@@ -7,11 +7,46 @@ from pathlib import Path
 
 from playwright.sync_api import expect, sync_playwright
 
-from dashboard.app import handler_for
+from dashboard.app import Review, handler_for
+from duplicate_workflow import organize
 from source_selection import SourceSelection
 
 
 class SourceBrowserTests(unittest.TestCase):
+    def test_exact_review_shows_undo_and_contextual_next(self):
+        """Keep reversal beside the group and reveal the next step after validation."""
+        with tempfile.TemporaryDirectory() as temporary:
+            base = Path(temporary)
+            documents = base / "documents"
+            documents.mkdir()
+            (documents / "a.txt").write_text("same", encoding="utf-8")
+            (documents / "b.txt").write_text("same", encoding="utf-8")
+            manifest = base / "manifest.json"
+            organize(documents, manifest)
+            review = Review(manifest, base / "dashboard-data")
+            server = ThreadingHTTPServer(("127.0.0.1", 0), handler_for(review, "test-token"))
+            threading.Thread(target=server.serve_forever, daemon=True).start()
+            try:
+                with sync_playwright() as playwright:
+                    browser = playwright.chromium.launch(
+                        executable_path=r"C:\Program Files\Google\Chrome\Application\chrome.exe",
+                        headless=True)
+                    try:
+                        page = browser.new_page()
+                        page.goto(f"http://127.0.0.1:{server.server_port}/")
+                        page.get_by_role("button", name="Retain this file").first.click()
+                        expect(page.locator(".group-heading-actions #undo")).to_be_visible()
+                        page.get_by_role("button", name="Undo selection").click()
+                        expect(page.locator("#undo")).to_be_hidden()
+                        page.get_by_role("button", name="Retain this file").first.click()
+                        page.get_by_role("button", name="Validate exact review").click()
+                        expect(page.locator("#next-content")).to_be_visible()
+                    finally:
+                        browser.close()
+            finally:
+                server.shutdown()
+                server.server_close()
+
     def test_folder_and_pdf_selectors(self):
         """Keep the supporting folder and bank PDF as separate choices."""
         with tempfile.TemporaryDirectory() as temporary:
@@ -37,8 +72,9 @@ class SourceBrowserTests(unittest.TestCase):
                         self.assertLess(navigation["height"], 100)
                         self.assertGreater(heading["y"], navigation["y"] + navigation["height"])
                         expect(page.locator(".source-grid > .settings-card")).to_have_count(2)
-                        expect(page.locator(".workflow-check")).to_have_count(5)
-                        expect(page.locator(".workflow-check.checked")).to_have_count(0)
+                        expect(page.locator(".workflow-step")).to_have_count(5)
+                        expect(page.locator(".workflow-check-button")).to_have_count(0)
+                        self.assertLess(page.locator("#workflow-progress").bounding_box()["height"], 60)
                         page.locator('.rail a[href="/bank"]').click()
                         expect(page).to_have_url(f"http://127.0.0.1:{server.server_port}/bank")
                         expect(page.locator("#bank-note")).to_contain_text("No prepared bank statement")

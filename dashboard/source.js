@@ -16,7 +16,11 @@ async function loadPreview() {
 }
 function showSource(data) {
   sourceState = {...sourceState, ...data};
-  $('#active-source').textContent = sourceState.active || 'No active review';
+  $('#active-source-name').textContent = sourceState.active ?
+    sourceState.active.split(/[\\/]/).filter(Boolean).pop() : 'No active review';
+  $('#active-source').textContent = sourceState.active || '';
+  $('#active-source-details').hidden = !sourceState.active;
+  $('#source-next').hidden = !sourceState.active;
   const selected = sourceState.selected;
   $('#selected-source').hidden = !selected;
   $('#source-action').hidden = !selected;

@@ -19,7 +19,7 @@ function renderRows() {
 async function loadBank() {
   try {
     const data = await api('/api/bank-statement');
-    if (!data.available) { $('#bank-note').textContent = 'No prepared bank statement was found.'; return; }
+    if (!data.available) { $('#bank-note').textContent = 'No prepared bank statement was found.'; $('#bank-source-link').hidden = false; return; }
     transactions = data.transactions;
     $('#bank-note').textContent = 'Extracted bank data for review. Supporting-document matching is still pending.';
     $('#bank-count').textContent = data.count;
@@ -59,5 +59,18 @@ async function exportWorkbook() {
   } finally { button.disabled = false; }
 }
 $('#bank-search').addEventListener('input', renderRows);
+$('#check-bank').onclick = async () => {
+  const button = $('#check-bank'); button.disabled = true;
+  try {
+    const status = await api('/api/workflow-checks');
+    const bank = status.steps[3];
+    const pending = status.steps.slice(1, 3).filter(step => !step.checked).map(step => step.name.toLowerCase());
+    $('#bank-next').hidden = !bank.next;
+    $('#bank-step-note').textContent = !bank.checked ? 'Bank balance checks need review.' :
+      bank.next ? 'Bank extraction passed. Continue to the completion checks.' :
+      `Bank extraction passed. Finish ${pending.join(' and ')} before continuing.`;
+  } catch (error) { $('#bank-step-note').textContent = error.message; }
+  finally { button.disabled = false; }
+};
 $('#export-button').addEventListener('click', exportWorkbook);
 loadBank();

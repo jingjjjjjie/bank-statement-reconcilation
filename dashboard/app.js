@@ -92,6 +92,6 @@ $('#search').oninput = render;
 document.querySelectorAll('[data-filter]').forEach(button => button.onclick = () => {filter = button.dataset.filter; document.querySelectorAll('[data-filter]').forEach(b => b.classList.toggle('selected', b === button)); render();});
 $('#validate').onclick = async () => {
   if (busy) return; $('#validate').disabled = true;
-  try {const result = await api('/api/validate', {}); const panel = $('#validation'); panel.hidden = false; panel.className = `validation ${result.passed ? 'success' : ''}`; panel.textContent = result.passed ? 'Exact duplicate review complete. Content review can begin.' : `Outstanding issues:\n${result.problems.join('\n')}`; state = await api('/api/state'); token = state.token; render();} catch (error) {toast(error.message);} finally {$('#validate').disabled = false;}
+  try {const result = await api('/api/validate', {}); const panel = $('#validation'); panel.hidden = false; panel.className = `validation ${result.passed ? 'success' : ''}`; $('#validation-text').textContent = result.passed ? 'Exact duplicate review complete.' : `Outstanding issues:\n${result.problems.join('\n')}`; $('#next-content').hidden = !result.passed; state = await api('/api/state'); token = state.token; render();} catch (error) {toast(error.message);} finally {$('#validate').disabled = false;}
 };
 api('/api/state').then(data => {state = data; token = data.token; selected = data.groups.find(g => g.status === 'pending')?.id; render();}).catch(error => {$('#empty').textContent = `Unable to load review: ${error.message}`;});

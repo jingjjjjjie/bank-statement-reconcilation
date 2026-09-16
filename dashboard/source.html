@@ -22,8 +22,9 @@
     <header><div class="breadcrumb">Workspace <span>/</span> Source folder</div><a class="header-settings" href="/">Document review</a></header>
     <section class="page-heading"><div><div class="eyebrow">REVIEW SETUP</div><h1>Source selection</h1><p>Select the supporting documents folder and bank statement PDF for this review.</p></div></section>
     <div id="source-error" class="validation" role="alert" hidden></div>
-    <section class="settings-card">
-      <h2>Active review</h2><p id="active-source">Loading…</p>
+    <section class="settings-card active-review-card">
+      <div><div class="source-section-label">CURRENT WORKSPACE</div><h2>Active review</h2><p id="active-source-name">Loading…</p><details id="active-source-details" hidden><summary>View folder path</summary><code id="active-source"></code></details></div>
+      <a id="source-next" class="button context-next" href="/" hidden>Continue to exact review</a>
     </section>
     <div class="source-grid">
     <section class="settings-card">

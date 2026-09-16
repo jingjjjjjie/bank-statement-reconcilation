@@ -1,5 +1,13 @@
 /* Pass-two candidate review uses saved model evidence and explicit admin choices. */
 const list = $('#candidate-list');
+let contentReady = false;
+
+/* A changed decision needs a fresh completion check. */
+function resetContentCheck() {
+  contentReady = false;
+  $('#content-next').hidden = true;
+  $('#content-check-note').textContent = '';
+}
 
 function paragraphs(items) {
   const box = node('ul', 'content-evidence');
@@ -43,9 +51,23 @@ function candidateCard(pair) {
       card.append(node('h4', '', title), paragraphs(result[field]));
     }
     const decision = pair.decision;
-    card.append(node('p', 'content-decision', decision ?
-      `Admin decision: ${decision.verdict} by ${decision.reviewer}. ${decision.reason}` : 'Admin decision pending.'));
     const reason = node('textarea'); reason.placeholder = 'Reason for this decision or undo'; reason.setAttribute('aria-label', 'Decision reason');
+    const decisionBar = node('div', 'content-decision-bar');
+    decisionBar.append(node('p', 'content-decision', decision ?
+      `Admin decision: ${decision.verdict} by ${decision.reviewer}. ${decision.reason}` : 'Admin decision pending.'));
+    if (decision) {
+      const undo = node('button', 'button secondary', 'Undo decision');
+      undo.type = 'button';
+      undo.onclick = async () => {
+        try {
+          await api('/api/content/undo', {pair: pair.pair, reviewer: $('#admin-name').value.trim(),
+            reason: reason.value.trim() || 'Uncertain; returned to pending review'});
+          resetContentCheck(); toast('Decision undone; candidate is pending again.'); await refresh();
+        } catch (error) { toast(error.message); }
+      };
+      decisionBar.append(undo);
+    }
+    card.append(decisionBar);
     card.append(reason);
     const actions = node('div', 'content-actions');
     for (const [verdict, label] of [['keep_both', 'Keep both'], ['keep_left', 'Keep left'], ['keep_right', 'Keep right']]) {
@@ -54,22 +76,10 @@ function candidateCard(pair) {
       button.onclick = async () => {
         try {
           await api('/api/content/decide', {pair: pair.pair, verdict, reviewer: $('#admin-name').value.trim(), reason: reason.value.trim()});
-          toast('Admin decision saved.'); await refresh();
+          resetContentCheck(); toast('Admin decision saved.'); await refresh();
         } catch (error) { toast(error.message); }
       };
       actions.append(button);
-    }
-    if (decision) {
-      const undo = node('button', 'button secondary', 'Undo decision');
-      undo.type = 'button';
-      undo.onclick = async () => {
-        try {
-          await api('/api/content/undo', {pair: pair.pair, reviewer: $('#admin-name').value.trim(),
-            reason: reason.value.trim() || 'Uncertain; returned to pending review'});
-          toast('Decision undone; candidate is pending again.'); await refresh();
-        } catch (error) { toast(error.message); }
-      };
-      actions.append(undo);
     }
     card.append(actions);
     if (result.classification === 'same_document') card.append(node('small', '', 'Keep left/right records the approved survivor. Admin cleanup remains separate.'));
@@ -81,13 +91,15 @@ async function refresh() {
   const state = await api('/api/content-review');
   const message = $('#content-message');
   if (!state.exact_ready) {
+    resetContentCheck();
     message.textContent = `Finish exact duplicate review first. ${state.exact_problems.length} issue(s) remain.`;
     $('#content-controls').hidden = true; $('#candidate-section').hidden = true; return;
   }
   message.textContent = state.run_error || (state.prepared ? 'Pass one is complete. Review every candidate below.' : 'Pass one is complete. Prepare the remaining documents to begin pass two.');
   $('#content-controls').hidden = false;
   $('#prepare-content').hidden = state.prepared;
-  $('#run-content').hidden = !state.prepared || state.running;
+  $('#run-content').hidden = !state.prepared || state.running || contentReady;
+  $('#check-content').hidden = !state.prepared || state.running;
   $('#content-running').hidden = !state.running;
   $('#content-progress').textContent = state.prepared ?
     `${state.documents} documents · ${state.units_read} units read · ${state.pairs_screened}/${state.pairs_total} pairs screened` : 'No content review prepared yet.';
@@ -98,10 +110,23 @@ async function refresh() {
 }
 
 async function action(path) {
-  try { await api(path, {}); await refresh(); } catch (error) { toast(error.message); }
+  try { await api(path, {}); resetContentCheck(); await refresh(); } catch (error) { toast(error.message); }
 }
 
 $('#prepare-content').onclick = () => action('/api/content/prepare');
 $('#run-content').onclick = () => action('/api/content/run');
+$('#check-content').onclick = async () => {
+  const button = $('#check-content'); button.disabled = true;
+  try {
+    const status = await api('/api/workflow-checks');
+    const ready = status.steps[2].checked;
+    contentReady = ready;
+    $('#content-next').hidden = !ready;
+    $('#run-content').hidden = ready;
+    $('#content-check-note').textContent = ready ? 'Content review passed its checks.' :
+      'Content review is still pending. Complete the remaining candidate decisions and run any unfinished batch.';
+  } catch (error) { $('#content-check-note').textContent = error.message; }
+  finally { button.disabled = false; }
+};
 api('/api/session').then(data => { token = data.token; return refresh(); }).catch(error => toast(error.message));
 setInterval(() => { if (token) refresh().catch(error => toast(error.message)); }, 5000);

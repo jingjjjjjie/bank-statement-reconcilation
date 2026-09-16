@@ -13,42 +13,27 @@ if ($('.workspace')) api('/api/workspace').then(info => {
   if ($('.breadcrumb')) $('.breadcrumb').append(node('span', 'review-context', `${info.name} · ${info.period}`));
 }).catch(() => {});
 
-/* Check saved work and expose the next available step on every dashboard page. */
+/* Summarize saved workflow state without competing with each page's main action. */
 function renderWorkflow(data) {
   const header = document.querySelector('main > header');
   if (!header) return;
-  let guide = $('#workflow-guide');
-  if (!guide) {
-    guide = node('section', 'workflow-guide');
-    guide.id = 'workflow-guide';
-    guide.setAttribute('aria-label', 'Workflow checks');
-    header.after(guide);
+  let progress = $('#workflow-progress');
+  if (!progress) {
+    progress = node('nav', 'workflow-progress');
+    progress.id = 'workflow-progress';
+    progress.setAttribute('aria-label', 'Workflow progress');
+    header.after(progress);
   }
-  guide.replaceChildren();
-  const nextIndex = data.steps.findIndex(step => !step.checked);
+  progress.replaceChildren();
+  const path = location.pathname.replace(/\/$/, '') || '/';
   data.steps.forEach((step, index) => {
-    const item = node('div', `workflow-check ${step.checked ? 'checked' : 'pending'}`);
-    const title = node('span', 'workflow-check-name', `${index + 1}. ${step.name}`);
-    const button = node('button', `workflow-check-button ${step.checked ? 'checked' : ''}`, step.checked ? 'Checked' : 'Check');
-    button.type = 'button';
-    button.setAttribute('aria-label', `Check ${step.name}`);
-    button.onclick = async () => {
-      button.disabled = true;
-      try { renderWorkflow(await api('/api/workflow-checks')); }
-      catch (error) { button.textContent = error.message; button.disabled = false; }
-    };
-    item.append(title, button);
-    if (index === nextIndex - 1 && step.next) {
-      const next = node('a', 'workflow-next', `Next: ${data.steps[nextIndex].name}`);
-      next.href = step.next;
-      item.append(next);
-    }
-    if (step.checked && ['Exact duplicates', 'Content review'].includes(step.name)) {
-      const undo = node('a', 'workflow-revise', step.name === 'Exact duplicates' ?
-        'Review / undo selections' : 'Review / undo decisions');
-      undo.href = step.href; item.append(undo);
-    }
-    guide.append(item);
+    const current = step.href === path;
+    const item = node('a', `workflow-step ${step.checked ? 'done' : 'pending'} ${current ? 'current' : ''}`);
+    item.href = step.href || '/complete';
+    if (current) item.setAttribute('aria-current', 'step');
+    item.append(node('span', 'workflow-step-number', step.checked ? '✓' : String(index + 1)),
+                node('span', '', step.name));
+    progress.append(item);
   });
 }
 api('/api/workflow-checks').then(renderWorkflow).catch(() => {});

@@ -23,7 +23,8 @@
     <div id="content-message" class="validation" role="status"></div>
     <section id="content-controls" class="settings-card" hidden>
       <h2>Review progress</h2><p id="content-progress"></p>
-      <div class="content-actions"><button class="button dark" id="prepare-content" type="button" hidden>Prepare documents</button><button class="button dark" id="run-content" type="button" hidden>Run next review batch</button><span id="content-running" hidden>Model review is running. This page updates automatically.</span></div>
+      <div class="content-actions"><button class="button dark" id="prepare-content" type="button" hidden>Prepare documents</button><button class="button dark" id="run-content" type="button" hidden>Run next review batch</button><button class="button secondary" id="check-content" type="button" hidden>Check content review</button><a class="button context-next" id="content-next" href="/bank" hidden>Continue to bank statement</a><span id="content-running" hidden>Model review is running. This page updates automatically.</span></div>
+      <p id="content-check-note" role="status"></p>
       <p>Preparation reads the files locally. A review batch uses your logged-in Codex subscription and the call limit in Settings.</p>
     </section>
     <section id="candidate-section" hidden>

@@ -53,6 +53,7 @@ class ContentBrowserTests(unittest.TestCase):
                     page.locator(".content-pair textarea").fill("Separate records")
                     page.get_by_role("button", name="Keep both").click()
                     expect(page.locator(".content-decision")).to_contain_text("Admin decision: keep_both by Admin")
+                    expect(page.locator(".content-decision-bar button")).to_have_text("Undo decision")
                     page.get_by_role("button", name="Undo decision").click()
                     expect(page.locator(".content-decision")).to_contain_text("Admin decision pending")
                     self.assertFalse(errors)
