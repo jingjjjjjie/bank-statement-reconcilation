@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Supporting · Duplicate review</title><link rel="stylesheet" href="/style.css">
+  <script src="/common.js" defer></script><script src="/app.js" defer></script>
+</head>
+<body>
+  <aside class="rail">
+    <a class="brand" href="/" aria-label="Supporting home"><span class="brand-icon">s.</span> supporting<span class="brand-dot">●</span></a>
+    <div class="workspace"><span class="eyebrow">YOUR WORKSPACE</span><strong>TOHIGH MEDIA</strong><span>December 2025 · MYR</span></div>
+    <div class="rail-label">RECONCILIATION</div>
+    <div class="nav-item active"><span>▧</span> Document review <span class="nav-count" id="nav-count">—</span></div>
+    <a class="nav-item" href="/settings"><span aria-hidden="true">⚙</span> Settings</a>
+    <div class="workflow"><div class="step current"><b>1</b><span>Exact duplicates<small>Choose your retained copies</small></span></div><div class="step"><b>2</b><span>Content review<small>Codex reasoning & vision</small></span></div><div class="step"><b>3</b><span>Bank matching<small>Reconcile supporting evidence</small></span></div></div>
+    <div class="rail-bottom"><span class="live-dot"></span> Local workspace<br><small>Your files stay under your control.</small></div>
+  </aside>
+  <main>
+    <header><div class="breadcrumb">Workspace <span>/</span> Document review</div><a class="header-settings" href="/settings">Settings ↗</a></header>
+    <section class="page-heading"><div><div class="eyebrow">STEP 01 / EXACT DUPLICATES</div><h1>A little less paperwork.</h1><p>Compare identical copies. Keep the one you want.</p></div><button class="button dark" id="validate">Validate & continue <span>↗</span></button></section>
+    <section class="stats"><div><span>Duplicate groups</span><strong id="total">—</strong><small>Content verified, byte for byte</small></div><div><span>Ready to review</span><strong id="pending">—</strong><small id="attention">One choice per group</small></div><div><span>Groups completed</span><strong id="reviewed">—<em>/ —</em></strong><div class="progress"><i id="progress"></i></div></div><div class="recovery-note"><span class="recovery-icon">↶</span><div><strong>Every choice is reversible.</strong><p>Other copies go to recovery.<br>Undo whenever you need.</p></div></div></section>
+    <div id="validation" class="validation" hidden></div>
+    <section class="review-layout">
+      <aside class="groups"><div class="groups-top"><h2>Review queue</h2><span id="queue-count">—</span></div><label class="search"><span>⌕</span><input id="search" type="search" placeholder="Find a file or group…" aria-label="Search groups"></label><div class="filters"><button data-filter="all" class="selected">All</button><button data-filter="pending">To review</button><button data-filter="reviewed">Completed</button></div><div id="group-list" class="group-list" aria-label="Duplicate groups"></div></aside>
+      <section class="comparison"><div id="empty" class="empty">Loading your duplicate groups…</div><div id="review-panel" hidden><div class="comparison-heading"><div><div class="eyebrow" id="group-number"></div><h2 id="group-title"></h2></div><span id="group-status" class="badge"></span></div><div class="evidence"><span class="checkmark">✓</span><div><strong>Same contents. Different copies.</strong><span id="evidence-text"></span></div><details><summary>Verification</summary><code id="hash"></code></details></div><div id="group-errors" class="validation" hidden></div><div id="file-cards" class="file-cards"></div><footer class="review-footer"><span id="selection-note">Choose a copy to retain. Nothing is permanently deleted.</span><div><button class="button secondary" id="undo" hidden>↶ Undo choice</button><button class="button secondary" id="next">Next group →</button></div></footer></div></section>
+    </section>
+    <footer class="page-footer"><span>SUPPORTING / DOCUMENT CONTROL</span><span id="folder"></span></footer>
+  </main>
+  <div id="toast" role="status" aria-live="polite" hidden></div>
+</body>
+</html>

@@ -1,0 +1,30 @@
+{
+  "pdf_mode": "text_only",
+  "pictures_enabled": true,
+  "codex_enabled": true,
+  "max_calls": 20,
+  "model": "gpt-5.6-sol",
+  "reasoning": "default",
+  "stages": {
+    "pdf": {
+      "model": "gpt-5.6-sol",
+      "reasoning": "default"
+    },
+    "images": {
+      "model": "gpt-5.6-sol",
+      "reasoning": "default"
+    },
+    "excel": {
+      "model": "gpt-5.6-sol",
+      "reasoning": "default"
+    },
+    "word": {
+      "model": "gpt-5.6-sol",
+      "reasoning": "default"
+    },
+    "comparison": {
+      "model": "gpt-5.6-sol",
+      "reasoning": "default"
+    }
+  }
+}

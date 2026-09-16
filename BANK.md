@@ -1,0 +1,37 @@
+# Bank statement branch
+
+Install `requirements-bank.txt` into Python. The workspace-local runtime is
+`.tools\python\python.exe`.
+
+```powershell
+python bank_statement.py "statement.pdf" --year 2025
+python bank_excel.py bank-output/master_statement.csv "sample.xlsx" --company "Example Company Sdn. Bhd."
+python -m unittest test_bank_statement
+```
+
+Two current deliverables:
+
+The latest generated answer is `bank-output/answer_statement_bank_only.xlsx`;
+the earlier `answer_statement.xlsx` was open/locked and could not be replaced.
+The exporter defaults to `answer_statement.xlsx` on subsequent runs.
+
+- `bank-output/master_statement.csv`: full bank narration, raw party/details,
+  parsed counterparty and role, amounts, balances, statement totals, source file
+  hash/page, and transaction ID. This is the reference for matching.
+- `bank-output/answer_statement.xlsx`: sample-styled answer, generated from the
+  master, with PAY TO populated and PARTICULAR blank for the supporting-document
+  branch. Full narration stays in the master; source comments on DATE
+  connect each answer row to the master and PDF.
+
+Names remain as printed, including abbreviations. Incoming rows show the payer;
+returned payments show the original recipient. No accounting classifications or
+supporting-document verification are inferred. REMARK stays PENDING.
+
+The extractor supports the observed single-account AmBank MYR digital layout.
+It checks each running balance, opening/closing balances, and printed debit/credit
+totals using Decimal. Excel export checks the PDF fingerprint and re-extracts the
+source to verify the master rows, dates, text, IDs, account, currency and totals.
+This catches later CSV changes but cannot independently detect a mistake repeated
+by the same extractor. Visual and independent-reader checks are in `bank-audit.md`.
+The year is supplied explicitly because the PDF date header
+contains overlapping text. Formatting is documented in `style.md`.

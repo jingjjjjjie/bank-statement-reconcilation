@@ -1,0 +1,21 @@
+.tools/
+__pycache__/
+review/
+duplicated/
+bank-output/
+dashboard/.data/
+
+# Local customer records and audit helpers contain source-specific details.
+Context.md
+duplicate-manifest.json
+issues.md
+bank-audit.md
+score_terra.py
+test_bank_sample_local.py
+
+# Local credentials and Python environments.
+.env
+.env.*
+!.env.example
+.venv/
+*.pyc
