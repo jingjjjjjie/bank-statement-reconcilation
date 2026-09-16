@@ -146,6 +146,29 @@ class Review:
                 "workbook_available": workbook.is_file(),
                 "transactions": [{key: row[key] for key in fields} for row in rows]}
 
+    def workflow_checks(self):
+        """Check saved stage results without changing review files or invoking a model."""
+        from vision_workflow import gate, load
+
+        exact = not check(self.root, self.manifest, self.manifest_path)
+        work = self.manifest_path.parent / "review"
+        content = False
+        if exact and (work / "index.json").is_file():
+            try:
+                content = not gate(*load(work))
+            except (OSError, ValueError, KeyError):
+                pass
+        master = self.manifest_path.parent / "bank-output" / "master_statement.csv"
+        bank = False
+        if master.is_file():
+            try:
+                with master.open(newline="", encoding="utf-8-sig") as stream:
+                    rows = list(csv.DictReader(stream))
+                bank = bool(rows) and all(row.get("balance_checks") == "passed" for row in rows)
+            except (OSError, ValueError, KeyError):
+                pass
+        return exact, content, bank
+
     def file_path(self, file_id):
         # Archived copies remain previewable; arbitrary filesystem paths are never accepted.
         record = self.records[file_id]
@@ -300,6 +323,27 @@ class Review:
             {"label": u["label"], "text": u["text"], "has_image": bool(u["image"])} for u in units]}
 
 
+def workflow_guide(review):
+    """Describe verified stage readiness and the next route for the dashboard."""
+    exact, content, bank = review.workflow_checks() if review else (False, False, False)
+    complete = False
+    if review and exact and content and bank:
+        try:
+            complete = review.completion()["complete"]
+        except (OSError, ValueError, KeyError):
+            pass
+    stages = [("Sources", "/source", bool(review)),
+              ("Exact duplicates", "/", exact),
+              ("Content review", "/content-review" if
+               (Path(__file__).parent / "content-review.html").is_file() else None, content),
+              ("Bank extraction", "/bank", bank),
+              ("Completion", "/complete", complete)]
+    return {"steps": [{"name": name, "href": href, "checked": checked,
+                       "next": stages[number + 1][1] if checked and number < len(stages) - 1
+                       and all(previous[2] for previous in stages[:number]) else None}
+                      for number, (name, href, checked) in enumerate(stages)]}
+
+
 def handler_for(review, token, sources=None):
     """Serve the active review and local source-folder selection."""
     sources = sources or SourceSelection(review.manifest_path.parent, review.data)
@@ -328,7 +372,7 @@ def handler_for(review, token, sources=None):
                 self.reply(403, {"error": "Local access only"})
                 return
             query = urlparse(self.path)
-            if review is None and query.path not in {"/source", "/source/", "/source.js", "/bank", "/bank/", "/bank.js", "/common.js", "/style.css", "/api/source", "/api/source/browse", "/api/source/preview", "/api/workspace", "/api/session", "/api/bank-statement"}:
+            if review is None and query.path not in {"/source", "/source/", "/source.js", "/bank", "/bank/", "/bank.js", "/common.js", "/style.css", "/api/source", "/api/source/browse", "/api/source/preview", "/api/workspace", "/api/session", "/api/bank-statement", "/api/workflow-checks"}:
                 self.send_response(302)
                 self.send_header("Location", "/source")
                 self.end_headers()
@@ -342,6 +386,8 @@ def handler_for(review, token, sources=None):
                         self.reply(200, {"token": token})
                     elif query.path == "/api/workspace":
                         self.reply(200, review.workspace() if review else {"name": "No active review", "period": "Choose a source folder"})
+                    elif query.path == "/api/workflow-checks":
+                        self.reply(200, workflow_guide(review))
                     elif query.path == "/api/config":
                         self.reply(200, review.settings())
                     elif query.path == "/api/source":

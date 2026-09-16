@@ -9,6 +9,7 @@ function render() {
   $('#reviewed').replaceChildren(document.createTextNode(state.reviewed), node('em', '', `/ ${state.groups.length}`));
   $('#progress').style.width = `${state.groups.length ? state.reviewed / state.groups.length * 100 : 0}%`;
   $('#attention').textContent = state.attention ? `${state.attention} group(s) require attention` : 'One selection per group';
+  $('#validate').classList.toggle('ready', state.pending === 0 && state.attention === 0);
   $('#nav-count').textContent = state.groups.length; $('#folder').textContent = state.folder;
   const groups = visibleGroups(); $('#queue-count').textContent = `${groups.length} ${groups.length === 1 ? 'group' : 'groups'}`;
   if (!groups.some(g => g.id === selected)) selected = groups[0]?.id;
@@ -37,7 +38,8 @@ function renderGroup(group) {
   $('#hash').textContent = `SHA-256: ${group.hash}`;
   $('#group-errors').hidden = !group.errors.length; $('#group-errors').textContent = group.errors.join('\n');
   $('#undo').hidden = !group.can_undo; $('#undo').disabled = busy;
-  $('#selection-note').textContent = group.status === 'reviewed' ? 'One file retained; other files remain recoverable.' : 'Select one file to retain.';
+  $('#next').classList.toggle('ready', group.status === 'reviewed');
+  $('#selection-note').textContent = group.status === 'reviewed' ? 'One file retained. Not sure? Undo selection to restore all copies.' : 'Select one file to retain, or leave this group pending if unsure.';
   $('#file-cards').replaceChildren();
   group.files.forEach((file, i) => {
     const kept = group.status === 'reviewed' && file.present;

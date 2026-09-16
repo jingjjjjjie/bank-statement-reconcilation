@@ -9,7 +9,7 @@ from pathlib import Path
 from http.server import ThreadingHTTPServer
 from unittest.mock import patch
 
-from dashboard.app import Review, handler_for
+from dashboard.app import Review, handler_for, workflow_guide
 from duplicate_workflow import organize, check
 from token_usage import record
 
@@ -42,6 +42,26 @@ class DashboardTests(unittest.TestCase):
         self.review.undo(self.group)
         self.assertEqual(self.review.snapshot()["groups"][0]["status"], "pending")
         self.assertEqual(len(list((self.base / "duplicated" / self.group).iterdir())), 3)
+
+    def test_workflow_guide_rechecks_undo_and_bank_evidence(self):
+        """Only verified steps turn green, and undo removes exact readiness."""
+        self.assertFalse(any(step["checked"] for step in workflow_guide(None)["steps"]))
+        self.assertEqual([step["checked"] for step in workflow_guide(self.review)["steps"]],
+                         [True, False, False, False, False])
+        self.review.keep(self.group, self.ids[0])
+        steps = workflow_guide(self.review)["steps"]
+        self.assertTrue(steps[1]["checked"])
+        self.assertEqual(steps[1]["next"], "/content-review" if
+                         Path(__file__).with_name("content-review.html").is_file() else None)
+        bank = self.base / "bank-output"
+        bank.mkdir()
+        (bank / "master_statement.csv").write_text(
+            "balance_checks,matching_status\npassed,pending\n", encoding="utf-8")
+        steps = workflow_guide(self.review)["steps"]
+        self.assertTrue(steps[3]["checked"])
+        self.assertIsNone(steps[3]["next"])
+        self.review.undo(self.group)
+        self.assertFalse(workflow_guide(self.review)["steps"][1]["checked"])
 
     def test_changed_copy_blocks_choice(self):
         Path(self.review.records[self.ids[2]]["OrganizedPath"]).write_text("changed")

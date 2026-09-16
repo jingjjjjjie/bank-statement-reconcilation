@@ -37,6 +37,8 @@ class SourceBrowserTests(unittest.TestCase):
                         self.assertLess(navigation["height"], 100)
                         self.assertGreater(heading["y"], navigation["y"] + navigation["height"])
                         expect(page.locator(".source-grid > .settings-card")).to_have_count(2)
+                        expect(page.locator(".workflow-check")).to_have_count(5)
+                        expect(page.locator(".workflow-check.checked")).to_have_count(0)
                         page.locator('.rail a[href="/bank"]').click()
                         expect(page).to_have_url(f"http://127.0.0.1:{server.server_port}/bank")
                         expect(page.locator("#bank-note")).to_contain_text("No prepared bank statement")
