@@ -21,9 +21,12 @@ def _choose_path(dialog_type):
     script = ("Add-Type -AssemblyName System.Windows.Forms; " + setup + "; "
               "if ($dialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) { "
               f"[Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes({selected})) }}")
-    result = subprocess.run(["powershell.exe", "-NoProfile", "-STA", "-WindowStyle", "Hidden",
-                             "-Command", script], capture_output=True, text=True, encoding="utf-8",
-                            errors="replace", check=False)
+    try:
+        result = subprocess.run(["powershell.exe", "-NoProfile", "-STA", "-Command", script],
+                                capture_output=True, text=True, encoding="utf-8", errors="replace",
+                                check=False, timeout=120)
+    except subprocess.TimeoutExpired as error:
+        raise RuntimeError("Folder picker did not respond; enter the full path instead") from error
     if result.returncode:
         raise RuntimeError("Windows folder picker failed: " + result.stderr.strip())
     return base64.b64decode(result.stdout.strip()).decode("utf-16-le") if result.stdout.strip() else ""

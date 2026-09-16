@@ -24,6 +24,8 @@ class SourceSelectionTests(unittest.TestCase):
             run.return_value.stdout = encoded + "\n"
             self.assertEqual(choose_folder(), path)
             self.assertIn("FolderBrowserDialog", run.call_args.args[0][-1])
+            self.assertNotIn("Hidden", run.call_args.args[0])
+            self.assertEqual(run.call_args.kwargs["timeout"], 120)
             run.return_value.stdout = ""
             self.assertEqual(choose_bank_pdf(), "")
             self.assertIn("OpenFileDialog", run.call_args.args[0][-1])
