@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Bank Statement Reconciliation · Content review</title><link rel="stylesheet" href="/style.css">
+  <script src="/common.js" defer></script><script src="/content-review.js" defer></script>
+</head>
+<body>
+  <aside class="rail">
+    <a class="brand" href="/">Bank Statement Reconciliation</a>
+    <div class="workspace"><span class="eyebrow">RECONCILIATION</span><strong>Loading review…</strong><span>Checking statement…</span></div>
+    <div class="rail-label">WORKFLOW</div>
+    <a class="nav-item" href="/source">Source folder</a>
+    <a class="nav-item" href="/">Exact duplicates</a>
+    <a class="nav-item active" href="/content-review" aria-current="page">Content review</a>
+    <a class="nav-item" href="/bank">Bank statement</a>
+    <a class="nav-item" href="/settings">Settings</a>
+    <a class="nav-item" href="/complete">Completion</a>
+  </aside>
+  <main>
+    <header><div class="breadcrumb">Workspace <span>/</span> Content review</div><a class="header-settings" href="/">Exact review</a></header>
+    <section class="page-heading"><div><div class="eyebrow">STEP 02 / CONTENT DUPLICATES</div><h1>Review possible copies</h1><p>Compare the full documents and record an admin decision for each candidate.</p></div></section>
+    <div id="content-message" class="validation" role="status"></div>
+    <section id="content-controls" class="settings-card" hidden>
+      <h2>Review progress</h2><p id="content-progress"></p>
+      <div class="content-actions"><button class="button dark" id="prepare-content" type="button" hidden>Prepare documents</button><button class="button dark" id="run-content" type="button" hidden>Run next review batch</button><span id="content-running" hidden>Model review is running. This page updates automatically.</span></div>
+      <p>Preparation reads the files locally. A review batch uses your logged-in Codex subscription and the call limit in Settings.</p>
+    </section>
+    <section id="candidate-section" hidden>
+      <div class="content-toolbar"><div><h2>Candidate pairs <span id="candidate-count"></span></h2><p>Model findings are evidence. Only an admin can approve a duplicate.</p></div><label>Admin name<input id="admin-name" autocomplete="name" placeholder="Your name"></label></div>
+      <div id="candidate-list"></div>
+    </section>
+  </main>
+  <div id="toast" role="status" aria-live="polite" hidden></div>
+</body>
+</html>

@@ -20,11 +20,13 @@ def object_schema(properties):
 
 TEXT = {"type": "string"}
 TEXTS = {"type": "array", "items": TEXT}
+MONEY = object_schema({"amount": TEXT, "currency": TEXT,
+                       "role": {"type": "string", "enum": ["line_item", "invoice_total", "grand_total"]}})
 EXTRACTION = object_schema({
     "readable": {"type": "boolean"}, "document_type": TEXT,
     "invoice_numbers": TEXTS, "company": TEXTS, "brief_description": TEXT,
     "references": TEXTS, "parties": TEXTS, "dates": TEXTS,
-    "amounts_and_currencies": TEXTS, "details": TEXT,
+    "amounts_and_currencies": TEXTS, "money": {"type": "array", "items": MONEY}, "details": TEXT,
     "annotations_and_signatures": TEXT, "limitations": TEXTS,
 })
 SCREEN = object_schema({"comparisons": {"type": "array", "items": object_schema({

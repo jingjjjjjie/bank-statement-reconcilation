@@ -500,6 +500,10 @@ def handler_for(review, token, sources=None):
                         self.reply(200, content_review.decide(review, body["pair"], body["verdict"],
                                                              body["reviewer"], body["reason"]))
                         return
+                    elif self.path == "/api/content/undo":
+                        self.reply(200, content_review.undo(review, body["pair"],
+                                                           body["reviewer"], body["reason"]))
+                        return
                     elif self.path == "/api/source/select":
                         self.reply(200, {"selected": sources.save(body["path"])})
                         return

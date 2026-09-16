@@ -13,7 +13,7 @@ from codex_reviewer import CodexReviewer, BudgetReached, EXTRACTION, SCREEN, COM
 from document_reader import extract
 from duplicate_workflow import DEFAULT_MANIFEST, fingerprint, review_files, check as exact_check
 from review_settings import CONFIG_PATH, load_config, content_settings, model_settings, stage_settings, document_stage, revision, validate as validate_config
-from similarity import score as similarity_score
+from comparison_policy import route as comparison_route
 from supporting_inventory import export as export_inventory
 from token_usage import summary as token_summary
 
@@ -197,7 +197,10 @@ def run(work, index, state, reviewer):
                 if key not in state["units"]:
                     prompt = ("Extract this entire review unit for later duplicate comparison. "
                               "Record invoice numbers, company names, and a very brief description when present. "
-                              "Leave missing fields empty; never infer them. Record all references, dates, currencies, totals and line-item detail; "
+                              "Leave missing fields empty; never infer them. Record all references, dates, currencies, totals and line-item detail. "
+                              "For money, list only amounts that contribute to the payable total, each with numeric amount, currency and role: "
+                              "line_item, invoice_total, or grand_total. Do not repeat a printed total as a line item. "
+                              "If an amount's role or currency is unclear, omit it from money and explain the limitation; "
                               "note unclear text, missing context and signatures.\n" +
                               json.dumps({"location": unit["label"], "text": unit["text"],
                                           "limitation": unit.get("limitation", "")}, ensure_ascii=False))
@@ -219,10 +222,10 @@ def run(work, index, state, reviewer):
                 pair = pair_key(left, right)
                 if pair in state["screens"]:
                     continue
-                percent, matched = similarity_score(summaries[left], summaries[right])
-                if percent >= 70:
+                route, reason = comparison_route(summaries[left], summaries[right])
+                if route == "direct_compare":
                     state["screens"][pair] = {"right_id": right, "candidate": True,
-                        "reason": f"Local field match {percent}%: {', '.join(matched)}"}
+                        "reason": reason}
                 else:
                     rights.append(right)
             checkpoint()
@@ -384,6 +387,26 @@ def decide(work, index, state, pair, verdict, reviewer, reason):
     state["decisions"][pair] = decision
     removal_plan(state)
     state.setdefault("decision_history", []).append({"pair": pair, "previous": previous, **decision})
+    save(work / "state.json", state)
+    report(work, index, state)
+
+
+def undo_decision(work, index, state, pair, reviewer, reason):
+    """Return an admin decision to pending while preserving its audit history."""
+    if pair not in state["decisions"]:
+        raise ValueError("There is no decision to undo")
+    if not reviewer.strip() or not reason.strip():
+        raise ValueError("Admin name and reason are required")
+    previous = state["decisions"].pop(pair)
+    try:
+        current_inventory(index, state)
+    except ValueError:
+        state["decisions"][pair] = previous
+        raise
+    state.setdefault("decision_history", []).append(
+        {"pair": pair, "previous": previous, "verdict": None,
+         "reviewer": reviewer.strip(), "reason": reason.strip(),
+         "at": datetime.now(timezone.utc).isoformat()})
     save(work / "state.json", state)
     report(work, index, state)
 

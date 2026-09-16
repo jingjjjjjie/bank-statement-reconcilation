@@ -26,6 +26,7 @@ class FakeReviewer:
                     "company": [], "brief_description": "fixture",
                     "references": ["TEST-1"],
                     "parties": [], "dates": [], "amounts_and_currencies": ["MYR 1"],
+                    "money": [{"amount": "1.00", "currency": "MYR", "role": "grand_total"}],
                     "details": "fixture", "annotations_and_signatures": "none", "limitations": []}
         if schema == SCREEN:
             payload = json.loads(prompt.split("\n", 1)[1])
@@ -65,6 +66,9 @@ class WorkflowTests(unittest.TestCase):
         self.assertTrue(any("admin verdict" in p for p in workflow.gate(index, state)))
         workflow.decide(self.work, index, state, pair, "keep_both", "Admin", "Separate evidence")
         self.assertEqual(workflow.gate(index, state), [])
+        workflow.undo_decision(self.work, index, state, pair, "Admin", "Need another look")
+        self.assertTrue(any("admin verdict" in p for p in workflow.gate(index, state)))
+        self.assertNotIn(pair, workflow.load(self.work)[1]["decisions"])
 
     def test_inventory_lists_nested_files_and_review_status(self):
         """Every nested source stays visible through pending and reviewed states."""
@@ -90,6 +94,7 @@ class WorkflowTests(unittest.TestCase):
         self.assertEqual({row["status"] for row in rows()}, {"reviewed_keep_both"})
         self.assertTrue(all(row["duplicate_with"] == "[]" for row in rows()))
         self.assertEqual({row["invoice_numbers"] for row in rows()}, {'["TEST-1"]'})
+        self.assertEqual({row["combined_total"] for row in rows()}, {'{"MYR": "1.00"}'})
 
     def test_strong_fields_skip_model_screen_but_compare_originals(self):
         """A local trigger saves screening tokens without granting a verdict."""
@@ -104,7 +109,7 @@ class WorkflowTests(unittest.TestCase):
         workflow.run(self.work, index, state, RecordingReviewer())
         self.assertNotIn(SCREEN, calls)
         self.assertEqual(len(state["pairs"]), 1)
-        self.assertTrue(any("Local field match" in row["reason"] for row in state["screens"].values()))
+        self.assertTrue(any("Combined total" in row["reason"] for row in state["screens"].values()))
         self.assertTrue(workflow.gate(index, state))
 
     def test_duplicate_cleanup_requires_survivor(self):
@@ -114,6 +119,10 @@ class WorkflowTests(unittest.TestCase):
         left, right = pair.split(":")
         Path(index["documents"][right]["paths"][0]).unlink()
         self.assertEqual(workflow.gate(index, state), [])
+        with self.assertRaisesRegex(ValueError, "unapproved missing"):
+            workflow.undo_decision(self.work, index, state, pair, "Admin", "Need another look")
+        self.assertIn(pair, workflow.load(self.work)[1]["decisions"])
+        _, state = workflow.load(self.work)
         Path(index["documents"][left]["paths"][0]).unlink()
         with self.assertRaises(ValueError):
             workflow.gate(index, state)

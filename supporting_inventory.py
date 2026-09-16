@@ -3,10 +3,12 @@
 import csv
 import json
 
+from comparison_policy import combined_total
+
 
 FIELDS = ("document_id", "source_path", "original_paths", "unit", "raw_text",
           "document_type", "invoice_numbers", "company", "brief_description",
-          "references", "parties", "dates", "amounts_and_currencies",
+          "references", "parties", "dates", "amounts_and_currencies", "combined_total",
           "details", "annotations_and_signatures", "limitations", "status",
           "duplicate_with", "comparison", "error")
 
@@ -68,6 +70,8 @@ def export(path, index, state):
         writer.writeheader()
         for digest, document in sorted(index["documents"].items()):
             status, related, labels, error = disposition(digest, index, state)
+            units = [state["units"].get(f"{digest}:{n}", {}) for n in range(len(document["units"]))]
+            total = combined_total(units)
             related_paths = [index["documents"][other]["paths"][0] for other in related]
             for source in document["paths"]:
                 for number, unit in enumerate(document["units"] or [{}]):
@@ -75,6 +79,7 @@ def export(path, index, state):
                     row = {"document_id": digest, "source_path": source,
                            "original_paths": json.dumps(document["original_paths"], ensure_ascii=False),
                            "unit": unit.get("label", ""), "raw_text": unit.get("text", ""),
+                           "combined_total": json.dumps({currency: str(amount) for currency, amount in total.items()}) if total else "",
                            "status": status, "duplicate_with": json.dumps(related_paths, ensure_ascii=False),
                            "comparison": json.dumps(labels, ensure_ascii=False),
                            "error": error or unit.get("blocked", "")}
