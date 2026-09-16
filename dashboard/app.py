@@ -1,5 +1,6 @@
 """Local duplicate-review dashboard. Run with Python; no web framework required."""
 import argparse
+import csv
 import hashlib
 import json
 import mimetypes
@@ -15,6 +16,7 @@ WORKSPACE = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(WORKSPACE))
 from duplicate_workflow import check, duplicate_root, fingerprint, supporting_files
 from review_settings import load_config, save_config, revision, content_settings, model_settings, model_catalog
+from token_usage import summary as token_summary
 
 
 def write_json(path, data):
@@ -68,7 +70,32 @@ class Review:
                 if state.get("model_config") and model_settings(state["model_config"]) != model_settings(config):
                     refresh = True
         return {"config": config, "revision": revision(config), "requires_refresh": refresh,
+                "token_usage": token_summary(self.manifest_path.parent / "review" / "token-usage.jsonl"),
                 "models": model_catalog()}
+
+    def completion(self):
+        """Show final usage only after exact, content, and bank checks pass."""
+        from vision_workflow import gate, load
+
+        exact_done = not check(self.root, self.manifest, self.manifest_path)
+        content_done = False
+        work = self.manifest_path.parent / "review"
+        if (work / "index.json").exists():
+            try:
+                content_done = not gate(*load(work))
+            except (OSError, ValueError, KeyError):
+                pass
+        exact_done = exact_done or content_done
+        bank_done = False
+        master = self.manifest_path.parent / "bank-output" / "master_statement.csv"
+        if content_done and master.exists():
+            with master.open(newline="", encoding="utf-8-sig") as source:
+                rows = list(csv.DictReader(source))
+            bank_done = bool(rows) and all(row.get("balance_checks") == "passed" and
+                                           row.get("matching_status") == "matched" for row in rows)
+        return {"exact_done": exact_done, "content_done": content_done,
+                "bank_done": bank_done, "complete": exact_done and content_done and bank_done,
+                "token_usage": token_summary(work / "token-usage.jsonl") if bank_done else None}
 
     def file_path(self, file_id):
         # Archived copies remain previewable; arbitrary filesystem paths are never accepted.
@@ -256,6 +283,8 @@ def handler_for(review, token):
                         self.reply(200, {"token": token})
                     elif query.path == "/api/config":
                         self.reply(200, review.settings())
+                    elif query.path == "/api/completion":
+                        self.reply(200, review.completion())
                     elif query.path == "/api/document":
                         self.reply(200, review.document(params["id"][0]))
                     elif query.path in {"/api/file", "/api/preview"}:
@@ -278,8 +307,11 @@ def handler_for(review, token):
                         assets = {"/": ("index.html", "text/html; charset=utf-8"),
                                   "/settings": ("settings.html", "text/html; charset=utf-8"),
                                   "/settings/": ("settings.html", "text/html; charset=utf-8"),
+                                  "/complete": ("complete.html", "text/html; charset=utf-8"),
+                                  "/complete/": ("complete.html", "text/html; charset=utf-8"),
                                   "/app.js": ("app.js", "text/javascript"),
                                   "/settings.js": ("settings.js", "text/javascript"),
+                                  "/complete.js": ("complete.js", "text/javascript"),
                                   "/common.js": ("common.js", "text/javascript"),
                                   "/style.css": ("style.css", "text/css")}
                         name, mime = assets[query.path]

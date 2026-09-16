@@ -2,21 +2,22 @@
 <html lang="en">
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Supporting · Settings</title><link rel="stylesheet" href="/style.css">
+  <title>bank-statement-reconciliation · Settings</title><link rel="stylesheet" href="/style.css">
   <script src="/common.js" defer></script><script src="/settings.js" defer></script>
 </head>
 <body>
   <aside class="rail">
-    <a class="brand" href="/" aria-label="Supporting home"><span class="brand-icon">s.</span> supporting<span class="brand-dot">●</span></a>
-    <div class="workspace"><span class="eyebrow">YOUR WORKSPACE</span><strong>TOHIGH MEDIA</strong><span>December 2025 · MYR</span></div>
-    <div class="rail-label">RECONCILIATION</div>
-    <a class="nav-item" href="/"><span>▧</span> Document review</a>
-    <a class="nav-item active" href="/settings" aria-current="page"><span>⚙</span> Settings</a>
-    <div class="rail-bottom"><span class="live-dot"></span> Local workspace<br><small>Settings persist in review_config.json.</small></div>
+    <a class="brand" href="/" aria-label="Bank Statement Reconciliation home">Bank Statement Reconciliation</a>
+    <div class="workspace"><span class="eyebrow">RECONCILIATION</span><strong>TOHIGH MEDIA</strong><span>December 2025 · MYR</span></div>
+    <div class="rail-label">WORKFLOW</div>
+    <a class="nav-item" href="/">Document review</a>
+    <a class="nav-item active" href="/settings" aria-current="page">Settings</a>
+    <a class="nav-item" href="/complete">Completion</a>
+    <div class="rail-bottom">Settings: review_config.json</div>
   </aside>
   <main class="settings-page">
     <header><div class="breadcrumb">Workspace <span>/</span> Settings</div><a class="header-settings" href="/">← Back to review</a></header>
-    <section class="page-heading"><div><div class="eyebrow">WORKFLOW CONFIGURATION</div><h1>Review settings.</h1><p>Choose how documents are read and how much Codex work each run may do.</p></div></section>
+    <section class="page-heading"><div><div class="eyebrow">WORKFLOW CONFIGURATION</div><h1>Review settings</h1><p>Configure document processing, model selection, and request limits.</p></div></section>
     <div id="settings-error" class="validation" role="alert" hidden></div>
     <form id="settings-form">
       <fieldset id="settings-fields" disabled>
@@ -46,11 +47,16 @@
           </dl>
           <div class="resume-command"><strong>Start or resume from the Development folder</strong><code>.tools\python\python.exe vision_workflow.py run</code><small>Finish the exact-duplicate review first. A command-line --max-calls value overrides this saved limit for that run.</small></div>
         </section>
+        <section class="settings-card"><div class="section-title"><span>04</span><div><h2>Recorded token usage</h2><p>Codex calls made by this document-review workflow from tracking onward.</p></div></div>
+          <div id="token-usage" aria-live="polite">Loading usage…</div>
+          <pre id="token-breakdown"></pre>
+          <small>Counts come from Codex's reported usage. Failed or interrupted attempts without a usage event are shown as unknown, so totals may be incomplete. Cached input is part of input tokens.</small>
+        </section>
       </fieldset>
       <div id="settings-refresh" class="validation" hidden>Prepared inputs need refreshing before the next content review. Previous metadata and decisions are archived.<code class="block-code">.tools\python\python.exe vision_workflow.py prepare --refresh</code></div>
       <div class="settings-savebar"><div><strong id="save-state" role="status" aria-live="polite">Loading settings…</strong><p>Saving settings does not start a review or make Codex calls.</p></div><div><button type="button" class="button secondary" id="discard-settings" disabled>Discard changes</button><button type="submit" class="button dark" id="save-settings" disabled>Save settings</button></div></div>
     </form>
-    <footer class="page-footer"><span>SUPPORTING / WORKFLOW SETTINGS</span><span>Saved in Development/review_config.json</span></footer>
+    <footer class="page-footer"><span>BANK STATEMENT RECONCILIATION / SETTINGS</span><span>Saved in Development/review_config.json</span></footer>
   </main>
   <div id="toast" role="status" aria-live="polite" hidden></div>
 </body>

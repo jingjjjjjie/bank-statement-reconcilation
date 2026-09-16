@@ -103,13 +103,13 @@ def main():
                 page.get_by_role("link", name="Back to review").click()
                 expect(page.locator("#settings-form")).to_have_count(0)
                 page.set_viewport_size({"width": 1440, "height": 1080})
-                page.get_by_role("button", name="Keep this copy", exact=True).first.click()
+                page.get_by_role("button", name="Retain this file", exact=True).first.click()
                 expect(page.locator("#group-status")).to_have_text("Review complete")
                 assert page.locator(".file-card.kept").count() == 1
                 assert page.locator(".file-card.archived").count() == 1
                 page.reload()
-                page.get_by_role("button", name="Undo choice").click()
-                expect(page.locator("#group-status")).to_have_text("Awaiting your choice")
+                page.get_by_role("button", name="Undo selection").click()
+                expect(page.locator("#group-status")).to_have_text("Pending")
                 assert page.locator(".file-card.archived").count() == 0
             finally:
                 server.shutdown()

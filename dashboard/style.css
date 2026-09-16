@@ -1,4 +1,4 @@
-/* Quiet workspace palette and readable document-review hierarchy. */
+/* Professional document-review layout. */
 :root {
   --nav:#182a28;
   --green:#24745b;
@@ -51,21 +51,10 @@ a {
   align-items:center;
   gap:10px;
   text-decoration:none;
-  font-size:23px;
-  letter-spacing:-1px;
+  font-size:16px;
+  line-height:1.35;
+  letter-spacing:0;
   font-weight:650
-}
-.brand-icon {
-  background:#d5e9ad;
-  color:var(--nav);
-  padding:0 8px 5px;
-  border-radius:9px;
-  font:700 28px Georgia
-}
-.brand-dot {
-  font-size:8px;
-  color:#c0d58c;
-  margin-left:auto
 }
 .workspace {
   margin:43px 0 34px;
@@ -156,18 +145,6 @@ a {
   font-size:11px;
   line-height:2
 }
-.rail-bottom small {
-  color:#8ea096;
-  font-size:10px
-}
-.live-dot {
-  display:inline-block;
-  width:6px;
-  height:6px;
-  background:#b5d18e;
-  border-radius:100%;
-  margin-right:6px
-}
 main {
   margin-left:232px;
   padding:0 36px
@@ -205,10 +182,10 @@ header {
   color:var(--green)
 }
 h1 {
-  font-size:34px;
-  letter-spacing:-1.5px;
+  font-size:32px;
+  letter-spacing:-.6px;
   line-height:1.2;
-  font-weight:550;
+  font-weight:600;
   margin:9px 0
 }
 p {
@@ -223,7 +200,7 @@ p {
   padding:11px 15px;
   border-radius:6px;
   border:1px solid transparent;
-  font-size:11px;
+  font-size:12px;
   font-weight:600;
   display:inline-flex;
   align-items:center;
@@ -261,7 +238,7 @@ p {
   border:0
 }
 .stats span {
-  font-size:10px;
+  font-size:11px;
   color:var(--muted)
 }
 .stats strong {
@@ -277,7 +254,7 @@ p {
   margin-left:5px
 }
 .stats small {
-  font-size:9px;
+  font-size:10px;
   color:var(--muted)
 }
 .progress {
@@ -307,10 +284,6 @@ p {
 .stats .recovery-note p {
   font-size:10px;
   color:#7c8874
-}
-.stats .recovery-icon {
-  font-size:24px;
-  color:#758c53
 }
 .review-layout {
   display:grid;
@@ -348,11 +321,6 @@ p {
   border-radius:5px;
   padding:8px 10px;
   background:#fff
-}
-.search>span {
-  font-size:19px;
-  line-height:12px;
-  color:var(--muted)
 }
 .search input {
   border:0;
@@ -404,21 +372,9 @@ p {
   background:#edf3e8;
   border-color:#dbe5d2
 }
-.group-icon {
-  display:grid;
-  place-items:center;
-  flex-shrink:0;
-  width:29px;
-  height:34px;
-  border:1px solid #dce2d4;
-  border-radius:5px;
-  background:white;
-  color:#7f9274;
-  font-size:16px
-}
 .group-item strong {
   display:block;
-  font-size:10px;
+  font-size:11px;
   font-weight:550;
   word-break:break-word;
   line-height:1.5;
@@ -427,7 +383,7 @@ p {
 }
 .group-item small {
   display:block;
-  font-size:9px;
+  font-size:10px;
   color:var(--muted);
   margin-top:5px
 }
@@ -493,22 +449,13 @@ p {
   padding:12px;
   margin-bottom:20px
 }
-.checkmark {
-  border-radius:50%;
-  width:22px;
-  height:22px;
-  display:grid;
-  place-items:center;
-  color:#52763c;
-  background:#e5eddb
-}
 .evidence strong {
   display:block;
-  font-size:10px
+  font-size:11px
 }
 .evidence span:last-child {
   display:block;
-  font-size:9px;
+  font-size:10px;
   margin-top:3px;
   color:var(--muted)
 }

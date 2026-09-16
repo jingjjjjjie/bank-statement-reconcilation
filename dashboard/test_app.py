@@ -7,9 +7,11 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 from http.server import ThreadingHTTPServer
+from unittest.mock import patch
 
 from dashboard.app import Review, handler_for
 from duplicate_workflow import organize, check
+from token_usage import record
 
 
 class DashboardTests(unittest.TestCase):
@@ -59,6 +61,24 @@ class DashboardTests(unittest.TestCase):
         restarted = Review(self.manifest, self.base / "dashboard-data")
         restarted.undo(self.group)
         self.assertEqual(restarted.snapshot()["groups"][0]["status"], "pending")
+
+    def test_completion_requires_bank_matching_and_reports_tokens(self):
+        """Release final totals only after all workflow gates are complete."""
+        self.review.keep(self.group, self.ids[0])
+        work = self.base / "review"
+        work.mkdir()
+        (work / "index.json").write_text("{}", encoding="utf-8")
+        record(work / "token-usage.jsonl", {"id": "one", "status": "finished", "stage": "pdf",
+               "model": "test", "usage": {"input_tokens": 100, "cached_input_tokens": 20,
+                                          "output_tokens": 25, "reasoning_output_tokens": 5}})
+        with patch("vision_workflow.load", return_value=({}, {})), patch("vision_workflow.gate", return_value=[]):
+            self.assertFalse(self.review.completion()["complete"])
+            bank = self.base / "bank-output"
+            bank.mkdir()
+            (bank / "master_statement.csv").write_text("balance_checks,matching_status\npassed,matched\n", encoding="utf-8")
+            result = self.review.completion()
+        self.assertTrue(result["complete"])
+        self.assertEqual(result["token_usage"]["totals"]["input_tokens"], 100)
 
     def test_altered_archive_blocks_undo(self):
         self.review.keep(self.group, self.ids[0])

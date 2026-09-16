@@ -4,10 +4,12 @@ import json
 import os
 import shutil
 import subprocess
+from uuid import uuid4
 from pathlib import Path
 
 from jsonschema import validate
 from review_settings import DEFAULT_MODEL
+from token_usage import record, reported_usage
 
 
 def object_schema(properties):
@@ -57,6 +59,9 @@ class CodexReviewer:
         self.reasoning = reasoning
         self.max_calls, self.timeout, self.calls = max_calls, timeout, 0
         self.cache = work / "model-cache"
+        self.usage_path = work / "token-usage.jsonl"
+        self.run_id = uuid4().hex
+        self.stage = "unknown"
         self.cache.mkdir(parents=True, exist_ok=True)
 
     def ask(self, prompt, schema, images=()):
@@ -72,6 +77,8 @@ class CodexReviewer:
         if result_path.exists():
             result = json.loads(result_path.read_text(encoding="utf-8"))
             validate(result, schema)
+            record(self.usage_path, {"status": "cached", "run_id": self.run_id,
+                                     "stage": self.stage, "model": self.model, "request": folder.name})
             return result
         if self.calls >= self.max_calls:
             raise BudgetReached("Call limit reached; resume with the same command")
@@ -86,7 +93,7 @@ class CodexReviewer:
         (folder / "prompt.txt").write_text(prompt, encoding="utf-8")
         output_path.unlink(missing_ok=True)
         command = [self.executable, "exec", "--ignore-user-config", "--skip-git-repo-check",
-                   "--ephemeral", "--sandbox", "read-only", "--color", "never",
+                   "--ephemeral", "--sandbox", "read-only", "--color", "never", "--json",
                    "--output-schema", str(schema_path.resolve()),
                    "--output-last-message", str(output_path.resolve())]
         if self.model:
@@ -96,10 +103,22 @@ class CodexReviewer:
         for image in images:
             command += ["--image", str(Path(image).resolve())]
         command += ["-"]
+        attempt_id = uuid4().hex
+        events_path = folder / f"events-{attempt_id}.jsonl"
+        entry = {"id": attempt_id, "run_id": self.run_id, "stage": self.stage,
+                 "model": self.model, "reasoning": self.reasoning, "request": folder.name,
+                 "events": str(events_path)}
+        record(self.usage_path, {**entry, "status": "started"})
         self.calls += 1
-        with (folder / "exec.log").open("w", encoding="utf-8") as log:
-            process = subprocess.run(command, input=prompt, text=True, encoding="utf-8",
-                                     stdout=log, stderr=log, cwd=folder, timeout=self.timeout)
+        process = None
+        try:
+            with events_path.open("w", encoding="utf-8") as events, (folder / "exec.log").open("a", encoding="utf-8") as log:
+                process = subprocess.run(command, input=prompt, text=True, encoding="utf-8",
+                                         stdout=events, stderr=log, cwd=folder, timeout=self.timeout)
+        finally:
+            usage = reported_usage(events_path)
+            record(self.usage_path, {**entry, "status": "finished" if process and process.returncode == 0 else "failed",
+                                     "usage": usage})
         if process.returncode or not output_path.exists():
             raise ValueError(f"codex exec failed; see {folder / 'exec.log'}")
         result = json.loads(output_path.read_text(encoding="utf-8-sig"))

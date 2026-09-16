@@ -13,6 +13,8 @@ from codex_reviewer import CodexReviewer, BudgetReached, EXTRACTION, SCREEN, COM
 from document_reader import extract
 from duplicate_workflow import DEFAULT_MANIFEST, fingerprint, review_files, check as exact_check
 from review_settings import CONFIG_PATH, load_config, content_settings, model_settings, stage_settings, document_stage, revision, validate as validate_config
+from supporting_inventory import export as export_inventory
+from token_usage import summary as token_summary
 
 DEFAULT_WORK = Path(__file__).with_name("review")
 
@@ -179,6 +181,7 @@ def run(work, index, state, reviewer):
         # One engine keeps a shared request budget across all stage/model changes.
         reviewer.model = choices[stage]["model"] or None
         reviewer.reasoning = choices[stage]["reasoning"]
+        reviewer.stage = stage
         return reviewer.ask(prompt, schema, images)
 
     try:
@@ -328,6 +331,13 @@ def report(work, index, state):
     rows += [f"Prepared PDF mode: {settings['pdf_mode']}; pictures: {settings['pictures_enabled']}.",
              f"Stage models used: {json.dumps(state.get('stage_models', {}))}.",
              "Text-only PDF units exclude signatures, handwriting and visual differences; blocked units remain unresolved.", ""]
+    usage = token_summary(work / "token-usage.jsonl")
+    rows += ["## Codex token usage", "",
+             f"Recorded attempts: {usage['attempts']}; cache hits: {usage['cache_hits']}; "
+             f"attempts with unknown usage: {usage['unknown_attempts']}.",
+             f"Reported input: {usage['totals']['input_tokens']:,}; cached input: {usage['totals']['cached_input_tokens']:,}; "
+             f"output: {usage['totals']['output_tokens']:,}; reasoning output: {usage['totals']['reasoning_output_tokens']:,}.",
+             "Totals cover recorded Codex calls only; unknown attempts are excluded.", ""]
     for pair, result in state["pairs"].items():
         left, right = pair.split(":")
         rows += [f"## {pair}", "", f"Left: {documents[left]['paths'][0]}",
@@ -341,7 +351,8 @@ def report(work, index, state):
     if len(problems) > 100:
         rows.append("- Full outstanding list is in report.json.")
     (work / "report.md").write_text("\n".join(rows), encoding="utf-8")
-    save(work / "report.json", {"documents": documents, "state": state, "problems": problems})
+    save(work / "report.json", {"documents": documents, "state": state, "problems": problems, "token_usage": usage})
+    export_inventory(work / "supporting-inventory.csv", index, state)
     return problems
 
 

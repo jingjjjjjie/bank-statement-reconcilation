@@ -9,4 +9,5 @@ Read this file before starting any task in this workspace. Apply these rules to 
 - Keep duplicate-review output under this workspace's `duplicated/` directory. Preserve original supporting-document locations in the manifest.
 - For application or workflow LLM reasoning or vision, use `codex exec` with the existing ChatGPT subscription login. Do not use API keys or a separate paid API connection unless the user explicitly changes this preference.
 - Use Python for deterministic extraction, hashing, validation, and workflow state. Require structured model output, attach images for vision, and record incomplete or failed calls as unresolved.
+- Track token usage for every workflow `codex exec` attempt from now on. Keep durable per-attempt records and totals by stage and model. Record cache hits as zero new usage and mark attempts without reported usage as unknown; never estimate missing tokens or present partial totals as complete.
 - Never treat model output as admin approval to delete files.
