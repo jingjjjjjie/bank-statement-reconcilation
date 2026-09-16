@@ -2,6 +2,15 @@
 const list = $('#candidate-list');
 let contentReady = false;
 
+function showReviewLoading(running, state) {
+  /* Keep the overlay in sync after a click, poll, or page reload. */
+  $('#content-loading').hidden = !running;
+  if (running && state) {
+    $('#content-loading-progress').textContent =
+      `${state.units_read} units read · ${state.pairs_screened}/${state.pairs_total} pairs screened. Results are saved as they finish.`;
+  }
+}
+
 /* A changed decision needs a fresh completion check. */
 function resetContentCheck() {
   contentReady = false;
@@ -91,6 +100,7 @@ async function refresh() {
   const state = await api('/api/content-review');
   const message = $('#content-message');
   if (!state.exact_ready) {
+    showReviewLoading(false);
     resetContentCheck();
     message.textContent = `Finish exact duplicate review first. ${state.exact_problems.length} issue(s) remain.`;
     $('#content-controls').hidden = true; $('#candidate-section').hidden = true; return;
@@ -101,6 +111,7 @@ async function refresh() {
   $('#run-content').hidden = !state.prepared || state.running || contentReady;
   $('#check-content').hidden = !state.prepared || state.running;
   $('#content-running').hidden = !state.running;
+  showReviewLoading(state.running, state);
   $('#content-progress').textContent = state.prepared ?
     `${state.documents} documents · ${state.units_read} units read · ${state.pairs_screened}/${state.pairs_total} pairs screened` : 'No content review prepared yet.';
   $('#candidate-section').hidden = !state.prepared;
@@ -110,7 +121,9 @@ async function refresh() {
 }
 
 async function action(path) {
-  try { await api(path, {}); resetContentCheck(); await refresh(); } catch (error) { toast(error.message); }
+  if (path === '/api/content/run') showReviewLoading(true);
+  try { await api(path, {}); resetContentCheck(); await refresh(); }
+  catch (error) { showReviewLoading(false); toast(error.message); }
 }
 
 $('#prepare-content').onclick = () => action('/api/content/prepare');
