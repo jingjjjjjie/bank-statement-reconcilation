@@ -11,3 +11,4 @@ Read this file before starting any task in this workspace. Apply these rules to 
 - Use Python for deterministic extraction, hashing, validation, and workflow state. Require structured model output, attach images for vision, and record incomplete or failed calls as unresolved.
 - Track token usage for every workflow `codex exec` attempt from now on. Keep durable per-attempt records and totals by stage and model. Record cache hits as zero new usage and mark attempts without reported usage as unknown; never estimate missing tokens or present partial totals as complete.
 - Never treat model output as admin approval to delete files.
+- Before final-comparison work, read `FINAL_COMPARISON.md` for the agreed two-page review/export workflow and open decisions. Implementation is deferred until both input branches are ready.

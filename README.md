@@ -1,5 +1,7 @@
 # Supporting-document review
 
+The agreed final comparison workflow is recorded in [FINAL_COMPARISON.md](FINAL_COMPARISON.md). Implement it after both extraction branches are ready.
+
 Python 3.12 or later. Pass one uses the standard library. Pass two uses the packages in `requirements.txt` and an installed Codex CLI logged in through ChatGPT.
 
 The existing supporting files have already been organized. Do not run organize again for this batch.
