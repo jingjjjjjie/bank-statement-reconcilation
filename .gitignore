@@ -2,6 +2,7 @@
 __pycache__/
 review/
 duplicated/
+benchmarks/terra-benchmark/
 bank-output/
 dashboard/.data/
 

@@ -98,4 +98,30 @@ $('#validate').onclick = async () => {
   if (busy) return; $('#validate').disabled = true;
   try {const result = await api('/api/validate', {}); const panel = $('#validation'); panel.hidden = false; panel.className = `validation ${result.passed ? 'success' : ''}`; $('#validation-text').textContent = result.passed ? 'Exact duplicate review complete.' : `Outstanding issues:\n${result.problems.join('\n')}`; $('#next-content').hidden = !result.passed; state = await api('/api/state'); token = state.token; render();} catch (error) {toast(error.message);} finally {$('#validate').disabled = false;}
 };
-api('/api/state').then(data => {state = data; token = data.token; selected = data.groups.find(g => g.status === 'pending')?.id; render();}).catch(error => {$('#empty').textContent = `Unable to load review: ${error.message}`;});
+function showPreset(data) {
+  $('#exact-development-status').textContent = data.saved
+    ? `Saved ${data.exact} exact and ${data.content} content decisions on ${new Date(data.at).toLocaleString()}.`
+    : 'No remembered decisions yet.';
+  $('#exact-apply').disabled = !data.saved;
+}
+$('#exact-remember').onclick = async () => {
+  try {showPreset(await api('/api/development/remember', {})); toast('Human decisions remembered.');}
+  catch (error) {toast(error.message);}
+};
+$('#exact-apply').onclick = async () => {
+  try {
+    const result = await api('/api/development/apply', {reviewer: $('#exact-development-reviewer').value});
+    showPreset(result.saved);
+    state = await api('/api/state'); token = state.token; render();
+    $('#validation').hidden = true;
+    toast(`Applied ${result.exact_applied} exact and ${result.content_applied} content decisions.`);
+  } catch (error) {toast(error.message);}
+};
+api('/api/state').then(async data => {
+  state = data; token = data.token; selected = data.groups.find(g => g.status === 'pending')?.id; render();
+  try {showPreset(await api('/api/development-decisions'));}
+  catch (error) {$('#exact-development-status').textContent = `Unable to load remembered decisions: ${error.message}. Restart the dashboard server and reload.`;}
+}).catch(error => {
+  $('#empty').textContent = `Unable to load review: ${error.message}`;
+  $('#exact-development-status').textContent = 'Unable to load saved decisions. Reload the dashboard.';
+});

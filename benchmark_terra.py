@@ -7,7 +7,7 @@ from pathlib import Path
 from PIL import Image, ImageOps
 from codex_reviewer import CodexReviewer, object_schema, TEXT, TEXTS
 
-WORK = Path(__file__).parent / "duplicated" / "terra-benchmark"
+WORK = Path(__file__).parent / "benchmarks" / "terra-benchmark"
 SELECTED = [1, 2, 3, 4, 5, 8, 11, 12, 13, 15, 23, 24, 26, 28, 30, 32, 33, 37, 39, 41]
 NULLABLE = {"type": ["string", "null"]}
 FIELDS = ["supplier", "date", "invoice_number", "currency", "subtotal", "tax", "total"]

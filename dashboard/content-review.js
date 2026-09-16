@@ -7,7 +7,7 @@ function showReviewLoading(running, state) {
   $('#content-loading').hidden = !running;
   if (running && state) {
     $('#content-loading-progress').textContent =
-      `${state.units_read} units read · ${state.pairs_screened}/${state.pairs_total} pairs screened. Results are saved as they finish.`;
+      `${state.units_read} units read · ${state.pairs_screened}/${state.pairs_total} possible pairs checked in batches. This is not the number of Codex calls.`;
   }
 }
 
@@ -133,7 +133,7 @@ async function refresh() {
   $('#content-running').hidden = !state.running;
   showReviewLoading(state.running, state);
   $('#content-progress').textContent = state.prepared ?
-    `${state.documents} documents · ${state.units_read} units read · ${state.pairs_screened}/${state.pairs_total} pairs screened` : 'No content review prepared yet.';
+    `${state.documents} documents · ${state.units_read} units read · ${state.pairs_screened}/${state.pairs_total} possible pairs checked in batches` : 'No content review prepared yet.';
   $('#candidate-section').hidden = !state.prepared;
   $('#candidate-count').textContent = `(${state.pairs.length})`;
   list.replaceChildren(...state.pairs.map(candidateCard));
