@@ -1,4 +1,5 @@
 """Temporary fixtures verify coverage, admin gates, and failure handling."""
+import csv
 import json
 import tempfile
 import unittest
@@ -21,7 +22,9 @@ class FakeReviewer:
     def ask(self, prompt, schema, images=()):
         # Deterministic results test orchestration, not model accuracy.
         if schema == EXTRACTION:
-            return {"readable": True, "document_type": "receipt", "references": ["TEST-1"],
+            return {"readable": True, "document_type": "receipt", "invoice_numbers": ["TEST-1"],
+                    "company": [], "brief_description": "fixture",
+                    "references": ["TEST-1"],
                     "parties": [], "dates": [], "amounts_and_currencies": ["MYR 1"],
                     "details": "fixture", "annotations_and_signatures": "none", "limitations": []}
         if schema == SCREEN:
@@ -63,6 +66,47 @@ class WorkflowTests(unittest.TestCase):
         workflow.decide(self.work, index, state, pair, "keep_both", "Admin", "Separate evidence")
         self.assertEqual(workflow.gate(index, state), [])
 
+    def test_inventory_lists_nested_files_and_review_status(self):
+        """Every nested source stays visible through pending and reviewed states."""
+        nested = self.root / "deep" / "deeper"
+        nested.mkdir(parents=True)
+        (self.root / "b.png").rename(nested / "b.png")
+        index, state = self.prepared()
+        path = self.work / "supporting-inventory.csv"
+
+        def rows():
+            with path.open(encoding="utf-8-sig", newline="") as stream:
+                return list(csv.DictReader(stream))
+
+        self.assertEqual(len(rows()), 2)
+        self.assertTrue(any("deep\\deeper" in row["source_path"] or
+                            "deep/deeper" in row["source_path"] for row in rows()))
+        self.assertEqual({row["status"] for row in rows()}, {"extraction_pending"})
+        workflow.run(self.work, index, state, FakeReviewer())
+        self.assertEqual({row["status"] for row in rows()}, {"review_pending"})
+        self.assertTrue(all(row["duplicate_with"] != "[]" for row in rows()))
+        pair = next(iter(state["pairs"]))
+        workflow.decide(self.work, index, state, pair, "keep_both", "Admin", "Different evidence")
+        self.assertEqual({row["status"] for row in rows()}, {"reviewed_keep_both"})
+        self.assertTrue(all(row["duplicate_with"] == "[]" for row in rows()))
+        self.assertEqual({row["invoice_numbers"] for row in rows()}, {'["TEST-1"]'})
+
+    def test_strong_fields_skip_model_screen_but_compare_originals(self):
+        """A local trigger saves screening tokens without granting a verdict."""
+        index, state = self.prepared()
+        calls = []
+
+        class RecordingReviewer(FakeReviewer):
+            def ask(self, prompt, schema, images=()):
+                calls.append(schema)
+                return super().ask(prompt, schema, images)
+
+        workflow.run(self.work, index, state, RecordingReviewer())
+        self.assertNotIn(SCREEN, calls)
+        self.assertEqual(len(state["pairs"]), 1)
+        self.assertTrue(any("Local field match" in row["reason"] for row in state["screens"].values()))
+        self.assertTrue(workflow.gate(index, state))
+
     def test_duplicate_cleanup_requires_survivor(self):
         index, state, pair = self.completed()
         workflow.decide(self.work, index, state, pair, "keep_left", "Admin", "Confirmed same document")
@@ -96,7 +140,15 @@ class WorkflowTests(unittest.TestCase):
     def test_omitted_pairs_cannot_pass(self):
         index, state = self.prepared()
         class OmitReviewer(FakeReviewer):
+            reads = 0
+
             def ask(self, prompt, schema, images=()):
+                if schema == EXTRACTION:
+                    self.reads += 1
+                    result = super().ask(prompt, schema, images)
+                    result["invoice_numbers"] = [f"OTHER-{self.reads}"]
+                    result["references"] = [f"OTHER-{self.reads}"]
+                    return result
                 if schema == SCREEN:
                     return {"comparisons": []}
                 return super().ask(prompt, schema, images)

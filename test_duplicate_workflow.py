@@ -59,6 +59,16 @@ class WorkflowTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             workflow.organize(self.root, self.manifest_path)
 
+    def test_unexpected_review_artifacts_are_not_supporting_files(self):
+        """Only manifest groups contribute files from the review folder."""
+        files = self.organize_pair()
+        artifact = self.base / "duplicated" / "benchmark" / "prompt.txt"
+        artifact.parent.mkdir()
+        artifact.write_text("not a supporting document", encoding="utf-8")
+        scanned = workflow.review_files(self.root, self.manifest, self.manifest_path)
+        self.assertEqual(set(scanned), set(files))
+        self.assertTrue(any("Unexpected group" in p for p in self.problems()))
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -78,7 +78,12 @@ def review_files(root, manifest, manifest_path):
     excluded = (manifest_path, destination / "original-locations.csv")
     files = supporting_files(root, excluded)
     if destination.exists() and not destination.is_relative_to(root):
-        files += supporting_files(destination, excluded)
+        for group in sorted({record["Group"] for record in manifest["Files"]}):
+            if Path(group).name != group or group in (".", ".."):
+                raise ValueError("Invalid group name in manifest.")
+            folder = destination / group
+            if folder.is_dir():
+                files += supporting_files(folder, excluded)
     return sorted(set(files))
 
 

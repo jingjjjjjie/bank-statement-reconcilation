@@ -13,6 +13,7 @@ from codex_reviewer import CodexReviewer, BudgetReached, EXTRACTION, SCREEN, COM
 from document_reader import extract
 from duplicate_workflow import DEFAULT_MANIFEST, fingerprint, review_files, check as exact_check
 from review_settings import CONFIG_PATH, load_config, content_settings, model_settings, stage_settings, document_stage, revision, validate as validate_config
+from similarity import score as similarity_score
 from supporting_inventory import export as export_inventory
 from token_usage import summary as token_summary
 
@@ -195,7 +196,8 @@ def run(work, index, state, reviewer):
                 key = f"{digest}:{number}"
                 if key not in state["units"]:
                     prompt = ("Extract this entire review unit for later duplicate comparison. "
-                              "Record all references, dates, currencies, totals and line-item detail; "
+                              "Record invoice numbers, company names, and a very brief description when present. "
+                              "Leave missing fields empty; never infer them. Record all references, dates, currencies, totals and line-item detail; "
                               "note unclear text, missing context and signatures.\n" +
                               json.dumps({"location": unit["label"], "text": unit["text"],
                                           "limitation": unit.get("limitation", "")}, ensure_ascii=False))
@@ -205,14 +207,25 @@ def run(work, index, state, reviewer):
                     checkpoint()
                     print(f"Read {digest[:10]} / {unit['label']}", flush=True)
 
-        # Screen every document pair through summaries, in bounded batches.
+        # Strong local matches go straight to original comparison; screen all other pairs.
         ready = [d for d in documents if not documents[d]["error"] and all(
             state["units"].get(f"{d}:{n}", {}).get("readable")
             for n in range(len(documents[d]["units"]))) ]
         summaries = {d: [{"location": unit["label"], **state["units"][f"{d}:{n}"]}
                         for n, unit in enumerate(documents[d]["units"])] for d in ready}
         for position, left in enumerate(ready):
-            rights = [r for r in ready[position + 1:] if pair_key(left, r) not in state["screens"]]
+            rights = []
+            for right in ready[position + 1:]:
+                pair = pair_key(left, right)
+                if pair in state["screens"]:
+                    continue
+                percent, matched = similarity_score(summaries[left], summaries[right])
+                if percent >= 70:
+                    state["screens"][pair] = {"right_id": right, "candidate": True,
+                        "reason": f"Local field match {percent}%: {', '.join(matched)}"}
+                else:
+                    rights.append(right)
+            checkpoint()
             for start in range(0, len(rights), 12):
                 batch = rights[start:start + 12]
                 prompt = ("Screen LEFT against EACH right document. Candidate=true for any possible "

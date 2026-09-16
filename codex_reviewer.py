@@ -22,6 +22,7 @@ TEXT = {"type": "string"}
 TEXTS = {"type": "array", "items": TEXT}
 EXTRACTION = object_schema({
     "readable": {"type": "boolean"}, "document_type": TEXT,
+    "invoice_numbers": TEXTS, "company": TEXTS, "brief_description": TEXT,
     "references": TEXTS, "parties": TEXTS, "dates": TEXTS,
     "amounts_and_currencies": TEXTS, "details": TEXT,
     "annotations_and_signatures": TEXT, "limitations": TEXTS,

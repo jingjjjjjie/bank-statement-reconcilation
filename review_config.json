@@ -1,5 +1,5 @@
 {
-  "pdf_mode": "text_only",
+  "pdf_mode": "auto",
   "pictures_enabled": true,
   "codex_enabled": true,
   "max_calls": 20,
