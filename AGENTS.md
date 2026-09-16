@@ -1,9 +1,12 @@
-for now keep everything clean and concise, for coding practices, please keep the code to be minimal ,readable, and leave short and concise comments for every block.
+# Development contract
 
-Use Python for development.
+Read this file before starting any task in this workspace. Apply these rules to every instruction and change made here. If a task conflicts with this contract, follow the higher-priority instruction and make the conflict clear.
 
-Default all workflow LLM reasoning and vision to `gpt-5.6-sol` unless explicitly overridden for a benchmark or by the user.
-
-Keep duplicate-review output in this Development workspace under `duplicated/`, not inside the original supporting-document folder. Preserve original locations in the manifest.
-
-Whenever the application or workflow requires LLM reasoning or vision, use `codex exec` with the existing ChatGPT subscription login. Do not use API keys or a separate paid API connection unless the user explicitly changes this preference. Python should handle deterministic extraction, hashing, validation, and workflow state. Use structured model output, attach images for vision, and record incomplete or failed calls as unresolved. Never treat model output as admin approval to delete files.
+- Keep work clean and concise. Write minimal, readable Python code. Give every function a short, clear docstring or comment explaining its purpose.
+- Use Python for development.
+- Follow sound Git practice: inspect the working tree before editing, keep changes scoped, run relevant checks, review the diff, and commit only intended files with a clear message. Preserve unrelated work and avoid rewriting shared history.
+- Default workflow LLM reasoning and vision to `gpt-5.6-sol`, unless the user or a benchmark explicitly overrides it.
+- Keep duplicate-review output under this workspace's `duplicated/` directory. Preserve original supporting-document locations in the manifest.
+- For application or workflow LLM reasoning or vision, use `codex exec` with the existing ChatGPT subscription login. Do not use API keys or a separate paid API connection unless the user explicitly changes this preference.
+- Use Python for deterministic extraction, hashing, validation, and workflow state. Require structured model output, attach images for vision, and record incomplete or failed calls as unresolved.
+- Never treat model output as admin approval to delete files.
