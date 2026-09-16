@@ -30,24 +30,54 @@ async function sourceAction(action) {
   }
 }
 
-$('#browse-source').onclick = () => sourceAction(async () => {
-  $('#browse-source').disabled = true;
+let browserKind = 'folder';
+let browserPath = null;
+async function browse(path) {
+  const items = $('#browser-items');
+  items.replaceChildren();
+  $('#browser-error').hidden = true;
+  $('#browser-current').textContent = 'Loading folders…';
   try {
-    const result = await api('/api/source/pick', {});
-    if (!result.cancelled) showSource({selected: result.selected});
-  } finally {$('#browse-source').disabled = false;}
+    const query = new URLSearchParams({kind: browserKind});
+    if (path) query.set('path', path);
+    const data = await api('/api/source/browse?' + query);
+    browserPath = data.path;
+    $('#browser-current').textContent = data.path || 'Computer';
+    $('#browser-use').hidden = browserKind !== 'folder' || !data.path;
+    const addItem = (label, target, action) => {
+      const button = node('button', 'browser-item', label);
+      button.type = 'button'; button.onclick = () => action(target); items.append(button);
+    };
+    if (data.path) addItem('↖ Up one level', data.parent, browse);
+    for (const folder of data.folders) addItem('📁 ' + folder.split(/[\\/]/).filter(Boolean).pop(), folder, browse);
+    for (const file of data.files) addItem('📄 ' + file.split(/[\\/]/).pop(), file, async selected => {
+      await sourceAction(async () => {
+        const result = await api('/api/source/bank-select', {path: selected});
+        showSource({bank: result.bank}); $('#path-browser').close();
+      });
+    });
+    if (!data.folders.length && !data.files.length) items.append(node('p', '', 'No folders or PDF files here.'));
+  } catch (error) {
+    $('#browser-error').textContent = error.message;
+    $('#browser-error').hidden = false;
+  }
+}
+function openBrowser(kind) {
+  browserKind = kind;
+  $('#path-browser').showModal();
+  browse(sourceState.active || sourceState.selected?.path || null);
+}
+$('#browse-source').onclick = () => openBrowser('folder');
+$('#browser-close').onclick = () => $('#path-browser').close();
+$('#browser-use').onclick = () => sourceAction(async () => {
+  const result = await api('/api/source/select', {path: browserPath});
+  showSource({selected: result.selected}); $('#path-browser').close();
 });
 $('#select-source').onclick = () => sourceAction(async () => {
   const result = await api('/api/source/select', {path: $('#source-path').value});
   showSource({selected: result.selected});
 });
-$('#browse-bank').onclick = () => sourceAction(async () => {
-  $('#browse-bank').disabled = true;
-  try {
-    const result = await api('/api/source/bank-pick', {});
-    if (!result.cancelled) showSource({bank: result.bank});
-  } finally {$('#browse-bank').disabled = false;}
-});
+$('#browse-bank').onclick = () => openBrowser('bank');
 $('#select-bank').onclick = () => sourceAction(async () => {
   const result = await api('/api/source/bank-select', {path: $('#bank-path').value});
   showSource({bank: result.bank});

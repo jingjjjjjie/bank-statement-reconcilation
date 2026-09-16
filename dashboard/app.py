@@ -16,7 +16,7 @@ WORKSPACE = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(WORKSPACE))
 from duplicate_workflow import check, duplicate_root, fingerprint, supporting_files
 from review_settings import load_config, save_config, revision, content_settings, model_settings, model_catalog
-from source_selection import SourceSelection, choose_bank_pdf, choose_folder
+from source_selection import SourceSelection
 from token_usage import summary as token_summary
 
 
@@ -280,7 +280,7 @@ def handler_for(review, token, sources=None):
                 self.reply(403, {"error": "Local access only"})
                 return
             query = urlparse(self.path)
-            if review is None and query.path not in {"/source", "/source/", "/source.js", "/common.js", "/style.css", "/api/source", "/api/session"}:
+            if review is None and query.path not in {"/source", "/source/", "/source.js", "/common.js", "/style.css", "/api/source", "/api/source/browse", "/api/session"}:
                 self.send_response(302)
                 self.send_header("Location", "/source")
                 self.end_headers()
@@ -300,6 +300,9 @@ def handler_for(review, token, sources=None):
                         self.reply(200, {"active": str(review.root) if review else None,
                                          "selected": sources.inspect(selected) if selected else None,
                                          "bank": sources.inspect_bank(bank) if bank else None})
+                    elif query.path == "/api/source/browse":
+                        self.reply(200, sources.browse(params.get("path", [None])[0],
+                                                       params.get("kind", ["folder"])[0] == "bank"))
                     elif query.path == "/api/completion":
                         self.reply(200, review.completion())
                     elif query.path == "/api/document":
@@ -367,11 +370,6 @@ def handler_for(review, token, sources=None):
                         save_config(review.config_path, body["config"], body["revision"])
                         self.reply(200, review.settings())
                         return
-                    elif self.path == "/api/source/pick":
-                        path = choose_folder()
-                        self.reply(200, {"cancelled": not bool(path),
-                                         "selected": sources.save(path) if path else None})
-                        return
                     elif self.path == "/api/source/select":
                         self.reply(200, {"selected": sources.save(body["path"])})
                         return
@@ -381,11 +379,6 @@ def handler_for(review, token, sources=None):
                         sources.activate(manifest)
                         review_ref["current"] = next_review
                         self.reply(200, {"active": str(next_review.root), "groups": len(next_review.groups)})
-                        return
-                    elif self.path == "/api/source/bank-pick":
-                        path = choose_bank_pdf()
-                        self.reply(200, {"cancelled": not bool(path),
-                                         "bank": sources.save_bank(path) if path else None})
                         return
                     elif self.path == "/api/source/bank-select":
                         self.reply(200, {"bank": sources.save_bank(body["path"])})

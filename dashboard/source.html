@@ -36,5 +36,11 @@
       <div id="bank-action" class="source-action" hidden><label class="setting-field"><strong>Statement year</strong><input id="bank-year" type="number" min="1900" max="2100" placeholder="2025"></label><p>Extraction creates a bank master for the active review. It does not replace an existing master from a different statement.</p><button id="prepare-bank" class="button dark" type="button">Extract bank statement</button><p id="bank-result" role="status"></p></div>
     </section>
   </main>
+  <dialog id="path-browser" class="path-browser" aria-label="Browse local files">
+    <div class="browser-heading"><div><strong>Browse this computer</strong><p id="browser-current">Loading folders…</p></div><button id="browser-close" class="button secondary" type="button">Close</button></div>
+    <div id="browser-error" class="validation" role="alert" hidden></div>
+    <div id="browser-items" class="browser-items"></div>
+    <div class="browser-footer"><button id="browser-use" class="button dark" type="button" hidden>Use this folder</button></div>
+  </dialog>
 </body>
 </html>

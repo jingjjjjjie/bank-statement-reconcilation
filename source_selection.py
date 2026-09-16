@@ -1,45 +1,10 @@
 """Select a local supporting folder and create an isolated review when requested."""
-import base64
 import hashlib
 import json
-import subprocess
+import string
 from pathlib import Path
 
 from duplicate_workflow import fingerprint, organize, supporting_files
-
-
-def _choose_path(dialog_type):
-    """Open a native Windows picker without requiring Tk in the Python runtime."""
-    setup = ("$dialog = New-Object System.Windows.Forms.FolderBrowserDialog; "
-             "$dialog.Description = 'Select supporting documents folder'; "
-             "$dialog.ShowNewFolderButton = $false") if dialog_type == "folder" else (
-             "$dialog = New-Object System.Windows.Forms.OpenFileDialog; "
-             "$dialog.Title = 'Select bank statement PDF'; "
-             "$dialog.Filter = 'PDF files (*.pdf)|*.pdf'; "
-             "$dialog.CheckFileExists = $true")
-    selected = "$dialog.SelectedPath" if dialog_type == "folder" else "$dialog.FileName"
-    script = ("Add-Type -AssemblyName System.Windows.Forms; " + setup + "; "
-              "if ($dialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) { "
-              f"[Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes({selected})) }}")
-    try:
-        result = subprocess.run(["powershell.exe", "-NoProfile", "-STA", "-Command", script],
-                                capture_output=True, text=True, encoding="utf-8", errors="replace",
-                                check=False, timeout=120)
-    except subprocess.TimeoutExpired as error:
-        raise RuntimeError("Folder picker did not respond; enter the full path instead") from error
-    if result.returncode:
-        raise RuntimeError("Windows folder picker failed: " + result.stderr.strip())
-    return base64.b64decode(result.stdout.strip()).decode("utf-16-le") if result.stdout.strip() else ""
-
-
-def choose_folder():
-    """Open the system folder picker on the computer running the dashboard."""
-    return _choose_path("folder")
-
-
-def choose_bank_pdf():
-    """Open the system file picker for a bank-statement PDF."""
-    return _choose_path("file")
 
 
 class SourceSelection:
@@ -58,6 +23,21 @@ class SourceSelection:
         if not self.selection.exists():
             return None
         return Path(json.loads(self.selection.read_text(encoding="utf-8"))["path"])
+
+    def browse(self, path=None, pdfs=False):
+        """List one local directory for the dashboard's in-page picker."""
+        if not path:
+            roots = [str(Path(f"{letter}:\\")) for letter in string.ascii_uppercase
+                     if Path(f"{letter}:\\").is_dir()]
+            return {"path": None, "parent": None, "folders": roots, "files": []}
+        folder = Path(path).expanduser().resolve(strict=True)
+        if not folder.is_dir():
+            raise ValueError("Choose a folder")
+        entries = sorted(folder.iterdir(), key=lambda item: item.name.casefold())
+        folders = [str(item) for item in entries if item.is_dir()]
+        files = [str(item) for item in entries if item.is_file() and item.suffix.lower() == ".pdf"] if pdfs else []
+        parent = str(folder.parent) if folder.parent != folder else None
+        return {"path": str(folder), "parent": parent, "folders": folders, "files": files}
 
     def inspect(self, path):
         """Validate and count a source without moving or uploading files."""

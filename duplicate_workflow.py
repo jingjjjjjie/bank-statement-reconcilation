@@ -149,6 +149,8 @@ def check(root, manifest, manifest_path):
             problems.append(f"{name}: remaining file does not match original content")
     if destination.exists():
         for folder in destination.iterdir():
+            if folder.name == "projects" and destination == manifest_path.resolve().parent / "duplicated":
+                continue
             if folder.is_dir() and folder.name not in expected:
                 problems.append(f"Unexpected group: {folder.name}")
     remaining = duplicate_groups(review_files(root, manifest, manifest_path))

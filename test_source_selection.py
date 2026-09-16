@@ -1,34 +1,32 @@
 """Verify source choices stay read-only until an explicit workflow action."""
-import base64
 import tempfile
 import threading
 import unittest
 import urllib.request
+from urllib.parse import urlencode
 import json
 from http.server import ThreadingHTTPServer
 from pathlib import Path
 from unittest.mock import patch
 
-from duplicate_workflow import fingerprint
-from source_selection import SourceSelection, choose_bank_pdf, choose_folder
+from duplicate_workflow import check, fingerprint, organize
+from source_selection import SourceSelection
 from dashboard.app import handler_for
 
 
 class SourceSelectionTests(unittest.TestCase):
-    def test_native_pickers_do_not_require_tkinter(self):
-        """Decode Windows picker paths and preserve cancelled selections."""
-        path = r"C:\Users\Example\桌面\Documents"
-        encoded = base64.b64encode(path.encode("utf-16-le")).decode("ascii")
-        with patch("source_selection.subprocess.run") as run:
-            run.return_value.returncode = 0
-            run.return_value.stdout = encoded + "\n"
-            self.assertEqual(choose_folder(), path)
-            self.assertIn("FolderBrowserDialog", run.call_args.args[0][-1])
-            self.assertNotIn("Hidden", run.call_args.args[0])
-            self.assertEqual(run.call_args.kwargs["timeout"], 120)
-            run.return_value.stdout = ""
-            self.assertEqual(choose_bank_pdf(), "")
-            self.assertIn("OpenFileDialog", run.call_args.args[0][-1])
+    def test_in_page_browser_lists_folders_and_pdfs(self):
+        """Browse one directory without opening a desktop dialog or moving files."""
+        with tempfile.TemporaryDirectory() as folder:
+            base = Path(folder)
+            (base / "receipts").mkdir()
+            (base / "statement.pdf").write_bytes(b"fixture")
+            (base / "other.txt").write_text("fixture", encoding="utf-8")
+            sources = SourceSelection(base, base / "dashboard-data")
+            listing = sources.browse(base, pdfs=True)
+            self.assertIn(str(base / "receipts"), listing["folders"])
+            self.assertEqual(listing["files"], [str(base / "statement.pdf")])
+            self.assertEqual(sources.browse(base)["files"], [])
 
     def test_separate_sources_and_bank_master_protection(self):
         """Keep folder and PDF choices separate and preserve an existing bank master."""
@@ -41,12 +39,20 @@ class SourceSelectionTests(unittest.TestCase):
             pdf = base / "statement.pdf"
             pdf.write_bytes(b"%PDF-1.4\nfixture")
             sources = SourceSelection(base, base / "dashboard-data")
+            legacy = base / "legacy"
+            legacy.mkdir()
+            (legacy / "one.txt").write_text("old", encoding="utf-8")
+            (legacy / "two.txt").write_text("old", encoding="utf-8")
+            legacy_manifest = base / "legacy-manifest.json"
+            old_review = organize(legacy, legacy_manifest)
             self.assertEqual(sources.save(documents)["files"], 2)
             self.assertEqual(sources.save_bank(pdf)["path"], str(pdf.resolve()))
             self.assertTrue((documents / "a.txt").exists())
             manifest, _ = sources.start()
             self.assertTrue(manifest.is_file())
             self.assertFalse((documents / "a.txt").exists())
+            self.assertFalse(any("Unexpected group: projects" in item for item in
+                                 check(legacy, old_review, legacy_manifest)))
             sources.activate(manifest)
             self.assertEqual(sources.active_manifest(base / "unused.json"), manifest)
 
@@ -74,8 +80,8 @@ class SourceSelectionTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "PDF"):
                 sources.save_bank(text_file)
 
-    def test_dashboard_opens_picker_without_an_existing_manifest(self):
-        """A fresh workspace reaches source setup before a review exists."""
+    def test_dashboard_browses_without_an_existing_manifest(self):
+        """A fresh workspace can list folders before a review exists."""
         with tempfile.TemporaryDirectory() as folder:
             base = Path(folder)
             sources = SourceSelection(base, base / "dashboard-data")
@@ -88,6 +94,9 @@ class SourceSelectionTests(unittest.TestCase):
                     self.assertEqual(response.url, root + "/source")
                 with urllib.request.urlopen(root + "/api/source") as response:
                     self.assertIsNone(json.load(response)["active"])
+                query = urlencode({"path": str(base), "kind": "bank"})
+                with urllib.request.urlopen(root + "/api/source/browse?" + query) as response:
+                    self.assertEqual(json.load(response)["path"], str(base))
             finally:
                 server.shutdown()
                 server.server_close()

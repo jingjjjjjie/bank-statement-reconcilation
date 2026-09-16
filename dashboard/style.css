@@ -917,6 +917,15 @@ a.nav-item:hover { background: #30483f; }
 .stage-setting { border-top: 1px solid #dce1d7; margin-top: 24px; padding-top: 18px; }
 .stage-setting h3 { margin: 0 0 8px; font-size: 16px; }
 .stage-setting p { margin: 0 0 18px; line-height: 1.6; }
+.path-browser { width: min(720px, 92vw); max-height: 82vh; border: 1px solid var(--line); border-radius: 10px; padding: 22px; color: var(--ink); }
+.path-browser::backdrop { background: #182a2880; }
+.browser-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; }
+.browser-heading strong { font-size: 18px; }
+.browser-heading p { color: var(--muted); overflow-wrap: anywhere; }
+.browser-items { max-height: 52vh; overflow: auto; border: 1px solid var(--line); border-radius: 6px; }
+.browser-item { display: block; width: 100%; padding: 11px 13px; border: 0; border-bottom: 1px solid var(--line); background: white; text-align: left; color: var(--ink); overflow-wrap: anywhere; }
+.browser-item:hover, .browser-item:focus-visible { background: var(--mint); }
+.browser-footer { display: flex; justify-content: flex-end; margin-top: 15px; }
 .source-controls { display: flex; align-items: end; gap: 14px; margin-top: 24px; flex-wrap: wrap; }
 .source-controls .setting-field { flex: 1 1 300px; }
 .source-controls .setting-field input { margin-bottom: 0; }
