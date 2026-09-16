@@ -22,7 +22,7 @@ class FakeReviewer:
     def ask(self, prompt, schema, images=()):
         # Deterministic results test orchestration, not model accuracy.
         if schema == EXTRACTION:
-            return {"readable": True, "document_type": "receipt", "invoice_numbers": ["TEST-1"],
+            return {"readable": True, "document_type": "receipt", "receipt_status": "receipt", "invoice_numbers": ["TEST-1"],
                     "company": [], "brief_description": "fixture",
                     "references": ["TEST-1"],
                     "parties": [], "dates": [], "amounts_and_currencies": ["MYR 1"],
@@ -95,6 +95,37 @@ class WorkflowTests(unittest.TestCase):
         self.assertTrue(all(row["duplicate_with"] == "[]" for row in rows()))
         self.assertEqual({row["invoice_numbers"] for row in rows()}, {'["TEST-1"]'})
         self.assertEqual({row["combined_total"] for row in rows()}, {'{"MYR": "1.00"}'})
+
+    def test_unsupported_and_exact_copies_remain_listed(self):
+        """List every original while reviewing only accepted formats."""
+        nested = self.root / "deep" / "deeper"
+        nested.mkdir(parents=True)
+        (nested / "notes.txt").write_text("not a receipt", encoding="utf-8")
+        (nested / "copy.png").write_bytes((self.root / "a.png").read_bytes())
+        index, state = self.prepared()
+        with (self.work / "supporting-inventory.csv").open(encoding="utf-8-sig", newline="") as stream:
+            rows = list(csv.DictReader(stream))
+        self.assertEqual(len(rows), 4)
+        self.assertEqual(len([row for row in rows if row["original_path"].endswith(".png")]), 3)
+        self.assertEqual(len([row for row in rows if row["exact_duplicate_with"] != "[]"]), 2)
+        unsupported = next(row for row in rows if row["original_path"].endswith("notes.txt"))
+        self.assertEqual(unsupported["status"], "not_accepted")
+        self.assertEqual(unsupported["format_status"], "not_accepted")
+        self.assertEqual(unsupported["receipt_status"], "")
+        self.assertFalse(any("notes.txt" in doc["paths"][0] and doc["units"] for doc in index["documents"].values()))
+
+    def test_unsupported_format_does_not_block_review(self):
+        """An inventoried unsupported file requires no model call or verdict."""
+        (self.root / "notes.txt").write_text("notes", encoding="utf-8")
+        index, state = self.prepared()
+        workflow.run(self.work, index, state, FakeReviewer())
+        pair = next(iter(state["pairs"]))
+        workflow.decide(self.work, index, state, pair, "keep_both", "Admin", "Different evidence")
+        self.assertEqual(workflow.gate(index, state), [])
+        with (self.work / "supporting-inventory.csv").open(encoding="utf-8-sig", newline="") as stream:
+            rows = list(csv.DictReader(stream))
+        self.assertEqual(next(row for row in rows if row["file_format"] == ".txt")["status"], "not_accepted")
+        self.assertEqual({row["receipt_status"] for row in rows if row["file_format"] == ".png"}, {"receipt"})
 
     def test_strong_fields_skip_model_screen_but_compare_originals(self):
         """A local trigger saves screening tokens without granting a verdict."""

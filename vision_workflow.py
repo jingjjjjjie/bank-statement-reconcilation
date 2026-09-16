@@ -18,6 +18,7 @@ from supporting_inventory import export as export_inventory
 from token_usage import summary as token_summary
 
 DEFAULT_WORK = Path(__file__).with_name("review")
+ACCEPTED_SUFFIXES = {".pdf", ".png", ".jpg", ".jpeg", ".tif", ".tiff", ".webp", ".bmp", ".xlsx"}
 
 
 class ReviewPending(ValueError):
@@ -68,16 +69,17 @@ def prepare(manifest_path, work, config_path=None, refresh=False):
         # Preserve original claim associations even after copies have been moved.
         originals = [r["OriginalPath"] for r in manifest["Files"] if r["SHA256"] == digest]
         item = {"id": digest, "paths": paths, "original_paths": originals,
-                "units": [], "error": None}
-        try:
-            item["units"] = extract(Path(paths[0]), work / "assets" / revision(content_settings(config))[:12] / digest, config)
-            for unit in item["units"]:
-                if unit["image"]:
-                    unit["image_sha256"] = fingerprint(Path(unit["image"]))
-            if fingerprint(Path(paths[0])) != digest:
-                raise ValueError("Source changed during extraction")
-        except Exception as error:
-            item["error"] = f"{type(error).__name__}: {error}"
+                "units": [], "error": None, "accepted": Path(paths[0]).suffix.lower() in ACCEPTED_SUFFIXES}
+        if item["accepted"]:
+            try:
+                item["units"] = extract(Path(paths[0]), work / "assets" / revision(content_settings(config))[:12] / digest, config)
+                for unit in item["units"]:
+                    if unit["image"]:
+                        unit["image_sha256"] = fingerprint(Path(unit["image"]))
+                if fingerprint(Path(paths[0])) != digest:
+                    raise ValueError("Source changed during extraction")
+            except Exception as error:
+                item["error"] = f"{type(error).__name__}: {error}"
         documents[digest] = item
         print(f"Prepared {number}: {Path(paths[0]).name}", flush=True)
     index = {"root": str(root), "manifest": str(manifest_path.resolve()), "documents": documents,
@@ -188,7 +190,7 @@ def run(work, index, state, reviewer):
     try:
         # Vision reads each page/image; structured text supplies cells and paragraphs.
         for digest, document in documents.items():
-            if document["error"]:
+            if document["error"] or not document.get("accepted", True):
                 continue
             for number, unit in enumerate(document["units"]):
                 if unit.get("blocked"):
@@ -201,6 +203,7 @@ def run(work, index, state, reviewer):
                               "For money, list only amounts that contribute to the payable total, each with numeric amount, currency and role: "
                               "line_item, invoice_total, or grand_total. Do not repeat a printed total as a line item. "
                               "If an amount's role or currency is unclear, omit it from money and explain the limitation; "
+                              "Classify receipt_status as receipt only for proof of payment, not_receipt for clearly other documents such as invoices, and unsure when unclear. "
                               "note unclear text, missing context and signatures.\n" +
                               json.dumps({"location": unit["label"], "text": unit["text"],
                                           "limitation": unit.get("limitation", "")}, ensure_ascii=False))
@@ -211,7 +214,7 @@ def run(work, index, state, reviewer):
                     print(f"Read {digest[:10]} / {unit['label']}", flush=True)
 
         # Strong local matches go straight to original comparison; screen all other pairs.
-        ready = [d for d in documents if not documents[d]["error"] and all(
+        ready = [d for d in documents if documents[d].get("accepted", True) and not documents[d]["error"] and all(
             state["units"].get(f"{d}:{n}", {}).get("readable")
             for n in range(len(documents[d]["units"]))) ]
         summaries = {d: [{"location": unit["label"], **state["units"][f"{d}:{n}"]}
@@ -307,6 +310,8 @@ def gate(index, state):
     approved_empty = {f"Unexpected group: {name}" for name in original_groups - active_groups}
     problems.extend(p for p in exact if p not in approved_empty)
     for digest, document in index["documents"].items():
+        if not document.get("accepted", True):
+            continue
         if document["error"]:
             problems.append(f"{digest[:10]}: extraction failed: {document['error']}")
         for n in range(len(document["units"])):
@@ -314,7 +319,8 @@ def gate(index, state):
                 problems.append(f"{digest[:10]} unit {n + 1}: {document['units'][n]['blocked']}")
             if not state["units"].get(f"{digest}:{n}", {}).get("readable"):
                 problems.append(f"{digest[:10]} unit {n + 1}: unread or unreadable")
-    for left, right in itertools.combinations(index["documents"], 2):
+    eligible = [digest for digest, doc in index["documents"].items() if doc.get("accepted", True)]
+    for left, right in itertools.combinations(eligible, 2):
         pair = pair_key(left, right)
         screen = state["screens"].get(pair)
         if screen is None:
@@ -335,13 +341,14 @@ def gate(index, state):
 def report(work, index, state):
     # Markdown is for reading; JSON is the complete machine-readable audit trail.
     documents = index["documents"]
+    eligible_count = sum(doc.get("accepted", True) for doc in documents.values())
     try:
         problems = gate(index, state)
     except ValueError as error:
         problems = [str(error)]
     rows = ["# Pass-two duplicate review", "", f"Status: {'PENDING' if problems else 'COMPLETE'}",
             f"Documents: {len(documents)}; units read: {len(state['units'])}; "
-            f"pairs screened: {len(state['screens'])}/{len(documents) * (len(documents) - 1) // 2}", "",
+            f"pairs screened: {len(state['screens'])}/{eligible_count * (eligible_count - 1) // 2}", "",
             "Model results are review evidence, not proof of duplicate payments. No source files are moved or deleted by pass two.", ""]
     settings = index.get("config", {"pdf_mode": "vision", "pictures_enabled": True})
     rows += [f"Prepared PDF mode: {settings['pdf_mode']}; pictures: {settings['pictures_enabled']}.",
