@@ -48,12 +48,24 @@ class ComparisonPolicyTests(unittest.TestCase):
         right = [unit([("100", "MYR", "grand_total")], invoice="INV-456", company="")]
         self.assertEqual(route(left, right)[0], "model_screen")
 
-    def test_no_reference_needs_two_other_details(self):
-        """Company and date can identify a same-total pair without an invoice."""
+    def test_no_invoice_needs_company_and_particulars(self):
+        """Company and meaningful particulars identify a same-total pair."""
         left = [unit([("100", "MYR", "grand_total")], invoice="")]
         right = [unit([("100", "MYR", "grand_total")], invoice="")]
         left[0]["dates"] = right[0]["dates"] = ["2025-12-03"]
         self.assertEqual(route(left, right)[0], "direct_compare")
+        right[0]["brief_description"] = "Transport fee"
+        self.assertEqual(route(left, right)[0], "model_screen")
+        right[0]["brief_description"] = "Cleaning fee"
+        right[0]["company"] = ["Other company"]
+        self.assertEqual(route(left, right)[0], "model_screen")
+
+    def test_one_generic_particular_word_stays_in_screening(self):
+        """A shared generic word cannot take the fast route."""
+        left = [unit([("100", "MYR", "grand_total")], invoice="")]
+        right = [unit([("100", "MYR", "grand_total")], invoice="")]
+        left[0]["brief_description"] = right[0]["brief_description"] = "Cleaning"
+        self.assertEqual(route(left, right)[0], "model_screen")
 
 
 if __name__ == "__main__":

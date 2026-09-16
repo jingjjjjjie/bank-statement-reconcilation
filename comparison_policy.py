@@ -12,11 +12,9 @@ def normalize(value):
     return "".join(char for char in value if char.isalnum())
 
 
-def values(units, primary, fallback=None):
+def values(units, field):
     """Collect nonempty values across all document units."""
-    entries = [item for unit in units for item in unit.get(primary, [])]
-    if not entries and fallback:
-        entries = [item for unit in units for item in unit.get(fallback, [])]
+    entries = [item for unit in units for item in unit.get(field, [])]
     return {normalize(item) for item in entries if normalize(item)}
 
 
@@ -71,17 +69,14 @@ def route(left, right):
     left_total, right_total = combined_total(left), combined_total(right)
     if left_total is None or left_total != right_total:
         return "model_screen", "Combined total missing, unclear, or different"
-    references = values(left, "invoice_numbers", "references") & values(right, "invoice_numbers", "references")
-    if references:
-        return "direct_compare", "Combined total and invoice/reference match"
-    matches = []
-    if values(left, "company", "parties") & values(right, "company", "parties"):
-        matches.append("company")
-    if values(left, "dates") & values(right, "dates"):
-        matches.append("date")
+    invoices = values(left, "invoice_numbers") & values(right, "invoice_numbers")
+    if invoices:
+        return "direct_compare", "Combined total and invoice number match"
+    companies = values(left, "company") & values(right, "company")
     a, b = descriptions(left), descriptions(right)
-    if a and b and len(a & b) / len(a | b) >= 0.5:
-        matches.append("description")
-    if len(matches) >= 2:
-        return "direct_compare", "Combined total and " + ", ".join(matches) + " match"
-    return "model_screen", "Combined total matches without enough identifying details"
+    particulars_match = a and b and len(a & b) >= 2 and len(a & b) / len(a | b) >= 0.5
+    if companies and particulars_match:
+        date_match = bool(values(left, "dates") & values(right, "dates"))
+        reason = "Combined total, company, and particulars match"
+        return "direct_compare", reason + ("; date also matches" if date_match else "")
+    return "model_screen", "Combined total matches without invoice or matching company and particulars"
