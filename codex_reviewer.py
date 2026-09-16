@@ -56,8 +56,12 @@ class BudgetReached(Exception):
     """Stop between calls while retaining completed work."""
 
 
+class ReviewCancelled(Exception):
+    """Stop the review after a user request without accepting partial calls."""
+
+
 class CodexReviewer:
-    def __init__(self, work, executable=None, model=None, max_calls=20, timeout=240, reasoning="default"):
+    def __init__(self, work, executable=None, model=None, max_calls=20, timeout=240, reasoning="default", cancel_event=None):
         # Keep response caches scoped to model, prompt, schema and image bytes.
         bundled = Path(os.environ.get("LOCALAPPDATA", "")) / "Programs/OpenAI/Codex/bin/codex.exe"
         self.executable = executable or shutil.which("codex") or str(bundled)
@@ -67,6 +71,8 @@ class CodexReviewer:
         self._shared_lock = threading.RLock()
         self._calls = [0]
         self._login_checked = [False]
+        self._cancelled = cancel_event if cancel_event is not None else threading.Event()
+        self._processes = set()
         self.cache = work / "model-cache"
         self.usage_path = work / "token-usage.jsonl"
         self.run_id = uuid4().hex
@@ -85,6 +91,14 @@ class CodexReviewer:
         worker.last_result = None
         return worker
 
+    def cancel(self):
+        """Stop new requests and terminate this review's active Codex calls."""
+        with self._shared_lock:
+            self._cancelled.set()
+            for process in tuple(self._processes):
+                if process.poll() is None:
+                    process.terminate()
+
     def _record(self, entry):
         """Append token events without interleaving parallel writes."""
         with self._shared_lock:
@@ -92,6 +106,8 @@ class CodexReviewer:
 
     def ask(self, prompt, schema, images=()):
         # Content-addressed requests are resumable without repeating successful calls.
+        if self._cancelled.is_set():
+            raise ReviewCancelled("Review stopped by user")
         prompt = RULES + "\n" + prompt
         digest = hashlib.sha256(json.dumps([prompt, schema, self.model, self.reasoning], sort_keys=True).encode())
         for image in images:
@@ -137,6 +153,8 @@ class CodexReviewer:
                  "model": self.model, "reasoning": self.reasoning, "request": folder.name,
                  "events": str(events_path)}
         with self._shared_lock:
+            if self._cancelled.is_set():
+                raise ReviewCancelled("Review stopped by user")
             if self._calls[0] >= self.max_calls:
                 raise BudgetReached("Call limit reached; resume with the same command")
             record(self.usage_path, {**entry, "status": "started"})
@@ -144,12 +162,27 @@ class CodexReviewer:
         process = None
         try:
             with events_path.open("w", encoding="utf-8") as events, (folder / f"exec-{attempt_id}.log").open("w", encoding="utf-8") as log:
-                process = subprocess.run(command, input=prompt, text=True, encoding="utf-8",
-                                         stdout=events, stderr=log, cwd=folder, timeout=self.timeout)
+                process = subprocess.Popen(command, stdin=subprocess.PIPE, text=True, encoding="utf-8",
+                                           stdout=events, stderr=log, cwd=folder)
+                with self._shared_lock:
+                    self._processes.add(process)
+                    if self._cancelled.is_set():
+                        process.terminate()
+                try:
+                    process.communicate(input=prompt, timeout=self.timeout)
+                except subprocess.TimeoutExpired:
+                    process.kill()
+                    process.communicate()
+                    raise
         finally:
+            with self._shared_lock:
+                self._processes.discard(process)
             usage = reported_usage(events_path)
-            self._record({**entry, "status": "finished" if process and process.returncode == 0 else "failed",
+            status = "finished" if process and process.returncode == 0 else "cancelled" if self._cancelled.is_set() else "failed"
+            self._record({**entry, "status": status,
                           "usage": usage})
+        if self._cancelled.is_set() and process.returncode != 0:
+            raise ReviewCancelled("Review stopped by user")
         if process.returncode or not output_path.exists():
             raise ValueError(f"codex exec failed; see {folder / f'exec-{attempt_id}.log'}")
         result = json.loads(output_path.read_text(encoding="utf-8-sig"))

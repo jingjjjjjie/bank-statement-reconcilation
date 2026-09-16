@@ -1,12 +1,22 @@
 /* Pass-two candidate review uses saved model evidence and explicit admin choices. */
 const list = $('#candidate-list');
 let contentReady = false;
+let currentReviewState = null;
 
 function showReviewLoading(running, state) {
   /* Keep the overlay in sync after a click, poll, or page reload. */
   $('#content-loading').hidden = !running;
   if (running && state) {
-    $('#content-loading-progress').textContent = reviewPhase(state).progress;
+    if (state.stop_requested) {
+      $('#content-loading-title').textContent = 'Stopping review';
+      $('#content-loading-progress').textContent = 'Stopping active Codex calls. Completed results remain saved.';
+      $('#stop-content').disabled = true;
+      return;
+    }
+    const phase = reviewPhase(state);
+    $('#content-loading-title').textContent = phase.title;
+    $('#content-loading-progress').textContent = phase.progress;
+    $('#stop-content').disabled = false;
   }
 }
 
@@ -131,6 +141,7 @@ function candidateCard(pair) {
 
 async function refresh() {
   const state = await api('/api/content-review');
+  currentReviewState = state;
   const message = $('#content-message');
   if (!state.exact_ready) {
     showReviewLoading(false);
@@ -160,13 +171,20 @@ async function refresh() {
 }
 
 async function action(path) {
-  if (path === '/api/content/run') showReviewLoading(true);
+  if (path === '/api/content/run') showReviewLoading(true, currentReviewState);
   try { await api(path, {}); resetContentCheck(); await refresh(); }
   catch (error) { showReviewLoading(false); toast(error.message); }
 }
 
 $('#prepare-content').onclick = () => action('/api/content/prepare');
 $('#run-content').onclick = () => action('/api/content/run');
+$('#stop-content').onclick = async () => {
+  $('#stop-content').disabled = true;
+  $('#content-loading-title').textContent = 'Stopping review';
+  $('#content-loading-progress').textContent = 'Stopping active Codex calls. Completed results remain saved.';
+  try {await api('/api/content/stop', {}); await refresh();}
+  catch (error) {$('#stop-content').disabled = false; toast(error.message);}
+};
 $('#check-content').onclick = async () => {
   const button = $('#check-content'); button.disabled = true;
   try {

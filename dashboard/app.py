@@ -521,6 +521,9 @@ def handler_for(review, token, sources=None):
                     elif self.path == "/api/content/run":
                         self.reply(200, content_review.start(review))
                         return
+                    elif self.path == "/api/content/stop":
+                        self.reply(200, content_review.stop(review))
+                        return
                     elif self.path == "/api/content/decide":
                         self.reply(200, content_review.decide(review, body["pair"], body["verdict"],
                                                              body["reviewer"], body["reason"]))

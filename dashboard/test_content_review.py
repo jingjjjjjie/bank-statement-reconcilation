@@ -12,7 +12,7 @@ from unittest.mock import patch
 
 from PIL import Image
 
-from codex_reviewer import COMPARISON, EXTRACTION, SCREEN
+from codex_reviewer import COMPARISON, EXTRACTION, ReviewCancelled, SCREEN
 from dashboard.app import Review, handler_for
 from dashboard import content_review, development
 from duplicate_workflow import organize
@@ -131,6 +131,30 @@ class ContentPageTests(unittest.TestCase):
         self.assertFalse(self.review.content_thread.is_alive())
         self.assertEqual(self.review.content_error, "")
         self.assertEqual(len(content_review.snapshot(self.review)["pairs"]), 1)
+
+    def test_stop_keeps_incomplete_work_pending(self):
+        """A stop request cancels the active batch without saving partial evidence."""
+        content_review.prepare(self.review)
+        started = threading.Event()
+        cancelled = threading.Event()
+
+        class BlockingReviewer(FixtureReviewer):
+            def ask(self, prompt, schema, images=()):
+                started.set()
+                cancelled.wait(timeout=5)
+                raise ReviewCancelled("stopped")
+
+            def cancel(self):
+                cancelled.set()
+
+        with patch("dashboard.content_review.CodexReviewer", side_effect=lambda *args, **kwargs: BlockingReviewer()):
+            content_review.start(self.review)
+            self.assertTrue(started.wait(timeout=5))
+            self.assertTrue(content_review.stop(self.review)["stop_requested"])
+            self.review.content_thread.join(timeout=5)
+        self.assertFalse(self.review.content_thread.is_alive())
+        self.assertEqual(load(self.manifest.parent / "review")[1]["units"], {})
+        self.assertIn("stopped", content_review.snapshot(self.review)["run_error"])
 
 
 if __name__ == "__main__":

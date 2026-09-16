@@ -3,7 +3,7 @@
 import threading
 from pathlib import Path
 
-from codex_reviewer import BudgetReached, CodexReviewer
+from codex_reviewer import BudgetReached, CodexReviewer, ReviewCancelled
 from duplicate_workflow import check, fingerprint
 from review_settings import load_config, stage_settings
 from vision_workflow import current_inventory, decide as save_decision, load, prepare as prepare_review, run, undo_decision
@@ -26,6 +26,7 @@ def snapshot(review):
     result = {"exact_ready": not problems, "exact_problems": problems[:30],
               "prepared": (work / "index.json").is_file(),
               "running": bool(getattr(review, "content_thread", None) and review.content_thread.is_alive()),
+              "stop_requested": bool(getattr(review, "content_cancel", None) and review.content_cancel.is_set()),
               "run_error": getattr(review, "content_error", ""), "pairs": []}
     if problems or not result["prepared"]:
         return result
@@ -85,6 +86,8 @@ def start(review):
     if not (work / "index.json").is_file():
         raise ValueError("Prepare content review first")
     review.content_error = ""
+    review.content_cancel = threading.Event()
+    review.content_engine = None
 
     def worker():
         """Resume saved extraction, screening, and comparison work."""
@@ -92,16 +95,33 @@ def start(review):
             index, state = load(work)
             config = load_config(review.config_path)
             engine = CodexReviewer(work, model=config["model"] or None,
-                                   max_calls=config["max_calls"], reasoning=config["reasoning"])
+                                   max_calls=config["max_calls"], reasoning=config["reasoning"],
+                                   cancel_event=review.content_cancel)
+            review.content_engine = engine
             engine.stage_choices = stage_settings(config)
             run(work, index, state, engine)
         except BudgetReached:
             pass
+        except ReviewCancelled:
+            review.content_error = "Review stopped. Completed results are saved; run again to resume."
         except Exception as error:
             review.content_error = str(error)
+        finally:
+            review.content_engine = None
 
     review.content_thread = threading.Thread(target=worker, daemon=True)
     review.content_thread.start()
+    return snapshot(review)
+
+
+def stop(review):
+    """Cancel active model calls and keep all completed review checkpoints."""
+    if not getattr(review, "content_thread", None) or not review.content_thread.is_alive():
+        raise ValueError("No content review is running")
+    review.content_cancel.set()
+    engine = getattr(review, "content_engine", None)
+    if engine is not None:
+        engine.cancel()
     return snapshot(review)
 
 

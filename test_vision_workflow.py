@@ -7,6 +7,7 @@ import tempfile
 import threading
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 
 from PIL import Image
@@ -14,7 +15,7 @@ from openpyxl import Workbook
 import pymupdf
 
 import vision_workflow as workflow
-from codex_reviewer import BudgetReached, CodexReviewer, EXTRACTION, RULES, SCREEN
+from codex_reviewer import BudgetReached, CodexReviewer, EXTRACTION, ReviewCancelled, RULES, SCREEN
 from document_reader import extract
 from duplicate_workflow import organize
 
@@ -194,6 +195,46 @@ class WorkflowTests(unittest.TestCase):
         reviewer = CodexReviewer(self.work, executable="missing-codex", model=model, max_calls=0)
         self.assertEqual(reviewer.ask(prompt, EXTRACTION), expected)
         self.assertEqual(reviewer.calls, 0)
+
+    def test_cancel_terminates_active_codex_call(self):
+        """Stopping an active request leaves no valid cached result."""
+        started, stopped = threading.Event(), threading.Event()
+
+        class WaitingProcess:
+            def __init__(self, *args, **kwargs):
+                self.returncode = None
+                started.set()
+
+            def poll(self):
+                return self.returncode
+
+            def terminate(self):
+                self.returncode = 1
+                stopped.set()
+
+            def communicate(self, input=None, timeout=None):
+                stopped.wait(timeout=5)
+
+        reviewer = CodexReviewer(self.work, executable="fixture-codex", model="fixture", max_calls=1)
+        failures = []
+
+        def read():
+            try:
+                reviewer.ask("Stop this fixture", EXTRACTION)
+            except Exception as error:
+                failures.append(error)
+
+        with patch("codex_reviewer.subprocess.run", return_value=SimpleNamespace(
+                returncode=0, stdout="chatgpt", stderr="")), patch(
+                "codex_reviewer.subprocess.Popen", WaitingProcess):
+            worker = threading.Thread(target=read)
+            worker.start()
+            self.assertTrue(started.wait(timeout=5))
+            reviewer.cancel()
+            worker.join(timeout=5)
+        self.assertFalse(worker.is_alive())
+        self.assertIsInstance(failures[0], ReviewCancelled)
+        self.assertFalse(reviewer.last_result.exists())
 
     def test_parallel_units_complete_and_checkpoint(self):
         """Read independent units together and save both validated results."""

@@ -6,6 +6,7 @@ import threading
 import unittest
 from http.server import ThreadingHTTPServer
 from pathlib import Path
+from types import SimpleNamespace
 
 from PIL import Image
 from playwright.sync_api import sync_playwright, expect
@@ -49,11 +50,14 @@ class ContentBrowserTests(unittest.TestCase):
                     page.goto(f"http://127.0.0.1:{server.server_port}/content-review")
                     expect(page.locator(".content-pair")).to_have_count(1)
                     running = threading.Event()
+                    review.content_cancel = threading.Event()
+                    review.content_engine = SimpleNamespace(cancel=running.set)
                     review.content_thread = threading.Thread(target=running.wait, daemon=True)
                     review.content_thread.start()
                     page.reload()
                     expect(page.locator("#content-loading")).to_be_visible()
-                    running.set()
+                    expect(page.locator("#content-loading-title")).to_have_text("Comparing candidate documents")
+                    page.get_by_role("button", name="Stop review").click()
                     review.content_thread.join(timeout=2)
                     page.reload()
                     expect(page.locator("#content-loading")).to_be_hidden()

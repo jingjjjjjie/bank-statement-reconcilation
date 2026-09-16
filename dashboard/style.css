@@ -1070,6 +1070,8 @@ main { width: min(100%, 1600px); margin: 0 auto; padding: 0 clamp(20px, 3vw, 48p
 .content-loading-card { width: min(440px, 100%); padding: 32px; border-radius: 12px; background: white; text-align: center; box-shadow: 0 20px 60px rgba(0, 0, 0, .2); }
 .content-loading-card h2 { margin: 16px 0 8px; }
 .content-loading-card p { margin: 0 0 10px; }
+.content-loading-card .button { margin: 8px 0 14px; }
+.content-loading-card small { display: block; }
 .content-spinner { display: inline-block; width: 44px; height: 44px; border: 4px solid var(--line); border-top-color: var(--green); border-radius: 50%; animation: content-spin .8s linear infinite; }
 @keyframes content-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .content-spinner { animation: none; } }
