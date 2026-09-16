@@ -43,7 +43,11 @@ def snapshot(review):
                                 "reason": screen["reason"], "comparison": comparison,
                                 "decision": state["decisions"].get(pair)})
     result["documents"] = len(documents)
+    result["documents_read"] = sum(bool(doc["units"]) and not doc["error"] and
+                                   all(f"{digest}:{n}" in state["units"] for n in range(len(doc["units"])))
+                                   for digest, doc in documents.items() if doc.get("accepted", True))
     result["units_read"] = len(state["units"])
+    result["units_total"] = sum(len(doc["units"]) for doc in documents.values() if doc.get("accepted", True))
     result["pairs_screened"] = len(state["screens"])
     eligible = sum(doc.get("accepted", True) for doc in documents.values())
     result["pairs_total"] = eligible * (eligible - 1) // 2

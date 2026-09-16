@@ -1,6 +1,7 @@
 """Temporary fixtures verify coverage, admin gates, and failure handling."""
 import csv
 import copy
+import hashlib
 import json
 import tempfile
 import threading
@@ -13,7 +14,7 @@ from openpyxl import Workbook
 import pymupdf
 
 import vision_workflow as workflow
-from codex_reviewer import BudgetReached, EXTRACTION, SCREEN
+from codex_reviewer import BudgetReached, CodexReviewer, EXTRACTION, RULES, SCREEN
 from document_reader import extract
 from duplicate_workflow import organize
 
@@ -178,6 +179,21 @@ class WorkflowTests(unittest.TestCase):
             workflow.run(self.work, index, state, LimitedReviewer())
         self.assertTrue(workflow.gate(index, state))
         self.assertTrue((self.work / "report.md").exists())
+
+    def test_refresh_keeps_validated_model_cache(self):
+        """Repeated testing reuses an identical completed Codex response."""
+        self.prepared()
+        prompt, model = "Cached fixture extraction", "fixture"
+        key = hashlib.sha256(json.dumps([RULES + "\n" + prompt, EXTRACTION, model, "default"],
+                                        sort_keys=True).encode()).hexdigest()
+        folder = self.work / "model-cache" / key
+        folder.mkdir(parents=True)
+        expected = FakeReviewer().ask(prompt, EXTRACTION)
+        (folder / "result.json").write_text(json.dumps(expected), encoding="utf-8")
+        workflow.prepare(self.manifest, self.work, refresh=True)
+        reviewer = CodexReviewer(self.work, executable="missing-codex", model=model, max_calls=0)
+        self.assertEqual(reviewer.ask(prompt, EXTRACTION), expected)
+        self.assertEqual(reviewer.calls, 0)
 
     def test_parallel_units_complete_and_checkpoint(self):
         """Read independent units together and save both validated results."""

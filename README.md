@@ -107,7 +107,7 @@ Rerun the same command to resume. It reads every unit, screens every unique docu
 
 `--max-calls` bounds new calls per invocation (default 20); `--timeout` bounds each call (default 240 seconds). Cached responses are keyed by prompt, schema, model selector and image contents. The current corpus has 136 unique documents, so full coverage involves 9,180 pair screens, batched into fewer model calls, plus page reads and candidate comparisons. A limited run does not complete the review.
 
-Read `review/report.md`; `report.json` contains full coverage and evidence. `review/model-cache` holds prompts, validated responses and CLI logs. Failed, timed-out, unreadable or skipped work cannot pass the final gate. Keep generated review files private with the source documents.
+Read `review/report.md`; `report.json` contains full coverage and evidence. Extraction finishes before pair screening starts. A progress unit is one page, image frame or spreadsheet sheet/chunk, so there can be more units than files. `review/state.json` resumes completed units and comparisons; `review/model-cache` holds prompts, validated responses and CLI logs and remains available after `prepare --refresh` for development tests. Identical prompt, schema, model, reasoning and image bytes reuse a successful response without a new Codex call. Changing any of those inputs requires a new call. Failed, timed-out, unreadable or skipped work cannot pass the final gate. Keep generated review files private with the source documents.
 
 Record an admin decision using the full pair ID from the report:
 

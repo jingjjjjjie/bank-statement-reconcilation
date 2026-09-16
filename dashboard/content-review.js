@@ -6,9 +6,16 @@ function showReviewLoading(running, state) {
   /* Keep the overlay in sync after a click, poll, or page reload. */
   $('#content-loading').hidden = !running;
   if (running && state) {
-    $('#content-loading-progress').textContent =
-      `${state.units_read} units read · ${state.pairs_screened}/${state.pairs_total} possible pairs checked in batches. This is not the number of Codex calls.`;
+    $('#content-loading-progress').textContent = reviewProgress(state);
   }
+}
+
+function reviewProgress(state) {
+  /* Show the active stage rather than the later pair count during extraction. */
+  if (state.units_read < state.units_total) {
+    return `Extracting: ${state.documents_read}/${state.documents} documents read · ${state.units_read}/${state.units_total} pages, images or sheets. Completed reads are saved.`;
+  }
+  return `Checking possible duplicates: ${state.pairs_screened}/${state.pairs_total} pairs screened in batches. Completed checks are saved.`;
 }
 
 /* A changed decision needs a fresh completion check. */
@@ -133,7 +140,7 @@ async function refresh() {
   $('#content-running').hidden = !state.running;
   showReviewLoading(state.running, state);
   $('#content-progress').textContent = state.prepared ?
-    `${state.documents} documents · ${state.units_read} units read · ${state.pairs_screened}/${state.pairs_total} possible pairs checked in batches` : 'No content review prepared yet.';
+    reviewProgress(state) : 'No content review prepared yet.';
   $('#candidate-section').hidden = !state.prepared;
   $('#candidate-count').textContent = `(${state.pairs.length})`;
   list.replaceChildren(...state.pairs.map(candidateCard));

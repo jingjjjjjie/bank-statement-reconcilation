@@ -82,10 +82,16 @@ class ContentPageTests(unittest.TestCase):
             self.assertIn(b"Review possible copies", response.read())
         self.assertFalse(get("/api/content-review")["prepared"])
         post("/api/content/prepare", {})
-        self.assertTrue(get("/api/content-review")["prepared"])
+        prepared = get("/api/content-review")
+        self.assertTrue(prepared["prepared"])
+        self.assertEqual(prepared["documents_read"], 0)
+        self.assertGreater(prepared["units_total"], 0)
         work = self.manifest.parent / "review"
         index, state = load(work)
         run(work, index, state, FixtureReviewer())
+        extracted = get("/api/content-review")
+        self.assertEqual(extracted["documents_read"], extracted["documents"])
+        self.assertEqual(extracted["units_read"], extracted["units_total"])
         candidate = get("/api/content-review")["pairs"][0]
         self.assertIsNone(candidate["decision"])
         with self.assertRaises(urllib.error.HTTPError) as error:
