@@ -16,10 +16,10 @@ from urllib.parse import parse_qs, urlparse
 WORKSPACE = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(WORKSPACE))
 from duplicate_workflow import check, duplicate_root, fingerprint, supporting_files
-from review_settings import load_config, save_config, revision, content_settings, model_settings, model_catalog
+from review_settings import DEFAULTS, load_config, save_config, revision, content_settings, model_settings, model_catalog
 from source_selection import SourceSelection
 from token_usage import summary as token_summary
-from dashboard import content_review
+from dashboard import content_review, development
 
 
 def write_json(path, data):
@@ -72,7 +72,7 @@ class Review:
                 state = json.loads(state_path.read_text(encoding="utf-8"))
                 if state.get("model_config") and model_settings(state["model_config"]) != model_settings(config):
                     refresh = True
-        return {"config": config, "revision": revision(config), "requires_refresh": refresh,
+        return {"config": config, "defaults": DEFAULTS, "revision": revision(config), "requires_refresh": refresh,
                 "token_usage": token_summary(self.manifest_path.parent / "review" / "token-usage.jsonl"),
                 "models": model_catalog()}
 
@@ -390,6 +390,8 @@ def handler_for(review, token, sources=None):
                         self.reply(200, workflow_guide(review))
                     elif query.path == "/api/config":
                         self.reply(200, review.settings())
+                    elif query.path == "/api/development-decisions":
+                        self.reply(200, development.snapshot(review))
                     elif query.path == "/api/source":
                         selected = sources.selected()
                         bank = sources.selected_bank()
@@ -489,6 +491,12 @@ def handler_for(review, token, sources=None):
                     elif self.path == "/api/config":
                         save_config(review.config_path, body["config"], body["revision"])
                         self.reply(200, review.settings())
+                        return
+                    elif self.path == "/api/development/remember":
+                        self.reply(200, development.remember(review))
+                        return
+                    elif self.path == "/api/development/apply":
+                        self.reply(200, development.apply(review, body["reviewer"]))
                         return
                     elif self.path == "/api/content/prepare":
                         self.reply(200, content_review.prepare(review))

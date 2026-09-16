@@ -4,7 +4,7 @@ const stages = [
   ['pdf', 'PDF reading', 'Uses the PDF processing option above: extracted text, vision fallback, or full vision.'],
   ['images', 'JPG / image reading', 'Vision only for now, including PNG and other supported images. No separate OCR step. Picture processing must be on.'],
   ['excel', 'Excel reading', 'Python extracts cells, formulas and cached values from XLSX files. This model reads that text and any allowed embedded pictures.'],
-  ['word', 'Word reading', 'Reads extracted DOCX text and any allowed embedded pictures.'],
+  ['word', 'Word reading (inactive)', 'DOCX files are currently listed as not accepted. This setting is retained for future use.'],
   ['comparison', 'Document comparison', 'Screens summaries and compares candidate originals across all file types, including PDF against JPG. May use vision when originals contain pictures.']
 ];
 function callExample() {
@@ -56,6 +56,7 @@ function showSettings(data) {
   }
   $('#settings-refresh').hidden = !data.requires_refresh;
   $('#settings-fields').disabled = false;
+  $('#use-defaults').disabled = false;
   $('#settings-error').hidden = true;
   dirty = false;
   $('#save-state').textContent = 'All settings saved';
@@ -70,6 +71,16 @@ function markDirty() {
 }
 $('#settings-form').oninput = markDirty;
 $('#discard-settings').onclick = () => showSettings(savedSettings);
+$('#use-defaults').onclick = () => {
+  if (!savedSettings) return;
+  const defaults = savedSettings.defaults;
+  $('#pdf-mode').value = defaults.pdf_mode;
+  $('#pictures-enabled').checked = defaults.pictures_enabled;
+  $('#codex-enabled').checked = defaults.codex_enabled;
+  $('#max-calls').value = defaults.max_calls;
+  renderStages({...savedSettings, config: defaults});
+  markDirty();
+};
 window.addEventListener('beforeunload', event => {if (dirty) {event.preventDefault(); event.returnValue = '';}});
 
 /* Preserve backend validation and stale-tab protection when saving. */
@@ -89,3 +100,21 @@ $('#settings-form').onsubmit = async event => {
   }
 };
 Promise.all([api('/api/session'), api('/api/config')]).then(([session, config]) => {token = session.token; showSettings(config);}).catch(error => {$('#settings-error').hidden = false; $('#settings-error').textContent = error.message; $('#save-state').textContent = 'Unable to load settings';});
+function showDevelopment(data) {
+  $('#development-status').textContent = data.saved
+    ? `Saved ${data.exact} exact and ${data.content} content decisions on ${new Date(data.at).toLocaleString()}.`
+    : 'No remembered decisions yet.';
+  $('#apply-decisions').disabled = !data.saved;
+}
+$('#remember-decisions').onclick = async () => {
+  try {showDevelopment(await api('/api/development/remember', {})); toast('Human decisions remembered.');}
+  catch (error) {toast(error.message);}
+};
+$('#apply-decisions').onclick = async () => {
+  try {
+    const result = await api('/api/development/apply', {reviewer: $('#development-reviewer').value});
+    showDevelopment(result.saved);
+    toast(`Applied ${result.exact_applied} exact and ${result.content_applied} content decisions.`);
+  } catch (error) {toast(error.message);}
+};
+api('/api/development-decisions').then(showDevelopment).catch(error => {$('#development-status').textContent = error.message;});

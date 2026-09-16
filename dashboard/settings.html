@@ -20,7 +20,7 @@
   </aside>
   <main class="settings-page">
     <header><div class="breadcrumb">Workspace <span>/</span> Settings</div><a class="header-settings" href="/">← Back to review</a></header>
-    <section class="page-heading"><div><div class="eyebrow">WORKFLOW CONFIGURATION</div><h1>Review settings</h1><p>Configure document processing, model selection, and request limits.</p></div></section>
+    <section class="page-heading"><div><div class="eyebrow">WORKFLOW CONFIGURATION</div><h1>Review settings</h1><p>Configure document processing, model selection, and request limits. Exact duplicates use fixed byte checks; these defaults control content review.</p></div></section>
     <div id="settings-error" class="validation" role="alert" hidden></div>
     <form id="settings-form">
       <fieldset id="settings-fields" disabled>
@@ -57,8 +57,13 @@
         </section>
       </fieldset>
       <div id="settings-refresh" class="validation" hidden>Prepared inputs need refreshing before the next content review. Previous metadata and decisions are archived.<code class="block-code">.tools\python\python.exe vision_workflow.py prepare --refresh</code></div>
-      <div class="settings-savebar"><div><strong id="save-state" role="status" aria-live="polite">Loading settings…</strong><p>Saving settings does not start a review or make Codex calls.</p></div><div><button type="button" class="button secondary" id="discard-settings" disabled>Discard changes</button><button type="submit" class="button dark" id="save-settings" disabled>Save settings</button></div></div>
+      <div class="settings-savebar"><div><strong id="save-state" role="status" aria-live="polite">Loading settings…</strong><p>Saving settings does not start a review or make Codex calls.</p></div><div><button type="button" class="button secondary" id="use-defaults" disabled>Use testing defaults</button><button type="button" class="button secondary" id="discard-settings" disabled>Discard changes</button><button type="submit" class="button dark" id="save-settings" disabled>Save settings</button></div></div>
     </form>
+    <section class="settings-card"><h2>Development decisions</h2><p>Save your human decisions from both duplicate passes. Apply them only to the same original paths and unchanged file hashes after you click the button. Content decisions require completed comparisons.</p>
+      <p id="development-status" role="status">Loading remembered decisions…</p>
+      <label class="setting-field"><strong>Your name for replayed content decisions</strong><input id="development-reviewer" autocomplete="name" placeholder="Admin name"></label>
+      <div class="content-actions"><button class="button secondary" id="remember-decisions" type="button">Remember current decisions</button><button class="button secondary" id="apply-decisions" type="button">Apply remembered decisions</button></div>
+    </section>
     <footer class="page-footer"><span>BANK STATEMENT RECONCILIATION / SETTINGS</span><span>Saved in Development/review_config.json</span></footer>
   </main>
   <div id="toast" role="status" aria-live="polite" hidden></div>

@@ -10,6 +10,7 @@ from http.server import ThreadingHTTPServer
 from unittest.mock import patch
 
 from dashboard.app import Review, handler_for, workflow_guide
+from dashboard import development
 from duplicate_workflow import organize, check
 from token_usage import record
 
@@ -81,6 +82,18 @@ class DashboardTests(unittest.TestCase):
         restarted = Review(self.manifest, self.base / "dashboard-data")
         restarted.undo(self.group)
         self.assertEqual(restarted.snapshot()["groups"][0]["status"], "pending")
+
+    def test_development_preset_replays_only_matching_exact_choice(self):
+        """A named click restores a saved human choice on unchanged files."""
+        self.review.keep(self.group, self.ids[1])
+        self.assertEqual(development.remember(self.review)["exact"], 1)
+        self.review.undo(self.group)
+        with self.assertRaisesRegex(ValueError, "name"):
+            development.apply(self.review, "")
+        result = development.apply(self.review, "Admin")
+        self.assertEqual(result["exact_applied"], 1)
+        self.assertEqual(self.review.snapshot()["groups"][0]["kept"], self.ids[1])
+        self.assertEqual(development.apply(self.review, "Admin")["exact_applied"], 0)
 
     def test_completion_requires_bank_matching_and_reports_tokens(self):
         """Release final totals only after all workflow gates are complete."""

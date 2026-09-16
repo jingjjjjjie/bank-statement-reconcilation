@@ -12,7 +12,7 @@ The existing supporting files have already been organized. Do not run organize a
 .tools\python\python.exe dashboard/app.py
 ```
 
-Open **http://127.0.0.1:8765** to compare copies, choose which one to keep, undo choices, and validate pass one. Other copies move to recoverable storage under `dashboard/.data/recovery`, outside the active duplicate groups. Webpage and server code live in `dashboard/`. See [dashboard instructions](dashboard/README.md). No Codex calls are made by the dashboard.
+Open **http://127.0.0.1:8765** to compare copies, choose which one to keep, undo choices, and validate pass one. Other copies move to recoverable storage under `dashboard/.data/recovery`, outside the active duplicate groups. Webpage and server code live in `dashboard/`. See [dashboard instructions](dashboard/README.md). The Settings page has development buttons for testing defaults and for remembering and explicitly reapplying human duplicate decisions. Saving settings and using those buttons make no Codex calls.
 
 ### Review settings
 

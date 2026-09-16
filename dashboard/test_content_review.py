@@ -14,7 +14,7 @@ from PIL import Image
 
 from codex_reviewer import COMPARISON, EXTRACTION, SCREEN
 from dashboard.app import Review, handler_for
-from dashboard import content_review
+from dashboard import content_review, development
 from duplicate_workflow import organize
 from vision_workflow import load, run
 
@@ -95,12 +95,16 @@ class ContentPageTests(unittest.TestCase):
              "reviewer": "Admin", "reason": "Same complete document"})
         decided = get("/api/content-review")["pairs"][0]
         self.assertEqual(decided["decision"]["reviewer"], "Admin")
+        self.assertEqual(post("/api/development/remember", {})["content"], 1)
         post("/api/content/undo", {"pair": candidate["pair"], "reviewer": "Admin",
              "reason": "Need to inspect the source again"})
         self.assertIsNone(get("/api/content-review")["pairs"][0]["decision"])
         _, reverted = load(work)
         self.assertIsNone(reverted["decision_history"][-1]["verdict"])
         self.assertTrue(reverted["decision_history"][-1]["previous"])
+        replayed = post("/api/development/apply", {"reviewer": "Tester"})
+        self.assertEqual(replayed["content_applied"], 1)
+        self.assertEqual(get("/api/content-review")["pairs"][0]["decision"]["reviewer"], "Tester")
         self.assertTrue(all(Path(path).is_file() for document in index["documents"].values()
                             for path in document["paths"]))
 
