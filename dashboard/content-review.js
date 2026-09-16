@@ -6,16 +6,22 @@ function showReviewLoading(running, state) {
   /* Keep the overlay in sync after a click, poll, or page reload. */
   $('#content-loading').hidden = !running;
   if (running && state) {
-    $('#content-loading-progress').textContent = reviewProgress(state);
+    $('#content-loading-progress').textContent = reviewPhase(state).progress;
   }
 }
 
-function reviewProgress(state) {
-  /* Show the active stage rather than the later pair count during extraction. */
+function reviewPhase(state) {
+  /* Name the work Codex is doing now, including after a page reload. */
   if (state.units_read < state.units_total) {
-    return `Extracting: ${state.documents_read}/${state.documents} documents read · ${state.units_read}/${state.units_total} pages, images or sheets. Completed reads are saved.`;
+    return {title: 'Extracting document data', progress:
+      `${state.documents_read}/${state.documents} documents read · ${state.units_read}/${state.units_total} pages, images or sheets extracted.`};
   }
-  return `Checking possible duplicates: ${state.pairs_screened}/${state.pairs_total} pairs screened in batches. Completed checks are saved.`;
+  if (state.pairs_screened < state.pairs_total) {
+    return {title: 'Screening possible duplicates', progress:
+      `${state.pairs_screened}/${state.pairs_total} document pairs screened. Completed checks are saved.`};
+  }
+  return {title: 'Comparing candidate documents', progress:
+    `${state.comparisons_done}/${state.comparisons_total} candidate comparisons complete.`};
 }
 
 /* A changed decision needs a fresh completion check. */
@@ -132,19 +138,25 @@ async function refresh() {
     message.textContent = `Finish exact duplicate review first. ${state.exact_problems.length} issue(s) remain.`;
     $('#content-controls').hidden = true; $('#candidate-section').hidden = true; return;
   }
-  message.textContent = state.run_error || (state.prepared ? 'Pass one is complete. Review every candidate below.' : 'Pass one is complete. Prepare the remaining documents to begin pass two.');
+  const machineDone = state.prepared && state.units_read === state.units_total &&
+    state.pairs_screened === state.pairs_total && state.comparisons_done === state.comparisons_total;
+  message.textContent = state.run_error || (!state.prepared ?
+    'Pass one is complete. Prepare the remaining documents to begin pass two.' :
+    !machineDone ? state.running ? `${reviewPhase(state).title}. Saved results appear as they finish.` :
+      `${reviewPhase(state).title} is paused. Press Run next review batch to continue from saved progress.` :
+      state.pairs.length ? 'Screening is complete. Review the candidate pairs below.' :
+        'Screening is complete. No candidate pairs were found.');
   $('#content-controls').hidden = false;
   $('#prepare-content').hidden = state.prepared;
   $('#run-content').hidden = !state.prepared || state.running || contentReady;
-  $('#check-content').hidden = !state.prepared || state.running;
+  $('#check-content').hidden = !machineDone || state.running;
   $('#content-running').hidden = !state.running;
   showReviewLoading(state.running, state);
   $('#content-progress').textContent = state.prepared ?
-    reviewProgress(state) : 'No content review prepared yet.';
-  $('#candidate-section').hidden = !state.prepared;
+    `${reviewPhase(state).title}: ${reviewPhase(state).progress}` : 'No content review prepared yet.';
+  $('#candidate-section').hidden = !state.pairs.length;
   $('#candidate-count').textContent = `(${state.pairs.length})`;
   list.replaceChildren(...state.pairs.map(candidateCard));
-  if (state.prepared && !state.pairs.length) list.append(node('p', '', 'No candidate pairs yet. Run a review batch to extract and screen the documents.'));
 }
 
 async function action(path) {

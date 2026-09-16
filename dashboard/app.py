@@ -19,7 +19,7 @@ from duplicate_workflow import check, duplicate_root, fingerprint, supporting_fi
 from review_settings import DEFAULTS, load_config, save_config, revision, content_settings, model_settings, model_catalog
 from source_selection import SourceSelection
 from token_usage import summary as token_summary
-from dashboard import content_review, development, office_preview
+from dashboard import content_review, development, document_status, office_preview
 
 
 def write_json(path, data):
@@ -412,6 +412,8 @@ def handler_for(review, token, sources=None):
                         self.reply(200, review.completion())
                     elif query.path == "/api/content-review":
                         self.reply(200, content_review.snapshot(review))
+                    elif query.path == "/api/document-status":
+                        self.reply(200, document_status.snapshot(review))
                     elif query.path == "/api/content-file":
                         path = content_review.source(review, params["id"][0])
                         self.reply(200, path.read_bytes(), mimetypes.guess_type(path.name)[0] or "application/octet-stream")
@@ -461,6 +463,8 @@ def handler_for(review, token, sources=None):
                                   "/source/": ("source.html", "text/html; charset=utf-8"),
                                   "/content-review": ("content-review.html", "text/html; charset=utf-8"),
                                   "/content-review/": ("content-review.html", "text/html; charset=utf-8"),
+                                  "/documents": ("documents.html", "text/html; charset=utf-8"),
+                                  "/documents/": ("documents.html", "text/html; charset=utf-8"),
                                   "/app.js": ("app.js", "text/javascript"),
                                   "/bank.js": ("bank.js", "text/javascript"),
                                   "/settings.js": ("settings.js", "text/javascript"),
@@ -468,6 +472,8 @@ def handler_for(review, token, sources=None):
                                   "/common.js": ("common.js", "text/javascript"),
                                   "/source.js": ("source.js", "text/javascript"),
                                   "/content-review.js": ("content-review.js", "text/javascript"),
+                                  "/documents.js": ("documents.js", "text/javascript"),
+                                  "/documents.css": ("documents.css", "text/css"),
                                   "/office-view.js": ("office-view.js", "text/javascript"),
                                   "/style.css": ("style.css", "text/css")}
                         name, mime = assets[query.path]

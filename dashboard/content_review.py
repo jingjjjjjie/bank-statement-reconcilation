@@ -49,6 +49,8 @@ def snapshot(review):
     result["units_read"] = len(state["units"])
     result["units_total"] = sum(len(doc["units"]) for doc in documents.values() if doc.get("accepted", True))
     result["pairs_screened"] = len(state["screens"])
+    result["comparisons_done"] = len(state["pairs"])
+    result["comparisons_total"] = sum(bool(screen["candidate"]) for screen in state["screens"].values())
     eligible = sum(doc.get("accepted", True) for doc in documents.values())
     result["pairs_total"] = eligible * (eligible - 1) // 2
     return result

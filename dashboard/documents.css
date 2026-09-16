@@ -1,0 +1,19 @@
+.document-stats { margin-bottom: 20px; }
+.document-toolbar, .document-filters { display: flex; justify-content: space-between; align-items: end; gap: 16px; flex-wrap: wrap; }
+.document-toolbar h2 { margin: 0 0 6px; }
+.document-toolbar p { margin: 0; }
+.document-filters label { color: var(--muted); font-size: 11px; }
+.document-filters input, .document-filters select { display: block; min-width: 180px; margin-top: 5px; padding: 9px; border: 1px solid var(--line); border-radius: 5px; background: white; color: var(--ink); }
+.document-table-wrap { overflow-x: auto; margin-top: 22px; }
+.document-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.document-table th, .document-table td { padding: 12px 10px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+.document-table th { color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: .5px; }
+.document-table td:first-child { min-width: 230px; max-width: 360px; overflow-wrap: anywhere; }
+.document-table td strong, .document-table td small { display: block; }
+.document-table td small { margin-top: 4px; color: var(--muted); font-size: 10px; }
+.document-table a { color: var(--green); white-space: nowrap; }
+.document-status { display: inline-block; border-radius: 4px; padding: 5px 8px; background: #eef1eb; color: #485a4f; font-size: 10px; white-space: nowrap; }
+.document-status.complete { background: #e4f2e6; color: #227852; }
+.document-status.needs-attention, .document-status.admin-review { background: #fbf3df; color: #765b1d; }
+.document-empty { margin: 25px 0 0; color: var(--muted); }
+@media (max-width: 760px) { .document-filters { width: 100%; } .document-filters label, .document-filters input, .document-filters select { width: 100%; } }
