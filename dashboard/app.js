@@ -109,13 +109,16 @@ $('#exact-remember').onclick = async () => {
   catch (error) {toast(error.message);}
 };
 $('#exact-apply').onclick = async () => {
+  const button = $('#exact-apply'); button.disabled = true;
+  $('#exact-development-status').textContent = 'Applying matching decisions…';
   try {
     const result = await api('/api/development/apply', {reviewer: $('#exact-development-reviewer').value});
     showPreset(result.saved);
     state = await api('/api/state'); token = state.token; render();
     $('#validation').hidden = true;
     toast(`Applied ${result.exact_applied} exact and ${result.content_applied} content decisions.`);
-  } catch (error) {toast(error.message);}
+  } catch (error) {$('#exact-development-status').textContent = error.message; toast(error.message);}
+  finally {button.disabled = false;}
 };
 api('/api/state').then(async data => {
   state = data; token = data.token; selected = data.groups.find(g => g.status === 'pending')?.id; render();

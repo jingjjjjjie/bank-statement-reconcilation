@@ -41,6 +41,12 @@ class TokenBrowserTests(unittest.TestCase):
                     self.assertTrue(page.evaluate("document.documentElement.scrollWidth <= innerWidth"))
                     page.goto(url + "/settings")
                     expect(page.locator("#token-usage")).to_contain_text("Total 0")
+                    expect(page.locator("#max-parallel")).to_have_value("4")
+                    page.locator("#max-parallel").fill("2")
+                    page.locator("#save-settings").click()
+                    expect(page.locator("#save-state")).to_have_text("All settings saved")
+                    page.reload()
+                    expect(page.locator("#max-parallel")).to_have_value("2")
                     page.route("**/api/config", lambda route: route.fulfill(status=200, content_type="application/json",
                                body=json.dumps({key: value for key, value in route.fetch().json().items() if key != "token_usage"})))
                     page.reload()

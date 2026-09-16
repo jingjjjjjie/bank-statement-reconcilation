@@ -9,8 +9,9 @@ const stages = [
 ];
 function callExample() {
   const n = Number($('#max-calls').value);
+  const parallel = Number($('#max-parallel').value);
   $('#call-example').textContent = Number.isInteger(n) && n >= 1 && n <= 500
-    ? `Up to ${n} new request${n === 1 ? '' : 's'} in this run. If more work remains, pause before request ${n + 1}. Run again to continue with up to ${n} more.`
+    ? `Up to ${n} new request${n === 1 ? '' : 's'} in this run, with up to ${Math.min(n, parallel || 1)} at once. If more work remains, pause before request ${n + 1}. Run again to continue with up to ${n} more.`
     : 'Enter a whole number from 1 to 500.';
 }
 function updateReasoning(stage, selected = 'default') {
@@ -43,6 +44,7 @@ function showSettings(data) {
   $('#pictures-enabled').checked = data.config.pictures_enabled;
   $('#codex-enabled').checked = data.config.codex_enabled;
   $('#max-calls').value = data.config.max_calls;
+  $('#max-parallel').value = data.config.max_parallel;
   renderStages(data);
   const usage = data.token_usage;
   if (usage?.totals) {
@@ -78,6 +80,7 @@ $('#use-defaults').onclick = () => {
   $('#pictures-enabled').checked = defaults.pictures_enabled;
   $('#codex-enabled').checked = defaults.codex_enabled;
   $('#max-calls').value = defaults.max_calls;
+  $('#max-parallel').value = defaults.max_parallel;
   renderStages({...savedSettings, config: defaults});
   markDirty();
 };
@@ -91,7 +94,7 @@ $('#settings-form').onsubmit = async event => {
   $('#save-settings').disabled = $('#discard-settings').disabled = true;
   try {
     const choices = Object.fromEntries(stages.map(([stage]) => [stage, {model: $(`#${stage}-model`).value, reasoning: $(`#${stage}-reasoning`).value}]));
-    const config = {...savedSettings.config, pdf_mode: $('#pdf-mode').value, pictures_enabled: $('#pictures-enabled').checked, codex_enabled: $('#codex-enabled').checked, max_calls: Number($('#max-calls').value), stages: choices};
+    const config = {...savedSettings.config, pdf_mode: $('#pdf-mode').value, pictures_enabled: $('#pictures-enabled').checked, codex_enabled: $('#codex-enabled').checked, max_calls: Number($('#max-calls').value), max_parallel: Number($('#max-parallel').value), stages: choices};
     showSettings(await api('/api/config', {config, revision: savedSettings.revision}));
     toast('Settings saved. No review was started.');
   } catch (error) {
@@ -111,10 +114,15 @@ $('#remember-decisions').onclick = async () => {
   catch (error) {toast(error.message);}
 };
 $('#apply-decisions').onclick = async () => {
+  const button = $('#apply-decisions'); button.disabled = true;
+  $('#development-status').textContent = 'Applying matching decisions…';
   try {
     const result = await api('/api/development/apply', {reviewer: $('#development-reviewer').value});
     showDevelopment(result.saved);
     toast(`Applied ${result.exact_applied} exact and ${result.content_applied} content decisions.`);
-  } catch (error) {toast(error.message);}
+  } catch (error) {$('#development-status').textContent = error.message; toast(error.message);}
+  finally {button.disabled = false;}
 };
-api('/api/development-decisions').then(showDevelopment).catch(error => {$('#development-status').textContent = error.message;});
+api('/api/development-decisions').then(showDevelopment).catch(error => {
+  $('#development-status').textContent = `Unable to load remembered decisions: ${error.message}. Restart the dashboard server and reload.`;
+});

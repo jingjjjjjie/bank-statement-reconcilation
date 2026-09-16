@@ -25,6 +25,8 @@ Do not delete `.data`: it holds recovery copies and the decision history. Recove
 
 Model and reasoning controls are separate for PDF reading, JPG/images, Excel, Word, and document comparison. JPG/images use vision only for now. Comparison settings cover both summary screening and original-document comparisons, including mixed file types. All stages share one request allowance. Existing shared settings remain the fallback until stage selections are saved. Command-line `--model` or `--reasoning` overrides that field for every stage in that run. Changing a stage's model or effort after review work has started requires `prepare --refresh`; previous metadata is archived.
 
+The Settings page also controls how many `codex exec` calls run together (1–8, default 4). All workers share the per-run request limit. Finished unit reads, screens, and original comparisons appear in saved review progress as they complete; unfinished or failed calls remain unresolved for the next run.
+
 The server listens only on loopback. Optional flags: `--port 8766`, `--manifest path`, `--data path`. Stop with Ctrl+C if started in a terminal.
 
 Tests:

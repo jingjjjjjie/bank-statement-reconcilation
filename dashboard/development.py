@@ -59,16 +59,18 @@ def apply(review, reviewer):
         raise ValueError("Remember decisions first")
     data = json.loads(target.read_text(encoding="utf-8"))
     exact_count = content_count = 0
+    groups = {item["id"]: item for item in review.snapshot()["groups"]}
+    identities = {(record["SHA256"], record["OriginalPath"]): (group, file_id)
+                  for group, ids in review.groups.items() for file_id in ids
+                  for record in [review.records[file_id]]}
     for saved in data["exact"]:
-        matches = [(group, file_id) for group, ids in review.groups.items() for file_id in ids
-                   if review.records[file_id]["SHA256"] == saved["hash"] and
-                   review.records[file_id]["OriginalPath"] == saved["original"]]
-        if len(matches) != 1:
+        match = identities.get((saved["hash"], saved["original"]))
+        if match is None:
             continue
-        group, file_id = matches[0]
-        current = next(item for item in review.snapshot()["groups"] if item["id"] == group)
-        if current["status"] == "pending":
+        group, file_id = match
+        if groups[group]["status"] == "pending":
             review.keep(group, file_id)
+            groups[group]["status"] = "reviewed"
             exact_count += 1
     work = content_review.work_path(review)
     if (work / "index.json").is_file() and not content_review.exact_problems(review):

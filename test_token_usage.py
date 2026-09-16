@@ -2,16 +2,60 @@
 import json
 import subprocess
 import tempfile
+import threading
 import unittest
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from codex_reviewer import CodexReviewer, object_schema
+from codex_reviewer import BudgetReached, CodexReviewer, object_schema
 from token_usage import record, summary
 
 
 class TokenUsageTests(unittest.TestCase):
+    def test_parallel_attempts_share_budget_and_durable_usage(self):
+        """Two workers overlap while the third new request stays blocked."""
+        with tempfile.TemporaryDirectory() as folder:
+            work = Path(folder)
+            schema = object_schema({"ok": {"type": "boolean"}})
+            barrier = threading.Barrier(2)
+            logins = []
+
+            def fake_run(command, **kwargs):
+                """Simulate two simultaneous Codex attempts with reported usage."""
+                if command[1:3] == ["login", "status"]:
+                    logins.append(1)
+                    return SimpleNamespace(returncode=0, stdout="ChatGPT", stderr="")
+                barrier.wait(timeout=5)
+                Path(command[command.index("--output-last-message") + 1]).write_text('{"ok": true}')
+                kwargs["stdout"].write(json.dumps({"type": "turn.completed", "usage": {
+                    "input_tokens": 10, "cached_input_tokens": 0,
+                    "output_tokens": 2, "reasoning_output_tokens": 0}}) + "\n")
+                return SimpleNamespace(returncode=0)
+
+            reviewer = CodexReviewer(work, executable="codex", max_calls=2)
+
+            def run_one(item):
+                """Attach a distinct model stage to each parallel attempt."""
+                stage, prompt = item
+                worker = reviewer.fork()
+                worker.stage = stage
+                worker.model = stage
+                return worker.ask(prompt, schema)
+
+            with patch("codex_reviewer.subprocess.run", side_effect=fake_run):
+                with ThreadPoolExecutor(max_workers=2) as pool:
+                    results = list(pool.map(run_one, (("pdf", "one"), ("images", "two"))))
+                with self.assertRaises(BudgetReached):
+                    reviewer.fork().ask("three", schema)
+            self.assertEqual(results, [{"ok": True}, {"ok": True}])
+            self.assertEqual((reviewer.calls, len(logins)), (2, 1))
+            usage = summary(work / "token-usage.jsonl")
+            self.assertEqual((usage["attempts"], usage["totals"]["input_tokens"]), (2, 20))
+            self.assertEqual((usage["by_stage"]["pdf"]["input_tokens"],
+                              usage["by_model"]["images"]["output_tokens"]), (10, 2))
+
     def test_reported_usage_cache_and_unknown_attempts(self):
         """Count reported tokens once and keep absent usage visible."""
         with tempfile.TemporaryDirectory() as folder:

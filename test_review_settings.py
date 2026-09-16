@@ -62,7 +62,9 @@ class SettingsTests(unittest.TestCase):
             save_config(self.path, DEFAULTS, before)
 
     def test_invalid_settings_do_not_get_saved(self):
-        for change in ({"codex_enabled": "false"}, {"max_calls": True}, {"max_calls": 0}, {"pdf_mode": "typo"}, {"unknown": True}):
+        for change in ({"codex_enabled": "false"}, {"max_calls": True}, {"max_calls": 0},
+                       {"max_parallel": True}, {"max_parallel": 0}, {"max_parallel": 9},
+                       {"pdf_mode": "typo"}, {"unknown": True}):
             with self.subTest(change=change), self.assertRaises(ValueError):
                 validate({**DEFAULTS, **change})
         self.assertFalse(self.path.exists())

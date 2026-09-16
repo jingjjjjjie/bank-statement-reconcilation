@@ -4,6 +4,7 @@ import itertools
 import json
 import subprocess
 import sys
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -150,6 +151,41 @@ def pack(document):
     return text, images
 
 
+def run_jobs(jobs, apply, workers):
+    """Run a bounded number of model jobs and checkpoint every finished result."""
+    if workers == 1:
+        for job in jobs:
+            apply(job())
+        return
+    pending, remaining, error = {}, iter(jobs), None
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        def submit_one():
+            """Keep only one queued job per available worker."""
+            try:
+                job = next(remaining)
+            except StopIteration:
+                return False
+            pending[pool.submit(job)] = None
+            return True
+
+        for _ in range(workers):
+            if not submit_one():
+                break
+        while pending:
+            future = next(as_completed(pending))
+            del pending[future]
+            try:
+                result = future.result()
+                apply(result)
+            except Exception as failure:
+                if error is None:
+                    error = failure
+            if error is None:
+                submit_one()
+    if error is not None:
+        raise error
+
+
 def run(work, index, state, reviewer):
     # Pass-one cleanup must finish before spending subscription usage on pass two.
     config = active_config(index)
@@ -170,48 +206,73 @@ def run(work, index, state, reviewer):
     state["stage_models"] = choices
     state["model_config"] = model_settings(config)
     documents = index["documents"]
+    workers = config["max_parallel"] if hasattr(reviewer, "fork") else 1
 
     def checkpoint():
         save(work / "state.json", state)
 
-    def ask(prompt, schema, images=(), stage="comparison"):
+    def ask(prompt, schema, images=(), stage="comparison", verify=None):
         # Re-read the switch before each call so disabling Codex stops subsequent calls.
         current = active_config(index)
         if not current["codex_enabled"]:
             raise ReviewPending("Codex was switched off; completed work is saved")
         if model_settings(current) != state["model_config"]:
             raise ReviewPending("Model settings changed during the run; stopped before the next call")
-        # One engine keeps a shared request budget across all stage/model changes.
-        reviewer.model = choices[stage]["model"] or None
-        reviewer.reasoning = choices[stage]["reasoning"]
-        reviewer.stage = stage
-        return reviewer.ask(prompt, schema, images)
+        # Worker copies isolate stage selection and share one atomic request budget.
+        worker = reviewer.fork() if workers > 1 else reviewer
+        worker.model = choices[stage]["model"] or None
+        worker.reasoning = choices[stage]["reasoning"]
+        worker.stage = stage
+        result = worker.ask(prompt, schema, images)
+        if verify is not None:
+            try:
+                verify(result)
+            except Exception:
+                if hasattr(worker, "invalidate"):
+                    worker.invalidate()
+                raise
+        return result
 
     try:
         # Vision reads each page/image; structured text supplies cells and paragraphs.
-        for digest, document in documents.items():
-            if document["error"] or not document.get("accepted", True):
-                continue
-            for number, unit in enumerate(document["units"]):
-                if unit.get("blocked"):
+        def unit_jobs():
+            """Yield unread document units without queuing the entire corpus."""
+            for digest, document in documents.items():
+                if document["error"] or not document.get("accepted", True):
                     continue
-                key = f"{digest}:{number}"
-                if key not in state["units"]:
-                    prompt = ("Extract this entire review unit for later duplicate comparison. "
-                              "Record invoice numbers, company names, and a very brief description when present. "
-                              "Leave missing fields empty; never infer them. Record all references, dates, currencies, totals and line-item detail. "
-                              "For money, list only amounts that contribute to the payable total, each with numeric amount, currency and role: "
-                              "line_item, invoice_total, or grand_total. Do not repeat a printed total as a line item. "
-                              "If an amount's role or currency is unclear, omit it from money and explain the limitation; "
-                              "Classify receipt_status as receipt only for proof of payment, not_receipt for clearly other documents such as invoices, and unsure when unclear. "
-                              "note unclear text, missing context and signatures.\n" +
-                              json.dumps({"location": unit["label"], "text": unit["text"],
-                                          "limitation": unit.get("limitation", "")}, ensure_ascii=False))
-                    state["units"][key] = ask(prompt, EXTRACTION,
-                                                      [unit["image"]] if unit["image"] else [],
-                                                      stage=document_stage(document["paths"][0]))
-                    checkpoint()
-                    print(f"Read {digest[:10]} / {unit['label']}", flush=True)
+                for number, unit in enumerate(document["units"]):
+                    if unit.get("blocked"):
+                        continue
+                    key = f"{digest}:{number}"
+                    if key in state["units"]:
+                        continue
+
+                    def job(digest=digest, document=document, unit=unit, key=key):
+                        """Read one page, sheet, or image with its selected model."""
+                        prompt = ("Extract this entire review unit for later duplicate comparison. "
+                                  "Record invoice numbers, company names, and a very brief description when present. "
+                                  "Leave missing fields empty; never infer them. Record all references, dates, currencies, totals and line-item detail. "
+                                  "For money, list only amounts that contribute to the payable total, each with numeric amount, currency and role: "
+                                  "line_item, invoice_total, or grand_total. Do not repeat a printed total as a line item. "
+                                  "If an amount's role or currency is unclear, omit it from money and explain the limitation; "
+                                  "Classify receipt_status as receipt only for proof of payment, not_receipt for clearly other documents such as invoices, and unsure when unclear. "
+                                  "note unclear text, missing context and signatures.\n" +
+                                  json.dumps({"location": unit["label"], "text": unit["text"],
+                                              "limitation": unit.get("limitation", "")}, ensure_ascii=False))
+                        return key, digest, unit["label"], ask(prompt, EXTRACTION,
+                            [unit["image"]] if unit["image"] else [],
+                            stage=document_stage(document["paths"][0]))
+
+                    yield job
+
+        def apply_unit(result):
+            """Save a completed extraction before more work is launched."""
+            key, digest, label, value = result
+            state["units"][key] = value
+            checkpoint()
+            print(f"Read {digest[:10]} / {label}", flush=True)
+
+        run_jobs(unit_jobs(), apply_unit, workers)
 
         # Strong local matches go straight to original comparison; screen all other pairs.
         ready = [d for d in documents if documents[d].get("accepted", True) and not documents[d]["error"] and all(
@@ -219,60 +280,92 @@ def run(work, index, state, reviewer):
             for n in range(len(documents[d]["units"]))) ]
         summaries = {d: [{"location": unit["label"], **state["units"][f"{d}:{n}"]}
                         for n, unit in enumerate(documents[d]["units"])] for d in ready}
-        for position, left in enumerate(ready):
-            rights = []
-            for right in ready[position + 1:]:
-                pair = pair_key(left, right)
-                if pair in state["screens"]:
-                    continue
-                route, reason = comparison_route(summaries[left], summaries[right])
-                if route == "direct_compare":
-                    state["screens"][pair] = {"right_id": right, "candidate": True,
-                        "reason": reason}
-                else:
-                    rights.append(right)
-            checkpoint()
-            for start in range(0, len(rights), 12):
-                batch = rights[start:start + 12]
-                prompt = ("Screen LEFT against EACH right document. Candidate=true for any possible "
-                          "same document, revised version, overlap, complementary evidence or uncertainty. "
-                          "False only for clearly distinct documents. Return exactly one comparison per right_id.\n" +
-                          json.dumps({"left": summaries[left], "right": {r: summaries[r] for r in batch}}, ensure_ascii=False))
-                if len(prompt) > 100000:
-                    # Large summaries remain candidates rather than being omitted.
-                    rows = [{"right_id": r, "candidate": True, "reason": "Summary too large; direct review required"} for r in batch]
-                else:
-                    rows = ask(prompt, SCREEN)["comparisons"]
-                if len(rows) != len(batch) or {r["right_id"] for r in rows} != set(batch):
-                    if hasattr(reviewer, "invalidate"):
-                        reviewer.invalidate()
-                    raise ValueError("Model omitted or repeated a comparison; coverage remains incomplete")
-                for row in rows:
-                    state["screens"][pair_key(left, row["right_id"])] = row
+        def screen_jobs():
+            """Yield summary batches while preserving direct local candidates."""
+            for position, left in enumerate(ready):
+                rights = []
+                for right in ready[position + 1:]:
+                    pair = pair_key(left, right)
+                    if pair in state["screens"]:
+                        continue
+                    route, reason = comparison_route(summaries[left], summaries[right])
+                    if route == "direct_compare":
+                        state["screens"][pair] = {"right_id": right, "candidate": True,
+                            "reason": reason}
+                    else:
+                        rights.append(right)
                 checkpoint()
+                for start in range(0, len(rights), 12):
+                    batch = rights[start:start + 12]
+
+                    def job(left=left, batch=batch):
+                        """Screen one batch and reject incomplete model coverage."""
+                        prompt = ("Screen LEFT against EACH right document. Candidate=true for any possible "
+                                  "same document, revised version, overlap, complementary evidence or uncertainty. "
+                                  "False only for clearly distinct documents. Return exactly one comparison per right_id.\n" +
+                                  json.dumps({"left": summaries[left], "right": {r: summaries[r] for r in batch}}, ensure_ascii=False))
+                        if len(prompt) > 100000:
+                            rows = [{"right_id": r, "candidate": True,
+                                     "reason": "Summary too large; direct review required"} for r in batch]
+                        else:
+                            def verify(response):
+                                """Require exactly one result for each requested document."""
+                                rows = response["comparisons"]
+                                if len(rows) != len(batch) or {r["right_id"] for r in rows} != set(batch):
+                                    raise ValueError("Model omitted or repeated a comparison; coverage remains incomplete")
+
+                            rows = ask(prompt, SCREEN, verify=verify)["comparisons"]
+                        return left, rows
+
+                    yield job
+
+        def apply_screen(result):
+            """Save a complete summary batch as its model call finishes."""
+            left, rows = result
+            for row in rows:
+                state["screens"][pair_key(left, row["right_id"])] = row
+            checkpoint()
+
+        run_jobs(screen_jobs(), apply_screen, workers)
 
         # Candidate verdicts inspect original text and visuals, not summaries alone.
-        for pair, screen in state["screens"].items():
-            if not screen["candidate"] or pair in state["pairs"]:
-                continue
-            left, right = pair.split(":")
-            left_text, left_images = pack(documents[left])
-            right_text, right_images = pack(documents[right])
-            for item in right_text:
-                if "image_number" in item:
-                    item["image_number"] += len(left_images)
-            prompt = ("Compare these whole documents. Cite supplied document IDs and page/sheet/unit locations "
-                      "in evidence and differences. same_document requires equivalent complete evidence; "
-                      "different annotations, bank details, signatures or missing pages must be distinguished.\n" +
-                      json.dumps({"left": left_text, "right": right_text}, ensure_ascii=False))
-            images = left_images + right_images
-            if len(images) > 40 or len(prompt) > 100000:
-                state["pairs"][pair] = {"classification": "uncertain", "confidence": "low",
-                    "evidence": [], "differences": [], "limitations": ["Too large for one comparison; admin must inspect both complete originals"]}
-            else:
-                state["pairs"][pair] = ask(prompt, COMPARISON, images)
+        def pair_jobs():
+            """Yield candidate originals for complete comparison."""
+            for pair, screen in state["screens"].items():
+                if not screen["candidate"] or pair in state["pairs"]:
+                    continue
+
+                def job(pair=pair):
+                    """Compare one pair's original text and images."""
+                    left, right = pair.split(":")
+                    left_text, left_images = pack(documents[left])
+                    right_text, right_images = pack(documents[right])
+                    for item in right_text:
+                        if "image_number" in item:
+                            item["image_number"] += len(left_images)
+                    prompt = ("Compare these whole documents. Cite supplied document IDs and page/sheet/unit locations "
+                              "in evidence and differences. same_document requires equivalent complete evidence; "
+                              "different annotations, bank details, signatures or missing pages must be distinguished.\n" +
+                              json.dumps({"left": left_text, "right": right_text}, ensure_ascii=False))
+                    images = left_images + right_images
+                    if len(images) > 40 or len(prompt) > 100000:
+                        result = {"classification": "uncertain", "confidence": "low", "evidence": [],
+                                  "differences": [], "limitations": ["Too large for one comparison; admin must inspect both complete originals"]}
+                    else:
+                        result = ask(prompt, COMPARISON, images)
+                    return pair, result
+
+                yield job
+
+        def apply_pair(result):
+            """Save one whole-document verdict for later admin review."""
+            pair, value = result
+            state["pairs"][pair] = value
             checkpoint()
+            left, right = pair.split(":")
             print(f"Compared {left[:10]} / {right[:10]}", flush=True)
+
+        run_jobs(pair_jobs(), apply_pair, workers)
     finally:
         # Partial work always gets a report and remains visibly incomplete.
         checkpoint()

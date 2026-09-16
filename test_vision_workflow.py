@@ -1,7 +1,9 @@
 """Temporary fixtures verify coverage, admin gates, and failure handling."""
 import csv
+import copy
 import json
 import tempfile
+import threading
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -176,6 +178,47 @@ class WorkflowTests(unittest.TestCase):
             workflow.run(self.work, index, state, LimitedReviewer())
         self.assertTrue(workflow.gate(index, state))
         self.assertTrue((self.work / "report.md").exists())
+
+    def test_parallel_units_complete_and_checkpoint(self):
+        """Read independent units together and save both validated results."""
+        index, state = self.prepared()
+        barrier = threading.Barrier(2)
+
+        class ParallelReviewer(FakeReviewer):
+            def fork(self):
+                """Keep each task's stage fields independent."""
+                return copy.copy(self)
+
+            def ask(self, prompt, schema, images=()):
+                """Require two extraction calls to overlap."""
+                if schema == EXTRACTION:
+                    barrier.wait(timeout=5)
+                return super().ask(prompt, schema, images)
+
+        from review_settings import DEFAULTS
+        with patch("vision_workflow.active_config", return_value={**DEFAULTS, "max_parallel": 2}):
+            workflow.run(self.work, index, state, ParallelReviewer())
+        self.assertEqual(len(state["units"]), 2)
+        self.assertEqual(len(workflow.load(self.work)[1]["units"]), 2)
+
+    def test_parallel_failure_keeps_other_finished_work(self):
+        """Drain active jobs and save successes before reporting a budget stop."""
+        barrier = threading.Barrier(2)
+        saved = []
+
+        def stopped():
+            """Simulate one worker reaching the shared call budget."""
+            barrier.wait(timeout=5)
+            raise BudgetReached("limit")
+
+        def finished():
+            """Return another worker's completed review."""
+            barrier.wait(timeout=5)
+            return "finished"
+
+        with self.assertRaises(BudgetReached):
+            workflow.run_jobs([stopped, finished], saved.append, 2)
+        self.assertEqual(saved, ["finished"])
 
     def test_omitted_pairs_cannot_pass(self):
         index, state = self.prepared()

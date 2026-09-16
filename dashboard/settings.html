@@ -41,6 +41,7 @@
             <label class="setting-field"><strong>Maximum new Codex requests</strong><input id="max-calls" type="number" min="1" max="500" required aria-describedby="call-example call-definition"><small>1–500 requests. Applies when the next run starts; it does not change a batch already running.</small></label>
             <div class="call-example"><span class="eyebrow">WITH YOUR LIMIT</span><p id="call-example" aria-live="polite">Loading saved limit…</p></div>
           </div>
+          <label class="setting-field"><strong>Codex requests in parallel</strong><input id="max-parallel" type="number" min="1" max="8" required><small>1–8 at once. Applies to the next run; all workers share the request limit above. More simultaneous calls may hit subscription rate limits.</small></label>
           <dl class="call-rules" id="call-definition">
             <div><dt>What is one request?</dt><dd>One new Codex model invocation to read or compare content. A document may need several requests; one request may compare multiple documents.</dd></div>
             <div><dt>What counts?</dt><dd>Each started request, including failed or timed-out attempts. Reading cached results and local PDF extraction count as zero.</dd></div>

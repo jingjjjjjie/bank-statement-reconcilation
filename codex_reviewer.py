@@ -4,6 +4,8 @@ import json
 import os
 import shutil
 import subprocess
+import threading
+from copy import copy
 from uuid import uuid4
 from pathlib import Path
 
@@ -61,12 +63,32 @@ class CodexReviewer:
         self.executable = executable or shutil.which("codex") or str(bundled)
         self.work, self.model = work, model if model is not None else DEFAULT_MODEL
         self.reasoning = reasoning
-        self.max_calls, self.timeout, self.calls = max_calls, timeout, 0
+        self.max_calls, self.timeout = max_calls, timeout
+        self._shared_lock = threading.RLock()
+        self._calls = [0]
+        self._login_checked = [False]
         self.cache = work / "model-cache"
         self.usage_path = work / "token-usage.jsonl"
         self.run_id = uuid4().hex
         self.stage = "unknown"
         self.cache.mkdir(parents=True, exist_ok=True)
+
+    @property
+    def calls(self):
+        """Return the shared number of new model attempts in this run."""
+        with self._shared_lock:
+            return self._calls[0]
+
+    def fork(self):
+        """Give one parallel task its own stage and cache-result pointer."""
+        worker = copy(self)
+        worker.last_result = None
+        return worker
+
+    def _record(self, entry):
+        """Append token events without interleaving parallel writes."""
+        with self._shared_lock:
+            record(self.usage_path, entry)
 
     def ask(self, prompt, schema, images=()):
         # Content-addressed requests are resumable without repeating successful calls.
@@ -81,18 +103,21 @@ class CodexReviewer:
         if result_path.exists():
             result = json.loads(result_path.read_text(encoding="utf-8"))
             validate(result, schema)
-            record(self.usage_path, {"status": "cached", "run_id": self.run_id,
-                                     "stage": self.stage, "model": self.model, "request": folder.name})
+            self._record({"status": "cached", "run_id": self.run_id,
+                          "stage": self.stage, "model": self.model, "request": folder.name})
             return result
-        if self.calls >= self.max_calls:
-            raise BudgetReached("Call limit reached; resume with the same command")
 
         # Require subscription login; never silently select an API-key connection.
-        login = subprocess.run([self.executable, "login", "status"], capture_output=True,
-                               text=True, encoding="utf-8", errors="replace", timeout=30)
-        if login.returncode or "chatgpt" not in (login.stdout + login.stderr).lower():
-            raise ValueError("Run codex login using ChatGPT before starting model review")
-        schema_path, output_path = folder / "schema.json", folder / "response.json"
+        with self._shared_lock:
+            if not self._login_checked[0]:
+                login = subprocess.run([self.executable, "login", "status"], capture_output=True,
+                                       text=True, encoding="utf-8", errors="replace", timeout=30)
+                if login.returncode or "chatgpt" not in (login.stdout + login.stderr).lower():
+                    raise ValueError("Run codex login using ChatGPT before starting model review")
+                self._login_checked[0] = True
+        attempt_id = uuid4().hex
+        schema_path = folder / f"schema-{attempt_id}.json"
+        output_path = folder / f"response-{attempt_id}.json"
         schema_path.write_text(json.dumps(schema), encoding="utf-8")
         (folder / "prompt.txt").write_text(prompt, encoding="utf-8")
         output_path.unlink(missing_ok=True)
@@ -107,27 +132,31 @@ class CodexReviewer:
         for image in images:
             command += ["--image", str(Path(image).resolve())]
         command += ["-"]
-        attempt_id = uuid4().hex
         events_path = folder / f"events-{attempt_id}.jsonl"
         entry = {"id": attempt_id, "run_id": self.run_id, "stage": self.stage,
                  "model": self.model, "reasoning": self.reasoning, "request": folder.name,
                  "events": str(events_path)}
-        record(self.usage_path, {**entry, "status": "started"})
-        self.calls += 1
+        with self._shared_lock:
+            if self._calls[0] >= self.max_calls:
+                raise BudgetReached("Call limit reached; resume with the same command")
+            record(self.usage_path, {**entry, "status": "started"})
+            self._calls[0] += 1
         process = None
         try:
-            with events_path.open("w", encoding="utf-8") as events, (folder / "exec.log").open("a", encoding="utf-8") as log:
+            with events_path.open("w", encoding="utf-8") as events, (folder / f"exec-{attempt_id}.log").open("w", encoding="utf-8") as log:
                 process = subprocess.run(command, input=prompt, text=True, encoding="utf-8",
                                          stdout=events, stderr=log, cwd=folder, timeout=self.timeout)
         finally:
             usage = reported_usage(events_path)
-            record(self.usage_path, {**entry, "status": "finished" if process and process.returncode == 0 else "failed",
-                                     "usage": usage})
+            self._record({**entry, "status": "finished" if process and process.returncode == 0 else "failed",
+                          "usage": usage})
         if process.returncode or not output_path.exists():
-            raise ValueError(f"codex exec failed; see {folder / 'exec.log'}")
+            raise ValueError(f"codex exec failed; see {folder / f'exec-{attempt_id}.log'}")
         result = json.loads(output_path.read_text(encoding="utf-8-sig"))
         validate(result, schema)
-        result_path.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
+        temporary = folder / f"result-{attempt_id}.json"
+        temporary.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
+        temporary.replace(result_path)
         return result
 
     def invalidate(self):

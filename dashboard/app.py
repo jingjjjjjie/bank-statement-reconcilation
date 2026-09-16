@@ -185,42 +185,45 @@ class Review:
                         return archived
         raise FileNotFoundError("This copy is no longer available")
 
+    def group_snapshot(self, name):
+        """Verify one exact-copy group before changing it."""
+        ids = self.groups[name]
+        files, errors = [], []
+        folder = self.duplicates / name
+        known = {Path(self.records[i]["OrganizedPath"]) for i in ids}
+        if not folder.is_dir():
+            errors.append("Group folder is missing")
+        elif set(supporting_files(folder)) - known:
+            errors.append("Unexpected files in this group")
+        for file_id in ids:
+            record = self.records[file_id]
+            present = Path(record["OrganizedPath"]).is_file()
+            available, valid, size = False, False, 0
+            try:
+                path = self.file_path(file_id)
+                available, size = True, path.stat().st_size
+                valid = fingerprint(path) == record["SHA256"]
+                if not valid:
+                    errors.append("A file has changed since duplicate verification")
+            except FileNotFoundError:
+                pass
+            files.append({"id": file_id, "name": Path(record["OriginalPath"]).name,
+                          "original": record["OriginalPath"], "present": present,
+                          "available": available, "valid": valid, "size": size})
+        count = sum(f["present"] for f in files)
+        action = self.latest(name)
+        if action and action["status"] in {"moving", "restoring"}:
+            errors.append("An interrupted action needs recovery; no further changes allowed")
+        if not count:
+            errors.append("No retained file in this group")
+        return {"id": name, "files": files, "hash": self.records[ids[0]]["SHA256"],
+                "status": "attention" if errors else "reviewed" if count == 1 else "pending",
+                "errors": errors, "can_undo": bool(action and action["status"] == "done"),
+                "kept": action["keep"] if action and action["status"] == "done" else None}
+
     def snapshot(self):
-        # Verify actual files, not just saved decisions, to show the current review state.
-        groups = []
-        for name, ids in self.groups.items():
-            files, errors = [], []
-            folder = self.duplicates / name
-            known = {Path(self.records[i]["OrganizedPath"]) for i in ids}
-            if not folder.is_dir():
-                errors.append("Group folder is missing")
-            elif set(supporting_files(folder)) - known:
-                errors.append("Unexpected files in this group")
-            for file_id in ids:
-                record = self.records[file_id]
-                present = Path(record["OrganizedPath"]).is_file()
-                available, valid, size = False, False, 0
-                try:
-                    path = self.file_path(file_id)
-                    available, size = True, path.stat().st_size
-                    valid = fingerprint(path) == record["SHA256"]
-                    if not valid:
-                        errors.append("A file has changed since duplicate verification")
-                except FileNotFoundError:
-                    pass
-                files.append({"id": file_id, "name": Path(record["OriginalPath"]).name,
-                              "original": record["OriginalPath"], "present": present,
-                              "available": available, "valid": valid, "size": size})
-            count = sum(f["present"] for f in files)
-            action = self.latest(name)
-            if action and action["status"] in {"moving", "restoring"}:
-                errors.append("An interrupted action needs recovery; no further changes allowed")
-            if not count:
-                errors.append("No retained file in this group")
-            groups.append({"id": name, "files": files, "hash": self.records[ids[0]]["SHA256"],
-                           "status": "attention" if errors else "reviewed" if count == 1 else "pending",
-                           "errors": errors, "can_undo": bool(action and action["status"] == "done"),
-                           "kept": action["keep"] if action and action["status"] == "done" else None})
+        """Verify every group for the dashboard summary."""
+        groups = [self.group_snapshot(name) for name in self.groups]
         return {"groups": groups, "folder": str(self.duplicates),
                 "reviewed": sum(g["status"] == "reviewed" for g in groups),
                 "pending": sum(g["status"] == "pending" for g in groups),
@@ -231,7 +234,7 @@ class Review:
         with self.lock:
             if file_id not in self.groups[group]:
                 raise ValueError("Selected file does not belong to this group")
-            current = next(g for g in self.snapshot()["groups"] if g["id"] == group)
+            current = self.group_snapshot(group)
             if current["errors"]:
                 raise ValueError("Resolve this group's file errors before making a choice")
             active = [f["id"] for f in current["files"] if f["present"]]
@@ -278,7 +281,7 @@ class Review:
             action = self.latest(group)
             if not action or action["status"] != "done":
                 raise ValueError("There is no completed dashboard choice to undo")
-            current = next(g for g in self.snapshot()["groups"] if g["id"] == group)
+            current = self.group_snapshot(group)
             if current["errors"]:
                 raise ValueError("Resolve file errors before undo")
             for move in action["moves"]:

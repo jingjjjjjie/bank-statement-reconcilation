@@ -93,7 +93,9 @@ class DashboardTests(unittest.TestCase):
         result = development.apply(self.review, "Admin")
         self.assertEqual(result["exact_applied"], 1)
         self.assertEqual(self.review.snapshot()["groups"][0]["kept"], self.ids[1])
-        self.assertEqual(development.apply(self.review, "Admin")["exact_applied"], 0)
+        with patch.object(self.review, "snapshot", wraps=self.review.snapshot) as snapshot:
+            self.assertEqual(development.apply(self.review, "Admin")["exact_applied"], 0)
+            self.assertEqual(snapshot.call_count, 1)
 
     def test_completion_requires_bank_matching_and_reports_tokens(self):
         """Release final totals only after all workflow gates are complete."""
