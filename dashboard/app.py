@@ -6,6 +6,7 @@ import json
 import mimetypes
 import secrets
 import sys
+import tempfile
 import threading
 from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -74,6 +75,20 @@ class Review:
                 "token_usage": token_summary(self.manifest_path.parent / "review" / "token-usage.jsonl"),
                 "models": model_catalog()}
 
+    def export_defaults(self):
+        """Suggest the existing company and a nearby sample style workbook."""
+        workbook = self.manifest_path.parent / "bank-output" / "answer_statement_bank_only.xlsx"
+        company = ""
+        if workbook.is_file():
+            from openpyxl import load_workbook
+            source = load_workbook(workbook, read_only=True)
+            try:
+                company = source.active["A1"].value or ""
+            finally:
+                source.close()
+        templates = [path for path in self.root.parent.glob("*.xlsx") if "sample" in path.name.casefold()]
+        return {"company": company, "template": str(templates[0]) if len(templates) == 1 else ""}
+
     def completion(self):
         """Show final usage only after exact, content, and bank checks pass."""
         from vision_workflow import gate, load
@@ -97,6 +112,27 @@ class Review:
         return {"exact_done": exact_done, "content_done": content_done,
                 "bank_done": bank_done, "complete": exact_done and content_done and bank_done,
                 "token_usage": token_summary(work / "token-usage.jsonl") if bank_done else None}
+
+    def bank_statement(self):
+        """Read the prepared bank master for the dashboard without changing it."""
+        master = self.manifest_path.parent / "bank-output" / "master_statement.csv"
+        if not master.is_file():
+            return {"available": False, "transactions": [], "workbook_available": False}
+        with master.open(newline="", encoding="utf-8-sig") as source:
+            rows = list(csv.DictReader(source))
+        if not rows:
+            raise ValueError("Bank master has no transactions")
+        fields = ("transaction_id", "date", "page", "direction", "money_in", "money_out",
+                  "balance", "counterparty", "counterparty_role", "narration", "matching_status")
+        first = rows[0]
+        workbook = self.manifest_path.parent / "bank-output" / "answer_statement_bank_only.xlsx"
+        return {"available": True, "account": first["account"], "currency": first["currency"],
+                "opening_balance": first["opening_balance"], "closing_balance": first["closing_balance"],
+                "total_money_in": first["total_money_in"], "total_money_out": first["total_money_out"],
+                "count": len(rows), "balance_checks": first["balance_checks"],
+                "matched": sum(row["matching_status"] == "matched" for row in rows),
+                "workbook_available": workbook.is_file(),
+                "transactions": [{key: row[key] for key in fields} for row in rows]}
 
     def file_path(self, file_id):
         # Archived copies remain previewable; arbitrary filesystem paths are never accepted.
@@ -280,7 +316,7 @@ def handler_for(review, token, sources=None):
                 self.reply(403, {"error": "Local access only"})
                 return
             query = urlparse(self.path)
-            if review is None and query.path not in {"/source", "/source/", "/source.js", "/common.js", "/style.css", "/api/source", "/api/source/browse", "/api/session"}:
+            if review is None and query.path not in {"/source", "/source/", "/source.js", "/common.js", "/style.css", "/api/source", "/api/source/browse", "/api/session", "/bank", "/bank/", "/bank.js", "/api/bank-statement"}:
                 self.send_response(302)
                 self.send_header("Location", "/source")
                 self.end_headers()
@@ -305,6 +341,14 @@ def handler_for(review, token, sources=None):
                                                        params.get("kind", ["folder"])[0] == "bank"))
                     elif query.path == "/api/completion":
                         self.reply(200, review.completion())
+                    elif query.path == "/api/bank-statement":
+                        self.reply(200, review.bank_statement() if review else
+                                   {"available": False, "transactions": [], "workbook_available": False})
+                    elif query.path == "/api/bank-export-defaults":
+                        self.reply(200, review.export_defaults())
+                    elif query.path == "/api/bank-workbook":
+                        workbook = review.manifest_path.parent / "bank-output" / "answer_statement_bank_only.xlsx"
+                        self.reply(200, workbook.read_bytes(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
                     elif query.path == "/api/document":
                         self.reply(200, review.document(params["id"][0]))
                     elif query.path in {"/api/file", "/api/preview"}:
@@ -325,6 +369,8 @@ def handler_for(review, token, sources=None):
                             self.reply(200, path.read_bytes(), mimetypes.guess_type(path.name)[0] or "image/png")
                     else:
                         assets = {"/": ("index.html", "text/html; charset=utf-8"),
+                                  "/bank": ("bank.html", "text/html; charset=utf-8"),
+                                  "/bank/": ("bank.html", "text/html; charset=utf-8"),
                                   "/settings": ("settings.html", "text/html; charset=utf-8"),
                                   "/settings/": ("settings.html", "text/html; charset=utf-8"),
                                   "/complete": ("complete.html", "text/html; charset=utf-8"),
@@ -332,6 +378,7 @@ def handler_for(review, token, sources=None):
                                   "/source": ("source.html", "text/html; charset=utf-8"),
                                   "/source/": ("source.html", "text/html; charset=utf-8"),
                                   "/app.js": ("app.js", "text/javascript"),
+                                  "/bank.js": ("bank.js", "text/javascript"),
                                   "/settings.js": ("settings.js", "text/javascript"),
                                   "/complete.js": ("complete.js", "text/javascript"),
                                   "/common.js": ("common.js", "text/javascript"),
@@ -387,6 +434,20 @@ def handler_for(review, token, sources=None):
                         if review is None:
                             raise ValueError("Create a supporting-document review first")
                         self.reply(200, sources.prepare_bank(review.manifest_path, body["year"]))
+                        return
+                    elif self.path == "/api/bank-export":
+                        if review is None:
+                            raise ValueError("Choose an active review first")
+                        from bank_excel import export
+                        master = review.manifest_path.parent / "bank-output" / "master_statement.csv"
+                        template = Path(body["template"]).expanduser().resolve(strict=True)
+                        if not template.is_file() or template.suffix.lower() != ".xlsx":
+                            raise ValueError("Choose a sample Excel workbook")
+                        with tempfile.TemporaryDirectory() as temporary:
+                            output = export(master, template, body["company"],
+                                            Path(temporary) / "answer_statement_bank_only.xlsx")
+                            self.reply(200, output.read_bytes(),
+                                       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
                         return
                     else:
                         raise ValueError("Unknown action")

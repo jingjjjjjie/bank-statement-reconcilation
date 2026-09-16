@@ -933,6 +933,27 @@ a.nav-item:hover { background: #30483f; }
 .source-action { margin-top: 22px; padding-top: 20px; border-top: 1px solid var(--line); }
 .source-action .button { margin-top: 16px; }
 
+.bank-stats { margin-bottom: 20px; }
+.bank-stats strong { font-size: 22px; }
+.bank-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 20px; margin-bottom: 18px; }
+.bank-toolbar h2 { margin: 0 0 6px; }
+.bank-toolbar input { min-width: 300px; padding: 10px; border: 1px solid var(--line); border-radius: 5px; }
+.bank-table-wrap { overflow-x: auto; }
+.bank-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.bank-table th, .bank-table td { padding: 12px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+.bank-table th:nth-child(n+3), .bank-table td:nth-child(n+3) { text-align: right; white-space: nowrap; }
+.bank-table td strong, .bank-table td small { display: block; }
+.bank-table td small, .bank-row-count { color: var(--muted); font-size: 11px; }
+.bank-table details { margin-top: 7px; max-width: 420px; }
+.bank-table summary { color: var(--green); cursor: pointer; font-size: 11px; }
+.bank-table pre { white-space: pre-wrap; overflow-wrap: anywhere; font: 11px/1.5 Consolas, monospace; }
+.bank-row-count { margin: 16px 0 0; }
+.bank-export-fields { display: grid; grid-template-columns: 1fr 2fr; gap: 15px; margin: 18px 0; }
+.bank-export-fields label { font-size: 12px; font-weight: 600; }
+.bank-export-fields input { display: block; width: 100%; margin-top: 7px; padding: 10px; border: 1px solid var(--line); border-radius: 5px; }
+@media(max-width:760px) { .bank-export-fields { grid-template-columns: 1fr; } }
+@media(max-width:760px) { .bank-toolbar { display: block; } .bank-toolbar input { min-width: 0; width: 100%; margin-top: 15px; } }
+
 /* Shared horizontal navigation and source setup layout. */
 .rail {
   position: relative;

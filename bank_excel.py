@@ -16,16 +16,12 @@ def copy_style(source, target):
         setattr(target, attribute, copy(getattr(source, attribute)))
 
 
-def main():
-    # Load only extraction data and the chosen style reference.
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("data", type=Path)
-    parser.add_argument("template", type=Path)
-    parser.add_argument("--company", required=True)
-    parser.add_argument("--output", type=Path, default=Path("bank-output/answer_statement.xlsx"))
-    args = parser.parse_args()
-    data = read_master(args.data)
-    source = load_workbook(args.template)
+def export(data_path, template_path, company, output_path):
+    """Write a bank-only workbook using the validated master and sample styles."""
+    if not company.strip():
+        raise ValueError("Enter the company name for the workbook")
+    data = read_master(Path(data_path))
+    source = load_workbook(Path(template_path))
     reference = source["DEC'25"]
     book = Workbook()
     book.loaded_theme = source.loaded_theme
@@ -42,7 +38,7 @@ def main():
         sheet.row_dimensions[row].height = reference.row_dimensions[row].height
     sheet.merge_cells("A1:K1")
     sheet.merge_cells("A2:K2")
-    sheet["A1"] = args.company
+    sheet["A1"] = company.strip()
     sheet["A2"] = f"AMBANK - BANK & CASH : A/C {data['account']} ({sheet.title}) - {data['currency']}"
     for cell in reference[4][:11]:
         sheet.cell(4, cell.column, cell.value)
@@ -89,10 +85,22 @@ def main():
     sheet.sheet_properties.pageSetUpPr.fitToPage = True
     sheet.print_title_rows = "4:4"
     sheet.print_area = f"A1:K{footer + 2}"
-    args.output.parent.mkdir(parents=True, exist_ok=True)
-    book.save(args.output)
+    output_path = Path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    book.save(output_path)
     source.close()
-    print(args.output.resolve())
+    return output_path
+
+
+def main():
+    """Run the workbook exporter from the command line."""
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("data", type=Path)
+    parser.add_argument("template", type=Path)
+    parser.add_argument("--company", required=True)
+    parser.add_argument("--output", type=Path, default=Path("bank-output/answer_statement.xlsx"))
+    args = parser.parse_args()
+    print(export(args.data, args.template, args.company, args.output).resolve())
 
 
 if __name__ == "__main__":
