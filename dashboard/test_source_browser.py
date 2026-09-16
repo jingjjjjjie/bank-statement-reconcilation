@@ -32,6 +32,11 @@ class SourceBrowserTests(unittest.TestCase):
                     try:
                         page = browser.new_page()
                         page.goto(f"http://127.0.0.1:{server.server_port}/source")
+                        navigation = page.locator(".rail").bounding_box()
+                        heading = page.locator("h1").bounding_box()
+                        self.assertLess(navigation["height"], 100)
+                        self.assertGreater(heading["y"], navigation["y"] + navigation["height"])
+                        expect(page.locator(".source-grid > .settings-card")).to_have_count(2)
                         page.locator("#source-path").fill(str(documents))
                         page.locator("#select-source").click()
                         expect(page.locator("#selected-source")).to_contain_text(str(documents))
@@ -42,6 +47,8 @@ class SourceBrowserTests(unittest.TestCase):
                         expect(page.locator("#selected-bank")).to_contain_text(str(statement))
                         self.assertEqual(sources.selected(), documents)
                         self.assertEqual(sources.selected_bank(), statement)
+                        page.set_viewport_size({"width": 390, "height": 844})
+                        expect(page.locator(".rail .nav-item").first).to_be_visible()
                     finally:
                         browser.close()
             finally:
