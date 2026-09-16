@@ -8,7 +8,7 @@
 <body>
   <aside class="rail">
     <a class="brand" href="/">Bank Statement Reconciliation</a>
-    <div class="workspace"><span class="eyebrow">RECONCILIATION</span><strong>TOHIGH MEDIA</strong><span>December 2025 · MYR</span></div>
+    <div class="workspace"><span class="eyebrow">RECONCILIATION</span><strong>Loading review…</strong><span>Checking statement…</span></div>
     <div class="rail-label">WORKFLOW</div>
     <a class="nav-item active" href="/source" aria-current="page">Source folder</a>
     <a class="nav-item" href="/">Document review</a>
@@ -29,7 +29,7 @@
       <div class="source-section-label">01 / DOCUMENT SOURCE</div><h2>Supporting documents</h2><p>Choose the folder containing documents for duplicate review.</p>
       <div class="source-controls"><button id="browse-source" class="button dark" type="button">Browse folders</button><label class="setting-field"><strong>Folder path</strong><input id="source-path" type="text" autocomplete="off" spellcheck="false" placeholder="C:\path\to\supporting-documents"></label><button id="select-source" class="button secondary" type="button">Check folder</button></div>
       <div id="selected-source" class="source-result" hidden></div>
-      <div id="source-action" class="source-action" hidden><p>Creating a review moves exact duplicate files from the selected folder into this workspace's <code>duplicated/</code> directory. Original locations are retained in the manifest. Other files stay in place.</p><button id="start-source" class="button dark" type="button">Create or open review</button></div>
+      <div id="source-action" class="source-action" hidden><p id="source-preview">Checking exact duplicates…</p><p>Creating a review moves exact duplicate files from the selected folder into this workspace's <code>duplicated/</code> directory. Original locations are retained in the manifest. Other files stay in place.</p><button id="start-source" class="button dark" type="button" disabled>Create or open review</button></div>
     </section>
     <section class="settings-card">
       <div class="source-section-label">02 / BANK SOURCE</div><h2>Bank statement</h2><p>Choose an AmBank digital statement PDF separately.</p>

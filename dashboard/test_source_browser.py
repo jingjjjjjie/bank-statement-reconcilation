@@ -44,6 +44,8 @@ class SourceBrowserTests(unittest.TestCase):
                         page.locator("#source-path").fill(str(documents))
                         page.locator("#select-source").click()
                         expect(page.locator("#selected-source")).to_contain_text(str(documents))
+                        expect(page.locator("#source-preview")).to_contain_text("1 source file")
+                        expect(page.locator("#start-source")).to_be_enabled()
                         page.locator("#browse-bank").click()
                         expect(page.locator("#path-browser")).to_be_visible()
                         page.get_by_role("button", name="Up one level").click()

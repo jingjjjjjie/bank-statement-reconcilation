@@ -80,6 +80,33 @@ class DashboardTests(unittest.TestCase):
         self.assertTrue(result["complete"])
         self.assertEqual(result["token_usage"]["totals"]["input_tokens"], 100)
 
+    def test_bank_page_reads_master_and_serves_bank_only_workbook(self):
+        """Show saved bank rows and expose only the known bank-only workbook."""
+        self.assertFalse(self.review.bank_statement()["available"])
+        bank = self.base / "bank-output"
+        bank.mkdir()
+        (bank / "master_statement.csv").write_text(
+            "account,currency,opening_balance,closing_balance,total_money_in,total_money_out,balance_checks,transaction_id,date,page,direction,money_in,money_out,balance,counterparty,counterparty_role,narration,matching_status\n"
+            "8866,MYR,100.00,110.00,10.00,0.00,passed,tx-1,2025-12-01,2,in,10.00,0.00,110.00,Payer,payer,Transfer,pending\n",
+            encoding="utf-8")
+        workbook = bank / "answer_statement_bank_only.xlsx"
+        workbook.write_bytes(b"bank workbook fixture")
+        server = ThreadingHTTPServer(("127.0.0.1", 0), handler_for(self.review, "test-token"))
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        self.addCleanup(server.server_close)
+        self.addCleanup(server.shutdown)
+        url = f"http://127.0.0.1:{server.server_port}"
+        with urllib.request.urlopen(url + "/api/bank-statement") as response:
+            data = json.load(response)
+        self.assertEqual((data["count"], data["matched"], data["transactions"][0]["counterparty"]),
+                         (1, 0, "Payer"))
+        self.assertTrue(data["workbook_available"])
+        with urllib.request.urlopen(url + "/api/bank-workbook") as response:
+            self.assertEqual(response.read(), b"bank workbook fixture")
+        with urllib.request.urlopen(url + "/bank") as response:
+            self.assertIn(b"Bank statement", response.read())
+
     def test_altered_archive_blocks_undo(self):
         self.review.keep(self.group, self.ids[0])
         self.review.file_path(self.ids[1]).write_text("altered archive")

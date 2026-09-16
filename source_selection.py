@@ -4,7 +4,7 @@ import json
 import string
 from pathlib import Path
 
-from duplicate_workflow import fingerprint, organize, supporting_files
+from duplicate_workflow import duplicate_groups, fingerprint, organize, supporting_files
 
 
 class SourceSelection:
@@ -56,6 +56,20 @@ class SourceSelection:
         self.selection.write_text(json.dumps({"path": result["path"]}), encoding="utf-8")
         return result
 
+    def preview(self):
+        """Count exact copies that creating the selected review would move."""
+        source = self.selected()
+        if source is None:
+            raise ValueError("Choose a supporting folder first")
+        self.inspect(source)
+        files = supporting_files(source)
+        groups = duplicate_groups(files)
+        identity = {"files": [(str(path), path.stat().st_size, path.stat().st_mtime_ns) for path in files],
+                    "groups": [(digest, [str(path) for path in members]) for digest, members in groups]}
+        token = hashlib.sha256(json.dumps(identity, ensure_ascii=False).encode("utf-8")).hexdigest()
+        return {"files": len(files), "groups": len(groups),
+                "copies_to_move": sum(len(members) for _, members in groups), "token": token}
+
     def selected_bank(self):
         """Return the saved bank PDF path, if one was chosen."""
         if not self.bank_selection.exists():
@@ -100,12 +114,14 @@ class SourceSelection:
         write_master(result, output)
         return {"path": str(output), "existing": False}
 
-    def start(self):
+    def start(self, expected=None):
         """Initialize or reopen the selected folder's isolated duplicate review."""
         source = self.selected()
         if source is None:
             raise ValueError("Choose a supporting folder first")
         self.inspect(source)
+        if expected is not None and self.preview()["token"] != expected:
+            raise ValueError("Source files changed since the preview; check the folder again")
         name = hashlib.sha256(str(source).casefold().encode()).hexdigest()[:16]
         project = self.workspace / "duplicated" / "projects" / name
         project.mkdir(parents=True, exist_ok=True)

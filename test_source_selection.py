@@ -15,6 +15,23 @@ from dashboard.app import handler_for
 
 
 class SourceSelectionTests(unittest.TestCase):
+    def test_preview_counts_moves_and_blocks_changed_source(self):
+        """Require a fresh move preview before creating a review."""
+        with tempfile.TemporaryDirectory() as folder:
+            base = Path(folder)
+            source = base / "documents"
+            source.mkdir()
+            (source / "a.txt").write_text("same", encoding="utf-8")
+            (source / "b.txt").write_text("same", encoding="utf-8")
+            selected = SourceSelection(base, base / "dashboard-data")
+            selected.save(source)
+            preview = selected.preview()
+            self.assertEqual((preview["files"], preview["groups"], preview["copies_to_move"]), (2, 1, 2))
+            (source / "new.txt").write_text("new", encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "changed since the preview"):
+                selected.start(preview["token"])
+            self.assertTrue((source / "a.txt").exists())
+
     def test_in_page_browser_lists_folders_and_pdfs(self):
         """Browse one directory without opening a desktop dialog or moving files."""
         with tempfile.TemporaryDirectory() as folder:

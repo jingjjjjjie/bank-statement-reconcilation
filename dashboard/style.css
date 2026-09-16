@@ -932,7 +932,6 @@ a.nav-item:hover { background: #30483f; }
 .source-result { margin-top: 22px; padding: 14px; background: var(--mint); overflow-wrap: anywhere; }
 .source-action { margin-top: 22px; padding-top: 20px; border-top: 1px solid var(--line); }
 .source-action .button { margin-top: 16px; }
-
 .bank-stats { margin-bottom: 20px; }
 .bank-stats strong { font-size: 22px; }
 .bank-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 20px; margin-bottom: 18px; }
@@ -951,6 +950,7 @@ a.nav-item:hover { background: #30483f; }
 .bank-export-fields { display: grid; grid-template-columns: 1fr 2fr; gap: 15px; margin: 18px 0; }
 .bank-export-fields label { font-size: 12px; font-weight: 600; }
 .bank-export-fields input { display: block; width: 100%; margin-top: 7px; padding: 10px; border: 1px solid var(--line); border-radius: 5px; }
+.breadcrumb .review-context { color: var(--ink); overflow-wrap: anywhere; }
 @media(max-width:760px) { .bank-export-fields { grid-template-columns: 1fr; } }
 @media(max-width:760px) { .bank-toolbar { display: block; } .bank-toolbar input { min-width: 0; width: 100%; margin-top: 15px; } }
 

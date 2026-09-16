@@ -7,3 +7,8 @@ async function api(path, body) {
   const data = await response.json(); if (!response.ok) throw Error(data.error || 'Request failed'); return data;
 }
 function toast(message) {$('#toast').textContent = message; $('#toast').hidden = false; clearTimeout(toast.timer); toast.timer = setTimeout(() => $('#toast').hidden = true, 5000);}
+if ($('.workspace')) api('/api/workspace').then(info => {
+  $('.workspace strong').textContent = info.name;
+  $('.workspace > span:last-child').textContent = info.period;
+  if ($('.breadcrumb')) $('.breadcrumb').append(node('span', 'review-context', `${info.name} · ${info.period}`));
+}).catch(() => {});

@@ -1,5 +1,19 @@
 /* Folder selection is read-only until the user starts a review. */
 let sourceState = {};
+let previewToken = null;
+async function loadPreview() {
+  previewToken = null;
+  $('#start-source').disabled = true;
+  $('#source-preview').textContent = 'Checking exact duplicates…';
+  try {
+    const preview = await api('/api/source/preview');
+    previewToken = preview.token;
+    $('#source-preview').textContent = `${preview.files} source file${preview.files === 1 ? '' : 's'} · ${preview.groups} exact duplicate group${preview.groups === 1 ? '' : 's'} · ${preview.copies_to_move} copies would move into duplicated/.`;
+    $('#start-source').disabled = false;
+  } catch (error) {
+    $('#source-preview').textContent = error.message;
+  }
+}
 function showSource(data) {
   sourceState = {...sourceState, ...data};
   $('#active-source').textContent = sourceState.active || 'No active review';
@@ -10,6 +24,7 @@ function showSource(data) {
     $('#source-path').value = selected.path;
     $('#selected-source').textContent = `${selected.path} · ${selected.files.toLocaleString()} files`;
   }
+  if (Object.hasOwn(data, 'selected') && selected) loadPreview();
   const bank = sourceState.bank;
   $('#selected-bank').hidden = !bank;
   $('#bank-action').hidden = !bank;
@@ -92,7 +107,7 @@ $('#prepare-bank').onclick = () => sourceAction(async () => {
 $('#start-source').onclick = () => sourceAction(async () => {
   $('#start-source').disabled = true;
   try {
-    await api('/api/source/start', {});
+    await api('/api/source/start', {preview: previewToken});
     location.assign('/');
   } finally {$('#start-source').disabled = false;}
 });

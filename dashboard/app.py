@@ -19,6 +19,7 @@ from duplicate_workflow import check, duplicate_root, fingerprint, supporting_fi
 from review_settings import load_config, save_config, revision, content_settings, model_settings, model_catalog
 from source_selection import SourceSelection
 from token_usage import summary as token_summary
+from dashboard import content_review
 
 
 def write_json(path, data):
@@ -74,6 +75,17 @@ class Review:
         return {"config": config, "revision": revision(config), "requires_refresh": refresh,
                 "token_usage": token_summary(self.manifest_path.parent / "review" / "token-usage.jsonl"),
                 "models": model_catalog()}
+
+    def workspace(self):
+        """Name the active source and statement period without fixed customer text."""
+        master = self.manifest_path.parent / "bank-output" / "master_statement.csv"
+        period = "Bank statement pending"
+        if master.is_file():
+            with master.open(newline="", encoding="utf-8-sig") as source:
+                first = next(csv.DictReader(source), None)
+            if first and first.get("date"):
+                period = datetime.fromisoformat(first["date"]).strftime("%B %Y")
+        return {"name": self.root.name, "period": period}
 
     def export_defaults(self):
         """Suggest the existing company and a nearby sample style workbook."""
@@ -316,7 +328,7 @@ def handler_for(review, token, sources=None):
                 self.reply(403, {"error": "Local access only"})
                 return
             query = urlparse(self.path)
-            if review is None and query.path not in {"/source", "/source/", "/source.js", "/common.js", "/style.css", "/api/source", "/api/source/browse", "/api/session", "/bank", "/bank/", "/bank.js", "/api/bank-statement"}:
+            if review is None and query.path not in {"/source", "/source/", "/source.js", "/bank", "/bank/", "/bank.js", "/common.js", "/style.css", "/api/source", "/api/source/browse", "/api/source/preview", "/api/workspace", "/api/session", "/api/bank-statement"}:
                 self.send_response(302)
                 self.send_header("Location", "/source")
                 self.end_headers()
@@ -328,6 +340,8 @@ def handler_for(review, token, sources=None):
                         self.reply(200, {**review.snapshot(), "token": token})
                     elif query.path == "/api/session":
                         self.reply(200, {"token": token})
+                    elif query.path == "/api/workspace":
+                        self.reply(200, review.workspace() if review else {"name": "No active review", "period": "Choose a source folder"})
                     elif query.path == "/api/config":
                         self.reply(200, review.settings())
                     elif query.path == "/api/source":
@@ -339,8 +353,18 @@ def handler_for(review, token, sources=None):
                     elif query.path == "/api/source/browse":
                         self.reply(200, sources.browse(params.get("path", [None])[0],
                                                        params.get("kind", ["folder"])[0] == "bank"))
+                    elif query.path == "/api/source/preview":
+                        self.reply(200, sources.preview())
                     elif query.path == "/api/completion":
                         self.reply(200, review.completion())
+                    elif query.path == "/api/content-review":
+                        self.reply(200, content_review.snapshot(review))
+                    elif query.path == "/api/content-file":
+                        path = content_review.source(review, params["id"][0])
+                        self.reply(200, path.read_bytes(), mimetypes.guess_type(path.name)[0] or "application/octet-stream")
+                    elif query.path == "/api/content-image":
+                        path = content_review.image(review, params["id"][0], int(params["unit"][0]))
+                        self.reply(200, path.read_bytes(), "image/png")
                     elif query.path == "/api/bank-statement":
                         self.reply(200, review.bank_statement() if review else
                                    {"available": False, "transactions": [], "workbook_available": False})
@@ -377,12 +401,15 @@ def handler_for(review, token, sources=None):
                                   "/complete/": ("complete.html", "text/html; charset=utf-8"),
                                   "/source": ("source.html", "text/html; charset=utf-8"),
                                   "/source/": ("source.html", "text/html; charset=utf-8"),
+                                  "/content-review": ("content-review.html", "text/html; charset=utf-8"),
+                                  "/content-review/": ("content-review.html", "text/html; charset=utf-8"),
                                   "/app.js": ("app.js", "text/javascript"),
                                   "/bank.js": ("bank.js", "text/javascript"),
                                   "/settings.js": ("settings.js", "text/javascript"),
                                   "/complete.js": ("complete.js", "text/javascript"),
                                   "/common.js": ("common.js", "text/javascript"),
                                   "/source.js": ("source.js", "text/javascript"),
+                                  "/content-review.js": ("content-review.js", "text/javascript"),
                                   "/style.css": ("style.css", "text/css")}
                         name, mime = assets[query.path]
                         self.reply(200, (Path(__file__).parent / name).read_bytes(), mime)
@@ -417,11 +444,23 @@ def handler_for(review, token, sources=None):
                         save_config(review.config_path, body["config"], body["revision"])
                         self.reply(200, review.settings())
                         return
+                    elif self.path == "/api/content/prepare":
+                        self.reply(200, content_review.prepare(review))
+                        return
+                    elif self.path == "/api/content/run":
+                        self.reply(200, content_review.start(review))
+                        return
+                    elif self.path == "/api/content/decide":
+                        self.reply(200, content_review.decide(review, body["pair"], body["verdict"],
+                                                             body["reviewer"], body["reason"]))
+                        return
                     elif self.path == "/api/source/select":
                         self.reply(200, {"selected": sources.save(body["path"])})
                         return
                     elif self.path == "/api/source/start":
-                        manifest, data = sources.start()
+                        if not isinstance(body.get("preview"), str) or not body["preview"]:
+                            raise ValueError("Check the folder to preview exact duplicates first")
+                        manifest, data = sources.start(body["preview"])
                         next_review = Review(manifest, data)
                         sources.activate(manifest)
                         review_ref["current"] = next_review
