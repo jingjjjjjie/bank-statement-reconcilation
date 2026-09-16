@@ -66,14 +66,18 @@ function renderGroup(group) {
         if (version !== renderVersion) return;
         const doc = docs.get(file.id); preview.replaceChildren();
         const unit = doc.units?.[page];
-        if (unit?.text) preview.append(node('pre', '', unit.text));
-        if (doc.kind !== 'office' || unit?.has_image) {
+        if (doc.kind === 'word' || doc.kind === 'spreadsheet') {
+          renderOfficePreview(preview, await api(`/api/office-view?id=${file.id}&page=${page}`));
+        } else {
+          if (unit?.text) preview.append(node('pre', '', unit.text));
+        }
+        if (!['word', 'spreadsheet'].includes(doc.kind) && (doc.kind !== 'office' || unit?.has_image)) {
           const image = node('img'); image.alt = `${file.name}, page ${page + 1}`; image.src = `/api/preview?id=${file.id}&page=${page}`;
           image.onclick = () => window.open(image.src, '_blank', 'noopener');
           image.onerror = () => preview.replaceChildren(node('span', 'placeholder', 'Preview unavailable. Open the original file to inspect it.'));
           preview.append(image);
         }
-        count.textContent = `${doc.kind === 'office' ? 'Section' : 'Page'} ${page + 1} of ${doc.pages}`;
+        count.textContent = doc.labels?.[page] || `${doc.kind === 'office' ? 'Section' : 'Page'} ${page + 1} of ${doc.pages}`;
         previous.disabled = page === 0; next.disabled = page === doc.pages - 1;
       } catch (error) {preview.replaceChildren(node('span', 'placeholder', error.message)); previous.disabled = next.disabled = true;}
     };

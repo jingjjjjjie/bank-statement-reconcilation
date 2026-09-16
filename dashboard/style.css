@@ -1022,6 +1022,20 @@ main { width: min(100%, 1600px); margin: 0 auto; padding: 0 clamp(20px, 3vw, 48p
 .content-document details { margin-top: 12px; }
 .content-document summary { cursor: pointer; }
 .content-document pre { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 300px; overflow: auto; font: 11px/1.5 Consolas, monospace; }
+.word-page { width: 100%; min-height: 100%; box-sizing: border-box; padding: 28px 32px; background: white; color: #242b27; box-shadow: 0 2px 8px #14281920; font: 12px/1.55 Georgia, serif; }
+.word-paragraph { margin: 0 0 12px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.word-paragraph.heading1 { font-size: 22px; font-weight: 700; }
+.word-paragraph.heading2 { font-size: 17px; font-weight: 700; }
+.word-paragraph.heading3 { font-size: 14px; font-weight: 700; }
+.sheet-page { width: 100%; min-width: 0; background: white; box-shadow: 0 2px 8px #14281920; }
+.sheet-title { padding: 9px 12px; font-size: 11px; font-weight: 700; color: var(--green); border-bottom: 1px solid var(--line); }
+.sheet-scroll { width: 100%; overflow: auto; }
+.office-table { border-collapse: collapse; width: 100%; font: 11px/1.4 Arial, sans-serif; }
+.office-table td, .office-table th { border: 1px solid #dce3db; padding: 5px 8px; text-align: left; white-space: pre-wrap; min-width: 60px; }
+.sheet-table { width: max-content; min-width: 100%; }
+.sheet-table .row-number { min-width: 28px; background: #edf2eb; color: #607069; text-align: right; font-weight: 400; }
+.preview-note { display: block; padding: 8px 10px; color: var(--muted); }
+.content-office-preview { max-height: 420px; overflow: auto; padding: 12px; background: #f0f0ea; margin-top: 10px; }
 .content-preview { max-width: 100%; max-height: 420px; object-fit: contain; display: block; margin-top: 10px; }
 .content-evidence { margin: 0; padding-left: 20px; }
 .content-pair textarea { display: block; width: 100%; min-height: 70px; padding: 10px; margin: 16px 0; border: 1px solid var(--line); border-radius: 5px; font: inherit; }
@@ -1049,6 +1063,9 @@ main { width: min(100%, 1600px); margin: 0 auto; padding: 0 clamp(20px, 3vw, 48p
 .content-decision-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; background: var(--mint); padding: 10px 12px; }
 .content-decision-bar .content-decision { padding: 0; }
 .content-decision-bar .button { flex-shrink: 0; }
+.exact-development { margin-bottom: 20px; }
+.exact-development .content-actions { align-items: end; }
+.exact-development .setting-field { min-width: 220px; }
 .content-loading { position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; padding: 20px; background: rgba(12, 35, 31, .68); }
 .content-loading-card { width: min(440px, 100%); padding: 32px; border-radius: 12px; background: white; text-align: center; box-shadow: 0 20px 60px rgba(0, 0, 0, .2); }
 .content-loading-card h2 { margin: 16px 0 8px; }

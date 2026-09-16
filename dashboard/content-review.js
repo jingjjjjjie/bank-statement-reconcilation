@@ -31,6 +31,26 @@ function documentCard(document) {
   const link = node('a', 'button secondary', 'Open original');
   link.href = `/api/content-file?id=${encodeURIComponent(document.id)}`;
   link.target = '_blank'; link.rel = 'noopener'; card.append(link);
+  if (/\.(docx|xlsx)$/i.test(document.name)) {
+    const details = node('details', 'visual-document');
+    details.append(node('summary', '', 'View document'));
+    const preview = node('div', 'content-office-preview');
+    const controls = node('div', 'page-controls'), previous = node('button', '', 'Previous');
+    const count = node('span'), next = node('button', '', 'Next');
+    controls.append(previous, count, next); details.append(preview, controls); card.append(details);
+    let page = 0, info;
+    const load = async () => {
+      try {
+        if (!info) info = await api(`/api/document?content_id=${encodeURIComponent(document.id)}`);
+        renderOfficePreview(preview, await api(`/api/office-view?content_id=${encodeURIComponent(document.id)}&page=${page}`));
+        count.textContent = info.labels?.[page] || `Page ${page + 1} of ${info.pages}`;
+        previous.disabled = page === 0; next.disabled = page >= info.pages - 1;
+      } catch (error) {preview.replaceChildren(node('p', '', error.message)); previous.disabled = next.disabled = true;}
+    };
+    details.ontoggle = () => {if (details.open) load();};
+    previous.onclick = () => {page--; load();}; next.onclick = () => {page++; load();};
+    return card;
+  }
   for (let n = 0; n < document.units.length; n++) {
     const unit = document.units[n];
     const details = node('details');

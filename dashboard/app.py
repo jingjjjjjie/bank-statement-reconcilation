@@ -19,7 +19,7 @@ from duplicate_workflow import check, duplicate_root, fingerprint, supporting_fi
 from review_settings import DEFAULTS, load_config, save_config, revision, content_settings, model_settings, model_catalog
 from source_selection import SourceSelection
 from token_usage import summary as token_summary
-from dashboard import content_review, development
+from dashboard import content_review, development, office_preview
 
 
 def write_json(path, data):
@@ -304,7 +304,7 @@ class Review:
                 raise
 
     def document(self, file_id):
-        # PDFs and images use native previews; Office files use all extracted text/image units.
+        # PDFs and images use native previews; Office files use structured visual pages.
         path = self.file_path(file_id)
         suffix = path.suffix.lower()
         if suffix == ".pdf":
@@ -313,6 +313,8 @@ class Review:
                 return {"kind": "pdf", "pages": len(pdf)}
         if suffix in {".jpg", ".jpeg", ".png", ".webp", ".bmp"}:
             return {"kind": "image", "pages": 1}
+        if suffix in {".docx", ".xlsx"}:
+            return office_preview.describe(path)
         from document_reader import extract
         cache = self.data / "previews" / fingerprint(path)
         metadata = cache / "units.json"
@@ -422,7 +424,12 @@ def handler_for(review, token, sources=None):
                         workbook = review.manifest_path.parent / "bank-output" / "answer_statement_bank_only.xlsx"
                         self.reply(200, workbook.read_bytes(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
                     elif query.path == "/api/document":
-                        self.reply(200, review.document(params["id"][0]))
+                        self.reply(200, office_preview.describe(content_review.source(review, params["content_id"][0]))
+                                   if "content_id" in params else review.document(params["id"][0]))
+                    elif query.path == "/api/office-view":
+                        path = (content_review.source(review, params["content_id"][0])
+                                if "content_id" in params else review.file_path(params["id"][0]))
+                        self.reply(200, office_preview.page(path, int(params.get("page", ["0"])[0])))
                     elif query.path in {"/api/file", "/api/preview"}:
                         file_id = params["id"][0]
                         path = review.file_path(file_id)
@@ -458,6 +465,7 @@ def handler_for(review, token, sources=None):
                                   "/common.js": ("common.js", "text/javascript"),
                                   "/source.js": ("source.js", "text/javascript"),
                                   "/content-review.js": ("content-review.js", "text/javascript"),
+                                  "/office-view.js": ("office-view.js", "text/javascript"),
                                   "/style.css": ("style.css", "text/css")}
                         name, mime = assets[query.path]
                         self.reply(200, (Path(__file__).parent / name).read_bytes(), mime)
