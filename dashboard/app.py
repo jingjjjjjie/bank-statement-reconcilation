@@ -16,6 +16,7 @@ WORKSPACE = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(WORKSPACE))
 from duplicate_workflow import check, duplicate_root, fingerprint, supporting_files
 from review_settings import load_config, save_config, revision, content_settings, model_settings, model_catalog
+from source_selection import SourceSelection, choose_bank_pdf, choose_folder
 from token_usage import summary as token_summary
 
 
@@ -251,8 +252,12 @@ class Review:
             {"label": u["label"], "text": u["text"], "has_image": bool(u["image"])} for u in units]}
 
 
-def handler_for(review, token):
-    # Bind a same-origin local API to a specific review instance.
+def handler_for(review, token, sources=None):
+    """Serve the active review and local source-folder selection."""
+    sources = sources or SourceSelection(review.manifest_path.parent, review.data)
+    review_ref = {"current": review}
+    server_lock = threading.RLock()
+
     class Handler(BaseHTTPRequestHandler):
         def reply(self, status, body, mime="application/json; charset=utf-8"):
             if not isinstance(body, bytes):
@@ -270,19 +275,31 @@ def handler_for(review, token):
             return self.headers.get("Host") in {f"127.0.0.1:{self.server.server_port}", f"localhost:{self.server.server_port}"}
 
         def do_GET(self):
+            review = review_ref["current"]
             if not self.local_host():
                 self.reply(403, {"error": "Local access only"})
                 return
             query = urlparse(self.path)
+            if review is None and query.path not in {"/source", "/source/", "/source.js", "/common.js", "/style.css", "/api/source", "/api/session"}:
+                self.send_response(302)
+                self.send_header("Location", "/source")
+                self.end_headers()
+                return
             params = parse_qs(query.query)
             try:
-                with review.lock:
+                with server_lock:
                     if query.path == "/api/state":
                         self.reply(200, {**review.snapshot(), "token": token})
                     elif query.path == "/api/session":
                         self.reply(200, {"token": token})
                     elif query.path == "/api/config":
                         self.reply(200, review.settings())
+                    elif query.path == "/api/source":
+                        selected = sources.selected()
+                        bank = sources.selected_bank()
+                        self.reply(200, {"active": str(review.root) if review else None,
+                                         "selected": sources.inspect(selected) if selected else None,
+                                         "bank": sources.inspect_bank(bank) if bank else None})
                     elif query.path == "/api/completion":
                         self.reply(200, review.completion())
                     elif query.path == "/api/document":
@@ -309,10 +326,13 @@ def handler_for(review, token):
                                   "/settings/": ("settings.html", "text/html; charset=utf-8"),
                                   "/complete": ("complete.html", "text/html; charset=utf-8"),
                                   "/complete/": ("complete.html", "text/html; charset=utf-8"),
+                                  "/source": ("source.html", "text/html; charset=utf-8"),
+                                  "/source/": ("source.html", "text/html; charset=utf-8"),
                                   "/app.js": ("app.js", "text/javascript"),
                                   "/settings.js": ("settings.js", "text/javascript"),
                                   "/complete.js": ("complete.js", "text/javascript"),
                                   "/common.js": ("common.js", "text/javascript"),
+                                  "/source.js": ("source.js", "text/javascript"),
                                   "/style.css": ("style.css", "text/css")}
                         name, mime = assets[query.path]
                         self.reply(200, (Path(__file__).parent / name).read_bytes(), mime)
@@ -323,6 +343,7 @@ def handler_for(review, token):
 
         def do_POST(self):
             # Token and Origin checks prevent another website from making file choices.
+            review = review_ref["current"]
             origin = self.headers.get("Origin")
             allowed = {f"http://127.0.0.1:{self.server.server_port}", f"http://localhost:{self.server.server_port}"}
             if not self.local_host() or self.headers.get("X-Review-Token") != token or (origin and origin not in allowed):
@@ -333,7 +354,7 @@ def handler_for(review, token):
                 if not 0 < length <= 8192:
                     raise ValueError("Invalid request size")
                 body = json.loads(self.rfile.read(length))
-                with review.lock:
+                with server_lock:
                     if self.path == "/api/keep":
                         review.keep(body["group"], body["id"])
                     elif self.path == "/api/undo":
@@ -345,6 +366,34 @@ def handler_for(review, token):
                     elif self.path == "/api/config":
                         save_config(review.config_path, body["config"], body["revision"])
                         self.reply(200, review.settings())
+                        return
+                    elif self.path == "/api/source/pick":
+                        path = choose_folder()
+                        self.reply(200, {"cancelled": not bool(path),
+                                         "selected": sources.save(path) if path else None})
+                        return
+                    elif self.path == "/api/source/select":
+                        self.reply(200, {"selected": sources.save(body["path"])})
+                        return
+                    elif self.path == "/api/source/start":
+                        manifest, data = sources.start()
+                        next_review = Review(manifest, data)
+                        sources.activate(manifest)
+                        review_ref["current"] = next_review
+                        self.reply(200, {"active": str(next_review.root), "groups": len(next_review.groups)})
+                        return
+                    elif self.path == "/api/source/bank-pick":
+                        path = choose_bank_pdf()
+                        self.reply(200, {"cancelled": not bool(path),
+                                         "bank": sources.save_bank(path) if path else None})
+                        return
+                    elif self.path == "/api/source/bank-select":
+                        self.reply(200, {"bank": sources.save_bank(body["path"])})
+                        return
+                    elif self.path == "/api/source/bank-prepare":
+                        if review is None:
+                            raise ValueError("Create a supporting-document review first")
+                        self.reply(200, sources.prepare_bank(review.manifest_path, body["year"]))
                         return
                     else:
                         raise ValueError("Unknown action")
@@ -364,8 +413,11 @@ def main():
     parser.add_argument("--manifest", type=Path, default=WORKSPACE / "duplicate-manifest.json")
     parser.add_argument("--data", type=Path, default=Path(__file__).parent / ".data")
     args = parser.parse_args()
-    review = Review(args.manifest, args.data)
-    server = ThreadingHTTPServer(("127.0.0.1", args.port), handler_for(review, secrets.token_urlsafe(32)))
+    sources = SourceSelection(WORKSPACE, args.data)
+    manifest = sources.active_manifest(args.manifest) if args.manifest == WORKSPACE / "duplicate-manifest.json" else args.manifest
+    data = manifest.parent / "dashboard-data" if manifest != args.manifest else args.data
+    review = Review(manifest, data) if manifest.is_file() else None
+    server = ThreadingHTTPServer(("127.0.0.1", args.port), handler_for(review, secrets.token_urlsafe(32), sources))
     print(f"Dashboard: http://127.0.0.1:{server.server_port}", flush=True)
     try:
         server.serve_forever()

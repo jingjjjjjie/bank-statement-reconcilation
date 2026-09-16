@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>bank-statement-reconciliation · Source folder</title><link rel="stylesheet" href="/style.css">
+  <script src="/common.js" defer></script><script src="/source.js" defer></script>
+</head>
+<body>
+  <aside class="rail">
+    <a class="brand" href="/">Bank Statement Reconciliation</a>
+    <div class="workspace"><span class="eyebrow">RECONCILIATION</span><strong>TOHIGH MEDIA</strong><span>December 2025 · MYR</span></div>
+    <div class="rail-label">WORKFLOW</div>
+    <a class="nav-item active" href="/source" aria-current="page">Source folder</a>
+    <a class="nav-item" href="/">Document review</a>
+    <a class="nav-item" href="/settings">Settings</a>
+    <a class="nav-item" href="/complete">Completion</a>
+    <div class="rail-bottom">Local review workspace</div>
+  </aside>
+  <main class="settings-page">
+    <header><div class="breadcrumb">Workspace <span>/</span> Source folder</div><a class="header-settings" href="/">Document review</a></header>
+    <section class="page-heading"><div><div class="eyebrow">DOCUMENT SOURCE</div><h1>Supporting documents folder</h1><p>Select the folder containing the documents to review.</p></div></section>
+    <div id="source-error" class="validation" role="alert" hidden></div>
+    <section class="settings-card">
+      <h2>Active review</h2><p id="active-source">Loading…</p>
+    </section>
+    <section class="settings-card">
+      <h2>Supporting documents</h2><p>Browse folders on this computer, or enter a full local path.</p>
+      <div class="source-controls"><button id="browse-source" class="button dark" type="button">Browse folders</button><span>or</span><label class="setting-field"><strong>Folder path</strong><input id="source-path" type="text" autocomplete="off" spellcheck="false" placeholder="C:\path\to\supporting-documents"></label><button id="select-source" class="button secondary" type="button">Check folder</button></div>
+      <div id="selected-source" class="source-result" hidden></div>
+      <div id="source-action" class="source-action" hidden><p>Creating a review moves exact duplicate files from the selected folder into this workspace's <code>duplicated/</code> directory. Original locations are retained in the manifest. Other files stay in place.</p><button id="start-source" class="button dark" type="button">Create or open review</button></div>
+    </section>
+    <section class="settings-card">
+      <h2>Bank statement</h2><p>Select the statement PDF separately. The current extractor supports AmBank digital statements.</p>
+      <div class="source-controls"><button id="browse-bank" class="button dark" type="button">Browse PDF files</button><span>or</span><label class="setting-field"><strong>PDF path</strong><input id="bank-path" type="text" autocomplete="off" spellcheck="false" placeholder="C:\path\to\statement.pdf"></label><button id="select-bank" class="button secondary" type="button">Check PDF</button></div>
+      <div id="selected-bank" class="source-result" hidden></div>
+      <div id="bank-action" class="source-action" hidden><label class="setting-field"><strong>Statement year</strong><input id="bank-year" type="number" min="1900" max="2100" placeholder="2025"></label><p>Extraction creates a bank master for the active review. It does not replace an existing master from a different statement.</p><button id="prepare-bank" class="button dark" type="button">Extract bank statement</button><p id="bank-result" role="status"></p></div>
+    </section>
+  </main>
+</body>
+</html>

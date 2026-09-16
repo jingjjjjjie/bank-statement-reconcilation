@@ -917,3 +917,9 @@ a.nav-item:hover { background: #30483f; }
 .stage-setting { border-top: 1px solid #dce1d7; margin-top: 24px; padding-top: 18px; }
 .stage-setting h3 { margin: 0 0 8px; font-size: 16px; }
 .stage-setting p { margin: 0 0 18px; line-height: 1.6; }
+.source-controls { display: flex; align-items: end; gap: 14px; margin-top: 24px; flex-wrap: wrap; }
+.source-controls .setting-field { flex: 1 1 300px; }
+.source-controls .setting-field input { margin-bottom: 0; }
+.source-result { margin-top: 22px; padding: 14px; background: var(--mint); overflow-wrap: anywhere; }
+.source-action { margin-top: 22px; padding-top: 20px; border-top: 1px solid var(--line); }
+.source-action .button { margin-top: 16px; }
