@@ -199,4 +199,4 @@ $('#check-content').onclick = async () => {
   finally { button.disabled = false; }
 };
 api('/api/session').then(data => { token = data.token; return refresh(); }).catch(error => toast(error.message));
-setInterval(() => { if (token) refresh().catch(error => toast(error.message)); }, 5000);
+setInterval(() => { if (token) refresh().catch(error => toast(error.message)); }, 3000);
