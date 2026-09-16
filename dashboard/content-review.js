@@ -182,7 +182,14 @@ $('#stop-content').onclick = async () => {
   $('#stop-content').disabled = true;
   $('#content-loading-title').textContent = 'Stopping review';
   $('#content-loading-progress').textContent = 'Stopping active Codex calls. Completed results remain saved.';
-  try {await api('/api/content/stop', {}); await refresh();}
+  try {
+    await api('/api/content/stop', {});
+    for (let attempt = 0; attempt < 40; attempt++) {
+      await refresh();
+      if (!currentReviewState.running) break;
+      await new Promise(resolve => setTimeout(resolve, 250));
+    }
+  }
   catch (error) {$('#stop-content').disabled = false; toast(error.message);}
 };
 $('#check-content').onclick = async () => {

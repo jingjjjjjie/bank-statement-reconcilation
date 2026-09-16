@@ -7,6 +7,7 @@ import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from pathlib import Path
+from time import sleep
 
 from jsonschema.exceptions import ValidationError
 
@@ -32,10 +33,17 @@ def read(path):
 
 
 def save(path, value):
-    # Atomic replacement keeps interrupted runs resumable.
+    """Atomically save a checkpoint, retrying brief Windows file locks."""
     temporary = path.with_suffix(".tmp")
     temporary.write_text(json.dumps(value, ensure_ascii=False, indent=2), encoding="utf-8")
-    temporary.replace(path)
+    for attempt in range(15):
+        try:
+            temporary.replace(path)
+            return
+        except PermissionError:
+            if attempt == 14:
+                raise
+            sleep(0.02 * (attempt + 1))
 
 
 def inventory(root, manifest_path):

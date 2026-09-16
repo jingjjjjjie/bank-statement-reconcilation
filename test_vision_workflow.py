@@ -41,6 +41,25 @@ class FakeReviewer:
 
 
 class WorkflowTests(unittest.TestCase):
+    def test_checkpoint_retries_a_brief_windows_lock(self):
+        """A temporary sharing lock does not lose a saved review checkpoint."""
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary) / "state.json"
+            original = Path.replace
+            attempts = [0]
+
+            def briefly_locked(source, target):
+                """Deny the first replacement and allow the retry."""
+                attempts[0] += 1
+                if attempts[0] == 1:
+                    raise PermissionError("file is in use")
+                return original(source, target)
+
+            with patch.object(Path, "replace", briefly_locked), patch("vision_workflow.sleep"):
+                workflow.save(path, {"units": 1})
+            self.assertEqual(workflow.read(path), {"units": 1})
+            self.assertEqual(attempts[0], 2)
+
     def setUp(self):
         # Fixtures live outside the customer folder and clean themselves up.
         self.temp = tempfile.TemporaryDirectory()
