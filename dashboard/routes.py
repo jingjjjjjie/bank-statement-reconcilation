@@ -250,11 +250,8 @@ def handler_for(review, token, sources=None):
                             raise ValueError("Choose an active review first")
                         from reconciliation.bank_excel import export
                         master = review.manifest_path.parent / "bank-output" / "master_statement.csv"
-                        template = Path(body["template"]).expanduser().resolve(strict=True)
-                        if not template.is_file() or template.suffix.lower() != ".xlsx":
-                            raise ValueError("Choose a sample Excel workbook")
                         with tempfile.TemporaryDirectory() as temporary:
-                            output = export(master, template, body["company"],
+                            output = export(master, body["company"],
                                             Path(temporary) / "answer_statement_bank_only.xlsx")
                             development_cache.capture(review.manifest_path, "bank-export", [output])
                             self.reply(200, output.read_bytes(),

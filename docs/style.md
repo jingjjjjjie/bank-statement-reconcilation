@@ -1,8 +1,9 @@
 # Bank reconciliation workbook style
 
-Reference: `YA24 - TSPLUG GH - BNC (sample).xlsx`, located in `local/Context.md` (local, Git-ignored).
-Primary reference sheet: `DEC'25`. Other monthly sheets have different widths;
-the measurements below are specifically from December.
+Runtime definition: `prompts/styles/bank_statement.xml`. This file captures the
+approved sample's December formatting and theme without its customer data or
+formulas. Exports load this definition directly; no sample workbook is required.
+Edit it using the instructions in `prompts/styles/README.md`.
 
 ## Layout
 
@@ -56,7 +57,7 @@ Widths are Excel column-width units, rounded to two decimals.
   hard-coded month/year format. Use real dates and a consistent `dd/mm/yyyy`
   format in the generated workbook.
 - DR, CR, TOTAL use accounting-style formatting: thousands separators, two
-  decimal places, and a dash for zero. Copy the source number format directly.
+  decimal places, and a dash for zero. Preserve the captured number format in the style definition.
 - DR increases the balance; CR decreases it. This reverses the AmBank PDF's
   CREDIT/DEBIT labels when mapping into the workbook.
 - TOTAL is a running balance. The sample formula is `=J5+H6-I6`, continuing

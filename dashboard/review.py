@@ -84,7 +84,7 @@ class Review:
         return {"name": self.root.name, "period": period}
 
     def export_defaults(self):
-        """Suggest the existing company and a nearby sample style workbook."""
+        """Suggest the existing company for the reusable bank workbook style."""
         workbook = self.manifest_path.parent / "bank-output" / "answer_statement_bank_only.xlsx"
         company = ""
         if workbook.is_file():
@@ -94,8 +94,7 @@ class Review:
                 company = source.active["A1"].value or ""
             finally:
                 source.close()
-        templates = [path for path in self.root.parent.glob("*.xlsx") if "sample" in path.name.casefold()]
-        return {"company": company, "template": str(templates[0]) if len(templates) == 1 else ""}
+        return {"company": company}
 
     def completion(self):
         """Show final usage only after exact, content, and bank checks pass."""

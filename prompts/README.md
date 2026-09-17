@@ -24,6 +24,6 @@ work. Changed request text gets a different cache key; unchanged requests can
 still reuse cached responses. Each executed request's full prompt remains saved
 in its `model-cache/<hash>/prompt.txt` for auditing.
 
-`styles.md` controls model instructions. The bank workbook's visual formatting
-guide remains in `docs/style.md`; it is not a model prompt or a runtime style
-configuration.
+`styles.md` controls model instructions. `styles/bank_statement.xml` controls
+Excel formatting deterministically; it is never sent to the model. See
+[workbook style instructions](styles/README.md) for editing it.

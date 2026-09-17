@@ -1,0 +1,1196 @@
+<?xml version='1.0' encoding='utf-8'?>
+<workbook-style xmlns:ns0="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:ns1="http://schemas.microsoft.com/office/thememl/2012/main" name="Bank statement" version="1">
+  <columns>
+    <column letter="A" heading="DATE" width="12.0" />
+    <column letter="B" heading="LEDGER" width="40.5703125" />
+    <column letter="C" heading="SQL" width="7.85546875" />
+    <column letter="D" heading="SALES TYPE" width="16.140625" />
+    <column letter="E" heading="PV/OR" width="12.140625" />
+    <column letter="F" heading="PAY TO" width="53.5703125" />
+    <column letter="G" heading="PARTICULAR" width="110.7109375" />
+    <column letter="H" heading="DR" width="14.0" />
+    <column letter="I" heading="CR" width="14.0" />
+    <column letter="J" heading="TOTAL" width="18.5703125" />
+    <column letter="K" heading="REMARK" width="18.140625" />
+  </columns>
+  <row name="title" height="21.0">
+    <cell column="1" style="title_A" />
+    <cell column="2" style="title_B" />
+    <cell column="3" style="title_B" />
+    <cell column="4" style="title_B" />
+    <cell column="5" style="title_B" />
+    <cell column="6" style="title_B" />
+    <cell column="7" style="title_B" />
+    <cell column="8" style="title_B" />
+    <cell column="9" style="title_B" />
+    <cell column="10" style="title_B" />
+    <cell column="11" style="title_B" />
+  </row>
+  <row name="subtitle" height="21.0">
+    <cell column="1" style="title_A" />
+    <cell column="2" style="title_B" />
+    <cell column="3" style="title_B" />
+    <cell column="4" style="title_B" />
+    <cell column="5" style="title_B" />
+    <cell column="6" style="title_B" />
+    <cell column="7" style="title_B" />
+    <cell column="8" style="title_B" />
+    <cell column="9" style="title_B" />
+    <cell column="10" style="title_B" />
+    <cell column="11" style="title_B" />
+  </row>
+  <row name="spacer" height="15">
+    <cell column="1" style="title_B" />
+    <cell column="2" style="spacer_B" />
+    <cell column="3" style="spacer_B" />
+    <cell column="4" style="title_B" />
+    <cell column="5" style="title_B" />
+    <cell column="6" style="title_B" />
+    <cell column="7" style="title_B" />
+    <cell column="8" style="title_B" />
+    <cell column="9" style="title_B" />
+    <cell column="10" style="title_B" />
+    <cell column="11" style="title_B" />
+  </row>
+  <row name="header" height="15">
+    <cell column="1" style="header_A" />
+    <cell column="2" style="header_B" />
+    <cell column="3" style="header_C" />
+    <cell column="4" style="header_D" />
+    <cell column="5" style="header_D" />
+    <cell column="6" style="header_F" />
+    <cell column="7" style="header_D" />
+    <cell column="8" style="header_H" />
+    <cell column="9" style="header_H" />
+    <cell column="10" style="header_H" />
+    <cell column="11" style="header_K" />
+  </row>
+  <row name="opening" height="15">
+    <cell column="1" style="opening_A" />
+    <cell column="2" style="opening_B" />
+    <cell column="3" style="opening_B" />
+    <cell column="4" style="opening_D" />
+    <cell column="5" style="opening_B" />
+    <cell column="6" style="opening_B" />
+    <cell column="7" style="opening_B" />
+    <cell column="8" style="opening_H" />
+    <cell column="9" style="opening_H" />
+    <cell column="10" style="opening_J" />
+    <cell column="11" style="opening_K" />
+  </row>
+  <row name="transaction" height="30">
+    <cell column="1" style="transaction_A" />
+    <cell column="2" style="transaction_B" />
+    <cell column="3" style="opening_B" />
+    <cell column="4" style="title_B" />
+    <cell column="5" style="opening_B" />
+    <cell column="6" style="opening_B" />
+    <cell column="7" style="opening_B" />
+    <cell column="8" style="opening_H" />
+    <cell column="9" style="opening_H" />
+    <cell column="10" style="opening_H" />
+    <cell column="11" style="opening_K" />
+  </row>
+  <row name="total" height="15.75">
+    <cell column="1" style="total_A" />
+    <cell column="2" style="total_B" />
+    <cell column="3" style="total_B" />
+    <cell column="4" style="total_D" />
+    <cell column="5" style="total_E" />
+    <cell column="6" style="total_E" />
+    <cell column="7" style="total_E" />
+    <cell column="8" style="total_H" />
+    <cell column="9" style="total_I" />
+    <cell column="10" style="total_J" />
+    <cell column="11" style="total_K" />
+  </row>
+  <row name="sql" height="15">
+    <cell column="1" style="sql_A" />
+    <cell column="2" style="opening_B" />
+    <cell column="3" style="opening_B" />
+    <cell column="4" style="opening_D" />
+    <cell column="5" style="opening_B" />
+    <cell column="6" style="sql_F" />
+    <cell column="7" style="sql_G" />
+    <cell column="8" style="opening_H" />
+    <cell column="9" style="sql_I" />
+    <cell column="10" style="opening_H" />
+    <cell column="11" style="opening_K" />
+  </row>
+  <row name="variance" height="15.75">
+    <cell column="1" style="title_B" />
+    <cell column="2" style="title_B" />
+    <cell column="3" style="title_B" />
+    <cell column="4" style="title_B" />
+    <cell column="5" style="title_B" />
+    <cell column="6" style="title_B" />
+    <cell column="7" style="sql_G" />
+    <cell column="8" style="variance_H" />
+    <cell column="9" style="variance_I" />
+    <cell column="10" style="title_B" />
+    <cell column="11" style="title_B" />
+  </row>
+  <print orientation="landscape" paperSize="9" fitToWidth="1" fitToHeight="0" repeat_rows="4:4" />
+  <ns0:theme name="Office Theme">
+    <ns0:themeElements>
+      <ns0:clrScheme name="Office">
+        <ns0:dk1>
+          <ns0:sysClr val="windowText" lastClr="000000" />
+        </ns0:dk1>
+        <ns0:lt1>
+          <ns0:sysClr val="window" lastClr="FFFFFF" />
+        </ns0:lt1>
+        <ns0:dk2>
+          <ns0:srgbClr val="0E2841" />
+        </ns0:dk2>
+        <ns0:lt2>
+          <ns0:srgbClr val="E8E8E8" />
+        </ns0:lt2>
+        <ns0:accent1>
+          <ns0:srgbClr val="156082" />
+        </ns0:accent1>
+        <ns0:accent2>
+          <ns0:srgbClr val="E97132" />
+        </ns0:accent2>
+        <ns0:accent3>
+          <ns0:srgbClr val="196B24" />
+        </ns0:accent3>
+        <ns0:accent4>
+          <ns0:srgbClr val="0F9ED5" />
+        </ns0:accent4>
+        <ns0:accent5>
+          <ns0:srgbClr val="A02B93" />
+        </ns0:accent5>
+        <ns0:accent6>
+          <ns0:srgbClr val="4EA72E" />
+        </ns0:accent6>
+        <ns0:hlink>
+          <ns0:srgbClr val="467886" />
+        </ns0:hlink>
+        <ns0:folHlink>
+          <ns0:srgbClr val="96607D" />
+        </ns0:folHlink>
+      </ns0:clrScheme>
+      <ns0:fontScheme name="Office">
+        <ns0:majorFont>
+          <ns0:latin typeface="Aptos Display" panose="02110004020202020204" />
+          <ns0:ea typeface="" />
+          <ns0:cs typeface="" />
+          <ns0:font script="Jpan" typeface="游ゴシック Light" />
+          <ns0:font script="Hang" typeface="맑은 고딕" />
+          <ns0:font script="Hans" typeface="等线 Light" />
+          <ns0:font script="Hant" typeface="新細明體" />
+          <ns0:font script="Arab" typeface="Times New Roman" />
+          <ns0:font script="Hebr" typeface="Times New Roman" />
+          <ns0:font script="Thai" typeface="Tahoma" />
+          <ns0:font script="Ethi" typeface="Nyala" />
+          <ns0:font script="Beng" typeface="Vrinda" />
+          <ns0:font script="Gujr" typeface="Shruti" />
+          <ns0:font script="Khmr" typeface="MoolBoran" />
+          <ns0:font script="Knda" typeface="Tunga" />
+          <ns0:font script="Guru" typeface="Raavi" />
+          <ns0:font script="Cans" typeface="Euphemia" />
+          <ns0:font script="Cher" typeface="Plantagenet Cherokee" />
+          <ns0:font script="Yiii" typeface="Microsoft Yi Baiti" />
+          <ns0:font script="Tibt" typeface="Microsoft Himalaya" />
+          <ns0:font script="Thaa" typeface="MV Boli" />
+          <ns0:font script="Deva" typeface="Mangal" />
+          <ns0:font script="Telu" typeface="Gautami" />
+          <ns0:font script="Taml" typeface="Latha" />
+          <ns0:font script="Syrc" typeface="Estrangelo Edessa" />
+          <ns0:font script="Orya" typeface="Kalinga" />
+          <ns0:font script="Mlym" typeface="Kartika" />
+          <ns0:font script="Laoo" typeface="DokChampa" />
+          <ns0:font script="Sinh" typeface="Iskoola Pota" />
+          <ns0:font script="Mong" typeface="Mongolian Baiti" />
+          <ns0:font script="Viet" typeface="Times New Roman" />
+          <ns0:font script="Uigh" typeface="Microsoft Uighur" />
+          <ns0:font script="Geor" typeface="Sylfaen" />
+          <ns0:font script="Armn" typeface="Arial" />
+          <ns0:font script="Bugi" typeface="Leelawadee UI" />
+          <ns0:font script="Bopo" typeface="Microsoft JhengHei" />
+          <ns0:font script="Java" typeface="Javanese Text" />
+          <ns0:font script="Lisu" typeface="Segoe UI" />
+          <ns0:font script="Mymr" typeface="Myanmar Text" />
+          <ns0:font script="Nkoo" typeface="Ebrima" />
+          <ns0:font script="Olck" typeface="Nirmala UI" />
+          <ns0:font script="Osma" typeface="Ebrima" />
+          <ns0:font script="Phag" typeface="Phagspa" />
+          <ns0:font script="Syrn" typeface="Estrangelo Edessa" />
+          <ns0:font script="Syrj" typeface="Estrangelo Edessa" />
+          <ns0:font script="Syre" typeface="Estrangelo Edessa" />
+          <ns0:font script="Sora" typeface="Nirmala UI" />
+          <ns0:font script="Tale" typeface="Microsoft Tai Le" />
+          <ns0:font script="Talu" typeface="Microsoft New Tai Lue" />
+          <ns0:font script="Tfng" typeface="Ebrima" />
+        </ns0:majorFont>
+        <ns0:minorFont>
+          <ns0:latin typeface="Aptos Narrow" panose="02110004020202020204" />
+          <ns0:ea typeface="" />
+          <ns0:cs typeface="" />
+          <ns0:font script="Jpan" typeface="游ゴシック" />
+          <ns0:font script="Hang" typeface="맑은 고딕" />
+          <ns0:font script="Hans" typeface="等线" />
+          <ns0:font script="Hant" typeface="新細明體" />
+          <ns0:font script="Arab" typeface="Arial" />
+          <ns0:font script="Hebr" typeface="Arial" />
+          <ns0:font script="Thai" typeface="Tahoma" />
+          <ns0:font script="Ethi" typeface="Nyala" />
+          <ns0:font script="Beng" typeface="Vrinda" />
+          <ns0:font script="Gujr" typeface="Shruti" />
+          <ns0:font script="Khmr" typeface="DaunPenh" />
+          <ns0:font script="Knda" typeface="Tunga" />
+          <ns0:font script="Guru" typeface="Raavi" />
+          <ns0:font script="Cans" typeface="Euphemia" />
+          <ns0:font script="Cher" typeface="Plantagenet Cherokee" />
+          <ns0:font script="Yiii" typeface="Microsoft Yi Baiti" />
+          <ns0:font script="Tibt" typeface="Microsoft Himalaya" />
+          <ns0:font script="Thaa" typeface="MV Boli" />
+          <ns0:font script="Deva" typeface="Mangal" />
+          <ns0:font script="Telu" typeface="Gautami" />
+          <ns0:font script="Taml" typeface="Latha" />
+          <ns0:font script="Syrc" typeface="Estrangelo Edessa" />
+          <ns0:font script="Orya" typeface="Kalinga" />
+          <ns0:font script="Mlym" typeface="Kartika" />
+          <ns0:font script="Laoo" typeface="DokChampa" />
+          <ns0:font script="Sinh" typeface="Iskoola Pota" />
+          <ns0:font script="Mong" typeface="Mongolian Baiti" />
+          <ns0:font script="Viet" typeface="Arial" />
+          <ns0:font script="Uigh" typeface="Microsoft Uighur" />
+          <ns0:font script="Geor" typeface="Sylfaen" />
+          <ns0:font script="Armn" typeface="Arial" />
+          <ns0:font script="Bugi" typeface="Leelawadee UI" />
+          <ns0:font script="Bopo" typeface="Microsoft JhengHei" />
+          <ns0:font script="Java" typeface="Javanese Text" />
+          <ns0:font script="Lisu" typeface="Segoe UI" />
+          <ns0:font script="Mymr" typeface="Myanmar Text" />
+          <ns0:font script="Nkoo" typeface="Ebrima" />
+          <ns0:font script="Olck" typeface="Nirmala UI" />
+          <ns0:font script="Osma" typeface="Ebrima" />
+          <ns0:font script="Phag" typeface="Phagspa" />
+          <ns0:font script="Syrn" typeface="Estrangelo Edessa" />
+          <ns0:font script="Syrj" typeface="Estrangelo Edessa" />
+          <ns0:font script="Syre" typeface="Estrangelo Edessa" />
+          <ns0:font script="Sora" typeface="Nirmala UI" />
+          <ns0:font script="Tale" typeface="Microsoft Tai Le" />
+          <ns0:font script="Talu" typeface="Microsoft New Tai Lue" />
+          <ns0:font script="Tfng" typeface="Ebrima" />
+        </ns0:minorFont>
+      </ns0:fontScheme>
+      <ns0:fmtScheme name="Office">
+        <ns0:fillStyleLst>
+          <ns0:solidFill>
+            <ns0:schemeClr val="phClr" />
+          </ns0:solidFill>
+          <ns0:gradFill rotWithShape="1">
+            <ns0:gsLst>
+              <ns0:gs pos="0">
+                <ns0:schemeClr val="phClr">
+                  <ns0:lumMod val="110000" />
+                  <ns0:satMod val="105000" />
+                  <ns0:tint val="67000" />
+                </ns0:schemeClr>
+              </ns0:gs>
+              <ns0:gs pos="50000">
+                <ns0:schemeClr val="phClr">
+                  <ns0:lumMod val="105000" />
+                  <ns0:satMod val="103000" />
+                  <ns0:tint val="73000" />
+                </ns0:schemeClr>
+              </ns0:gs>
+              <ns0:gs pos="100000">
+                <ns0:schemeClr val="phClr">
+                  <ns0:lumMod val="105000" />
+                  <ns0:satMod val="109000" />
+                  <ns0:tint val="81000" />
+                </ns0:schemeClr>
+              </ns0:gs>
+            </ns0:gsLst>
+            <ns0:lin ang="5400000" scaled="0" />
+          </ns0:gradFill>
+          <ns0:gradFill rotWithShape="1">
+            <ns0:gsLst>
+              <ns0:gs pos="0">
+                <ns0:schemeClr val="phClr">
+                  <ns0:satMod val="103000" />
+                  <ns0:lumMod val="102000" />
+                  <ns0:tint val="94000" />
+                </ns0:schemeClr>
+              </ns0:gs>
+              <ns0:gs pos="50000">
+                <ns0:schemeClr val="phClr">
+                  <ns0:satMod val="110000" />
+                  <ns0:lumMod val="100000" />
+                  <ns0:shade val="100000" />
+                </ns0:schemeClr>
+              </ns0:gs>
+              <ns0:gs pos="100000">
+                <ns0:schemeClr val="phClr">
+                  <ns0:lumMod val="99000" />
+                  <ns0:satMod val="120000" />
+                  <ns0:shade val="78000" />
+                </ns0:schemeClr>
+              </ns0:gs>
+            </ns0:gsLst>
+            <ns0:lin ang="5400000" scaled="0" />
+          </ns0:gradFill>
+        </ns0:fillStyleLst>
+        <ns0:lnStyleLst>
+          <ns0:ln w="12700" cap="flat" cmpd="sng" algn="ctr">
+            <ns0:solidFill>
+              <ns0:schemeClr val="phClr" />
+            </ns0:solidFill>
+            <ns0:prstDash val="solid" />
+            <ns0:miter lim="800000" />
+          </ns0:ln>
+          <ns0:ln w="19050" cap="flat" cmpd="sng" algn="ctr">
+            <ns0:solidFill>
+              <ns0:schemeClr val="phClr" />
+            </ns0:solidFill>
+            <ns0:prstDash val="solid" />
+            <ns0:miter lim="800000" />
+          </ns0:ln>
+          <ns0:ln w="25400" cap="flat" cmpd="sng" algn="ctr">
+            <ns0:solidFill>
+              <ns0:schemeClr val="phClr" />
+            </ns0:solidFill>
+            <ns0:prstDash val="solid" />
+            <ns0:miter lim="800000" />
+          </ns0:ln>
+        </ns0:lnStyleLst>
+        <ns0:effectStyleLst>
+          <ns0:effectStyle>
+            <ns0:effectLst />
+          </ns0:effectStyle>
+          <ns0:effectStyle>
+            <ns0:effectLst />
+          </ns0:effectStyle>
+          <ns0:effectStyle>
+            <ns0:effectLst>
+              <ns0:outerShdw blurRad="57150" dist="19050" dir="5400000" algn="ctr" rotWithShape="0">
+                <ns0:srgbClr val="000000">
+                  <ns0:alpha val="63000" />
+                </ns0:srgbClr>
+              </ns0:outerShdw>
+            </ns0:effectLst>
+          </ns0:effectStyle>
+        </ns0:effectStyleLst>
+        <ns0:bgFillStyleLst>
+          <ns0:solidFill>
+            <ns0:schemeClr val="phClr" />
+          </ns0:solidFill>
+          <ns0:solidFill>
+            <ns0:schemeClr val="phClr">
+              <ns0:tint val="95000" />
+              <ns0:satMod val="170000" />
+            </ns0:schemeClr>
+          </ns0:solidFill>
+          <ns0:gradFill rotWithShape="1">
+            <ns0:gsLst>
+              <ns0:gs pos="0">
+                <ns0:schemeClr val="phClr">
+                  <ns0:tint val="93000" />
+                  <ns0:satMod val="150000" />
+                  <ns0:shade val="98000" />
+                  <ns0:lumMod val="102000" />
+                </ns0:schemeClr>
+              </ns0:gs>
+              <ns0:gs pos="50000">
+                <ns0:schemeClr val="phClr">
+                  <ns0:tint val="98000" />
+                  <ns0:satMod val="130000" />
+                  <ns0:shade val="90000" />
+                  <ns0:lumMod val="103000" />
+                </ns0:schemeClr>
+              </ns0:gs>
+              <ns0:gs pos="100000">
+                <ns0:schemeClr val="phClr">
+                  <ns0:shade val="63000" />
+                  <ns0:satMod val="120000" />
+                </ns0:schemeClr>
+              </ns0:gs>
+            </ns0:gsLst>
+            <ns0:lin ang="5400000" scaled="0" />
+          </ns0:gradFill>
+        </ns0:bgFillStyleLst>
+      </ns0:fmtScheme>
+    </ns0:themeElements>
+    <ns0:objectDefaults>
+      <ns0:lnDef>
+        <ns0:spPr />
+        <ns0:bodyPr />
+        <ns0:lstStyle />
+        <ns0:style>
+          <ns0:lnRef idx="2">
+            <ns0:schemeClr val="accent1" />
+          </ns0:lnRef>
+          <ns0:fillRef idx="0">
+            <ns0:schemeClr val="accent1" />
+          </ns0:fillRef>
+          <ns0:effectRef idx="1">
+            <ns0:schemeClr val="accent1" />
+          </ns0:effectRef>
+          <ns0:fontRef idx="minor">
+            <ns0:schemeClr val="tx1" />
+          </ns0:fontRef>
+        </ns0:style>
+      </ns0:lnDef>
+    </ns0:objectDefaults>
+    <ns0:extraClrSchemeLst />
+    <ns0:extLst>
+      <ns0:ext uri="{05A4C25C-085E-4340-85A3-A5531E510DB2}">
+        <ns1:themeFamily name="Office Theme" id="{2E142A2C-CD16-42D6-873A-C26D2A0506FA}" vid="{1BDDFF52-6CD6-40A5-AB3C-68EB2F1E4D0A}" />
+      </ns0:ext>
+    </ns0:extLst>
+  </ns0:theme>
+  <styles>
+    <style name="title_A" number_format="[$-14809]d/m/yyyy;@">
+      <font>
+        <name val="Aptos Narrow" />
+        <family val="2" />
+        <b val="1" />
+        <color theme="1" />
+        <sz val="16" />
+        <scheme val="minor" />
+      </font>
+      <fill>
+        <patternFill />
+      </fill>
+      <border>
+        <left />
+        <right />
+        <top />
+        <bottom />
+        <diagonal />
+      </border>
+      <alignment horizontal="left" vertical="center" />
+      <protection locked="1" hidden="0" />
+    </style>
+    <style name="title_B" number_format="General">
+      <font>
+        <name val="Aptos Narrow" />
+        <family val="2" />
+        <color theme="1" />
+        <sz val="11" />
+        <scheme val="minor" />
+      </font>
+      <fill>
+        <patternFill />
+      </fill>
+      <border>
+        <left />
+        <right />
+        <top />
+        <bottom />
+        <diagonal />
+      </border>
+      <alignment />
+      <protection locked="1" hidden="0" />
+    </style>
+    <style name="spacer_B" number_format="General">
+      <font>
+        <name val="Aptos Narrow" />
+        <family val="2" />
+        <b val="1" />
+        <color theme="4" />
+        <sz val="11" />
+        <scheme val="minor" />
+      </font>
+      <fill>
+        <patternFill />
+      </fill>
+      <border>
+        <left />
+        <right />
+        <top />
+        <bottom />
+        <diagonal />
+      </border>
+      <alignment vertical="center" />
+      <protection locked="1" hidden="0" />
+    </style>
+    <style name="header_A" number_format="[$-14809]d/m/yyyy;@">
+      <font>
+        <name val="Aptos Narrow" />
+        <family val="2" />
+        <b val="1" />
+        <color theme="1" />
+        <sz val="11" />
+        <scheme val="minor" />
+      </font>
+      <fill>
+        <patternFill patternType="solid">
+          <fgColor theme="2" tint="-0.249977111117893" />
+          <bgColor indexed="64" />
+        </patternFill>
+      </fill>
+      <border>
+        <left />
+        <right />
+        <top />
+        <bottom />
+        <diagonal />
+      </border>
+      <alignment horizontal="left" vertical="center" />
+      <protection locked="1" hidden="0" />
+    </style>
+    <style name="header_B" number_format="General">
+      <font>
+        <name val="Aptos Narrow" />
+        <family val="2" />
+        <b val="1" />
+        <color theme="4" />
+        <sz val="11" />
+        <scheme val="minor" />
+      </font>
+      <fill>
+        <patternFill patternType="solid">
+          <fgColor theme="2" tint="-0.249977111117893" />
+          <bgColor indexed="64" />
+        </patternFill>
+      </fill>
+      <border>
+        <left />
+        <right />
+        <top />
+        <bottom />
+        <diagonal />
+      </border>
+      <alignment horizontal="center" vertical="center" />
+      <protection locked="1" hidden="0" />
+    </style>
+    <style name="header_C" number_format="General">
+      <font>
+        <name val="Aptos Narrow" />
+        <family val="2" />
+        <b val="1" />
+        <color theme="1" />
+        <sz val="11" />
+        <scheme val="minor" />
+      </font>
+      <fill>
+        <patternFill patternType="solid">
+          <fgColor theme="2" tint="-0.249977111117893" />
+          <bgColor indexed="64" />
+        </patternFill>
+      </fill>
+      <border>
+        <left />
+        <right />
+        <top />
+        <bottom />
+        <diagonal />
+      </border>
+      <alignment vertical="center" />
+      <protection locked="1" hidden="0" />
+    </style>
+    <style name="header_D" number_format="General">
+      <font>
+        <name val="Aptos Narrow" />
+        <family val="2" />
+        <b val="1" />
+        <color theme="1" />
+        <sz val="11" />
+        <scheme val="minor" />
+      </font>
+      <fill>
+        <patternFill patternType="solid">
+          <fgColor theme="2" tint="-0.249977111117893" />
+          <bgColor indexed="64" />
+        </patternFill>
+      </fill>
+      <border>
+        <left />
+        <right />
+        <top />
+        <bottom />
+        <diagonal />
+      </border>
+      <alignment horizontal="center" vertical="center" />
+      <protection locked="1" hidden="0" />
+    </style>
+    <style name="header_F" number_format="General">
+      <font>
+        <name val="Aptos Narrow" />
+        <family val="2" />
+        <b val="1" />
+        <color theme="1" />
+        <sz val="11" />
+        <scheme val="minor" />
+      </font>
+      <fill>
+        <patternFill patternType="solid">
+          <fgColor theme="2" tint="-0.249977111117893" />
+          <bgColor indexed="64" />
+        </patternFill>
+      </fill>
+      <border>
+        <left />
+        <right />
+        <top />
+        <bottom />
+        <diagonal />
+      </border>
+      <alignment horizontal="left" vertical="center" />
+      <protection locked="1" hidden="0" />
+    </style>
+    <style name="header_H" number_format="_-* #,##0.00_-;\-* #,##0.00_-;_-* &quot;-&quot;??_-;_-@_-">
+      <font>
+        <name val="Aptos Narrow" />
+        <family val="2" />
+        <b val="1" />
+        <color theme="1" />
+        <sz val="11" />
+        <scheme val="minor" />
+      </font>
+      <fill>
+        <patternFill patternType="solid">
+          <fgColor theme="2" tint="-0.249977111117893" />
+          <bgColor indexed="64" />
+        </patternFill>
+      </fill>
+      <border>
+        <left />
+        <right />
+        <top />
+        <bottom />
+        <diagonal />
+      </border>
+      <alignment horizontal="center" vertical="center" />
+      <protection locked="1" hidden="0" />
+    </style>
+    <style name="header_K" number_format="General">
+      <font>
+        <name val="Aptos Narrow" />
+        <family val="2" />
+        <b val="1" />
+        <color rgb="FFFF0000" />
+        <sz val="11" />
+        <scheme val="minor" />
+      </font>
+      <fill>
+        <patternFill patternType="solid">
+          <fgColor theme="2" tint="-0.249977111117893" />
+          <bgColor indexed="64" />
+        </patternFill>
+      </fill>
+      <border>
+        <left />
+        <right />
+        <top />
+        <bottom />
+        <diagonal />
+      </border>
+      <alignment horizontal="center" vertical="center" />
+      <protection locked="1" hidden="0" />
+    </style>
+    <style name="opening_A" number_format="dd&quot;/10/2025&quot;">
+      <font>
+        <name val="Aptos Narrow" />
+        <family val="2" />
+        <color theme="1" />
+        <sz val="11" />
+        <scheme val="minor" />
+      </font>
+      <fill>
+        <patternFill />
+      </fill>
+      <border>
+        <left />
+        <right />
+        <top />
+        <bottom />
+        <diagonal />
+      </border>
+      <alignment horizontal="left" />
+      <protection locked="1" hidden="0" />
+    </style>
+    <style name="opening_B" number_format="General">
+      <font>
+        <name val="Aptos Narrow" />
+        <family val="2" />
+        <color theme="1" />
+        <sz val="11" />
+        <scheme val="minor" />
+      </font>
+      <fill>
+        <patternFill />
+      </fill>
+      <border>
+        <left />
+        <right />
+        <top />
+        <bottom />
+        <diagonal />
+      </border>
+      <alignment vertical="center" />
+      <protection locked="1" hidden="0" />
+    </style>
+    <style name="opening_D" number_format="General">
+      <font>
+        <name val="Aptos Narrow" />
+        <family val="2" />
+        <color theme="1" />
+        <sz val="11" />
+        <scheme val="minor" />
+      </font>
+      <fill>
+        <patternFill />
+      </fill>
+      <border>
+        <left />
+        <right />
+        <top />
+        <bottom />
+        <diagonal />
+      </border>
+      <alignment horizontal="center" vertical="center" />
+      <protection locked="1" hidden="0" />
+    </style>
+    <style name="opening_H" number_format="_-* #,##0.00_-;\-* #,##0.00_-;_-* &quot;-&quot;??_-;_-@_-">
+      <font>
+        <name val="Aptos Narrow" />
+        <family val="2" />
+        <color theme="1" />
+        <sz val="11" />
+        <scheme val="minor" />
+      </font>
+      <fill>
+        <patternFill />
+      </fill>
+      <border>
+        <left />
+        <right />
+        <top />
+        <bottom />
+        <diagonal />
+      </border>
+      <alignment vertical="center" />
+      <protection locked="1" hidden="0" />
+    </style>
+    <style name="opening_J" number_format="_-* #,##0.00_-;\-* #,##0.00_-;_-* &quot;-&quot;??_-;_-@_-">
+      <font>
+        <name val="Aptos Narrow" />
+        <family val="2" />
+        <b val="1" />
+        <color theme="1" />
+        <sz val="11" />
+        <scheme val="minor" />
+      </font>
+      <fill>
+        <patternFill />
+      </fill>
+      <border>
+        <left />
+        <right />
+        <top />
+        <bottom />
+        <diagonal />
+      </border>
+      <alignment vertical="center" />
+      <protection locked="1" hidden="0" />
+    </style>
+    <style name="opening_K" number_format="General">
+      <font>
+        <name val="Aptos Narrow" />
+        <family val="2" />
+        <b val="1" />
+        <color rgb="FFFF0000" />
+        <sz val="11" />
+        <scheme val="minor" />
+      </font>
+      <fill>
+        <patternFill />
+      </fill>
+      <border>
+        <left />
+        <right />
+        <top />
+        <bottom />
+        <diagonal />
+      </border>
+      <alignment vertical="center" />
+      <protection locked="1" hidden="0" />
+    </style>
+    <style name="transaction_A" number_format="dd/mm/yyyy">
+      <font>
+        <name val="Aptos Narrow" />
+        <family val="2" />
+        <color theme="1" />
+        <sz val="11" />
+        <scheme val="minor" />
+      </font>
+      <fill>
+        <patternFill />
+      </fill>
+      <border>
+        <left />
+        <right />
+        <top />
+        <bottom />
+        <diagonal />
+      </border>
+      <alignment vertical="center" />
+      <protection locked="1" hidden="0" />
+    </style>
+    <style name="transaction_B" number_format="General">
+      <font>
+        <name val="Aptos Narrow" />
+        <family val="2" />
+        <b val="1" />
+        <color theme="3" tint="0.249977111117893" />
+        <sz val="11" />
+        <scheme val="minor" />
+      </font>
+      <fill>
+        <patternFill />
+      </fill>
+      <border>
+        <left />
+        <right />
+        <top />
+        <bottom />
+        <diagonal />
+      </border>
+      <alignment vertical="center" />
+      <protection locked="1" hidden="0" />
+    </style>
+    <style name="total_A" number_format="[$-14809]d/m/yyyy;@">
+      <font>
+        <name val="Aptos Narrow" />
+        <family val="2" />
+        <color theme="1" />
+        <sz val="11" />
+        <scheme val="minor" />
+      </font>
+      <fill>
+        <patternFill patternType="solid">
+          <fgColor theme="2" tint="-0.249977111117893" />
+          <bgColor indexed="64" />
+        </patternFill>
+      </fill>
+      <border>
+        <left />
+        <right />
+        <top />
+        <bottom />
+        <diagonal />
+      </border>
+      <alignment horizontal="left" vertical="center" />
+      <protection locked="1" hidden="0" />
+    </style>
+    <style name="total_B" number_format="General">
+      <font>
+        <name val="Aptos Narrow" />
+        <family val="2" />
+        <b val="1" />
+        <color theme="4" />
+        <sz val="11" />
+        <scheme val="minor" />
+      </font>
+      <fill>
+        <patternFill patternType="solid">
+          <fgColor theme="2" tint="-0.249977111117893" />
+          <bgColor indexed="64" />
+        </patternFill>
+      </fill>
+      <border>
+        <left />
+        <right />
+        <top />
+        <bottom />
+        <diagonal />
+      </border>
+      <alignment vertical="center" />
+      <protection locked="1" hidden="0" />
+    </style>
+    <style name="total_D" number_format="General">
+      <font>
+        <name val="Aptos Narrow" />
+        <family val="2" />
+        <color theme="1" />
+        <sz val="11" />
+        <scheme val="minor" />
+      </font>
+      <fill>
+        <patternFill patternType="solid">
+          <fgColor theme="2" tint="-0.249977111117893" />
+          <bgColor indexed="64" />
+        </patternFill>
+      </fill>
+      <border>
+        <left />
+        <right />
+        <top />
+        <bottom />
+        <diagonal />
+      </border>
+      <alignment horizontal="center" vertical="center" />
+      <protection locked="1" hidden="0" />
+    </style>
+    <style name="total_E" number_format="General">
+      <font>
+        <name val="Aptos Narrow" />
+        <family val="2" />
+        <color theme="1" />
+        <sz val="11" />
+        <scheme val="minor" />
+      </font>
+      <fill>
+        <patternFill patternType="solid">
+          <fgColor theme="2" tint="-0.249977111117893" />
+          <bgColor indexed="64" />
+        </patternFill>
+      </fill>
+      <border>
+        <left />
+        <right />
+        <top />
+        <bottom />
+        <diagonal />
+      </border>
+      <alignment vertical="center" />
+      <protection locked="1" hidden="0" />
+    </style>
+    <style name="total_H" number_format="_-* #,##0.00_-;\-* #,##0.00_-;_-* &quot;-&quot;??_-;_-@_-">
+      <font>
+        <name val="Aptos Narrow" />
+        <family val="2" />
+        <color theme="1" />
+        <sz val="11" />
+        <scheme val="minor" />
+      </font>
+      <fill>
+        <patternFill patternType="solid">
+          <fgColor theme="2" tint="-0.249977111117893" />
+          <bgColor indexed="64" />
+        </patternFill>
+      </fill>
+      <border>
+        <left />
+        <right />
+        <top style="thin">
+          <color indexed="64" />
+        </top>
+        <bottom style="double">
+          <color indexed="64" />
+        </bottom>
+        <diagonal />
+      </border>
+      <alignment vertical="center" />
+      <protection locked="1" hidden="0" />
+    </style>
+    <style name="total_I" number_format="_-* #,##0.00_-;\-* #,##0.00_-;_-* &quot;-&quot;??_-;_-@_-">
+      <font>
+        <name val="Aptos Narrow" />
+        <family val="2" />
+        <color theme="1" />
+        <sz val="11" />
+        <scheme val="minor" />
+      </font>
+      <fill>
+        <patternFill patternType="solid">
+          <fgColor theme="2" tint="-0.249977111117893" />
+          <bgColor indexed="64" />
+        </patternFill>
+      </fill>
+      <border>
+        <left />
+        <right />
+        <top style="thin">
+          <color indexed="64" />
+        </top>
+        <bottom style="double">
+          <color indexed="64" />
+        </bottom>
+        <diagonal />
+      </border>
+      <alignment horizontal="center" vertical="center" />
+      <protection locked="1" hidden="0" />
+    </style>
+    <style name="total_J" number_format="_-* #,##0.00_-;\-* #,##0.00_-;_-* &quot;-&quot;??_-;_-@_-">
+      <font>
+        <name val="Aptos Narrow" />
+        <family val="2" />
+        <color theme="1" />
+        <sz val="11" />
+        <scheme val="minor" />
+      </font>
+      <fill>
+        <patternFill patternType="solid">
+          <fgColor theme="2" tint="-0.249977111117893" />
+          <bgColor indexed="64" />
+        </patternFill>
+      </fill>
+      <border>
+        <left />
+        <right />
+        <top />
+        <bottom />
+        <diagonal />
+      </border>
+      <alignment vertical="center" />
+      <protection locked="1" hidden="0" />
+    </style>
+    <style name="total_K" number_format="General">
+      <font>
+        <name val="Aptos Narrow" />
+        <family val="2" />
+        <b val="1" />
+        <color rgb="FFFF0000" />
+        <sz val="11" />
+        <scheme val="minor" />
+      </font>
+      <fill>
+        <patternFill patternType="solid">
+          <fgColor theme="2" tint="-0.249977111117893" />
+          <bgColor indexed="64" />
+        </patternFill>
+      </fill>
+      <border>
+        <left />
+        <right />
+        <top />
+        <bottom />
+        <diagonal />
+      </border>
+      <alignment vertical="center" />
+      <protection locked="1" hidden="0" />
+    </style>
+    <style name="sql_A" number_format="[$-14809]d/m/yyyy;@">
+      <font>
+        <name val="Aptos Narrow" />
+        <family val="2" />
+        <color theme="1" />
+        <sz val="11" />
+        <scheme val="minor" />
+      </font>
+      <fill>
+        <patternFill />
+      </fill>
+      <border>
+        <left />
+        <right />
+        <top />
+        <bottom />
+        <diagonal />
+      </border>
+      <alignment horizontal="left" vertical="center" />
+      <protection locked="1" hidden="0" />
+    </style>
+    <style name="sql_F" number_format="General">
+      <font>
+        <name val="Aptos Narrow" />
+        <family val="2" />
+        <color theme="1" />
+        <sz val="11" />
+        <scheme val="minor" />
+      </font>
+      <fill>
+        <patternFill />
+      </fill>
+      <border>
+        <left />
+        <right />
+        <top />
+        <bottom />
+        <diagonal />
+      </border>
+      <alignment horizontal="left" vertical="center" />
+      <protection locked="1" hidden="0" />
+    </style>
+    <style name="sql_G" number_format="General">
+      <font>
+        <name val="Aptos Narrow" />
+        <family val="2" />
+        <b val="1" />
+        <color theme="1" />
+        <sz val="11" />
+        <scheme val="minor" />
+      </font>
+      <fill>
+        <patternFill />
+      </fill>
+      <border>
+        <left />
+        <right />
+        <top />
+        <bottom />
+        <diagonal />
+      </border>
+      <alignment horizontal="right" vertical="center" />
+      <protection locked="1" hidden="0" />
+    </style>
+    <style name="sql_I" number_format="_-* #,##0.00_-;\-* #,##0.00_-;_-* &quot;-&quot;??_-;_-@_-">
+      <font>
+        <name val="Aptos Narrow" />
+        <family val="2" />
+        <color theme="1" />
+        <sz val="11" />
+        <scheme val="minor" />
+      </font>
+      <fill>
+        <patternFill />
+      </fill>
+      <border>
+        <left />
+        <right />
+        <top />
+        <bottom />
+        <diagonal />
+      </border>
+      <alignment horizontal="center" vertical="center" />
+      <protection locked="1" hidden="0" />
+    </style>
+    <style name="variance_H" number_format="_-* #,##0.00_-;\-* #,##0.00_-;_-* &quot;-&quot;??_-;_-@_-">
+      <font>
+        <name val="Aptos Narrow" />
+        <family val="2" />
+        <color theme="1" />
+        <sz val="11" />
+        <scheme val="minor" />
+      </font>
+      <fill>
+        <patternFill />
+      </fill>
+      <border>
+        <left />
+        <right />
+        <top style="thin">
+          <color indexed="64" />
+        </top>
+        <bottom style="double">
+          <color indexed="64" />
+        </bottom>
+        <diagonal />
+      </border>
+      <alignment vertical="center" />
+      <protection locked="1" hidden="0" />
+    </style>
+    <style name="variance_I" number_format="_-* #,##0.00_-;\-* #,##0.00_-;_-* &quot;-&quot;??_-;_-@_-">
+      <font>
+        <name val="Aptos Narrow" />
+        <family val="2" />
+        <color theme="1" />
+        <sz val="11" />
+        <scheme val="minor" />
+      </font>
+      <fill>
+        <patternFill />
+      </fill>
+      <border>
+        <left />
+        <right />
+        <top style="thin">
+          <color indexed="64" />
+        </top>
+        <bottom style="double">
+          <color indexed="64" />
+        </bottom>
+        <diagonal />
+      </border>
+      <alignment horizontal="center" vertical="center" />
+      <protection locked="1" hidden="0" />
+    </style>
+  </styles>
+</workbook-style>

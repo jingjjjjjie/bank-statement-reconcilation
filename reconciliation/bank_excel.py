@@ -1,56 +1,70 @@
-"""Export extracted transactions using the sample workbook's December styles."""
+"""Export validated bank transactions using the editable workbook style."""
 
 import argparse
-from copy import copy
 from datetime import datetime
 from pathlib import Path
+from xml.etree import ElementTree as ET
 
-from openpyxl import Workbook, load_workbook
+from openpyxl import Workbook
+from openpyxl.styles import Alignment, Border, Font, PatternFill, Protection
+from reconciliation.paths import WORKSPACE
 from openpyxl.comments import Comment
 from reconciliation.bank_statement import read_master
 
 
-def copy_style(source, target):
-    """Register each style component in the destination workbook."""
-    for attribute in ("font", "fill", "border", "alignment", "protection", "number_format"):
-        setattr(target, attribute, copy(getattr(source, attribute)))
+STYLE_PATH = WORKSPACE / "prompts" / "styles" / "bank_statement.xml"
 
 
-def export(data_path, template_path, company, output_path):
-    """Write a bank-only workbook using the validated master and sample styles."""
+def apply_row_style(style, name, sheet, number):
+    """Apply a named row's formatting without introducing cell values."""
+    row = style.find(f"row[@name='{name}']")
+    if row is None:
+        raise ValueError(f"Workbook style is missing row: {name}")
+    sheet.row_dimensions[number].height = float(row.attrib["height"])
+    components = {"font": Font, "fill": PatternFill, "border": Border,
+                  "alignment": Alignment, "protection": Protection}
+    for entry in row.findall("cell"):
+        cell = sheet.cell(number, int(entry.attrib["column"]))
+        definition = style.find(f"styles/style[@name='{entry.attrib["style"]}']")
+        cell.number_format = definition.attrib["number_format"]
+        for attribute, factory in components.items():
+            setattr(cell, attribute, factory.from_tree(definition.find(attribute)))
+
+
+def export(data_path, company, output_path, style_path=None):
+    """Write bank evidence using a fresh workbook and an editable style file."""
     if not company.strip():
         raise ValueError("Enter the company name for the workbook")
     data = read_master(Path(data_path))
-    source = load_workbook(Path(template_path))
-    reference = source["DEC'25"]
+    style = ET.parse(Path(style_path) if style_path is not None else STYLE_PATH).getroot()
+    if style.tag != "workbook-style" or style.get("version") != "1":
+        raise ValueError("Unsupported workbook style")
     book = Workbook()
-    book.loaded_theme = source.loaded_theme
+    theme = style.find("{http://schemas.openxmlformats.org/drawingml/2006/main}theme")
+    if theme is not None:
+        book.loaded_theme = ET.tostring(theme, encoding="utf-8")
     sheet = book.active
     sheet.title = datetime.fromisoformat(data["transactions"][0]["date"]).strftime("%b'%y").upper()
 
-    # Copy styles into a fresh workbook so no other customer's records survive.
-    for key, dimension in reference.column_dimensions.items():
-        if key in "ABCDEFGHIJK":
-            sheet.column_dimensions[key].width = dimension.width
-    for row in range(1, 6):
-        for column in range(1, 12):
-            copy_style(reference.cell(row, column), sheet.cell(row, column))
-        sheet.row_dimensions[row].height = reference.row_dimensions[row].height
+    # Style files contain formatting only; transaction values come from the master.
+    for column in style.findall("columns/column"):
+        sheet.column_dimensions[column.attrib["letter"]].width = float(column.attrib["width"])
+    for row, name in enumerate(("title", "subtitle", "spacer", "header", "opening"), 1):
+        apply_row_style(style, name, sheet, row)
     sheet.merge_cells("A1:K1")
     sheet.merge_cells("A2:K2")
     sheet["A1"] = company.strip()
+    sheet["A1"].data_type = "s"
     sheet["A2"] = f"AMBANK - BANK & CASH : A/C {data['account']} ({sheet.title}) - {data['currency']}"
-    for cell in reference[4][:11]:
-        sheet.cell(4, cell.column, cell.value)
+    for column in style.findall("columns/column"):
+        sheet[f"{column.attrib['letter']}4"] = column.attrib["heading"]
     sheet["J5"] = float(data["opening_balance"])
     sheet["J5"].comment = Comment("Opening balance from the AmBank statement.", "Source")
 
     # Fill bank fields; reserve PARTICULAR for the supporting-document branch.
     for number, transaction in enumerate(data["transactions"], 6):
-        for column in range(1, 12):
-            copy_style(reference.cell(6, column), sheet.cell(number, column))
+        apply_row_style(style, "transaction", sheet, number)
         sheet.cell(number, 1, datetime.fromisoformat(transaction["date"]))
-        sheet.cell(number, 1).number_format = "dd/mm/yyyy"
         sheet.cell(number, 6, transaction["counterparty"].upper() or None)
         sheet.cell(number, 6).data_type = "s"
         sheet.cell(number, 8, float(transaction["money_in"]) or None)
@@ -64,31 +78,29 @@ def export(data_path, template_path, company, output_path):
         sheet.cell(number, 6).comment = Comment(
             f"Role: {transaction['counterparty_role']}\n"
             f"As printed: {transaction['counterparty_raw']}", "Source")
-        sheet.row_dimensions[number].height = 30
 
     # Match the footer layout without inventing SQL reconciliation results.
     footer = len(data["transactions"]) + 7
-    for offset, source_row in enumerate((160, 161, 162)):
-        for column in range(1, 12):
-            copy_style(reference.cell(source_row, column), sheet.cell(footer + offset, column))
+    for offset, name in enumerate(("total", "sql", "variance")):
+        apply_row_style(style, name, sheet, footer + offset)
     sheet.cell(footer, 7, "TOTAL")
     sheet.cell(footer, 8, float(data["total_money_in"]))
     sheet.cell(footer, 9, float(data["total_money_out"]))
     sheet.cell(footer + 1, 7, "AS PER SQL")
     sheet.cell(footer + 2, 7, "VARIANCE")
 
-    # Fit the wide report to paper while retaining the sample's column widths.
-    sheet.page_setup.orientation = "landscape"
-    sheet.page_setup.paperSize = sheet.PAPERSIZE_A4
-    sheet.page_setup.fitToWidth = 1
-    sheet.page_setup.fitToHeight = 0
+    # Print layout is part of the editable visual style.
+    layout = style.find("print").attrib
+    sheet.page_setup.orientation = layout["orientation"]
+    sheet.page_setup.paperSize = layout["paperSize"]
+    sheet.page_setup.fitToWidth = int(layout["fitToWidth"])
+    sheet.page_setup.fitToHeight = int(layout["fitToHeight"])
     sheet.sheet_properties.pageSetUpPr.fitToPage = True
-    sheet.print_title_rows = "4:4"
+    sheet.print_title_rows = layout["repeat_rows"]
     sheet.print_area = f"A1:K{footer + 2}"
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     book.save(output_path)
-    source.close()
     return output_path
 
 
@@ -96,11 +108,11 @@ def main():
     """Run the workbook exporter from the command line."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("data", type=Path)
-    parser.add_argument("template", type=Path)
+    parser.add_argument("--style", type=Path, default=STYLE_PATH)
     parser.add_argument("--company", required=True)
     parser.add_argument("--output", type=Path, default=Path("bank-output/answer_statement.xlsx"))
     args = parser.parse_args()
-    print(export(args.data, args.template, args.company, args.output).resolve())
+    print(export(args.data, args.company, args.output, args.style).resolve())
 
 
 if __name__ == "__main__":

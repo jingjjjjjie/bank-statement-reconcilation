@@ -33,7 +33,6 @@ async function loadBank() {
     try {
       const defaults = await api('/api/bank-export-defaults');
       $('#export-company').value = defaults.company;
-      $('#export-template').value = defaults.template;
     } catch (error) { $('#export-error').textContent = error.message; $('#export-error').hidden = false; }
     $('#bank-content').hidden = false;
     renderRows();
@@ -47,7 +46,7 @@ async function exportWorkbook() {
     token = (await api('/api/session')).token;
     const response = await fetch('/api/bank-export', {method: 'POST',
       headers: {'Content-Type': 'application/json', 'X-Review-Token': token},
-      body: JSON.stringify({company: $('#export-company').value, template: $('#export-template').value})});
+      body: JSON.stringify({company: $('#export-company').value})});
     if (!response.ok) throw Error((await response.json()).error || 'Export failed');
     const url = URL.createObjectURL(await response.blob());
     const link = node('a'); link.href = url; link.download = 'answer_statement_bank_only.xlsx';
