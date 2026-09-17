@@ -61,7 +61,7 @@ class BankExcelTests(unittest.TestCase):
         path = self.root / "style.xml"
         tree = ET.parse(STYLE_PATH)
         style = tree.getroot()
-        style.find("columns/column[@letter='F']").set("width", "42")
+        style.find("columns/column[@field='counterparty']").set("width", "42")
         style.find("row[@name='transaction']").set("height", "44")
         tree.write(path)
         export(self.root / "master.csv", "Example company", self.output, path)
@@ -80,3 +80,53 @@ class BankExcelTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Unsupported workbook style"):
             export(self.root / "master.csv", "Example company", self.output, path)
         self.assertFalse(self.output.exists())
+
+    def test_reordered_columns_move_values_styles_totals_and_comments(self):
+        """Reversing only the XML columns must keep each field and its evidence aligned."""
+        path = self.root / "reordered.xml"
+        tree = ET.parse(STYLE_PATH)
+        columns = tree.getroot().find("columns")
+        columns[:] = list(reversed(list(columns)))
+        tree.write(path)
+        export(self.root / "master.csv", "Example company", self.output, path)
+        book = load_workbook(self.output)
+        self.addCleanup(book.close)
+        sheet = book.active
+        self.assertEqual(sheet["A4"].value, "REMARK")
+        self.assertEqual(sheet["A6"].value, "PENDING")
+        self.assertTrue(sheet["A6"].font.bold)
+        self.assertEqual(sheet["K4"].value, "DATE")
+        self.assertEqual(sheet["K6"].number_format, "dd/mm/yyyy")
+        self.assertIn("test-1", sheet["K6"].comment.text)
+        self.assertEqual(sheet["B5"].value, 100)
+        self.assertEqual(sheet["B6"].value, 80)
+        self.assertEqual(sheet["C6"].value, 20)
+        self.assertEqual(sheet["C8"].value, 20)
+        self.assertEqual(sheet["E8"].value, "TOTAL")
+        self.assertEqual(sheet["F6"].value, "EXAMPLE VENDOR")
+        self.assertIn("recipient", sheet["F6"].comment.text)
+        self.assertEqual(sheet["A1"].font.sz, 16)
+        self.assertEqual(sheet["A1"].value, "Example company")
+        for column in (5, 7, 8, 9, 10):
+            self.assertIsNone(sheet.cell(6, column).value)
+
+    def test_bad_mappings_fail_before_creating_output(self):
+        """Typos, duplicate fields and broken style references cannot silently lose data."""
+        for change in ("unknown", "duplicate", "missing", "broken_style"):
+            with self.subTest(change=change):
+                path = self.root / "invalid.xml"
+                tree = ET.parse(STYLE_PATH)
+                root = tree.getroot()
+                columns = root.find("columns")
+                if change == "unknown":
+                    columns[0].set("field", "typo")
+                elif change == "duplicate":
+                    columns[0].set("field", columns[1].get("field"))
+                elif change == "missing":
+                    columns.remove(columns[0])
+                else:
+                    root.find("row/cell").set("style", "missing")
+                tree.write(path)
+                with self.assertRaises(ValueError):
+                    export(self.root / "master.csv", "Example company", self.output, path)
+                self.assertFalse(self.output.exists())

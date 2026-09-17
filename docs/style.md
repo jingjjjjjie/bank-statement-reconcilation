@@ -18,6 +18,9 @@ Edit it using the instructions in `prompts/styles/README.md`.
 
 ## Columns
 
+The table below describes the bundled order. Reorder `columns/column` entries in
+the XML to move fields; their values, formatting, totals and comments move together.
+
 Widths are Excel column-width units, rounded to two decimals.
 
 | Column | Heading | Width |

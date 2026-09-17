@@ -1,134 +1,134 @@
 <?xml version='1.0' encoding='utf-8'?>
-<workbook-style xmlns:ns0="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:ns1="http://schemas.microsoft.com/office/thememl/2012/main" name="Bank statement" version="1">
+<workbook-style xmlns:ns0="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:ns1="http://schemas.microsoft.com/office/thememl/2012/main" name="Bank statement" version="2">
   <columns>
-    <column letter="A" heading="DATE" width="12.0" />
-    <column letter="B" heading="LEDGER" width="40.5703125" />
-    <column letter="C" heading="SQL" width="7.85546875" />
-    <column letter="D" heading="SALES TYPE" width="16.140625" />
-    <column letter="E" heading="PV/OR" width="12.140625" />
-    <column letter="F" heading="PAY TO" width="53.5703125" />
-    <column letter="G" heading="PARTICULAR" width="110.7109375" />
-    <column letter="H" heading="DR" width="14.0" />
-    <column letter="I" heading="CR" width="14.0" />
-    <column letter="J" heading="TOTAL" width="18.5703125" />
-    <column letter="K" heading="REMARK" width="18.140625" />
+    <column heading="DATE" width="12.0" field="date" />
+    <column heading="LEDGER" width="40.5703125" field="ledger" />
+    <column heading="SQL" width="7.85546875" field="sql" />
+    <column heading="SALES TYPE" width="16.140625" field="sales_type" />
+    <column heading="PV/OR" width="12.140625" field="voucher" />
+    <column heading="PAY TO" width="53.5703125" field="counterparty" />
+    <column heading="PARTICULAR" width="110.7109375" field="particular" />
+    <column heading="DR" width="14.0" field="money_in" />
+    <column heading="CR" width="14.0" field="money_out" />
+    <column heading="TOTAL" width="18.5703125" field="balance" />
+    <column heading="REMARK" width="18.140625" field="status" />
   </columns>
-  <row name="title" height="21.0">
-    <cell column="1" style="title_A" />
-    <cell column="2" style="title_B" />
-    <cell column="3" style="title_B" />
-    <cell column="4" style="title_B" />
-    <cell column="5" style="title_B" />
-    <cell column="6" style="title_B" />
-    <cell column="7" style="title_B" />
-    <cell column="8" style="title_B" />
-    <cell column="9" style="title_B" />
-    <cell column="10" style="title_B" />
-    <cell column="11" style="title_B" />
+  <row name="title" height="21.0" anchor-style="title_A">
+    <cell style="title_A" field="date" />
+    <cell style="title_B" field="ledger" />
+    <cell style="title_B" field="sql" />
+    <cell style="title_B" field="sales_type" />
+    <cell style="title_B" field="voucher" />
+    <cell style="title_B" field="counterparty" />
+    <cell style="title_B" field="particular" />
+    <cell style="title_B" field="money_in" />
+    <cell style="title_B" field="money_out" />
+    <cell style="title_B" field="balance" />
+    <cell style="title_B" field="status" />
   </row>
-  <row name="subtitle" height="21.0">
-    <cell column="1" style="title_A" />
-    <cell column="2" style="title_B" />
-    <cell column="3" style="title_B" />
-    <cell column="4" style="title_B" />
-    <cell column="5" style="title_B" />
-    <cell column="6" style="title_B" />
-    <cell column="7" style="title_B" />
-    <cell column="8" style="title_B" />
-    <cell column="9" style="title_B" />
-    <cell column="10" style="title_B" />
-    <cell column="11" style="title_B" />
+  <row name="subtitle" height="21.0" anchor-style="title_A">
+    <cell style="title_A" field="date" />
+    <cell style="title_B" field="ledger" />
+    <cell style="title_B" field="sql" />
+    <cell style="title_B" field="sales_type" />
+    <cell style="title_B" field="voucher" />
+    <cell style="title_B" field="counterparty" />
+    <cell style="title_B" field="particular" />
+    <cell style="title_B" field="money_in" />
+    <cell style="title_B" field="money_out" />
+    <cell style="title_B" field="balance" />
+    <cell style="title_B" field="status" />
   </row>
   <row name="spacer" height="15">
-    <cell column="1" style="title_B" />
-    <cell column="2" style="spacer_B" />
-    <cell column="3" style="spacer_B" />
-    <cell column="4" style="title_B" />
-    <cell column="5" style="title_B" />
-    <cell column="6" style="title_B" />
-    <cell column="7" style="title_B" />
-    <cell column="8" style="title_B" />
-    <cell column="9" style="title_B" />
-    <cell column="10" style="title_B" />
-    <cell column="11" style="title_B" />
+    <cell style="title_B" field="date" />
+    <cell style="spacer_B" field="ledger" />
+    <cell style="spacer_B" field="sql" />
+    <cell style="title_B" field="sales_type" />
+    <cell style="title_B" field="voucher" />
+    <cell style="title_B" field="counterparty" />
+    <cell style="title_B" field="particular" />
+    <cell style="title_B" field="money_in" />
+    <cell style="title_B" field="money_out" />
+    <cell style="title_B" field="balance" />
+    <cell style="title_B" field="status" />
   </row>
   <row name="header" height="15">
-    <cell column="1" style="header_A" />
-    <cell column="2" style="header_B" />
-    <cell column="3" style="header_C" />
-    <cell column="4" style="header_D" />
-    <cell column="5" style="header_D" />
-    <cell column="6" style="header_F" />
-    <cell column="7" style="header_D" />
-    <cell column="8" style="header_H" />
-    <cell column="9" style="header_H" />
-    <cell column="10" style="header_H" />
-    <cell column="11" style="header_K" />
+    <cell style="header_A" field="date" />
+    <cell style="header_B" field="ledger" />
+    <cell style="header_C" field="sql" />
+    <cell style="header_D" field="sales_type" />
+    <cell style="header_D" field="voucher" />
+    <cell style="header_F" field="counterparty" />
+    <cell style="header_D" field="particular" />
+    <cell style="header_H" field="money_in" />
+    <cell style="header_H" field="money_out" />
+    <cell style="header_H" field="balance" />
+    <cell style="header_K" field="status" />
   </row>
   <row name="opening" height="15">
-    <cell column="1" style="opening_A" />
-    <cell column="2" style="opening_B" />
-    <cell column="3" style="opening_B" />
-    <cell column="4" style="opening_D" />
-    <cell column="5" style="opening_B" />
-    <cell column="6" style="opening_B" />
-    <cell column="7" style="opening_B" />
-    <cell column="8" style="opening_H" />
-    <cell column="9" style="opening_H" />
-    <cell column="10" style="opening_J" />
-    <cell column="11" style="opening_K" />
+    <cell style="opening_A" field="date" />
+    <cell style="opening_B" field="ledger" />
+    <cell style="opening_B" field="sql" />
+    <cell style="opening_D" field="sales_type" />
+    <cell style="opening_B" field="voucher" />
+    <cell style="opening_B" field="counterparty" />
+    <cell style="opening_B" field="particular" />
+    <cell style="opening_H" field="money_in" />
+    <cell style="opening_H" field="money_out" />
+    <cell style="opening_J" field="balance" />
+    <cell style="opening_K" field="status" />
   </row>
   <row name="transaction" height="30">
-    <cell column="1" style="transaction_A" />
-    <cell column="2" style="transaction_B" />
-    <cell column="3" style="opening_B" />
-    <cell column="4" style="title_B" />
-    <cell column="5" style="opening_B" />
-    <cell column="6" style="opening_B" />
-    <cell column="7" style="opening_B" />
-    <cell column="8" style="opening_H" />
-    <cell column="9" style="opening_H" />
-    <cell column="10" style="opening_H" />
-    <cell column="11" style="opening_K" />
+    <cell style="transaction_A" field="date" />
+    <cell style="transaction_B" field="ledger" />
+    <cell style="opening_B" field="sql" />
+    <cell style="title_B" field="sales_type" />
+    <cell style="opening_B" field="voucher" />
+    <cell style="opening_B" field="counterparty" />
+    <cell style="opening_B" field="particular" />
+    <cell style="opening_H" field="money_in" />
+    <cell style="opening_H" field="money_out" />
+    <cell style="opening_H" field="balance" />
+    <cell style="opening_K" field="status" />
   </row>
   <row name="total" height="15.75">
-    <cell column="1" style="total_A" />
-    <cell column="2" style="total_B" />
-    <cell column="3" style="total_B" />
-    <cell column="4" style="total_D" />
-    <cell column="5" style="total_E" />
-    <cell column="6" style="total_E" />
-    <cell column="7" style="total_E" />
-    <cell column="8" style="total_H" />
-    <cell column="9" style="total_I" />
-    <cell column="10" style="total_J" />
-    <cell column="11" style="total_K" />
+    <cell style="total_A" field="date" />
+    <cell style="total_B" field="ledger" />
+    <cell style="total_B" field="sql" />
+    <cell style="total_D" field="sales_type" />
+    <cell style="total_E" field="voucher" />
+    <cell style="total_E" field="counterparty" />
+    <cell style="total_E" field="particular" />
+    <cell style="total_H" field="money_in" />
+    <cell style="total_I" field="money_out" />
+    <cell style="total_J" field="balance" />
+    <cell style="total_K" field="status" />
   </row>
   <row name="sql" height="15">
-    <cell column="1" style="sql_A" />
-    <cell column="2" style="opening_B" />
-    <cell column="3" style="opening_B" />
-    <cell column="4" style="opening_D" />
-    <cell column="5" style="opening_B" />
-    <cell column="6" style="sql_F" />
-    <cell column="7" style="sql_G" />
-    <cell column="8" style="opening_H" />
-    <cell column="9" style="sql_I" />
-    <cell column="10" style="opening_H" />
-    <cell column="11" style="opening_K" />
+    <cell style="sql_A" field="date" />
+    <cell style="opening_B" field="ledger" />
+    <cell style="opening_B" field="sql" />
+    <cell style="opening_D" field="sales_type" />
+    <cell style="opening_B" field="voucher" />
+    <cell style="sql_F" field="counterparty" />
+    <cell style="sql_G" field="particular" />
+    <cell style="opening_H" field="money_in" />
+    <cell style="sql_I" field="money_out" />
+    <cell style="opening_H" field="balance" />
+    <cell style="opening_K" field="status" />
   </row>
   <row name="variance" height="15.75">
-    <cell column="1" style="title_B" />
-    <cell column="2" style="title_B" />
-    <cell column="3" style="title_B" />
-    <cell column="4" style="title_B" />
-    <cell column="5" style="title_B" />
-    <cell column="6" style="title_B" />
-    <cell column="7" style="sql_G" />
-    <cell column="8" style="variance_H" />
-    <cell column="9" style="variance_I" />
-    <cell column="10" style="title_B" />
-    <cell column="11" style="title_B" />
+    <cell style="title_B" field="date" />
+    <cell style="title_B" field="ledger" />
+    <cell style="title_B" field="sql" />
+    <cell style="title_B" field="sales_type" />
+    <cell style="title_B" field="voucher" />
+    <cell style="title_B" field="counterparty" />
+    <cell style="sql_G" field="particular" />
+    <cell style="variance_H" field="money_in" />
+    <cell style="variance_I" field="money_out" />
+    <cell style="title_B" field="balance" />
+    <cell style="title_B" field="status" />
   </row>
   <print orientation="landscape" paperSize="9" fitToWidth="1" fitToHeight="0" repeat_rows="4:4" />
   <ns0:theme name="Office Theme">
