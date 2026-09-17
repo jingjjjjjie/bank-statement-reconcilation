@@ -8,7 +8,7 @@ from http.server import BaseHTTPRequestHandler
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
-from reconciliation.duplicate_workflow import fingerprint
+from reconciliation.duplicate_workflow import check, fingerprint
 from reconciliation.review_settings import save_config
 from reconciliation.source_selection import SourceSelection
 from reconciliation import development_cache
@@ -16,7 +16,7 @@ from dashboard import content_review, development, document_status, office_previ
 from dashboard.review import Review, workflow_guide
 
 
-ASSETS = {"/": ("index.html", "text/html; charset=utf-8"),
+ASSETS = {"/review": ("index.html", "text/html; charset=utf-8"),
           "/bank": ("bank.html", "text/html; charset=utf-8"),
           "/bank/": ("bank.html", "text/html; charset=utf-8"),
           "/settings": ("settings.html", "text/html; charset=utf-8"),
@@ -79,6 +79,9 @@ def handler_for(review, token, sources=None):
                 self.reply(403, {"error": "Local access only"})
                 return
             query = urlparse(self.path)
+            if query.path == "/":
+                self.reply(200, (Path(__file__).parent / "static/source.html").read_bytes(), "text/html; charset=utf-8")
+                return
             if review is None and query.path not in {"/documents", "/documents/", "/documents.js", "/documents.css", "/api/document-status", "/source", "/source/", "/source.js", "/bank", "/bank/", "/bank.js", "/common.js", "/style.css", "/api/development-mode", "/api/source", "/api/source/browse", "/api/source/preview", "/api/workspace", "/api/session", "/api/bank-statement", "/api/workflow-checks"}:
                 self.send_response(302)
                 self.send_header("Location", "/source")
@@ -113,6 +116,7 @@ def handler_for(review, token, sources=None):
                         selected = sources.selected()
                         bank = sources.selected_bank()
                         self.reply(200, {"active": str(review.root) if review else None,
+                                         "workspace": sources.selected_workspace(),
                                          "selected": sources.inspect(selected) if selected else None,
                                          "bank": sources.inspect_bank(bank) if bank else None})
                     elif query.path == "/api/source/browse":
@@ -229,6 +233,9 @@ def handler_for(review, token, sources=None):
                         self.reply(200, content_review.undo(review, body["pair"],
                                                            body["reviewer"], body["reason"]))
                         return
+                    elif self.path == "/api/source/workspace-select":
+                        self.reply(200, sources.save_workspace(body["path"]))
+                        return
                     elif self.path == "/api/source/select":
                         self.reply(200, {"selected": sources.save(body["path"])})
                         return
@@ -247,6 +254,8 @@ def handler_for(review, token, sources=None):
                     elif self.path == "/api/source/bank-prepare":
                         if review is None:
                             raise ValueError("Create a supporting-document review first")
+                        if sources.selected_workspace() and sources.selected() != review.root:
+                            raise ValueError("Create or open the selected workspace review before extracting its statement")
                         self.reply(200, sources.prepare_bank(review.manifest_path, body["year"]))
                         return
                     elif self.path == "/api/bank-export":

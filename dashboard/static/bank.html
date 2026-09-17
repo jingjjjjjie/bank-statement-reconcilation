@@ -10,8 +10,8 @@
     <a class="brand" href="/">Bank Statement Reconciliation</a>
     <div class="workspace"><span class="eyebrow">RECONCILIATION</span><strong>Loading review…</strong><span>Checking statement…</span></div>
     <div class="rail-label">WORKFLOW</div>
-    <a class="nav-item" href="/source">Source folder</a>
-    <a class="nav-item" href="/">Exact duplicates</a>
+    <a class="nav-item" href="/source">Workspace selection</a>
+    <a class="nav-item" href="/review">Exact duplicates</a>
     <a class="nav-item" href="/content-review">Content review</a>
     <a class="nav-item" href="/documents">Document status</a>
     <a class="nav-item active" href="/bank" aria-current="page">Bank statement</a>
@@ -20,9 +20,16 @@
     <div class="rail-bottom">Local review workspace</div>
   </aside>
   <main>
-    <header><div class="breadcrumb">Workspace <span>/</span> Bank statement</div><a class="header-settings" href="/">Document review</a></header>
+    <header><div class="breadcrumb">Workspace <span>/</span> Bank statement</div><a class="header-settings" href="/review">Document review</a></header>
     <section class="page-heading"><div><div class="eyebrow">BANK STATEMENT</div><h1>AmBank transactions</h1><p id="bank-note">Loading the extracted bank statement…</p><a id="bank-source-link" href="/source" hidden>Select bank statement PDF</a></div><a id="workbook" class="button dark" href="/api/bank-workbook" download="answer_statement_bank_only.xlsx" hidden>Download bank-only workbook</a></section>
     <div id="bank-error" class="validation" role="alert" hidden></div>
+    <section id="bank-extraction" class="settings-card" hidden>
+      <h2>Extract bank statement</h2><p id="statement-source"></p>
+      <label class="setting-field"><strong>Statement year</strong><input id="bank-year" type="number" min="1900" max="2100" placeholder="2025"></label>
+      <p>Use the year printed on the statement. Extraction creates the bank master for this workspace.</p>
+      <button id="prepare-bank" class="button dark" type="button">Extract bank statement</button>
+      <p id="bank-result" role="status"></p>
+    </section>
     <section id="bank-content" hidden>
       <section class="stats bank-stats"><div><span>Transactions</span><strong id="bank-count"></strong><small id="bank-account"></small></div><div><span>Opening balance</span><strong id="bank-opening"></strong></div><div><span>Money in / out</span><strong id="bank-flow"></strong></div><div><span>Closing balance</span><strong id="bank-closing"></strong><small id="bank-checks"></small></div></section>
       <div class="stage-actions"><button id="check-bank" class="button secondary" type="button">Check bank extraction</button><a id="bank-next" class="button context-next" href="/complete" hidden>Continue to completion</a><p id="bank-step-note" role="status"></p></div>

@@ -173,7 +173,7 @@ class DashboardTests(unittest.TestCase):
         self.addCleanup(server.shutdown)
         assets = Path(__file__).resolve().parents[2] / "dashboard/static"
         for asset in assets.iterdir():
-            route = "/" if asset.name == "index.html" else "/" + (
+            route = "/review" if asset.name == "index.html" else "/" + (
                 asset.stem if asset.suffix == ".html" else asset.name)
             with self.subTest(route=route):
                 with urllib.request.urlopen(f"http://127.0.0.1:{server.server_port}{route}") as response:

@@ -33,7 +33,7 @@ class TokenBrowserTests(unittest.TestCase):
                     errors = []
                     page.on("pageerror", lambda error: errors.append(str(error)))
                     url = f"http://127.0.0.1:{server.server_port}"
-                    page.goto(url)
+                    page.goto(url + "/review")
                     expect(page).to_have_title("bank-statement-reconciliation · Document review")
                     expect(page.locator("h1")).to_have_text("Exact duplicate review")
                     page.screenshot(path=".tools/formal-dashboard.png", full_page=True)
@@ -65,24 +65,25 @@ class TokenBrowserTests(unittest.TestCase):
                     page.reload()
                     expect(page.locator("#final-total")).to_have_text("125 tokens")
                     expect(page.locator("#final-usage")).to_be_visible()
-                    next_source = base / "next-source"
-                    next_source.mkdir()
+                    work = base / "next-workspace"
+                    next_source = work / "documents"
+                    next_source.mkdir(parents=True)
+                    (work / "statement").mkdir()
                     (next_source / "one.txt").write_text("duplicate", encoding="utf-8")
                     (next_source / "two.txt").write_text("duplicate", encoding="utf-8")
-                    bank_pdf = base / "statement.pdf"
+                    bank_pdf = work / "statement/statement.pdf"
                     bank_pdf.write_bytes(b"%PDF-1.4\nfixture")
                     page.goto(url + "/source")
-                    expect(page.locator("#active-source")).to_have_text(str(source.resolve()))
-                    page.locator("#source-path").fill(str(next_source))
-                    page.get_by_role("button", name="Check folder").click()
-                    expect(page.locator("#selected-source")).to_contain_text("2 files")
+                    expect(page.locator("h1")).to_have_text("Choose your workspace")
+                    page.get_by_text("Enter a folder path manually", exact=True).click()
+                    page.locator("#source-path").fill(str(work))
+                    page.get_by_role("button", name="Select workspace").click()
+                    expect(page.locator("#selected-source")).to_contain_text("2 supporting files")
                     self.assertTrue((next_source / "one.txt").exists())
-                    page.locator("#bank-path").fill(str(bank_pdf))
-                    page.get_by_role("button", name="Check PDF").click()
-                    expect(page.locator("#selected-bank")).to_contain_text("statement.pdf")
+                    expect(page.locator("#selected-source")).to_contain_text("1 bank statement")
                     self.assertTrue(bank_pdf.exists())
-                    page.get_by_role("button", name="Create or open review").click()
-                    expect(page).to_have_url(url + "/")
+                    page.get_by_role("button", name="Proceed", exact=True).click()
+                    expect(page).to_have_url(url + "/review")
                     expect(page.locator("#total")).to_have_text("1")
                     self.assertFalse((next_source / "one.txt").exists())
                     self.assertEqual(errors, [])

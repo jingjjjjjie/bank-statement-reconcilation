@@ -75,6 +75,20 @@ Repeat those browser setup commands after recreating the container. For the smal
 
 #### Upload folder for each deployment
 
+Create one folder per job using this layout:
+
+```text
+bank-statement-uploads/
+└── WorkName/
+    ├── statement/
+    │   └── bank-statement.pdf
+    └── documents/
+        └── supporting files and subfolders
+```
+
+Keep exactly one bank-statement PDF directly in `statement/`. Supporting PDFs belong in `documents/` with the other supporting files. The dashboard home page is workspace selection: browse to `/uploads/WorkName` and select it to load both inputs together. Invalid layouts are rejected before saving. Selecting a workspace copies or moves no files; click **Proceed** after reviewing the duplicate preview. The picker shows both input counts together; enter the statement year on the Bank statement page when extracting. Exact review is available at `/review`.
+
+
 By default, copy supporting documents and bank statements into the sibling `bank-statement-uploads/` folder, outside this repository. To choose another host folder, set `UPLOADS_PATH` in your local `.env` file:
 
 ```dotenv

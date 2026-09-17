@@ -81,7 +81,9 @@ class Review:
                 first = next(csv.DictReader(source), None)
             if first and first.get("date"):
                 period = datetime.fromisoformat(first["date"]).strftime("%B %Y")
-        return {"name": self.root.name, "period": period}
+        is_workspace = self.root.name == "documents" and (self.root.parent / "statement").is_dir()
+        name = self.root.parent.name if is_workspace else self.root.name
+        return {"name": name, "period": period}
 
     def export_defaults(self):
         """Suggest the existing company for the reusable bank workbook style."""
@@ -345,8 +347,8 @@ def workflow_guide(review):
             complete = review.completion()["complete"]
         except (OSError, ValueError, KeyError):
             pass
-    stages = [("Sources", "/source", bool(review)),
-              ("Exact duplicates", "/", exact),
+    stages = [("Workspace", "/", bool(review)),
+              ("Exact duplicates", "/review", exact),
               ("Content review", "/content-review" if
                (Path(__file__).parent / "static" / "content-review.html").is_file() else None, content),
               ("Bank extraction", "/bank", bank),

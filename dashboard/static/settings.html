@@ -10,8 +10,8 @@
     <a class="brand" href="/" aria-label="Bank Statement Reconciliation home">Bank Statement Reconciliation</a>
     <div class="workspace"><span class="eyebrow">RECONCILIATION</span><strong>Loading review…</strong><span>Checking statement…</span></div>
     <div class="rail-label">WORKFLOW</div>
-    <a class="nav-item" href="/source">Source folder</a>
-    <a class="nav-item" href="/">Exact duplicates</a>
+    <a class="nav-item" href="/source">Workspace selection</a>
+    <a class="nav-item" href="/review">Exact duplicates</a>
     <a class="nav-item" href="/content-review">Content review</a>
     <a class="nav-item" href="/documents">Document status</a>
     <a class="nav-item" href="/bank">Bank statement</a>
@@ -20,7 +20,7 @@
     <div class="rail-bottom">Settings: config/review_config.json</div>
   </aside>
   <main class="settings-page">
-    <header><div class="breadcrumb">Workspace <span>/</span> Settings</div><a class="header-settings" href="/">← Back to review</a></header>
+    <header><div class="breadcrumb">Workspace <span>/</span> Settings</div><a class="header-settings" href="/review">← Back to review</a></header>
     <section class="page-heading"><div><div class="eyebrow">WORKFLOW CONFIGURATION</div><h1>Review settings</h1><p>Configure document processing, model selection, and request limits. Exact duplicates use fixed byte checks; these defaults control content review.</p></div></section>
     <div id="settings-error" class="validation" role="alert" hidden></div>
     <section class="settings-card"><label class="setting-switch"><span><strong>Development / testing mode</strong><small>Enable shared output caching and decision replay tools. Turning this off keeps saved data and normal review history.</small></span><input id="development-mode" type="checkbox" role="switch" disabled></label><p id="development-mode-status" role="status">Loading mode?</p></section>

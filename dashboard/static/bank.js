@@ -19,7 +19,18 @@ function renderRows() {
 async function loadBank() {
   try {
     const data = await api('/api/bank-statement');
-    if (!data.available) { $('#bank-note').textContent = 'No prepared bank statement was found.'; $('#bank-source-link').hidden = false; return; }
+    $('#bank-extraction').hidden = true;
+    $('#bank-source-link').hidden = true;
+    if (!data.available) {
+      $('#bank-note').textContent = 'No prepared bank statement was found.';
+      const source = await api('/api/source');
+      const ready = source.bank && source.selected && source.active === source.selected.path;
+      $('#bank-extraction').hidden = !ready;
+      $('#bank-source-link').hidden = !!ready;
+      $('#bank-source-link').textContent = 'Select a workspace and proceed';
+      if (ready) $('#statement-source').textContent = source.bank.path;
+      return;
+    }
     transactions = data.transactions;
     $('#bank-note').textContent = 'Extracted bank data for review. Supporting-document matching is still pending.';
     $('#bank-count').textContent = data.count;
@@ -72,4 +83,17 @@ $('#check-bank').onclick = async () => {
   finally { button.disabled = false; }
 };
 $('#export-button').addEventListener('click', exportWorkbook);
+$('#prepare-bank').onclick = async () => {
+  const button = $('#prepare-bank');
+  button.disabled = true;
+  $('#bank-error').hidden = true;
+  try {
+    token = (await api('/api/session')).token;
+    await api('/api/source/bank-prepare', {year: Number($('#bank-year').value)});
+    await loadBank();
+  } catch (error) {
+    $('#bank-error').textContent = error.message;
+    $('#bank-error').hidden = false;
+  } finally { button.disabled = false; }
+};
 loadBank();

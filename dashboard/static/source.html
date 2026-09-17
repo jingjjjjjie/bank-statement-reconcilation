@@ -2,16 +2,16 @@
 <html lang="en">
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>bank-statement-reconciliation · Source folder</title><link rel="stylesheet" href="/style.css">
+  <title>bank-statement-reconciliation · Workspace selection</title><link rel="stylesheet" href="/style.css">
   <script src="/common.js" defer></script><script src="/source.js" defer></script>
 </head>
-<body>
+<body class="workspace-page">
   <aside class="rail">
     <a class="brand" href="/">Bank Statement Reconciliation</a>
     <div class="workspace"><span class="eyebrow">RECONCILIATION</span><strong>Loading review…</strong><span>Checking statement…</span></div>
     <div class="rail-label">WORKFLOW</div>
-    <a class="nav-item active" href="/source" aria-current="page">Source folder</a>
-    <a class="nav-item" href="/">Exact duplicates</a>
+    <a class="nav-item active" href="/source" aria-current="page">Workspace selection</a>
+    <a class="nav-item" href="/review">Exact duplicates</a>
     <a class="nav-item" href="/content-review">Content review</a>
     <a class="nav-item" href="/documents">Document status</a>
     <a class="nav-item" href="/bank">Bank statement</a>
@@ -19,34 +19,35 @@
     <a class="nav-item" href="/complete">Completion</a>
     <div class="rail-bottom">Local review workspace</div>
   </aside>
-  <main class="settings-page">
-    <header><div class="breadcrumb">Workspace <span>/</span> Source folder</div><a class="header-settings" href="/">Document review</a></header>
-    <section class="page-heading"><div><div class="eyebrow">REVIEW SETUP</div><h1>Source selection</h1><p>Select the supporting documents folder and bank statement PDF for this review.</p></div></section>
-    <div id="source-error" class="validation" role="alert" hidden></div>
-    <section class="settings-card active-review-card">
-      <div><div class="source-section-label">CURRENT WORKSPACE</div><h2>Active review</h2><p id="active-source-name">Loading…</p><details id="active-source-details" hidden><summary>View folder path</summary><code id="active-source"></code></details></div>
-      <a id="source-next" class="button context-next" href="/" hidden>Continue to exact review</a>
+  <main class="workspace-picker">
+    <header><span class="picker-kicker">YOUR REVIEW WORKSPACE</span><a class="header-settings" href="/review">Return to review &rarr;</a></header>
+    <section class="picker-heading"><span class="picker-step">01 / GET STARTED</span><h1>Choose your workspace</h1><p>One folder. Your statement and supporting documents, together.</p></section>
+    <section class="workspace-card" aria-label="Workspace selection">
+      <div class="workspace-card-top">
+        <span class="folder-symbol" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 7V5a1 1 0 0 1 1-1h5l2 3h9a1 1 0 0 1 1 1v11H3V7Z"/></svg></span>
+        <div class="workspace-identity"><span class="picker-label">SELECTED WORKSPACE</span><h2 id="workspace-name">Choose a folder to begin</h2><p id="workspace-location">Select a workspace from your upload folder.</p></div>
+        <button id="browse-source" class="button secondary" type="button">Browse folders</button>
+      </div>
+      <div id="source-error" class="validation" role="alert" hidden></div>
+      <div id="selected-source" class="workspace-inputs" role="status" hidden>
+        <div class="workspace-input"><span class="input-kind">STATEMENT</span><strong>1 bank statement</strong><span id="statement-name"></span><span class="input-found">Detected in statement/</span></div>
+        <div class="workspace-input"><span class="input-kind">DOCUMENTS</span><strong id="document-count"></strong><span>Receipts, invoices and other supporting files</span><span class="input-found">Detected in documents/</span></div>
+      </div>
+      <details class="manual-path"><summary>Enter a folder path manually</summary><div class="manual-path-controls"><label for="source-path">Workspace folder</label><input id="source-path" type="text" autocomplete="off" spellcheck="false" placeholder="/uploads/WorkName"><button id="select-source" class="button secondary" type="button">Select workspace</button></div></details>
+      <div id="source-action" class="workspace-card-footer" hidden>
+        <div><span id="workspace-status" class="workspace-ready">Checking workspace</span><p id="source-preview" aria-live="polite">Checking supporting files...</p></div>
+        <button id="start-source" class="button dark" type="button" disabled>Proceed</button>
+      </div>
     </section>
-    <div class="source-grid">
-    <section class="settings-card">
-      <div class="source-section-label">01 / DOCUMENT SOURCE</div><h2>Supporting documents</h2><p>Choose the folder containing documents for duplicate review.</p>
-      <div class="source-controls"><button id="browse-source" class="button dark" type="button">Browse folders</button><label class="setting-field"><strong>Folder path</strong><input id="source-path" type="text" autocomplete="off" spellcheck="false" placeholder="Choose a folder with Browse folders"></label><button id="select-source" class="button secondary" type="button">Check folder</button></div>
-      <div id="selected-source" class="source-result" hidden></div>
-      <div id="source-action" class="source-action" hidden><p id="source-preview">Checking exact duplicates…</p><p>Exact duplicates are verified automatically and copied into <code>output/duplicates/</code>, one folder per group. Original documents stay in place. No manual selection is needed.</p><button id="start-source" class="button dark" type="button" disabled>Create or open review</button></div>
-    </section>
-    <section class="settings-card">
-      <div class="source-section-label">02 / BANK SOURCE</div><h2>Bank statement</h2><p>Choose an AmBank digital statement PDF separately.</p>
-      <div class="source-controls"><button id="browse-bank" class="button dark" type="button">Browse PDF files</button><label class="setting-field"><strong>PDF path</strong><input id="bank-path" type="text" autocomplete="off" spellcheck="false" placeholder="Choose a PDF with Browse PDF files"></label><button id="select-bank" class="button secondary" type="button">Check PDF</button></div>
-      <div id="selected-bank" class="source-result" hidden></div>
-      <div id="bank-action" class="source-action" hidden><label class="setting-field"><strong>Statement year</strong><input id="bank-year" type="number" min="1900" max="2100" placeholder="2025"></label><p>Extraction creates a bank master for the active review. It does not replace an existing master from a different statement.</p><button id="prepare-bank" class="button dark" type="button">Extract bank statement</button><p id="bank-result" role="status"></p></div>
-    </section>
-    </div>
+    <details class="workspace-format"><summary>How should my workspace be organized?</summary><div><pre>WorkName/
+  statement/   One bank-statement PDF
+  documents/   All supporting files</pre><p>Select WorkName itself. We find both inputs automatically. Duplicate reports are generated automatically when you proceed.</p></div></details>
   </main>
   <dialog id="path-browser" class="path-browser" aria-label="Browse local files">
-    <div class="browser-heading"><div><strong>Browse this computer</strong><p id="browser-current">Loading folders…</p></div><button id="browser-close" class="button secondary" type="button">Close</button></div>
+    <div class="browser-heading"><div><strong>Choose a workspace folder</strong><p id="browser-current">Loading folders…</p></div><button id="browser-close" class="button secondary" type="button">Close</button></div>
     <div id="browser-error" class="validation" role="alert" hidden></div>
     <div id="browser-items" class="browser-items"></div>
-    <div class="browser-footer"><button id="browser-use" class="button dark" type="button" hidden>Use this folder</button></div>
+    <div class="browser-footer"><button id="browser-use" class="button dark" type="button" hidden>Select this workspace</button></div>
   </dialog>
 </body>
 </html>

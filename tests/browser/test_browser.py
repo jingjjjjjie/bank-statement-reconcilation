@@ -34,7 +34,7 @@ def main():
             threading.Thread(target=server.serve_forever, daemon=True).start()
             try:
                 page.set_viewport_size({"width": 1440, "height": 1080})
-                page.goto(f"http://127.0.0.1:{server.server_port}")
+                page.goto(f"http://127.0.0.1:{server.server_port}/review")
                 # Save settings only in the fixture workspace and verify they survive reload.
                 page.get_by_role("link", name="Settings", exact=True).click()
                 expect(page).to_have_url(f"http://127.0.0.1:{server.server_port}/settings")

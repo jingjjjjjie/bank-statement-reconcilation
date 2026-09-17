@@ -16,6 +16,98 @@ from dashboard.app import handler_for
 
 
 class SourceSelectionTests(unittest.TestCase):
+    def test_workspace_selects_both_inputs_without_moving_files(self):
+        """A work folder keeps the statement out of the supporting document scan."""
+        with tempfile.TemporaryDirectory() as folder:
+            base = Path(folder)
+            work = base / "December"
+            (work / "documents").mkdir(parents=True)
+            (work / "statement").mkdir()
+            receipt = work / "documents/receipt.pdf"
+            receipt.write_bytes(b"receipt")
+            bank = work / "statement/bank.PDF"
+            bank.write_bytes(b"statement")
+            sources = SourceSelection(base, base / "data")
+            result = sources.save_workspace(work)
+            self.assertEqual(result["selected"]["files"], 1)
+            self.assertEqual(sources.selected(), work / "documents")
+            self.assertEqual(sources.selected_bank(), bank)
+            self.assertEqual(sources.selected_workspace(), str(work))
+            self.assertTrue(receipt.exists())
+            self.assertTrue(bank.exists())
+            self.assertEqual(sources.preview()["files"], 1)
+            (work / "statement/second.pdf").write_bytes(b"another")
+            with self.assertRaisesRegex(ValueError, "exactly one"):
+                sources.start()
+
+    def test_invalid_workspace_does_not_replace_selection(self):
+        """Missing or multiple statements cannot overwrite an existing source choice."""
+        with tempfile.TemporaryDirectory() as folder:
+            base = Path(folder)
+            old = base / "old"
+            old.mkdir()
+            sources = SourceSelection(base, base / "data")
+            sources.save(old)
+            work = base / "invalid"
+            work.mkdir()
+            with self.assertRaisesRegex(ValueError, "documents/ and statement/"):
+                sources.save_workspace(work)
+            (work / "documents").mkdir()
+            (work / "statement").mkdir()
+            for count in (0, 2):
+                for number in range(count):
+                    (work / f"statement/{number}.pdf").write_bytes(b"PDF")
+                with self.assertRaisesRegex(ValueError, "exactly one"):
+                    sources.save_workspace(work)
+                self.assertEqual(sources.selected(), old)
+
+    def test_workspace_http_selection_and_review_navigation(self):
+        """Select a work folder through HTTP and keep the home page as its picker."""
+        with tempfile.TemporaryDirectory() as folder:
+            base = Path(folder)
+            work = base / "December"
+            (work / "documents").mkdir(parents=True)
+            (work / "statement").mkdir()
+            (work / "documents/receipt.txt").write_text("receipt")
+            (work / "statement/bank.pdf").write_bytes(b"statement")
+            sources = SourceSelection(base, base / "data")
+            server = ThreadingHTTPServer(("127.0.0.1", 0), handler_for(None, "test-token", sources))
+            threading.Thread(target=server.serve_forever, daemon=True).start()
+            root = f"http://127.0.0.1:{server.server_port}"
+
+            def post(route, body):
+                """Submit a local dashboard action using the fixture session token."""
+                request = urllib.request.Request(root + route, json.dumps(body).encode(),
+                    {"Content-Type": "application/json", "X-Review-Token": "test-token"})
+                with urllib.request.urlopen(request) as response:
+                    return json.load(response)
+
+            try:
+                result = post("/api/source/workspace-select", {"path": str(work)})
+                self.assertEqual(result["workspace"], str(work))
+                self.assertEqual(result["selected"]["files"], 1)
+                self.assertEqual(result["bank"]["path"], str(work / "statement/bank.pdf"))
+                with urllib.request.urlopen(root + "/api/source/preview") as response:
+                    preview = json.load(response)
+                post("/api/source/start", {"preview": preview["token"]})
+                with urllib.request.urlopen(root + "/") as response:
+                    page = response.read()
+                    self.assertIn(b"Choose your workspace</h1>", page)
+                    self.assertIn(b">Proceed</button>", page)
+                    self.assertNotIn(b'id="bank-year"', page)
+                    self.assertNotIn(b'id="bank-path"', page)
+                with urllib.request.urlopen(root + "/bank") as response:
+                    page = response.read()
+                    self.assertIn(b'id="bank-year"', page)
+                    self.assertIn(b'id="prepare-bank"', page)
+                with urllib.request.urlopen(root + "/review") as response:
+                    self.assertIn(b'/exact-report.js', response.read())
+                with urllib.request.urlopen(root + "/api/workspace") as response:
+                    self.assertEqual(json.load(response)["name"], "December")
+            finally:
+                server.shutdown()
+                server.server_close()
+
     def test_reopen_resumes_legacy_interrupted_organization(self):
         """An old partial manifest must finish its moves before becoming active."""
         with tempfile.TemporaryDirectory() as folder:
@@ -152,7 +244,8 @@ class SourceSelectionTests(unittest.TestCase):
             try:
                 root = f"http://127.0.0.1:{server.server_port}"
                 with urllib.request.urlopen(root) as response:
-                    self.assertEqual(response.url, root + "/source")
+                    self.assertEqual(response.url, root)
+                    self.assertIn(b"Workspace selection", response.read())
                 with urllib.request.urlopen(root + "/api/source") as response:
                     self.assertIsNone(json.load(response)["active"])
                 for route in ("/documents", "/documents/", "/documents.js", "/documents.css"):

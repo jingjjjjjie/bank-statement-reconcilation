@@ -26,6 +26,37 @@ class SourceSelection:
             return None
         return Path(json.loads(self.selection.read_text(encoding="utf-8"))["path"])
 
+    def selected_workspace(self):
+        """Return the saved work folder without changing an existing review."""
+        if not self.selection.exists():
+            return None
+        return json.loads(self.selection.read_text(encoding="utf-8")).get("workspace")
+
+    def inspect_workspace(self, path):
+        """Require supporting documents and exactly one statement PDF in a work folder."""
+        work = Path(path).expanduser().resolve(strict=True)
+        documents, statement = work / "documents", work / "statement"
+        if not documents.is_dir() or not statement.is_dir():
+            raise ValueError("Choose a workspace containing documents/ and statement/ folders")
+        if documents.is_symlink() or statement.is_symlink():
+            raise ValueError("Workspace input folders must not be symbolic links")
+        pdfs = [p for p in supporting_files(statement) if p.suffix.lower() == ".pdf"]
+        if len(pdfs) != 1 or pdfs[0].parent != statement:
+            raise ValueError("statement/ must contain exactly one bank-statement PDF directly inside it")
+        return {"workspace": str(work), "selected": self.inspect(documents),
+                "bank": self.inspect_bank(pdfs[0])}
+
+    def save_workspace(self, path):
+        """Save both validated inputs together; selecting a workspace moves no files."""
+        result = self.inspect_workspace(path)
+        self.data.mkdir(parents=True, exist_ok=True)
+        temporary = self.selection.with_suffix(".tmp")
+        temporary.write_text(json.dumps({"path": result["selected"]["path"],
+                                        "workspace": result["workspace"],
+                                        "bank": result["bank"]["path"]}), encoding="utf-8")
+        temporary.replace(self.selection)
+        return result
+
     def browse(self, path=None, pdfs=False):
         """List one local directory for the dashboard's in-page picker."""
         if not path:
@@ -77,6 +108,8 @@ class SourceSelection:
 
     def selected_bank(self):
         """Return the saved bank PDF path, if one was chosen."""
+        if self.selected_workspace():
+            return Path(json.loads(self.selection.read_text(encoding="utf-8"))["bank"])
         if not self.bank_selection.exists():
             return None
         return Path(json.loads(self.bank_selection.read_text(encoding="utf-8"))["path"])
@@ -90,6 +123,8 @@ class SourceSelection:
 
     def save_bank(self, path):
         """Save a bank PDF choice without extracting or overwriting a master."""
+        if self.selected_workspace():
+            raise ValueError("Select a workspace to change its bank statement")
         result = self.inspect_bank(path)
         self.data.mkdir(parents=True, exist_ok=True)
         self.bank_selection.write_text(json.dumps({"path": result["path"]}), encoding="utf-8")
@@ -122,6 +157,10 @@ class SourceSelection:
 
     def start(self, expected=None):
         """Initialize or reopen the selected folder's isolated duplicate review."""
+        if self.selected_workspace():
+            current = self.inspect_workspace(self.selected_workspace())
+            if current["bank"]["path"] != str(self.selected_bank()):
+                raise ValueError("Statement changed; select the workspace again")
         source = self.selected()
         if source is None:
             raise ValueError("Choose a supporting folder first")

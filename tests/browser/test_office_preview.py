@@ -45,7 +45,7 @@ class OfficePreviewTests(unittest.TestCase):
                     page = browser.new_page()
                     errors = []
                     page.on("pageerror", lambda error: errors.append(str(error)))
-                    page.goto(f"http://127.0.0.1:{server.server_port}/")
+                    page.goto(f"http://127.0.0.1:{server.server_port}/review")
                     page.locator(".group-item").filter(has_text="accounts").first.click()
                     expect(page.locator(".sheet-title").first).to_have_text("Accounts")
                     expect(page.locator(".sheet-table td").first).to_have_text("Balance")
