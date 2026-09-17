@@ -79,6 +79,7 @@ function renderPieceNavigation() {
   activePiece = Math.max(0, Math.min(activePiece, cards.length - 1));
   $('#piece-count').textContent = `${cards.length} ${cards.length === 1 ? 'piece' : 'pieces'}`;
   $('#piece-tabs').hidden = cards.length < 2;
+  $('#split-piece').disabled = $('#remove-piece').disabled = !cards.length;
   $('#piece-tabs').replaceChildren(...cards.map((card, number) => {
     card.hidden = number !== activePiece;
     card.querySelector('legend').textContent = `Piece ${number + 1} details`;
@@ -124,7 +125,6 @@ async function showOriginal(unit) {
   originalUnit = unit;
   originalInfo = null;
   $('#original-page').replaceChildren();
-  $('#original-name').textContent = unit.source_path.split(/[\\/]/).pop();
   $('#original-status').textContent = 'Loading original…';
   $('#original-preview').replaceChildren();
   const info = await api(`/api/extraction-preview?id=${encodeURIComponent(unit.document_id)}`);
@@ -160,7 +160,7 @@ async function renderOriginal() {
     $('#original-status').textContent = 'Structured document preview. Open the original for exact print formatting.';
   } else if (office || ['image', 'pdf'].includes(info.kind)) {
     const picture = node('img');
-    picture.alt = `${$('#original-name').textContent}, ${info.labels[page]}`;
+    picture.alt = `${unit.source_path.split(/[\\/]/).pop()}, ${info.labels[page]}`;
     picture.draggable = false;
     picture.onload = () => { if (request === originalRequest) { layoutMedia(); $('#original-status').textContent = info.labels[page]; } };
     picture.onerror = () => { if (request === originalRequest) $('#original-status').textContent = 'Preview could not load. Open the original document.'; };
@@ -179,6 +179,16 @@ $('#original-zoom').onchange = event => {
 };
 $('#previous-document').onclick = () => changeDocument(-1);
 $('#next-document').onclick = () => changeDocument(1);
+$('#split-piece').onclick = () => {
+  /* Apply the split to the selected piece, retaining all other edits. */
+  const card = $('#receipt-pieces').children[activePiece];
+  if (card) { extractionDirty = true; card.splitPiece(); }
+};
+$('#remove-piece').onclick = () => {
+  /* Remove only the selected extraction piece, never the source file. */
+  const card = $('#receipt-pieces').children[activePiece];
+  if (card) { extractionDirty = true; card.remove(); }
+};
 new MutationObserver(renderPieceNavigation).observe($('#receipt-pieces'), {childList:true});
 document.addEventListener('input', event => { if (event.target.closest('#receipt-pieces')) extractionDirty = true; });
 document.addEventListener('click', event => { if (event.target.closest('#receipt-pieces button, #add-receipt')) extractionDirty = true; });

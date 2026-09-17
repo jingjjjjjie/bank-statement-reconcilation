@@ -64,30 +64,13 @@ function addReceiptPiece(piece=emptyPiece()) {
   receiptField(card, 'Printed total', 'total', piece.total);
   receiptField(card, 'Currency (for example MYR)', 'currency', piece.currency);
   receiptField(card, 'Limitations (one per line)', 'limitations', piece.limitations, true);
-  const remove = node('button', 'button secondary', 'Remove this piece from extraction');
-  remove.type = 'button'; remove.onclick = () => card.remove(); card.append(remove);
-  const split = node('button', 'button secondary', 'Split receipt');
-  split.type = 'button'; split.onclick = () => {
+  card.splitPiece = () => {
     const pieces = readReceiptPieces(), position = [...$('#receipt-pieces').children].indexOf(card);
     const original = pieces[position];
     pieces.splice(position, 1, {...original, total:'', needs_review:true}, {...emptyPiece(), source_units:original.source_units, needs_review:true});
     $('#receipt-pieces').replaceChildren(); pieces.forEach(addReceiptPiece);
     $('#receipt-unit-status').textContent = 'Set the source locations and printed totals for both pieces, then resolve the boundary flags.';
   };
-  const merge = node('button', 'button secondary', 'Merge with previous receipt');
-  merge.type = 'button'; merge.onclick = () => {
-    const pieces = readReceiptPieces(), position = [...$('#receipt-pieces').children].indexOf(card);
-    if (position < 1) return;
-    const left = pieces[position - 1], right = pieces[position];
-    const joined = {...left, location:[left.location,right.location].filter(Boolean).join('; '),
-      invoice_numbers:[...new Set([...left.invoice_numbers,...right.invoice_numbers])],
-      limitations:[...left.limitations,...right.limitations], total:'', needs_review:true};
-    if (unit?.assembled) joined.source_units = [...new Set([...left.source_units,...right.source_units])].sort((a,b) => a-b);
-    pieces.splice(position - 1, 2, joined);
-    $('#receipt-pieces').replaceChildren(); pieces.forEach(addReceiptPiece);
-    $('#receipt-unit-status').textContent = 'Merged provisionally. Verify the printed total and receipt boundaries before accepting.';
-  };
-  card.append(split, merge);
   $('#receipt-pieces').append(card);
 }
 
