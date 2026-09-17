@@ -31,6 +31,82 @@ python dashboard/app.py
 
 Open **http://127.0.0.1:8765** to compare copies, choose which one to keep, undo choices, and validate pass one. Other copies move to recoverable storage under `dashboard/.data/recovery`, outside the active duplicate groups. Webpage and server code live in `dashboard/`. See [dashboard instructions](dashboard/README.md). The Settings page has development buttons for testing defaults and for remembering and explicitly reapplying human duplicate decisions. Saving settings and using those buttons make no Codex calls.
 
+### Docker
+
+Docker Compose defaults to the `development` target, based on `python:3.12-bookworm`. It includes Codex, Node/npm, Git, ripgrep, curl, process tools, an editor, build tools, pytest, debugpy, and the Python browser-test dependencies. The `runtime` target retains the slim Python image. Docker Compose mounts the repository at `/workspace`, the selected host document folder at `/documents`, and keeps the ChatGPT login in a named volume.
+
+Copy `.env.example` to `.env`, set `DOCUMENTS_PATH` to the folder containing the supporting documents and bank statement, then build and start the dashboard:
+
+```console
+docker compose build
+docker compose run --rm dashboard codex login
+docker compose up -d
+```
+
+Choose ChatGPT login when prompted. Open **http://127.0.0.1:8765**, and select files under `/documents` in the Source page. The document mount is read-write because exact-copy organization moves files into recoverable review storage; use a dedicated working copy of the source documents. Stop the service with `docker compose down`. The `codex-home` volume retains the login, while review state remains in this repository through the `/workspace` bind mount.
+
+The image defaults to the verified Codex CLI version in `.env.example`. Change `CODEX_VERSION` when intentionally upgrading it.
+
+#### Coding agents and debugging
+
+After changing Docker targets or dependencies, rebuild and recreate the container:
+
+```console
+docker compose up -d --build dashboard
+docker compose exec dashboard bash
+```
+
+The agent works in `/workspace` as the non-root `app` user. The repository mount includes Git history, and edits are saved directly to the host repository. Node, npm, and the Codex CLI are available inside the container; Codex uses the existing ChatGPT login volume. Workflow model calls must follow `AGENTS.md`, including structured output and durable token-usage tracking.
+
+Run the offline regression suite inside the container with:
+
+```console
+docker compose exec dashboard python -m unittest discover -s tests/unit -t .
+```
+
+Playwright's Python package is included, but browser binaries and their system dependencies are optional. To run Chromium browser checks, install them after creating the container:
+
+```console
+docker compose exec --user root dashboard python -m playwright install-deps chromium
+docker compose exec dashboard python -m playwright install chromium
+```
+
+Repeat those browser setup commands after recreating the container. For the smaller application image, set `DOCKER_TARGET=runtime` in `.env` and rebuild with `docker compose up -d --build dashboard`. Both targets use the same mounts and login volume.
+
+#### Upload folder for each deployment
+
+By default, copy supporting documents and bank statements into the sibling `bank-statement-uploads/` folder, outside this repository. To choose another host folder, set `UPLOADS_PATH` in your local `.env` file:
+
+```dotenv
+UPLOADS_PATH=../bank-statement-uploads
+```
+
+Use a relative path from the project folder or an absolute path on the Docker host, for example `C:/Data/reconciliation/uploads` on Windows, `/Users/alex/Documents/reconciliation/uploads` on macOS, or `/srv/reconciliation/uploads` on Linux. Use forward slashes on Windows and quote values containing spaces, such as `UPLOADS_PATH="C:/Shared Files/uploads"`. Create the chosen folder and ensure the container user can read and write it; Docker Desktop must have access to that folder.
+
+Run `docker compose up -d dashboard` after changing the setting. Inside Docker, the folder is always `/uploads`; browse to `/uploads` in the dashboard's Source page. Files copied into the host folder appear immediately, without restarting Docker. For a remote deployment, copy files to the Docker host's folder.
+
+The default upload folder is outside Git and the Docker build context, and `.env` is ignored by Git. For a custom folder, prefer a location outside the repository. If you choose another folder inside the repository, add its relative path to both `.gitignore` and `.dockerignore`; these files do not expand `.env` variables.
+
+The mount is read-write, so changes inside Docker also affect the files on this PC. Put working copies in this folder. The separate `/documents` mount continues to use `DOCUMENTS_PATH` from `.env`.
+
+#### Restart the dashboard
+
+Run these commands from the project folder. After changing mounts or other Compose settings, apply them with:
+
+```console
+docker compose up -d dashboard
+```
+
+For a routine restart and status check:
+
+```console
+docker compose restart dashboard
+docker compose ps
+docker compose logs --tail 50 dashboard
+```
+
+Open **http://127.0.0.1:8765** after the dashboard is healthy. Compose starts it with `python -m dashboard.app` so Python resolves the dashboard's imports correctly.
+
 ### Review settings
 
 The separate [Settings page](http://127.0.0.1:8765/settings), linked from the dashboard, saves to `config/review_config.json`:

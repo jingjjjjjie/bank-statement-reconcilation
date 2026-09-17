@@ -1,0 +1,21 @@
+services:
+  dashboard:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      target: ${DOCKER_TARGET:-development}
+      args:
+        CODEX_VERSION: ${CODEX_VERSION:-0.154.0}
+    init: true
+    command: ["python", "-m", "dashboard.app", "--host", "0.0.0.0", "--port", "8765"]
+    ports:
+      - "127.0.0.1:${DASHBOARD_PORT:-8765}:8765"
+    volumes:
+      - .:/workspace
+      - "${DOCUMENTS_PATH:-../bank-statement-uploads}:/documents"
+      - "${UPLOADS_PATH:-../bank-statement-uploads}:/uploads"
+      - codex-home:/home/app/.codex
+    restart: unless-stopped
+
+volumes:
+  codex-home:

@@ -14,8 +14,10 @@ from dashboard.review import Review, workflow_guide, write_json
 
 
 def main():
-    # Listen on loopback only; launching the dashboard never changes source files.
+    """Start the local dashboard server."""
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--host", default="127.0.0.1",
+                        help="interface to bind (use 0.0.0.0 in a container)")
     parser.add_argument("--port", type=int, default=8765)
     parser.add_argument("--manifest", type=Path, default=WORKSPACE / "duplicate-manifest.json")
     parser.add_argument("--data", type=Path, default=Path(__file__).parent / ".data")
@@ -24,8 +26,9 @@ def main():
     manifest = sources.active_manifest(args.manifest) if args.manifest == WORKSPACE / "duplicate-manifest.json" else args.manifest
     data = manifest.parent / "dashboard-data" if manifest != args.manifest else args.data
     review = Review(manifest, data) if manifest.is_file() else None
-    server = ThreadingHTTPServer(("127.0.0.1", args.port), handler_for(review, secrets.token_urlsafe(32), sources))
-    print(f"Dashboard: http://127.0.0.1:{server.server_port}", flush=True)
+    server = ThreadingHTTPServer((args.host, args.port), handler_for(review, secrets.token_urlsafe(32), sources))
+    display_host = "127.0.0.1" if args.host == "0.0.0.0" else args.host
+    print(f"Dashboard: http://{display_host}:{server.server_port}", flush=True)
     try:
         server.serve_forever()
     except KeyboardInterrupt:

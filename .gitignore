@@ -21,3 +21,7 @@ test_bank_sample_local.py
 !.env.example
 .venv/
 *.pyc
+
+# Default host folder mounted into the Docker container.
+documents/
+uploads/

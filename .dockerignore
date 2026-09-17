@@ -1,0 +1,18 @@
+.git
+.tools
+.venv
+__pycache__
+*.py[cod]
+.env
+.env.*
+!.env.example
+review
+duplicated
+bank-output
+dashboard/.data
+benchmarks
+documents
+uploads
+
+# Private local project notes.
+docs/local
