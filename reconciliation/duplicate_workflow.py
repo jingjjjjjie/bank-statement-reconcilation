@@ -2,10 +2,13 @@
 
 import argparse
 import csv
+import errno
 import hashlib
 import json
 import os
+import shutil
 import sys
+import tempfile
 from collections import defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
@@ -88,6 +91,80 @@ def review_files(root, manifest, manifest_path):
     return sorted(set(files))
 
 
+def move_verified(source, target, expected):
+    """Move across mounts only after a durable copy passes hash verification."""
+    if target.exists() or fingerprint(source) != expected:
+        raise ValueError(f"File changed or target exists: {source}")
+    try:
+        source.rename(target)
+    except OSError as error:
+        if error.errno != errno.EXDEV:
+            raise
+        temporary = None
+        try:
+            with tempfile.NamedTemporaryFile(dir=target.parent, prefix=".transfer-", delete=False) as output:
+                temporary = Path(output.name)
+                with source.open("rb") as input_file:
+                    shutil.copyfileobj(input_file, output, CHUNK_SIZE)
+                output.flush()
+                os.fsync(output.fileno())
+            if fingerprint(temporary) != expected or fingerprint(source) != expected:
+                raise ValueError(f"File changed during transfer: {source}")
+            if target.exists():
+                raise ValueError(f"Target appeared during transfer: {target}")
+            temporary.rename(target)
+            if fingerprint(target) != expected or fingerprint(source) != expected:
+                raise ValueError(f"Transfer verification failed: {source}")
+            source.unlink()
+        finally:
+            if temporary is not None:
+                temporary.unlink(missing_ok=True)
+    if fingerprint(target) != expected:
+        raise ValueError(f"Post-move verification failed: {target}")
+
+
+def finish_organization(root, manifest, manifest_path):
+    """Resume an unfinished manifest without remapping or overwriting documents."""
+    root = root.resolve(strict=True)
+    destination = duplicate_root(manifest, manifest_path)
+    if Path(manifest["SupportingRoot"]).resolve() != root:
+        raise ValueError("Manifest belongs to a different supporting root")
+    if destination != manifest_path.resolve().parent / "duplicated":
+        raise ValueError("Recovery destination must stay beside its manifest")
+    # Validate every recorded location before completing any interrupted transfers.
+    for record in manifest["Files"]:
+        source, target = Path(record["OriginalPath"]), Path(record["OrganizedPath"])
+        if not source.resolve().is_relative_to(root) or not target.resolve().is_relative_to(destination):
+            raise ValueError("Source or target escaped its expected folder")
+        if not source.exists() and not target.exists():
+            raise ValueError(f"Both original and review copy are missing: {source}")
+        for path in (source, target):
+            if path.exists() and fingerprint(path) != record["SHA256"]:
+                raise ValueError(f"Recorded document changed: {path}")
+    destination.mkdir(exist_ok=True)
+    for record in manifest["Files"]:
+        source, target = Path(record["OriginalPath"]), Path(record["OrganizedPath"])
+        target.parent.mkdir(parents=True, exist_ok=True)
+        if source.exists():
+            if target.exists():
+                # A crash after verified publication may leave both identical copies.
+                if fingerprint(source) != record["SHA256"] or fingerprint(target) != record["SHA256"]:
+                    raise ValueError(f"Recorded document changed: {source}")
+                source.unlink()
+            else:
+                move_verified(source, target, record["SHA256"])
+    locations = destination / "original-locations.csv"
+    with locations.open("w", encoding="utf-8-sig", newline="") as stream:
+        writer = csv.DictWriter(stream, fieldnames=["Group", "SHA256", "OriginalPath", "OrganizedPath"])
+        writer.writeheader()
+        writer.writerows(manifest["Files"])
+    manifest["OrganizationComplete"] = True
+    temporary = manifest_path.with_suffix(".tmp")
+    temporary.write_text(json.dumps(manifest, indent=2, ensure_ascii=False), encoding="utf-8")
+    temporary.replace(manifest_path)
+    return manifest
+
+
 def organize(root, manifest_path):
     # Review copies live beside the workspace manifest, outside the source folder.
     destination = manifest_path.resolve().parent / "duplicated"
@@ -104,23 +181,11 @@ def organize(root, manifest_path):
             records.append(dict(Group=group, SHA256=digest,
                                 OriginalPath=str(source), OrganizedPath=str(target)))
     manifest = dict(SupportingRoot=str(root), DuplicateRoot=str(destination),
-                    Created=datetime.now(timezone.utc).isoformat(), Files=records)
+                    Created=datetime.now(timezone.utc).isoformat(), Files=records, OrganizationComplete=False)
     # Write the recovery map before moving any files. Never overwrite a manifest.
     with manifest_path.open("x", encoding="utf-8") as stream:
         json.dump(manifest, stream, indent=2, ensure_ascii=False)
-    destination.mkdir()
-    for record in records:
-        source, target = Path(record["OriginalPath"]), Path(record["OrganizedPath"])
-        target.parent.mkdir(exist_ok=True)
-        if target.exists() or fingerprint(source) != record["SHA256"]:
-            raise ValueError(f"File changed or target exists: {source}")
-        source.rename(target)
-        if fingerprint(target) != record["SHA256"]:
-            raise ValueError(f"Post-move verification failed: {target}")
-    with (destination / "original-locations.csv").open("x", encoding="utf-8-sig", newline="") as stream:
-        writer = csv.DictWriter(stream, fieldnames=["Group", "SHA256", "OriginalPath", "OrganizedPath"])
-        writer.writeheader()
-        writer.writerows(records)
+    finish_organization(root, manifest, manifest_path)
     print(f"Organized {len(records)} files into {len(groups)} groups. No files deleted.")
     return manifest
 

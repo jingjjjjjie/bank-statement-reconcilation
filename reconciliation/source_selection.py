@@ -5,7 +5,7 @@ import os
 import string
 from pathlib import Path
 
-from reconciliation.duplicate_workflow import duplicate_groups, fingerprint, organize, supporting_files
+from reconciliation.duplicate_workflow import duplicate_groups, fingerprint, finish_organization, organize, supporting_files
 
 
 class SourceSelection:
@@ -136,6 +136,9 @@ class SourceSelection:
             saved = json.loads(manifest.read_text(encoding="utf-8-sig"))
             if Path(saved["SupportingRoot"]).resolve() != source:
                 raise ValueError("Existing review belongs to another source folder")
+            complete = saved.get("OrganizationComplete", (project / "duplicated/original-locations.csv").exists())
+            if not complete:
+                finish_organization(source, saved, manifest)
         return manifest, project / "dashboard-data"
 
     def activate(self, manifest):

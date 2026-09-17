@@ -16,6 +16,29 @@ from dashboard.app import handler_for
 
 
 class SourceSelectionTests(unittest.TestCase):
+    def test_reopen_resumes_legacy_interrupted_organization(self):
+        """An old partial manifest must finish its moves before becoming active."""
+        with tempfile.TemporaryDirectory() as folder:
+            base = Path(folder)
+            source = base / "source"
+            source.mkdir()
+            for name in ("a.txt", "b.txt"):
+                (source / name).write_bytes(b"same")
+            sources = SourceSelection(base, base / "data")
+            sources.save(source)
+            with patch("reconciliation.duplicate_workflow.move_verified", side_effect=OSError("interrupted")):
+                with self.assertRaises(OSError):
+                    sources.start(sources.preview()["token"])
+            path = next((base / "duplicated/projects").glob("*/duplicate-manifest.json"))
+            saved = json.loads(path.read_text())
+            saved.pop("OrganizationComplete")
+            path.write_text(json.dumps(saved), encoding="utf-8")
+            manifest, _ = sources.start(sources.preview()["token"])
+            completed = json.loads(manifest.read_text())
+            self.assertTrue(completed["OrganizationComplete"])
+            self.assertTrue(all(Path(r["OrganizedPath"]).is_file() for r in completed["Files"]))
+            self.assertEqual(list(source.iterdir()), [])
+
     def test_browser_roots_are_available_on_current_platform(self):
         """A fresh picker must show drives or POSIX roots without a saved source."""
         with tempfile.TemporaryDirectory() as folder:

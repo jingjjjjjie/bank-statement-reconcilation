@@ -1,12 +1,71 @@
 """Checks use temporary fixtures only, never customer documents."""
 import tempfile
 import unittest
+import errno
+import json
 from pathlib import Path
+from unittest.mock import patch
 
 from reconciliation import duplicate_workflow as workflow
 
 
 class WorkflowTests(unittest.TestCase):
+    def test_cross_device_move_verifies_before_removing_originals(self):
+        """Separate Docker mounts use a verified copy when rename raises EXDEV."""
+        rename = Path.rename
+
+        def cross_mount(path, target):
+            """Reject only the source-to-review rename, as a mount boundary would."""
+            if path.is_relative_to(self.root):
+                raise OSError(errno.EXDEV, "Invalid cross-device link")
+            return rename(path, target)
+
+        with patch.object(Path, "rename", cross_mount):
+            files = self.organize_pair()
+        self.assertTrue(all(path.read_bytes() == b"same receipt" for path in files))
+        self.assertTrue(self.manifest["OrganizationComplete"])
+        self.assertFalse(list(files[0].parent.glob(".transfer-*")))
+
+    def test_failed_copy_keeps_original_and_can_resume(self):
+        """Corrupt transfer data never removes source files or becomes a final copy."""
+        source = self.root / "one.txt"
+        source.write_bytes(b"original")
+        target = self.base / "copy.txt"
+        expected = workflow.fingerprint(source)
+        with patch.object(Path, "rename", side_effect=OSError(errno.EXDEV, "cross mount")), \
+                patch("reconciliation.duplicate_workflow.shutil.copyfileobj", side_effect=lambda _reader, writer, _size: writer.write(b"bad")):
+            with self.assertRaisesRegex(ValueError, "changed during transfer"):
+                workflow.move_verified(source, target, expected)
+        self.assertEqual(source.read_bytes(), b"original")
+        self.assertFalse(target.exists())
+        self.assertFalse(list(self.base.glob(".transfer-*")))
+        workflow.move_verified(source, target, expected)
+        self.assertEqual(target.read_bytes(), b"original")
+
+    def test_resume_partial_manifest_preserves_recorded_locations(self):
+        """Recover after one successful move and a failure on the second file."""
+        original = workflow.move_verified
+        calls = []
+
+        def fail_second(source, target, expected):
+            """Leave a real partial organization for the recovery path."""
+            calls.append(source)
+            if len(calls) == 2:
+                raise PermissionError("fixture interruption")
+            original(source, target, expected)
+
+        with patch("reconciliation.duplicate_workflow.move_verified", fail_second):
+            with self.assertRaises(PermissionError):
+                self.organize_pair()
+        manifest = json.loads(self.manifest_path.read_text())
+        self.assertFalse(manifest["OrganizationComplete"])
+        provenance = list(manifest["Files"])
+        workflow.finish_organization(self.root, manifest, self.manifest_path)
+        self.assertEqual(manifest["Files"], provenance)
+        self.assertTrue(manifest["OrganizationComplete"])
+        self.assertTrue(all(Path(r["OrganizedPath"]).exists() for r in provenance))
+        self.assertTrue(all(not Path(r["OriginalPath"]).exists() for r in provenance))
+
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
