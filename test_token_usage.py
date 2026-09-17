@@ -7,7 +7,7 @@ import unittest
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import patch
+from test_helpers import mock_codex
 
 from codex_reviewer import BudgetReached, CodexReviewer, object_schema
 from token_usage import record, summary
@@ -44,7 +44,7 @@ class TokenUsageTests(unittest.TestCase):
                 worker.model = stage
                 return worker.ask(prompt, schema)
 
-            with patch("codex_reviewer.subprocess.run", side_effect=fake_run):
+            with mock_codex(fake_run):
                 with ThreadPoolExecutor(max_workers=2) as pool:
                     results = list(pool.map(run_one, (("pdf", "one"), ("images", "two"))))
                 with self.assertRaises(BudgetReached):
@@ -77,7 +77,7 @@ class TokenUsageTests(unittest.TestCase):
 
             reviewer = CodexReviewer(work, executable="codex", model="gpt-5.6-sol")
             reviewer.stage = "pdf"
-            with patch("codex_reviewer.subprocess.run", side_effect=fake_run):
+            with mock_codex(fake_run):
                 reviewer.ask("first", schema)
                 reviewer.ask("first", schema)
                 reviewer.stage = "comparison"
@@ -108,7 +108,7 @@ class TokenUsageTests(unittest.TestCase):
                     return SimpleNamespace(returncode=0, stdout="ChatGPT", stderr="")
                 raise subprocess.TimeoutExpired(command, 1)
 
-            with patch("codex_reviewer.subprocess.run", side_effect=fake_run):
+            with mock_codex(fake_run):
                 with self.assertRaises(subprocess.TimeoutExpired):
                     reviewer.ask("receipt", object_schema({"ok": {"type": "boolean"}}))
             usage = summary(work / "token-usage.jsonl")

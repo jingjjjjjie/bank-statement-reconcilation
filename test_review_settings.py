@@ -4,6 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import patch
+from test_helpers import mock_codex
 from types import SimpleNamespace
 
 import pymupdf
@@ -107,7 +108,7 @@ class SettingsTests(unittest.TestCase):
             Path(command[command.index("--output-last-message") + 1]).write_text('{"ok": true}')
             return SimpleNamespace(returncode=0)
         schema = object_schema({"ok": {"type": "boolean"}})
-        with patch("codex_reviewer.subprocess.run", side_effect=fake_run):
+        with mock_codex(fake_run):
             for effort in ("low", "high", "low"):
                 engine = CodexReviewer(self.base, executable="codex", model="gpt-5.6-sol", reasoning=effort)
                 self.assertTrue(engine.ask("test", schema)["ok"])
@@ -138,7 +139,7 @@ class SettingsTests(unittest.TestCase):
             return SimpleNamespace(returncode=0)
         schema = object_schema({"ok": {"type": "boolean"}})
         engine = CodexReviewer(self.base, executable="codex", model="first", max_calls=1)
-        with patch("codex_reviewer.subprocess.run", side_effect=fake_run):
+        with mock_codex(fake_run):
             engine.ask("test", schema)
             engine.model = "second"
             with self.assertRaises(BudgetReached):

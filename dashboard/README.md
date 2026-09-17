@@ -29,8 +29,18 @@ The Settings page also controls how many `codex exec` calls run together (1–8,
 
 The server listens only on loopback. Optional flags: `--port 8766`, `--manifest path`, `--data path`. Stop with Ctrl+C if started in a terminal.
 
-Tests:
+## Code layout
+
+- `app.py`: command-line options and server startup; retains the existing Python imports.
+- `routes.py`: HTTP endpoints, request validation, and static assets.
+- `review.py`: manifest access, recoverable keep/undo decisions, and workflow readiness.
+- `content_review.py`: background content-review jobs and human verdicts.
+- `office_preview.py` and `document_status.py`: document previews and review status.
+- `../document_reader.py`: extraction entry point with separate PDF, image, Excel, Word, and embedded-image handlers.
+
+Tests (from the repository root, using Python with the project dependencies installed):
 
 ```console
-.tools\python\python.exe -m unittest dashboard.test_app
+python -m unittest discover
+python -m unittest dashboard.test_app dashboard.test_content_review
 ```
