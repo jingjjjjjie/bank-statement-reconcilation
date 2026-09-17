@@ -1,5 +1,5 @@
 {
-  "pdf_mode": "auto",
+  "pdf_mode": "vision",
   "pictures_enabled": true,
   "codex_enabled": true,
   "max_calls": 1000,
