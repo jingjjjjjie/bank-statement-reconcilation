@@ -31,7 +31,7 @@ Open **http://127.0.0.1:8765** to compare copies, choose which one to keep, undo
 
 ### Review settings
 
-The separate [Settings page](http://127.0.0.1:8765/settings), linked from the dashboard, saves to `review_config.json`:
+The separate [Settings page](http://127.0.0.1:8765/settings), linked from the dashboard, saves to `config/review_config.json`:
 
 - **PDF processing:** extractor only (default), text with vision fallback for sparse/scanned pages, or text plus vision on every page.
 - **Picture processing:** enables pictures, embedded Office images and PDF page images for review. Dashboard previews are unaffected.

@@ -9,7 +9,7 @@ from pathlib import Path
 
 from reconciliation.duplicate_workflow import check, duplicate_root, fingerprint, supporting_files
 from reconciliation.review_settings import (
-    DEFAULTS, content_settings, load_config, model_catalog, model_settings, revision,
+    CONFIG_PATH, DEFAULTS, content_settings, load_config, model_catalog, model_settings, revision,
 )
 from reconciliation.token_usage import summary as token_summary
 from dashboard import office_preview
@@ -28,7 +28,8 @@ class Review:
     def __init__(self, manifest_path, data):
         # Only manifest-listed files can be previewed, retained or restored.
         self.manifest_path, self.data = manifest_path.resolve(), data.resolve()
-        self.config_path = self.manifest_path.parent / "review_config.json"
+        self.config_path = (CONFIG_PATH if self.manifest_path.parent == CONFIG_PATH.parent.parent
+                            else self.manifest_path.parent / "review_config.json")
         self.manifest = json.loads(manifest_path.read_text(encoding="utf-8-sig"))
         self.root = Path(self.manifest["SupportingRoot"]).resolve()
         self.duplicates = duplicate_root(self.manifest, self.manifest_path)

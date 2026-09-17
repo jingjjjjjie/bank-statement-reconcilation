@@ -14,5 +14,5 @@ class WorkspacePathTests(unittest.TestCase):
         root = Path(__file__).resolve().parents[2]
         self.assertEqual(WORKSPACE, root)
         self.assertEqual(DEFAULT_MANIFEST, root / "duplicate-manifest.json")
-        self.assertEqual(CONFIG_PATH, root / "review_config.json")
+        self.assertEqual(CONFIG_PATH, root / "config" / "review_config.json")
         self.assertEqual(DEFAULT_WORK, root / "review")

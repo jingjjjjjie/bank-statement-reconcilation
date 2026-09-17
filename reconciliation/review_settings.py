@@ -5,7 +5,7 @@ import os
 from pathlib import Path
 from reconciliation.paths import WORKSPACE
 
-CONFIG_PATH = WORKSPACE / "review_config.json"
+CONFIG_PATH = WORKSPACE / "config" / "review_config.json"
 DEFAULT_MODEL = "gpt-5.6-sol"
 DEFAULTS = {"pdf_mode": "text_only", "pictures_enabled": True, "codex_enabled": True,
             "max_calls": 20, "max_parallel": 4, "model": DEFAULT_MODEL, "reasoning": "default", "stages": {}}

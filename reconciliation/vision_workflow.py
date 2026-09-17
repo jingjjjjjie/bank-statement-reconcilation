@@ -384,6 +384,8 @@ def run(work, index, state, reviewer):
 def active_config(index):
     # Results from another extraction mode cannot silently satisfy the current review.
     path = index.get("config_path", str(CONFIG_PATH))
+    if path and Path(path) == CONFIG_PATH.parent.parent / "review_config.json" and not Path(path).exists():
+        path = CONFIG_PATH
     if path and not Path(path).is_file():
         raise ReviewPending("The review configuration is missing; restore it before proceeding")
     config = load_config(path)
