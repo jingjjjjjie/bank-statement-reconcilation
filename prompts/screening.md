@@ -1,0 +1,1 @@
+Screen LEFT against EACH right document. Candidate=true for any possible same document, revised version, overlap, complementary evidence or uncertainty. False only for clearly distinct documents. Return exactly one comparison per right_id.

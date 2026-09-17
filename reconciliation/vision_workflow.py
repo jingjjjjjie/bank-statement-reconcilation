@@ -8,6 +8,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from pathlib import Path
 from reconciliation.paths import WORKSPACE
+from reconciliation.prompts import load_prompt
 from time import sleep
 
 from jsonschema.exceptions import ValidationError
@@ -258,16 +259,9 @@ def run(work, index, state, reviewer):
 
                     def job(digest=digest, document=document, unit=unit, key=key):
                         """Read one page, sheet, or image with its selected model."""
-                        prompt = ("Extract this entire review unit for later duplicate comparison. "
-                                  "Record invoice numbers, company names, and a very brief description when present. "
-                                  "Leave missing fields empty; never infer them. Record all references, dates, currencies, totals and line-item detail. "
-                                  "For money, list only amounts that contribute to the payable total, each with numeric amount, currency and role: "
-                                  "line_item, invoice_total, or grand_total. Do not repeat a printed total as a line item. "
-                                  "If an amount's role or currency is unclear, omit it from money and explain the limitation; "
-                                  "Classify receipt_status as receipt only for proof of payment, not_receipt for clearly other documents such as invoices, and unsure when unclear. "
-                                  "note unclear text, missing context and signatures.\n" +
-                                  json.dumps({"location": unit["label"], "text": unit["text"],
-                                              "limitation": unit.get("limitation", "")}, ensure_ascii=False))
+                        prompt = load_prompt("extraction") + "\n" + json.dumps({
+                            "location": unit["label"], "text": unit["text"],
+                            "limitation": unit.get("limitation", "")}, ensure_ascii=False)
                         return key, digest, unit["label"], ask(prompt, EXTRACTION,
                             [unit["image"]] if unit["image"] else [],
                             stage=document_stage(document["paths"][0]))
@@ -309,10 +303,9 @@ def run(work, index, state, reviewer):
 
                     def job(left=left, batch=batch):
                         """Screen one batch and reject incomplete model coverage."""
-                        prompt = ("Screen LEFT against EACH right document. Candidate=true for any possible "
-                                  "same document, revised version, overlap, complementary evidence or uncertainty. "
-                                  "False only for clearly distinct documents. Return exactly one comparison per right_id.\n" +
-                                  json.dumps({"left": summaries[left], "right": {r: summaries[r] for r in batch}}, ensure_ascii=False))
+                        prompt = load_prompt("screening") + "\n" + json.dumps({
+                            "left": summaries[left], "right": {r: summaries[r] for r in batch}},
+                            ensure_ascii=False)
                         if len(prompt) > 100000:
                             rows = [{"right_id": r, "candidate": True,
                                      "reason": "Summary too large; direct review required"} for r in batch]
@@ -352,10 +345,8 @@ def run(work, index, state, reviewer):
                     for item in right_text:
                         if "image_number" in item:
                             item["image_number"] += len(left_images)
-                    prompt = ("Compare these whole documents. Cite supplied document IDs and page/sheet/unit locations "
-                              "in evidence and differences. same_document requires equivalent complete evidence; "
-                              "different annotations, bank details, signatures or missing pages must be distinguished.\n" +
-                              json.dumps({"left": left_text, "right": right_text}, ensure_ascii=False))
+                    prompt = load_prompt("comparison") + "\n" + json.dumps(
+                        {"left": left_text, "right": right_text}, ensure_ascii=False)
                     images = left_images + right_images
                     if len(images) > 40 or len(prompt) > 100000:
                         result = {"classification": "uncertain", "confidence": "low", "evidence": [],

@@ -15,8 +15,9 @@ from openpyxl import Workbook
 import pymupdf
 
 import reconciliation.vision_workflow as workflow
-from reconciliation.codex_reviewer import BudgetReached, CodexReviewer, EXTRACTION, ReviewCancelled, RULES, SCREEN
+from reconciliation.codex_reviewer import BudgetReached, CodexReviewer, EXTRACTION, ReviewCancelled, SCREEN
 from reconciliation.document_reader import extract
+from reconciliation.prompts import load_prompt
 from reconciliation.duplicate_workflow import organize
 
 
@@ -204,7 +205,7 @@ class WorkflowTests(unittest.TestCase):
         """Repeated testing reuses an identical completed Codex response."""
         self.prepared()
         prompt, model = "Cached fixture extraction", "fixture"
-        key = hashlib.sha256(json.dumps([RULES + "\n" + prompt, EXTRACTION, model, "default"],
+        key = hashlib.sha256(json.dumps([load_prompt("styles") + "\n\n" + prompt, EXTRACTION, model, "default"],
                                         sort_keys=True).encode()).hexdigest()
         folder = self.work / "model-cache" / key
         folder.mkdir(parents=True)

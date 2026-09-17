@@ -3,6 +3,7 @@ import json
 import argparse
 from pathlib import Path
 from reconciliation.paths import WORKSPACE
+from reconciliation.prompts import load_prompt
 
 from PIL import Image, ImageDraw
 from reconciliation.codex_reviewer import CodexReviewer, EXTRACTION
@@ -21,7 +22,7 @@ def main():
     ImageDraw.Draw(picture).text((40, 40), "SYNTHETIC TEST RECEIPT\nReference: TEST-001\nTotal: MYR 123.45", fill="black", font_size=38)
     picture.save(image)
     result = CodexReviewer(work, model=args.model, reasoning=args.reasoning, max_calls=1).ask(
-        "Extract this synthetic receipt image. This is a connection test, not real accounting evidence.",
+        load_prompt("connection_test"),
         EXTRACTION, [image])
     assert result["readable"], result
     assert "123.45" in json.dumps(result), result
