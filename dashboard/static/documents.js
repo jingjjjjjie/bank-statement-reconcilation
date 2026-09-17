@@ -67,4 +67,4 @@ $('#hide-duplicates').onchange = rememberFilters;
 $('#document-search').oninput = rememberFilters;
 $('#document-filter').onchange = rememberFilters;
 refreshDocuments().catch(error => toast(error.message));
-setInterval(() => refreshDocuments().catch(error => toast(error.message)), 5000);
+pollVisible(refreshDocuments, 5000);

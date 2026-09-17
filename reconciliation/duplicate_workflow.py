@@ -19,6 +19,7 @@ CHUNK_SIZE = 1024 * 1024
 
 
 def fingerprint(path):
+    """Read current file bytes for every integrity check."""
     digest = hashlib.sha256()
     with path.open("rb") as stream:
         for block in iter(lambda: stream.read(CHUNK_SIZE), b""):
@@ -37,6 +38,8 @@ def identical(left, right):
 
 
 def supporting_files(root, excluded=()):
+    """Scan canonical directories once, rejecting linked entries before collecting files."""
+    root = Path(root).resolve()
     excluded = {path.resolve() for path in excluded}
     result = []
     for directory, folders, files in os.walk(root, followlinks=False):
@@ -46,7 +49,7 @@ def supporting_files(root, excluded=()):
                 raise ValueError(f"Linked paths require manual review: {path}")
         for name in files:
             path = Path(directory) / name
-            if path.resolve() not in excluded:
+            if path not in excluded:
                 result.append(path)
     return sorted(result)
 

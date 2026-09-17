@@ -1,5 +1,6 @@
 """HTTP routes and request validation for the local review dashboard."""
 import json
+import hashlib
 import mimetypes
 import tempfile
 import threading
@@ -15,6 +16,31 @@ from dashboard import content_review, development, document_status, office_previ
 from dashboard.review import Review, workflow_guide
 
 
+ASSETS = {"/": ("index.html", "text/html; charset=utf-8"),
+          "/bank": ("bank.html", "text/html; charset=utf-8"),
+          "/bank/": ("bank.html", "text/html; charset=utf-8"),
+          "/settings": ("settings.html", "text/html; charset=utf-8"),
+          "/settings/": ("settings.html", "text/html; charset=utf-8"),
+          "/complete": ("complete.html", "text/html; charset=utf-8"),
+          "/complete/": ("complete.html", "text/html; charset=utf-8"),
+          "/source": ("source.html", "text/html; charset=utf-8"),
+          "/source/": ("source.html", "text/html; charset=utf-8"),
+          "/content-review": ("content-review.html", "text/html; charset=utf-8"),
+          "/content-review/": ("content-review.html", "text/html; charset=utf-8"),
+          "/documents": ("documents.html", "text/html; charset=utf-8"),
+          "/documents/": ("documents.html", "text/html; charset=utf-8"),
+          "/app.js": ("app.js", "text/javascript"),
+          "/bank.js": ("bank.js", "text/javascript"),
+          "/settings.js": ("settings.js", "text/javascript"),
+          "/complete.js": ("complete.js", "text/javascript"),
+          "/common.js": ("common.js", "text/javascript"),
+          "/source.js": ("source.js", "text/javascript"),
+          "/content-review.js": ("content-review.js", "text/javascript"),
+          "/documents.js": ("documents.js", "text/javascript"),
+          "/documents.css": ("documents.css", "text/css"),
+          "/office-view.js": ("office-view.js", "text/javascript"),
+          "/style.css": ("style.css", "text/css")}
+
 def handler_for(review, token, sources=None):
     """Serve the active review and local source-folder selection."""
     sources = sources or SourceSelection(review.manifest_path.parent, review.data)
@@ -22,14 +48,19 @@ def handler_for(review, token, sources=None):
     server_lock = threading.RLock()
 
     class Handler(BaseHTTPRequestHandler):
-        def reply(self, status, body, mime="application/json; charset=utf-8"):
+        def reply(self, status, body, mime="application/json; charset=utf-8", etag=None):
             """Send a response with consistent local-dashboard security headers."""
             if not isinstance(body, bytes):
                 body = json.dumps(body, ensure_ascii=False).encode("utf-8")
+            if etag and self.headers.get("If-None-Match") == etag:
+                status, body = 304, b""
             self.send_response(status)
             self.send_header("Content-Type", mime)
-            self.send_header("Content-Length", str(len(body)))
-            self.send_header("Cache-Control", "no-store")
+            if status != 304:
+                self.send_header("Content-Length", str(len(body)))
+            self.send_header("Cache-Control", "private, no-cache" if etag else "no-store")
+            if etag:
+                self.send_header("ETag", etag)
             self.send_header("X-Content-Type-Options", "nosniff")
             self.send_header("Content-Security-Policy", "default-src 'self'; img-src 'self' blob:; frame-ancestors 'none'; base-uri 'none'")
             self.end_headers()
@@ -53,11 +84,17 @@ def handler_for(review, token, sources=None):
                 return
             params = parse_qs(query.query)
             try:
+                if query.path in ASSETS:
+                    name, mime = ASSETS[query.path]
+                    body = (Path(__file__).parent / "static" / name).read_bytes()
+                    self.reply(200, body, mime, '"' + hashlib.sha256(body).hexdigest() + '"')
+                    return
+                if query.path == "/api/session":
+                    self.reply(200, {"token": token})
+                    return
                 with server_lock:
                     if query.path == "/api/state":
                         self.reply(200, {**review.snapshot(), "token": token})
-                    elif query.path == "/api/session":
-                        self.reply(200, {"token": token})
                     elif query.path == "/api/workspace":
                         self.reply(200, review.workspace() if review else {"name": "No active review", "period": "Choose a source folder"})
                     elif query.path == "/api/workflow-checks":
@@ -123,32 +160,7 @@ def handler_for(review, token, sources=None):
                                 path = Path(units[int(params.get("page", ["0"])[0])]["image"])
                             self.reply(200, path.read_bytes(), mimetypes.guess_type(path.name)[0] or "image/png")
                     else:
-                        assets = {"/": ("index.html", "text/html; charset=utf-8"),
-                                  "/bank": ("bank.html", "text/html; charset=utf-8"),
-                                  "/bank/": ("bank.html", "text/html; charset=utf-8"),
-                                  "/settings": ("settings.html", "text/html; charset=utf-8"),
-                                  "/settings/": ("settings.html", "text/html; charset=utf-8"),
-                                  "/complete": ("complete.html", "text/html; charset=utf-8"),
-                                  "/complete/": ("complete.html", "text/html; charset=utf-8"),
-                                  "/source": ("source.html", "text/html; charset=utf-8"),
-                                  "/source/": ("source.html", "text/html; charset=utf-8"),
-                                  "/content-review": ("content-review.html", "text/html; charset=utf-8"),
-                                  "/content-review/": ("content-review.html", "text/html; charset=utf-8"),
-                                  "/documents": ("documents.html", "text/html; charset=utf-8"),
-                                  "/documents/": ("documents.html", "text/html; charset=utf-8"),
-                                  "/app.js": ("app.js", "text/javascript"),
-                                  "/bank.js": ("bank.js", "text/javascript"),
-                                  "/settings.js": ("settings.js", "text/javascript"),
-                                  "/complete.js": ("complete.js", "text/javascript"),
-                                  "/common.js": ("common.js", "text/javascript"),
-                                  "/source.js": ("source.js", "text/javascript"),
-                                  "/content-review.js": ("content-review.js", "text/javascript"),
-                                  "/documents.js": ("documents.js", "text/javascript"),
-                                  "/documents.css": ("documents.css", "text/css"),
-                                  "/office-view.js": ("office-view.js", "text/javascript"),
-                                  "/style.css": ("style.css", "text/css")}
-                        name, mime = assets[query.path]
-                        self.reply(200, (Path(__file__).parent / "static" / name).read_bytes(), mime)
+                        self.reply(404, {"error": "File or page not found"})
             except (KeyError, IndexError, FileNotFoundError):
                 self.reply(404, {"error": "File or page not found"})
             except Exception as error:

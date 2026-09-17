@@ -13,6 +13,15 @@ async function api(path, body) {
   const response = await fetch(path, body === undefined ? {} : {method: 'POST', headers: {'Content-Type': 'application/json', 'X-Review-Token': token}, body: JSON.stringify(body)});
   const data = await response.json(); if (!response.ok) throw Error(data.error || 'Request failed'); return data;
 }
+function pollVisible(refresh, milliseconds) {
+  /* Wait for each refresh to finish and leave hidden tabs idle. */
+  async function tick() {
+    try { if (!document.hidden) await refresh(); }
+    catch (error) { toast(error.message); }
+    finally { setTimeout(tick, milliseconds); }
+  }
+  setTimeout(tick, milliseconds);
+}
 function toast(message) {$('#toast').textContent = message; $('#toast').hidden = false; clearTimeout(toast.timer); toast.timer = setTimeout(() => $('#toast').hidden = true, 5000);}
 if ($('.workspace')) api('/api/workspace').then(info => {
   $('.workspace strong').textContent = info.name;
