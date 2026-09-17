@@ -19,3 +19,12 @@ and unknown lists empty. Screenshots and claims can be supporting evidence. Excl
 clearly unrelated material. For uncertain boundaries preserve provisional pieces, set
 needs_review true and explain the ambiguity; do not force a merge. Put document-wide
 coverage or legibility problems in limitations. Model output never grants approval.
+
+Extract claim, wage and invoice totals independently of payment status and currency.
+A document need not prove payment to have a supported printed total; an unknown currency
+stays empty without erasing that total. Do not add generic lack-of-payment-proof limitations
+to claims. Read spreadsheet total labels with the title, rate and work entries: a printed
+claim total may sit under an hours column. For example, 1 training hour, hourly rate 25,
+and a labelled total of 25 support total "25". Do not mistake a clearly labelled hours or
+count total for money, invent an unprinted total, or apply a bonus-only currency label to
+the entire claim without supporting context.
