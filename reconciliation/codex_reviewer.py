@@ -57,7 +57,7 @@ class BudgetReached(Exception):
 
 
 class CodexReviewer:
-    def __init__(self, work, executable=None, model=None, max_calls=20, timeout=240, reasoning="default", cancel_event=None):
+    def __init__(self, work, executable=None, model=None, max_calls=1000, timeout=240, reasoning="default", cancel_event=None):
         # Keep response caches scoped to model, prompt, schema and image bytes.
         bundled = Path(os.environ.get("LOCALAPPDATA", "")) / "Programs/OpenAI/Codex/bin/codex.exe"
         self.executable = executable or shutil.which("codex") or str(bundled)

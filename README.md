@@ -199,12 +199,12 @@ The default preparation directory is `review/`. Preparation retains one model in
 After pass-one cleanup succeeds:
 
 ```console
-python -m reconciliation.vision_workflow run --max-calls 20
+python -m reconciliation.vision_workflow run --max-calls 1000
 ```
 
 Rerun the same command to resume. It reads every unit, screens every unique document pair through model-extracted summaries in batches, then compares original text/images for candidates. No filename or amount-only filter excludes pairs. Summary screening can still miss matches: this is model-assisted review, not a mathematical guarantee. Very large comparisons remain uncertain for admin inspection rather than being silently truncated.
 
-`--max-calls` bounds new calls per invocation (default 20); `--timeout` bounds each call (default 240 seconds). Cached responses are keyed by prompt, schema, model selector and image contents. Pair screening covers every unique document pair, batched into model calls, followed by candidate comparisons. A limited run does not complete the review.
+`--max-calls` bounds new calls per invocation (default 1,000; a safety ceiling, not a target); `--timeout` bounds each call (default 240 seconds). Cached responses are keyed by prompt, schema, model selector and image contents. Pair screening covers every unique document pair, batched into model calls, followed by candidate comparisons. A limited run does not complete the review.
 
 Read `review/report.md`; `report.json` contains full coverage and evidence. Extraction finishes before pair screening starts. A progress unit is one page, image frame or spreadsheet sheet/chunk, so there can be more units than files. `review/state.json` resumes completed units and comparisons; `review/model-cache` holds prompts, validated responses and CLI logs and remains available after `prepare --refresh` for development tests. Identical prompt, schema, model, reasoning and image bytes reuse a successful response without a new Codex call. Changing any of those inputs requires a new call. Failed, timed-out, unreadable or skipped work cannot pass the final gate. Keep generated review files private with the source documents.
 

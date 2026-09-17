@@ -63,7 +63,7 @@ class SettingsTests(unittest.TestCase):
             save_config(self.path, DEFAULTS, before)
 
     def test_invalid_settings_do_not_get_saved(self):
-        for change in ({"codex_enabled": "false"}, {"max_calls": True}, {"max_calls": 0},
+        for change in ({"codex_enabled": "false"}, {"max_calls": True}, {"max_calls": 0}, {"max_calls": 1001},
                        {"max_parallel": True}, {"max_parallel": 0}, {"max_parallel": 9},
                        {"pdf_mode": "typo"}, {"unknown": True}):
             with self.subTest(change=change), self.assertRaises(ValueError):
@@ -177,3 +177,9 @@ if __name__ == "__main__":
         with self.assertRaisesRegex(ValueError, "configuration is missing"):
             prepare(self.base / "manifest.json", self.base / "review", self.base / "missing.json")
         self.assertFalse((self.base / "review").exists())
+
+    def test_larger_batch_safety_ceiling_with_eight_workers(self):
+        """Allow the chosen request ceiling and parallelism while validating bounds."""
+        config = validate({**DEFAULTS, "model": "", "max_calls": 1000, "max_parallel": 8})
+        self.assertEqual(config["max_calls"], 1000)
+        self.assertEqual(config["max_parallel"], 8)

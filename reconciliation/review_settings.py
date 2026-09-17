@@ -8,7 +8,7 @@ from reconciliation.paths import WORKSPACE
 CONFIG_PATH = WORKSPACE / "config" / "review_config.json"
 DEFAULT_MODEL = "gpt-5.6-sol"
 DEFAULTS = {"pdf_mode": "text_only", "pictures_enabled": True, "codex_enabled": True,
-            "max_calls": 20, "max_parallel": 4, "model": DEFAULT_MODEL, "reasoning": "default", "stages": {}}
+            "max_calls": 1000, "max_parallel": 4, "model": DEFAULT_MODEL, "reasoning": "default", "stages": {}}
 STAGES = ("pdf", "images", "excel", "word", "comparison")
 
 
@@ -45,8 +45,8 @@ def validate(config):
         raise ValueError("PDF mode must be text_only, auto or vision")
     if any(type(config[key]) is not bool for key in ("pictures_enabled", "codex_enabled")):
         raise ValueError("Picture and Codex switches must be true or false")
-    if type(config["max_calls"]) is not int or not 1 <= config["max_calls"] <= 500:
-        raise ValueError("Call limit must be an integer between 1 and 500")
+    if type(config["max_calls"]) is not int or not 1 <= config["max_calls"] <= 1000:
+        raise ValueError("Call limit must be an integer between 1 and 1000")
     if type(config["max_parallel"]) is not int or not 1 <= config["max_parallel"] <= 8:
         raise ValueError("Parallel requests must be an integer between 1 and 8")
     if not isinstance(config["model"], str) or not isinstance(config["reasoning"], str):
