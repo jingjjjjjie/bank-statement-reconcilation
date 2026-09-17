@@ -12,6 +12,16 @@ DEFAULTS = {"pdf_mode": "text_only", "pictures_enabled": True, "codex_enabled": 
 STAGES = ("pdf", "images", "excel", "word", "comparison")
 
 
+def config_for_manifest(manifest):
+    """Use shared settings for managed reviews while preserving existing legacy overrides."""
+    parent = Path(manifest).resolve().parent
+    workspace = CONFIG_PATH.parent.parent
+    local = parent / "review_config.json"
+    if parent == workspace or (parent.is_relative_to(workspace / "duplicated/projects") and not local.is_file()):
+        return CONFIG_PATH
+    return local
+
+
 def model_catalog():
     # Read capability metadata from Codex's own cache; do not guess model identifiers.
     home = Path(os.environ.get("CODEX_HOME", Path.home() / ".codex"))

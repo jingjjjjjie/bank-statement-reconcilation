@@ -17,7 +17,7 @@ from jsonschema.exceptions import ValidationError
 from reconciliation.codex_reviewer import CodexReviewer, BudgetReached, EXTRACTION, SCREEN, COMPARISON
 from reconciliation.document_reader import extract
 from reconciliation.duplicate_workflow import DEFAULT_MANIFEST, fingerprint, review_files, check as exact_check
-from reconciliation.review_settings import CONFIG_PATH, load_config, content_settings, model_settings, stage_settings, document_stage, revision, validate as validate_config
+from reconciliation.review_settings import CONFIG_PATH, config_for_manifest, load_config, content_settings, model_settings, stage_settings, document_stage, revision, validate as validate_config
 from reconciliation.comparison_policy import route as comparison_route
 from reconciliation.supporting_inventory import export as export_inventory
 from reconciliation.token_usage import summary as token_summary
@@ -59,6 +59,8 @@ def inventory(root, manifest_path):
 
 def prepare(manifest_path, work, config_path=None, refresh=False):
     # Preparation is local and can run while pass-one admin cleanup is pending.
+    if config_path is not None and not Path(config_path).is_file():
+        raise ValueError(f"Review configuration is missing: {config_path}")
     manifest = read(manifest_path)
     root = Path(manifest["SupportingRoot"]).resolve(strict=True)
     if work.resolve().is_relative_to(root):
@@ -378,6 +380,10 @@ def active_config(index):
     path = index.get("config_path", str(CONFIG_PATH))
     if path and Path(path) == CONFIG_PATH.parent.parent / "review_config.json" and not Path(path).exists():
         path = CONFIG_PATH
+    if path and not Path(path).is_file() and index.get("manifest"):
+        legacy = Path(index["manifest"]).resolve().parent / "review_config.json"
+        if Path(path).resolve() == legacy:
+            path = config_for_manifest(index["manifest"])
     if path and not Path(path).is_file():
         raise ReviewPending("The review configuration is missing; restore it before proceeding")
     config = load_config(path)

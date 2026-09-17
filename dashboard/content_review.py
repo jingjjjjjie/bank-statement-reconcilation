@@ -6,7 +6,7 @@ from pathlib import Path
 from reconciliation.codex_reviewer import BudgetReached, CodexReviewer, ReviewCancelled
 from reconciliation.duplicate_workflow import check, fingerprint
 from reconciliation.review_settings import load_config, stage_settings
-from reconciliation.vision_workflow import current_inventory, decide as save_decision, load, prepare as prepare_review, run, undo_decision
+from reconciliation.vision_workflow import active_config, current_inventory, decide as save_decision, load, prepare as prepare_review, run, undo_decision
 
 
 def work_path(review):
@@ -104,6 +104,8 @@ def start(review):
     work = work_path(review)
     if not (work / "index.json").is_file():
         raise ValueError("Prepare content review first")
+    index, _ = load(work)
+    active_config(index)
     review.content_error = ""
     review.content_cancel = threading.Event()
     review.content_engine = None

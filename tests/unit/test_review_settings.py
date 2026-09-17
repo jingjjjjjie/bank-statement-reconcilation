@@ -10,7 +10,7 @@ from types import SimpleNamespace
 import pymupdf
 from PIL import Image
 from reconciliation.document_reader import extract
-from reconciliation.review_settings import DEFAULTS, load_config, save_config, revision, validate, stage_settings
+from reconciliation.review_settings import DEFAULTS, config_for_manifest, load_config, save_config, revision, validate, stage_settings
 from reconciliation.vision_workflow import active_config, ReviewPending, run
 from reconciliation.codex_reviewer import CodexReviewer, object_schema
 
@@ -151,3 +151,29 @@ class SettingsTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+    def test_managed_review_uses_shared_config_and_resolves_old_missing_path(self):
+        """Dashboard settings and execution share the real file for nested work folders."""
+        shared = self.base / "config/review_config.json"
+        shared.parent.mkdir()
+        config = {**DEFAULTS, "model": ""}
+        shared.write_text(json.dumps(config))
+        manifest = self.base / "duplicated/projects/project/duplicate-manifest.json"
+        legacy = manifest.with_name("review_config.json")
+        with patch("reconciliation.review_settings.CONFIG_PATH", shared):
+            self.assertEqual(config_for_manifest(manifest), shared)
+            index = {"manifest": str(manifest), "config_path": str(legacy), "config": config}
+            self.assertEqual(active_config(index), config)
+            legacy.parent.mkdir(parents=True)
+            legacy.write_text(json.dumps(config))
+            self.assertEqual(config_for_manifest(manifest), legacy)
+            index["config_path"] = str(legacy.with_name("explicit-missing.json"))
+            with self.assertRaisesRegex(ReviewPending, "configuration is missing"):
+                active_config(index)
+
+    def test_missing_explicit_config_fails_before_preparation(self):
+        """Do not prepare default evidence linked to a nonexistent settings file."""
+        from reconciliation.vision_workflow import prepare
+        with self.assertRaisesRegex(ValueError, "configuration is missing"):
+            prepare(self.base / "manifest.json", self.base / "review", self.base / "missing.json")
+        self.assertFalse((self.base / "review").exists())
