@@ -81,3 +81,28 @@ python -m unittest tests.unit.test_matching_benchmark tests.unit.test_receipt_ma
 Exact original request JSON and the effective prompts in the saved model cache are authoritative for replay: the experiment harness was refined between runs. The current harness includes richer competitor context than the earliest exploratory run. Live execution uses the existing ChatGPT login and records every attempt; it does not require an API key.
 
 The user selected six parallel requests for the next application batch; `config/review_config.json` now saves `max_parallel: 6`. The comparative synthetic runs used two concurrent requests so their timing remains comparable; the two authorized real tests ran sequentially.
+
+## Full 240-line comparison
+
+The subsequent authorized experiment covers all 240 bank entries using a frozen snapshot of 136 supporting documents, 181 monetary/claim records (including 53 explicit spreadsheet payee rows), and a shared contextual follow-up for 37 other documents. Model: `gpt-5.6-sol`, six parallel workers, structured output and global allocation checks. No proposals were approved or written to live matching state.
+
+| Matching strategy | Matching calls | Input tokens | Output tokens | Matching elapsed | Checked strong | Tentative | None found |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| 20 lines per call | 12 | 429,970 | 15,648 | 160.7 s | 40 | 44 | 156 |
+| 40 lines per call | 6 | 283,060 | 12,575 | 62.9 s | 37 | 38 | 165 |
+| Python routing + 20-line ambiguous batches | 7 | 285,731 | 10,662 | 56.5 s | 30 | 67 | 143 |
+| Python matching only | 0 | 0 | 0 | 0.233 s total | 18 | 134 | 88 |
+
+The hybrid handled 112 lines locally (23 unique payee-row proposals and 89 without indexed candidates) and sent 128 to the model. One model response failed candidate-ID validation, leaving 20 lines unresolved and tentative. Its tokens are included; there was no retry in this benchmark. This prevents interpreting the hybrid's lower strong count as a clean accuracy comparison.
+
+Matching token/time figures exclude source verification and contextual review. The initial 20-line run used another 18 source-check calls (309,136 input / 7,016 output tokens, 205.3 seconds) and one contextual call (27,727 / 664 tokens, 18.0 seconds). The 40-line variant needed eight new source-check calls (129,859 / 2,029 tokens, 35.7 seconds); subsequent variants reused prior checks. Python matching itself used no model, but its **checked** count relies on those shared model source checks. All experiments together made 52 calls with 1,465,483 input and 48,594 output tokens; no attempt has unknown usage. Cached input of 304,768 is already included in input; reasoning output is already included in output.
+
+Elapsed matching time comes from saved first-start/last-finish timestamps, accounting for parallel overlap. Measured later end-to-end times, including incremental verification and report writing, were 98.076 seconds for 40-line batches, 56.359 seconds for hybrid, and 0.233 seconds for Python. Stage timestamps and monotonic total timers use different clocks. The original baseline had no end-to-end timer; do not infer one or include pauses as model runtime. These are single-run observations, not repeatable latency guarantees.
+
+The 40-line run reduced matching input by about 34% and elapsed matching time by about 61%, but the strategies disagree on returned/retried transfers, shortened payee names and unresolved multi-page invoices. Only 26 identical strong allocations are shared across the three model-assisted runs; 17 other lines have a strong proposal in at least one run without that agreement. More strong proposals does not establish higher accuracy. Source checks are model judgments, not human ground truth. Document assembly is still incomplete; no candidate does not establish missing support.
+
+Current conclusion: 40-line batches are worth retaining as a lower-cost option for review. The hybrid needs invalid-response recovery and better grouping of competing payments before a fair follow-up comparison. Resolve reversal relationships and receipt boundaries before relying on any strong count.
+
+Private local records: `duplicated/benchmarks/full-statement-240/STRATEGIES.md`, `strategy-comparison.json`, `strategy-total-usage.json`, `strategy-comparison.csv`, and `disputed-strong-candidates.json`. Every variant retains per-line reasons, source locations, request/result JSON, durable attempt logs and token usage. These private artifacts are ignored by Git; this document records aggregate findings only.
+
+Reproduce with `python -m scripts.test_statement_matching --work <review> --bank <master.csv> --statement <original.pdf> --output <new-output> --workers 6`, then `python -m scripts.compare_statement_strategies <new-output> --workers 6`. Use `--report-only` on the comparison command to refresh reports and timing from saved evidence without model calls. Reusing an output directory resumes its frozen experiment; use a new directory for a new corpus.
