@@ -21,6 +21,7 @@ test_bank_sample_local.py
 !.env.example
 .venv/
 config/development.local.json
+config/pdf-layouts.local.json
 *.pyc
 
 # Default host folder mounted into the Docker container.

@@ -10,6 +10,7 @@ from pathlib import Path
 from reconciliation.paths import WORKSPACE
 from reconciliation import development_cache
 from reconciliation.prompts import load_prompt
+from reconciliation import pdf_routing
 from time import sleep
 
 from jsonschema.exceptions import ValidationError
@@ -203,6 +204,8 @@ def run_jobs(jobs, apply, workers):
 def run(work, index, state, reviewer):
     # Pass-one cleanup must finish before spending subscription usage on pass two.
     config = active_config(index)
+    if config["pdf_mode"] in pdf_routing.MODES and not development_cache.mode()["enabled"]:
+        raise ReviewPending("Experimental PDF modes require development mode; choose Vision in Settings")
     if not config["codex_enabled"]:
         raise ReviewPending("Codex is off in review settings; no model calls were made")
     current_inventory(index, state)
@@ -228,14 +231,17 @@ def run(work, index, state, reviewer):
     def ask(prompt, schema, images=(), stage="comparison", verify=None):
         # Re-read the switch before each call so disabling Codex stops subsequent calls.
         current = active_config(index)
+        if current["pdf_mode"] in pdf_routing.MODES and not development_cache.mode()["enabled"]:
+            raise ReviewPending("Development mode was switched off; stopped before the next call")
         if not current["codex_enabled"]:
             raise ReviewPending("Codex was switched off; completed work is saved")
         if model_settings(current) != state["model_config"]:
             raise ReviewPending("Model settings changed during the run; stopped before the next call")
         # Worker copies isolate stage selection and share one atomic request budget.
         worker = reviewer.fork() if workers > 1 else reviewer
-        worker.model = choices[stage]["model"] or None
-        worker.reasoning = choices[stage]["reasoning"]
+        choice = choices["pdf" if stage.startswith("pdf_") else stage]
+        worker.model = choice["model"] or None
+        worker.reasoning = choice["reasoning"]
         worker.stage = stage
         result = worker.ask(prompt, schema, images)
         if verify is not None:
@@ -263,6 +269,10 @@ def run(work, index, state, reviewer):
 
                     def job(digest=digest, document=document, unit=unit, key=key):
                         """Read one page, sheet, or image with its selected model."""
+                        if document_stage(document["paths"][0]) == "pdf" and config["pdf_mode"] in pdf_routing.MODES:
+                            value = pdf_routing.extract_unit(unit, ask, config["pdf_mode"],
+                                work / "pdf-routing" / (key.replace(":", "-") + ".json"))
+                            return key, digest, unit["label"], value
                         prompt = load_prompt("extraction") + "\n" + json.dumps({
                             "location": unit["label"], "text": unit["text"],
                             "limitation": unit.get("limitation", "")}, ensure_ascii=False)
@@ -294,7 +304,8 @@ def run(work, index, state, reviewer):
                 def job(digest=digest, document=document):
                     """Inspect all source units before proposing document receipt boundaries."""
                     evidence = document
-                    if Path(document["paths"][0]).suffix.lower() == ".pdf" and config["pictures_enabled"]:
+                    if (Path(document["paths"][0]).suffix.lower() == ".pdf" and config["pictures_enabled"]
+                            and config["pdf_mode"] not in pdf_routing.MODES):
                         units = extract(Path(document["paths"][0]), work / "assets" / "receipt-assembly" / digest,
                                         {**config, "pdf_mode": "vision"})
                         evidence = {**document, "units": units}

@@ -30,6 +30,7 @@ class SettingsTests(unittest.TestCase):
             document.save(self.pdf)
 
     def test_pdf_text_only_uses_no_page_images_and_blocks_scan(self):
+        self.config["pdf_mode"] = "text_only"
         units = extract(self.pdf, self.base / "text", self.config)
         self.assertTrue(all(u["image"] is None for u in units))
         self.assertIn("123.45", units[0]["text"])
@@ -122,7 +123,7 @@ class SettingsTests(unittest.TestCase):
         with patch("reconciliation.review_settings.model_catalog", return_value=models):
             legacy = validate({**DEFAULTS, "model": "vision", "reasoning": "high"})
             self.assertTrue(all(c["model"] == "vision" for c in stage_settings(legacy).values()))
-            config = {**DEFAULTS, "model": "vision", "stages": {"pdf": {"model": "text", "reasoning": "low"}}}
+            config = {**DEFAULTS, "pdf_mode": "text_only", "model": "vision", "stages": {"pdf": {"model": "text", "reasoning": "low"}}}
             self.assertEqual(stage_settings(validate(config))["pdf"]["model"], "text")
             for change in ({"pdf_mode": "vision"},
                            {"stages": {"images": {"model": "text", "reasoning": "low"}}},

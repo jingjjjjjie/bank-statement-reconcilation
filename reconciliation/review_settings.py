@@ -7,7 +7,7 @@ from reconciliation.paths import WORKSPACE
 
 CONFIG_PATH = WORKSPACE / "config" / "review_config.json"
 DEFAULT_MODEL = "gpt-5.6-sol"
-DEFAULTS = {"pdf_mode": "text_only", "pictures_enabled": True, "codex_enabled": True,
+DEFAULTS = {"pdf_mode": "vision", "pictures_enabled": True, "codex_enabled": True,
             "max_calls": 1000, "max_parallel": 4, "model": DEFAULT_MODEL, "reasoning": "default", "stages": {}}
 STAGES = ("pdf", "images", "excel", "word", "comparison")
 
@@ -41,8 +41,10 @@ def validate(config):
     if not isinstance(config, dict) or not required <= set(config) or set(config) - set(DEFAULTS):
         raise ValueError("Settings contain missing or unknown fields")
     config = {**DEFAULTS, **config}
-    if config["pdf_mode"] not in ("text_only", "auto", "vision"):
-        raise ValueError("PDF mode must be text_only, auto or vision")
+    if config["pdf_mode"] not in ("text_only", "auto", "vision", "hybrid", "compare"):
+        raise ValueError("Unknown PDF processing mode")
+    if config["pdf_mode"] in ("hybrid", "compare") and not config["pictures_enabled"]:
+        raise ValueError("PDF fallback and comparison require pictures")
     if any(type(config[key]) is not bool for key in ("pictures_enabled", "codex_enabled")):
         raise ValueError("Picture and Codex switches must be true or false")
     if type(config["max_calls"]) is not int or not 1 <= config["max_calls"] <= 1000:
@@ -120,6 +122,10 @@ def revision(config):
 def save_config(path, config, expected_revision):
     # Refuse stale browser saves and replace the JSON atomically.
     config = validate(config)
+    if config["pdf_mode"] in ("hybrid", "compare"):
+        from reconciliation.development_cache import mode
+        if not mode()["enabled"]:
+            raise ValueError("Enable development mode before selecting experimental PDF processing")
     if expected_revision != revision(load_config(path)):
         raise ValueError("Settings changed elsewhere. Reload the dashboard before saving")
     temporary = path.with_suffix(".tmp")

@@ -8,6 +8,7 @@ import openpyxl
 import pymupdf
 from PIL import Image, ImageOps, ImageSequence
 from reconciliation.review_settings import DEFAULTS, validate
+from reconciliation.pdf_routing import MODES, inspect_page
 
 
 def extract(path, output, config=None):
@@ -16,13 +17,15 @@ def extract(path, output, config=None):
     units = []
     config = validate(config if config is not None else dict(DEFAULTS))
 
-    def add(label, text="", image=None, limitation="", blocked=""):
+    def add(label, text="", image=None, limitation="", blocked="", pdf_probe=None):
         # Split long text without dropping rows or pages from coverage.
-        chunks = [text[i:i + 12000] for i in range(0, len(text), 12000)] or [""]
+        chunks = [text] if pdf_probe is not None else ([text[i:i + 12000] for i in range(0, len(text), 12000)] or [""])
         for part, chunk in enumerate(chunks, 1):
             item = {"label": f"{label} / part {part}", "text": chunk, "image": None,
                     "limitation": limitation, "blocked": blocked}
-            if image is not None and part == 1:
+            if pdf_probe is not None:
+                item["pdf_probe"] = pdf_probe
+            if image is not None and (part == 1 or pdf_probe is not None):
                 target = output / f"unit-{len(units) + 1:04d}.png"
                 picture = ImageOps.exif_transpose(image).convert("RGB")
                 picture.thumbnail((2400, 2400))
@@ -57,7 +60,8 @@ def _extract_pdf(path, config, add):
         for number, page in enumerate(document, 1):
             text = page.get_text()
             sparse = sum(ch.isalnum() for ch in text) < 20
-            needs_picture = config["pdf_mode"] == "vision" or (config["pdf_mode"] == "auto" and sparse)
+            experimental = config["pdf_mode"] in MODES
+            needs_picture = experimental or config["pdf_mode"] == "vision" or (config["pdf_mode"] == "auto" and sparse)
             picture, blocked = None, ""
             if needs_picture and config["pictures_enabled"]:
                 pixmap = page.get_pixmap(dpi=150, alpha=False)
@@ -67,7 +71,8 @@ def _extract_pdf(path, config, add):
             limitation = "" if picture else "PDF text only: images, handwriting, signatures and visual layout were not inspected"
             if needs_picture and not config["pictures_enabled"]:
                 blocked = "PDF vision requested but picture processing is off"
-            add(f"page {number}", text, picture, limitation, blocked)
+            add(f"page {number}", text, picture, limitation, blocked,
+                pdf_probe=inspect_page(page) if experimental else None)
 
 
 def _extract_images(path, config, add):
