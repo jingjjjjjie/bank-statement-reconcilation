@@ -1,19 +1,17 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Review extraction</title><link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="/extraction-review.css"><script src="/common.js" defer></script><script src="/office-view.js" defer></script><script src="/extraction-review.js" defer></script><script src="/receipts.js" defer></script></head><body>  <aside class="rail">
-    <a class="brand" href="/">Bank Statement Reconciliation</a>
-    <a class="nav-item" href="/source">Workspace selection</a>
-    <a class="nav-item" href="/review">Exact duplicates</a>
-    <a class="nav-item" href="/content-review">Content review</a>
-    <a class="nav-item active" href="/documents" aria-current="page">Document status</a>
-    <a class="nav-item" href="/bank">Bank statement</a>
-    <a class="nav-item" href="/settings">Settings</a>
-    <a class="nav-item" href="/complete">Completion</a>
-  </aside>
-<main><header><div class="breadcrumb">Documents / Review extraction</div><a href="/documents">Back to document status</a></header><section class="page-heading"><div><h1>Review extraction</h1><p>Compare each piece with the original. Correct the split and fields, leaving missing values blank.</p></div><button id="reload-receipts" class="button secondary" type="button">Load latest results</button></section><div class="extraction-layout"><section class="extraction-original" aria-label="Original document"><div class="preview-toolbar"><strong id="original-name">Original document</strong><label>Page / sheet<select id="original-page"></select></label><label>Zoom<select id="original-zoom"><option value="1">100%</option><option value="1.5">150%</option><option value="2">200%</option><option value="3">300%</option></select></label></div><p id="original-status" role="status"></p><div id="original-viewport"><div id="original-preview"></div></div></section>    <section class="extraction-editor" id="receipt-review-panel">
-      <h2>Review individual receipts</h2><p>One image can contain several pieces. Check each against the original, correct the split and fields, then accept the extraction. Leave missing fields blank.</p>
-      <p id="receipt-error" class="validation" role="alert" hidden></p>
-      <label class="setting-field">Reviewer name<input id="receipt-reviewer" autocomplete="name"></label>
-      <label class="setting-field">Document / page<select id="receipt-unit"></select></label>
-      <p id="receipt-unit-status" role="status"></p><a id="receipt-original" target="_blank" rel="noopener">Open original document</a>
-      <form id="receipt-form"><div id="receipt-pieces"></div><div class="content-actions"><button id="add-receipt" class="button secondary" type="button">Add separate piece</button><button id="accept-receipts" class="button dark" type="submit">Accept extraction &amp; next</button></div></form>
-    </section>
-</div></main><div id="toast" role="status" aria-live="polite" hidden></div></body></html>
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Review extraction</title>
+<link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="/extraction-review.css">
+<script src="/common.js" defer></script><script src="/office-view.js" defer></script>
+<script src="/extraction-review.js" defer></script><script src="/receipts.js" defer></script>
+</head><body class="extraction-workspace">
+<main>
+<header class="review-header"><div class="review-title"><a href="/documents" aria-label="Back to document status">← Documents</a><span class="header-divider"></span><h1>Review extraction</h1><span id="review-progress" class="review-progress"></span></div><div class="review-header-actions"><label for="receipt-reviewer">Reviewer</label><input id="receipt-reviewer" autocomplete="name" placeholder="Your name"><button id="reload-receipts" class="button secondary" type="button" title="Load latest saved results">Reload</button></div></header>
+<section class="document-switcher" aria-label="Document navigation"><div class="document-choice"><label for="receipt-unit">DOCUMENT / PAGE</label><select id="receipt-unit" aria-label="Document / page"></select></div><div class="document-navigation"><button id="previous-document" type="button" aria-label="Previous document">←</button><span id="document-position">0 / 0</span><button id="next-document" type="button" aria-label="Next document">→</button></div></section>
+<div class="extraction-layout">
+<section class="extraction-original" aria-label="Original document"><div class="preview-toolbar"><span class="pane-label">ORIGINAL</span><strong id="original-name">Choose a document</strong><a id="receipt-original" target="_blank" rel="noopener" title="Open original document">Open original ↗</a></div><div id="original-viewport"><div id="original-preview"></div></div><div class="viewer-footer"><label>Page / sheet <select id="original-page"></select></label><label>Zoom <select id="original-zoom"><option value="1">Fit page</option><option value="1.5">150%</option><option value="2">200%</option><option value="3">300%</option></select></label><span id="original-status" role="status"></span></div></section>
+<section class="extraction-editor" id="receipt-review-panel"><div class="editor-heading"><div><span class="pane-label">EXTRACTED DETAILS</span><h2>Check each piece</h2></div><span id="piece-count" class="piece-count">0 pieces</span></div><p class="editor-help">Compare with the original. Leave missing fields blank.</p><p id="receipt-error" class="validation" role="alert" hidden></p><div id="piece-tabs" class="piece-tabs" aria-label="Receipt pieces"></div><p id="receipt-unit-status" role="status"></p>
+<form id="receipt-form"><div id="receipt-pieces"></div><div class="editor-footer"><button id="add-receipt" class="button secondary" type="button">+ Add piece</button><button id="accept-receipts" class="button dark" type="submit">Accept &amp; next →</button></div></form>
+</section></div></main><div id="toast" role="status" aria-live="polite" hidden></div>
+</body></html>

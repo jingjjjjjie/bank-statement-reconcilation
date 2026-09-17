@@ -8,7 +8,7 @@ from http.server import ThreadingHTTPServer
 from playwright.sync_api import expect, sync_playwright
 from dashboard.routes import handler_for
 from tests.unit import test_receipt_matching as fixtures
-from PIL import Image
+from PIL import Image, ImageDraw
 from reconciliation.duplicate_workflow import fingerprint
 
 
@@ -18,7 +18,16 @@ class ReceiptMatchingBrowserTests(unittest.TestCase):
         fixture = fixtures.ReceiptMatchingTests()
         fixture.setUp()
         self.addCleanup(fixture.doCleanups)
-        Image.new("RGB", (480, 800), "white").save(fixture.source)
+        picture = Image.new("RGB", (480, 800), "#f5f2e9")
+        drawing = ImageDraw.Draw(picture)
+        for top, name, total in ((30, 'OFFICE SUPPLIES', '45.00'), (425, 'DELIVERY', '15.00')):
+            drawing.rectangle((35, top, 445, top + 335), fill='white', outline='#ddd9d0', width=2)
+            drawing.text((65, top + 30), 'EXAMPLE STORE', fill='#28392d', font_size=27)
+            drawing.text((65, top + 85), 'RECEIPT  /  18 SEP 2026', fill='#798277', font_size=17)
+            drawing.line((65, top + 130, 415, top + 130), fill='#ddd9d0', width=2)
+            drawing.text((65, top + 165), name, fill='#28392d', font_size=20)
+            drawing.text((65, top + 240), 'TOTAL  MYR ' + total, fill='#28392d', font_size=26)
+        picture.save(fixture.source)
         digest = fingerprint(fixture.source)
         fixture.index["documents"][digest] = fixture.index["documents"].pop(fixture.digest)
         fixture.state["units"][digest + ":0"] = fixture.state["units"].pop(fixture.key)
@@ -46,7 +55,11 @@ class ReceiptMatchingBrowserTests(unittest.TestCase):
             expect(page.locator("#original-status")).to_have_text("Image 1")
             left = page.locator('.extraction-original').bounding_box()
             right = page.locator('.extraction-editor').bounding_box()
-            self.assertLess(left['x'] + left['width'], right['x'])
+            self.assertLessEqual(left['x'] + left['width'], right['x'])
+            expect(page.locator('#receipt-pieces fieldset:visible')).to_have_count(1)
+            page.get_by_role('button', name='Piece 2', exact=True).click()
+            expect(page.locator('#receipt-pieces fieldset:visible [data-field="total"]')).to_have_value('15.00')
+            page.get_by_role('button', name='Piece 1', exact=True).click()
             page.locator('#original-zoom').select_option('2')
             expect(page.locator('#original-preview')).to_have_attribute('style', 'width: 200%;')
             page.locator('#original-zoom').select_option('1')
@@ -57,6 +70,13 @@ class ReceiptMatchingBrowserTests(unittest.TestCase):
             artifacts.mkdir(exist_ok=True)
             page.evaluate('window.scrollTo(0, 0)')
             page.screenshot(path=str(artifacts / 'extraction-review.png'), full_page=True)
+            page.set_viewport_size({'width':1280, 'height':720})
+            footer = page.locator('#accept-receipts').bounding_box()
+            self.assertLessEqual(footer['y'] + footer['height'], 720)
+            page.set_viewport_size({'width':390, 'height':844})
+            self.assertTrue(page.evaluate('document.documentElement.scrollWidth <= window.innerWidth'))
+            page.screenshot(path=str(artifacts / 'extraction-review-mobile.png'), full_page=True)
+            page.set_viewport_size({'width':1440, 'height':1000})
             expect(page.locator('[data-field="total"]').first).to_have_value("45.00")
             page.locator("#receipt-reviewer").fill("Fixture reviewer")
             page.locator("#accept-receipts").click()

@@ -1,5 +1,41 @@
 /* Keep original evidence visible independently of editable extraction fields. */
 let originalUnit, originalInfo, originalRequest = 0, extractionDirty = false, selectedUnit = '';
+let activePiece = 0, pieceDocument = '', previousPieceCount = 0;
+
+function renderPieceNavigation() {
+  /* Edit one piece at a time while preserving every piece in the submitted form. */
+  const cards = [...$('#receipt-pieces').children];
+  if (pieceDocument !== selectedUnit) activePiece = 0;
+  else if (cards.length > previousPieceCount) activePiece = cards.length - 1;
+  pieceDocument = selectedUnit; previousPieceCount = cards.length;
+  activePiece = Math.max(0, Math.min(activePiece, cards.length - 1));
+  $('#piece-count').textContent = `${cards.length} ${cards.length === 1 ? 'piece' : 'pieces'}`;
+  $('#piece-tabs').replaceChildren(...cards.map((card, number) => {
+    card.hidden = number !== activePiece;
+    card.querySelector('legend').textContent = `Piece ${number + 1} details`;
+    const button = node('button', '', `Piece ${number + 1}`);
+    button.type = 'button'; button.setAttribute('aria-pressed', String(number === activePiece));
+    button.onclick = () => { activePiece = number; renderPieceNavigation(); $('#receipt-pieces').scrollTop = 0; };
+    return button;
+  }));
+}
+
+function updateReviewNavigation() {
+  /* Show real review progress and bound previous/next navigation. */
+  const select = $('#receipt-unit'), count = select.options.length;
+  $('#document-position').textContent = count ? `${select.selectedIndex + 1} / ${count}` : '0 / 0';
+  $('#previous-document').disabled = select.selectedIndex <= 0;
+  $('#next-document').disabled = select.selectedIndex >= count - 1;
+  const accepted = receiptData?.units.filter(unit => unit.accepted).length || 0;
+  $('#review-progress').textContent = `${accepted} of ${count} reviewed`;
+}
+
+function changeDocument(offset) {
+  /* Reuse the selection event so unsaved-change protection applies to navigation. */
+  const select = $('#receipt-unit');
+  select.selectedIndex += offset;
+  select.dispatchEvent(new Event('change', {bubbles:true}));
+}
 
 function clearOriginal() {
   /* Clear stale evidence when no extraction is selected. */
@@ -8,12 +44,14 @@ function clearOriginal() {
   $('#original-preview').replaceChildren();
   $('#original-page').replaceChildren();
   $('#original-status').textContent = 'No extracted documents available yet.';
+  updateReviewNavigation();
 }
 
 async function showOriginal(unit) {
   /* Select the matching source page and ignore superseded requests. */
   const request = ++originalRequest;
   selectedUnit = unit.key; extractionDirty = false;
+  updateReviewNavigation();
   originalUnit = unit;
   originalInfo = null;
   $('#original-page').replaceChildren();
@@ -63,7 +101,13 @@ async function renderOriginal() {
 }
 
 $('#original-page').onchange = () => renderOriginal().catch(receiptError);
-$('#original-zoom').onchange = event => { $('#original-preview').style.width = `${Number(event.target.value) * 100}%`; };
+$('#original-zoom').onchange = event => {
+  $('#original-preview').style.width = `${Number(event.target.value) * 100}%`;
+  $('#original-preview').dataset.zoomed = String(Number(event.target.value) !== 1);
+};
+$('#previous-document').onclick = () => changeDocument(-1);
+$('#next-document').onclick = () => changeDocument(1);
+new MutationObserver(renderPieceNavigation).observe($('#receipt-pieces'), {childList:true});
 document.addEventListener('input', event => { if (event.target.closest('#receipt-pieces')) extractionDirty = true; });
 document.addEventListener('click', event => { if (event.target.closest('#receipt-pieces button, #add-receipt')) extractionDirty = true; });
 document.addEventListener('change', event => {
