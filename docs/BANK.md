@@ -1,6 +1,6 @@
 # Bank statement branch
 
-Install the root `requirements-bank.txt` into Python and run commands from the repository root.
+Install the root `requirements.txt` into Python and run commands from the repository root.
 
 ```powershell
 python -m reconciliation.bank_statement "statement.pdf" --year 2025
