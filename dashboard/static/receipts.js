@@ -25,12 +25,15 @@ async function loadReceiptResults() {
 
 function setReceiptData(data) {
   /* Retain selected document and transaction while refreshing saved results. */
-  const unit = $('#receipt-unit').value;
+  const unit = $('#receipt-unit')?.value || new URLSearchParams(location.search).get('unit');
   receiptData = data;
+  if ($('#receipt-unit')) {
   $('#receipt-unit').replaceChildren(...data.units.map(item => new Option(
     `${item.source_path.split(/[\\/]/).pop()} / ${item.label}`, item.key)));
   if (data.units.some(item => item.key === unit)) $('#receipt-unit').value = unit;
-  showReceiptUnit(); renderReceiptBanks(); renderSavedMatches();
+  showReceiptUnit();
+  }
+  if ($('#receipt-bank')) { renderReceiptBanks(); renderSavedMatches(); }
 }
 
 function receiptField(card, label, key, value, multiline=false) {
@@ -44,6 +47,7 @@ function receiptField(card, label, key, value, multiline=false) {
 function addReceiptPiece(piece=emptyPiece()) {
   /* Let the reviewer correct a model split without changing original images. */
   const card = node('fieldset', 'settings-card');
+  card.receiptPiece = structuredClone(piece);
   card.append(node('legend', '', 'Separate receipt / supporting piece'));
   receiptField(card, 'Location in image or page', 'location', piece.location);
   receiptField(card, 'Document type', 'document_type', piece.document_type);
@@ -62,18 +66,19 @@ function showReceiptUnit() {
   const unit = receiptData?.units.find(item => item.key === $('#receipt-unit').value);
   $('#receipt-pieces').replaceChildren();
   $('#receipt-form').hidden = !unit; $('#receipt-original').hidden = !unit;
-  if (!unit) { $('#receipt-unit-status').textContent = 'No extracted receipt units yet. Run documents, then load the results.'; return; }
+  if (!unit) { if (typeof clearOriginal === 'function') clearOriginal(); $('#receipt-unit-status').textContent = 'No extracted receipt units yet. Run documents, then load the results.'; return; }
   $('#receipt-original').href = `/api/content-file?id=${encodeURIComponent(unit.document_id)}`;
   $('#receipt-unit-status').textContent = unit.accepted ? 'Extraction accepted.' : unit.needs_refresh
     ? 'Older extraction has no separate receipt records. Re-extract or enter pieces after checking the original.'
     : 'Check each separate piece before accepting. Missing values stay blank.';
   for (const piece of unit.receipts) addReceiptPiece(piece);
+  if (typeof showOriginal === 'function') showOriginal(unit).catch(receiptError);
 }
 
 function readReceiptPieces() {
   /* Read the corrected pieces with empty strings and lists preserved. */
   return [...$('#receipt-pieces').children].map(card => {
-    const piece = emptyPiece();
+    const piece = structuredClone(card.receiptPiece || emptyPiece());
     for (const input of card.querySelectorAll('[data-field]')) {
       const key = input.dataset.field;
       piece[key] = Array.isArray(piece[key]) ? input.value.split('\n').map(value => value.trim()).filter(Boolean) : input.value.trim();
@@ -144,19 +149,26 @@ function renderSavedMatches() {
   $('#receipt-saved-matches').replaceChildren(...receiptData.matches.map(matchCard));
 }
 
-$('#receipt-unit').onchange = showReceiptUnit;
-$('#add-receipt').onclick = () => addReceiptPiece();
-$('#receipt-bank-search').oninput = renderReceiptBanks;
-$('#receipt-bank').onchange = showReceiptBank;
+if ($('#receipt-unit')) $('#receipt-unit').onchange = showReceiptUnit;
+if ($('#add-receipt')) $('#add-receipt').onclick = () => addReceiptPiece();
+if ($('#receipt-bank-search')) $('#receipt-bank-search').oninput = renderReceiptBanks;
+if ($('#receipt-bank')) $('#receipt-bank').onchange = showReceiptBank;
 $('#reload-receipts').onclick = () => receiptAction(loadReceiptResults);
-$('#receipt-form').onsubmit = event => {
+if ($('#receipt-form')) $('#receipt-form').onsubmit = event => {
   event.preventDefault();
-  receiptAction(async () => setReceiptData(await api('/api/receipts/accept', {
-    revision:receiptData.revision, key:$('#receipt-unit').value,
-    receipts:readReceiptPieces(), reviewer:$('#receipt-reviewer').value,
-  })));
+  receiptAction(async () => {
+    const key = $('#receipt-unit').value;
+    const data = await api('/api/receipts/accept', {
+      revision:receiptData.revision, key, receipts:readReceiptPieces(), reviewer:$('#receipt-reviewer').value,
+    });
+    extractionDirty = false;
+    setReceiptData(data);
+    const next = data.units.find(item => !item.accepted && item.key !== key);
+    if (next) { $('#receipt-unit').value = next.key; showReceiptUnit(); }
+    toast(next ? 'Extraction accepted. Next item opened.' : 'Extraction accepted. All available items reviewed.');
+  });
 };
-$('#receipt-match-form').onsubmit = event => {
+if ($('#receipt-match-form')) $('#receipt-match-form').onsubmit = event => {
   event.preventDefault();
   receiptAction(async () => {
     const selected = [...$('#receipt-allocations').querySelectorAll('[data-receipt-id]')]
@@ -167,7 +179,7 @@ $('#receipt-match-form').onsubmit = event => {
       reviewer:$('#receipt-reviewer').value, reason:$('#receipt-match-reason').value}));
   });
 };
-$('#run-documents').onclick = () => receiptAction(async () => {
+if ($('#run-documents')) $('#run-documents').onclick = () => receiptAction(async () => {
   setDocumentRequestMessage(documentState.prepared ? 'Starting document processing...' : 'Preparing document pages...');
   try {
     if (!documentState.prepared) await api('/api/content/prepare', {});
@@ -176,7 +188,7 @@ $('#run-documents').onclick = () => receiptAction(async () => {
     await refreshDocuments();
   } finally { setDocumentRequestMessage(''); }
 });
-$('#stop-documents').onclick = () => receiptAction(async () => {
+if ($('#stop-documents')) $('#stop-documents').onclick = () => receiptAction(async () => {
   setDocumentRequestMessage('Stopping document processing...');
   try { await api('/api/content/stop', {}); await refreshDocuments(); }
   finally { setDocumentRequestMessage(''); }

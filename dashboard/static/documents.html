@@ -29,14 +29,7 @@
       <div class="document-table-wrap"><table class="document-table"><thead><tr><th>Document</th><th>Status</th><th>Extraction</th><th>Screening</th><th>Candidate review</th><th>File</th></tr></thead><tbody id="document-rows"></tbody></table></div>
       <p id="document-empty" class="document-empty" hidden></p>
     </section>
-    <section class="settings-card" id="receipt-review-panel">
-      <h2>Review individual receipts</h2><p>One image can contain several pieces. Check each against the original, correct the split and fields, then accept the extraction. Leave missing fields blank.</p>
-      <p id="receipt-error" class="validation" role="alert" hidden></p>
-      <label class="setting-field">Reviewer name<input id="receipt-reviewer" autocomplete="name"></label>
-      <label class="setting-field">Document / page<select id="receipt-unit"></select></label>
-      <p id="receipt-unit-status" role="status"></p><a id="receipt-original" target="_blank" rel="noopener">Open original document</a>
-      <form id="receipt-form"><div id="receipt-pieces"></div><div class="content-actions"><button id="add-receipt" class="button secondary" type="button">Add separate piece</button><button id="accept-receipts" class="button dark" type="submit">Accept receipt extraction</button></div></form>
-    </section>
+    <section class="settings-card"><h2>Review individual receipts</h2><p>Check the original alongside editable receipt pieces on the dedicated review page.</p><a class="button dark" href="/extraction-review">Review extraction</a><p id="receipt-error" class="validation" role="alert" hidden></p><label class="setting-field">Reviewer name<input id="receipt-reviewer" autocomplete="name"></label></section>
     <section class="settings-card" id="receipt-match-panel">
       <h2>Match receipts to a bank transaction</h2><p>Select one receipt for a separate payment, or several for a combined payment. Invoice and payment proof for the same expense must not be counted as separate expenses. Amount agreement alone does not prove a match.</p>
       <label class="setting-field">Find a transaction<input id="receipt-bank-search" type="search" placeholder="Amount, date, party or reference"></label>

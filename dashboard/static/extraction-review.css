@@ -1,0 +1,16 @@
+.extraction-layout { display:grid; grid-template-columns:minmax(0, 1.2fr) minmax(340px, 1fr); gap:24px; align-items:start; }
+.extraction-original { position:sticky; top:16px; background:#fff; border:1px solid var(--line); border-radius:10px; padding:16px; min-width:0; }
+.preview-toolbar { display:flex; gap:12px; flex-wrap:wrap; align-items:center; }
+.preview-toolbar strong { width:100%; overflow-wrap:anywhere; }
+.preview-toolbar label { display:flex; gap:8px; align-items:center; }
+#original-page { max-width:300px; }
+#original-viewport { height:72vh; overflow:auto; background:#edf0f3; }
+#original-preview { width:100%; padding:12px; box-sizing:border-box; }
+#original-preview img { display:block; width:100%; height:auto; }
+#original-preview pre { white-space:pre-wrap; overflow-wrap:anywhere; background:white; padding:16px; }
+.extraction-editor { min-width:0; }
+.extraction-editor fieldset { margin:16px 0; padding:18px; }
+.extraction-editor textarea { display:block; width:100%; min-height:76px; box-sizing:border-box; padding:8px; border:1px solid var(--line); border-radius:5px; font:inherit; resize:vertical; }
+.extraction-editor .setting-field { display:block; margin-bottom:12px; }
+.preview-toolbar select { padding:7px; border:1px solid var(--line); border-radius:5px; background:white; }
+@media(max-width:1000px) { .extraction-layout { grid-template-columns:1fr; } .extraction-original { position:static; } #original-viewport { height:50vh; } }

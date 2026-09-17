@@ -15,9 +15,14 @@ from reconciliation import development_cache
 from dashboard import content_review, development, document_status, office_preview
 from dashboard.review import Review, workflow_guide
 from dashboard import receipt_review
+from dashboard import extraction_preview
 
 
 ASSETS = {"/review": ("index.html", "text/html; charset=utf-8"),
+          "/extraction-review": ("extraction-review.html", "text/html; charset=utf-8"),
+          "/extraction-review/": ("extraction-review.html", "text/html; charset=utf-8"),
+          "/extraction-review.js": ("extraction-review.js", "text/javascript"),
+          "/extraction-review.css": ("extraction-review.css", "text/css"),
           "/bank": ("bank.html", "text/html; charset=utf-8"),
           "/bank/": ("bank.html", "text/html; charset=utf-8"),
           "/settings": ("settings.html", "text/html; charset=utf-8"),
@@ -132,6 +137,11 @@ def handler_for(review, token, sources=None):
                         self.reply(200, content_review.snapshot(review))
                     elif query.path == "/api/receipts":
                         self.reply(200, receipt_review.snapshot(review))
+                    elif query.path == "/api/extraction-preview":
+                        self.reply(200, extraction_preview.describe(content_review.source(review, params["id"][0])))
+                    elif query.path == "/api/extraction-preview-image":
+                        self.reply(200, extraction_preview.image(content_review.source(review, params["id"][0]),
+                                   int(params.get("page", ["0"])[0])), "image/png")
                     elif query.path == "/api/document-status":
                         self.reply(200, document_status.snapshot(review))
                     elif query.path == "/api/content-file":

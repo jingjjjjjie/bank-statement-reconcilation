@@ -1,0 +1,19 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Review extraction</title><link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="/extraction-review.css"><script src="/common.js" defer></script><script src="/office-view.js" defer></script><script src="/extraction-review.js" defer></script><script src="/receipts.js" defer></script></head><body>  <aside class="rail">
+    <a class="brand" href="/">Bank Statement Reconciliation</a>
+    <a class="nav-item" href="/source">Workspace selection</a>
+    <a class="nav-item" href="/review">Exact duplicates</a>
+    <a class="nav-item" href="/content-review">Content review</a>
+    <a class="nav-item active" href="/documents" aria-current="page">Document status</a>
+    <a class="nav-item" href="/bank">Bank statement</a>
+    <a class="nav-item" href="/settings">Settings</a>
+    <a class="nav-item" href="/complete">Completion</a>
+  </aside>
+<main><header><div class="breadcrumb">Documents / Review extraction</div><a href="/documents">Back to document status</a></header><section class="page-heading"><div><h1>Review extraction</h1><p>Compare each piece with the original. Correct the split and fields, leaving missing values blank.</p></div><button id="reload-receipts" class="button secondary" type="button">Load latest results</button></section><div class="extraction-layout"><section class="extraction-original" aria-label="Original document"><div class="preview-toolbar"><strong id="original-name">Original document</strong><label>Page / sheet<select id="original-page"></select></label><label>Zoom<select id="original-zoom"><option value="1">100%</option><option value="1.5">150%</option><option value="2">200%</option><option value="3">300%</option></select></label></div><p id="original-status" role="status"></p><div id="original-viewport"><div id="original-preview"></div></div></section>    <section class="extraction-editor" id="receipt-review-panel">
+      <h2>Review individual receipts</h2><p>One image can contain several pieces. Check each against the original, correct the split and fields, then accept the extraction. Leave missing fields blank.</p>
+      <p id="receipt-error" class="validation" role="alert" hidden></p>
+      <label class="setting-field">Reviewer name<input id="receipt-reviewer" autocomplete="name"></label>
+      <label class="setting-field">Document / page<select id="receipt-unit"></select></label>
+      <p id="receipt-unit-status" role="status"></p><a id="receipt-original" target="_blank" rel="noopener">Open original document</a>
+      <form id="receipt-form"><div id="receipt-pieces"></div><div class="content-actions"><button id="add-receipt" class="button secondary" type="button">Add separate piece</button><button id="accept-receipts" class="button dark" type="submit">Accept extraction &amp; next</button></div></form>
+    </section>
+</div></main><div id="toast" role="status" aria-live="polite" hidden></div></body></html>

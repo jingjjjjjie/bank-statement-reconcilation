@@ -29,6 +29,9 @@ function renderDocuments() {
     open.href = `/api/content-file?id=${encodeURIComponent(item.id)}`;
     open.target = '_blank'; open.rel = 'noopener';
     const file = node('td'); file.append(open);
+    const extraction = node('a', '', 'Review extraction');
+    extraction.href = `/extraction-review?unit=${encodeURIComponent(item.id + ':0')}`;
+    file.append(node('br'), extraction);
     tr.append(title, node('td'), node('td', '', `${item.units_read}/${item.units_total} units`),
       node('td', '', `${item.pairs_screened}/${item.pairs_total} pairs`), node('td', '', review), file);
     tr.children[1].append(status);
