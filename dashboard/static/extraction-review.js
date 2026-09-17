@@ -1,6 +1,74 @@
 /* Keep original evidence visible independently of editable extraction fields. */
 let originalUnit, originalInfo, originalRequest = 0, extractionDirty = false, selectedUnit = '';
 let activePiece = 0, pieceDocument = '', previousPieceCount = 0;
+let mediaZoom = 1, mediaDrag = null;
+const mediaViewport = $('#original-viewport'), mediaPreview = $('#original-preview');
+const mediaStage = node('div', 'original-stage');
+mediaPreview.before(mediaStage); mediaStage.append(mediaPreview);
+mediaViewport.title = 'Scroll to zoom · Drag to pan · Double-click to fit';
+
+function layoutMedia() {
+  /* Scale a fixed document layout instead of stretching or reflowing its container. */
+  const bounds = mediaViewport.getBoundingClientRect();
+  mediaPreview.style.width = `${bounds.width}px`;
+  mediaPreview.style.height = mediaPreview.querySelector('img') ? `${bounds.height}px` : 'auto';
+  mediaPreview.style.transform = `scale(${mediaZoom})`;
+  mediaStage.style.width = `${bounds.width * mediaZoom}px`;
+  mediaStage.style.height = `${Math.max(bounds.height, mediaPreview.scrollHeight) * mediaZoom}px`;
+  mediaViewport.dataset.zoomed = String(mediaZoom > 1);
+}
+
+function zoomMedia(value, clientX, clientY) {
+  /* Keep the same document point under the pointer while changing magnification. */
+  const bounds = mediaViewport.getBoundingClientRect();
+  const x = clientX === undefined ? mediaViewport.clientWidth / 2 : clientX - bounds.left;
+  const y = clientY === undefined ? mediaViewport.clientHeight / 2 : clientY - bounds.top;
+  const documentX = (mediaViewport.scrollLeft + x) / mediaZoom;
+  const documentY = (mediaViewport.scrollTop + y) / mediaZoom;
+  mediaZoom = Math.min(5, Math.max(1, value));
+  layoutMedia();
+  mediaViewport.scrollLeft = documentX * mediaZoom - x;
+  mediaViewport.scrollTop = documentY * mediaZoom - y;
+  const select = $('#original-zoom');
+  select.querySelector('[data-custom-zoom]')?.remove();
+  const exact = [...select.options].find(option => Number(option.value) === mediaZoom);
+  if (!exact) {
+    const option = new Option(`${Math.round(mediaZoom * 100)}%`, String(mediaZoom));
+    option.dataset.customZoom = 'true'; select.add(option);
+  }
+  select.value = String(mediaZoom);
+}
+
+function resetMedia() {
+  /* Fit new pages and documents without carrying over an old pan position. */
+  zoomMedia(1);
+  mediaViewport.scrollLeft = mediaViewport.scrollTop = 0;
+}
+
+mediaViewport.addEventListener('wheel', event => {
+  if (!mediaPreview.children.length) return;
+  event.preventDefault();
+  const units = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? mediaViewport.clientHeight : 1;
+  const delta = Math.max(-300, Math.min(300, event.deltaY * units));
+  zoomMedia(mediaZoom * Math.exp(-delta * 0.002), event.clientX, event.clientY);
+}, {passive:false});
+mediaViewport.addEventListener('pointerdown', event => {
+  if (event.button !== 0 || event.pointerType !== 'mouse' || mediaZoom === 1) return;
+  event.preventDefault();
+  mediaDrag = {x:event.clientX, y:event.clientY, left:mediaViewport.scrollLeft, top:mediaViewport.scrollTop};
+  mediaViewport.setPointerCapture(event.pointerId);
+  mediaViewport.classList.add('panning');
+});
+mediaViewport.addEventListener('pointermove', event => {
+  if (!mediaDrag) return;
+  mediaViewport.scrollLeft = mediaDrag.left + mediaDrag.x - event.clientX;
+  mediaViewport.scrollTop = mediaDrag.top + mediaDrag.y - event.clientY;
+});
+mediaViewport.addEventListener('lostpointercapture', () => {
+  mediaDrag = null; mediaViewport.classList.remove('panning');
+});
+mediaViewport.addEventListener('dblclick', resetMedia);
+new ResizeObserver(layoutMedia).observe(mediaViewport);
 
 function renderPieceNavigation() {
   /* Edit one piece at a time while preserving every piece in the submitted form. */
@@ -80,30 +148,33 @@ async function renderOriginal() {
   const request = ++originalRequest, info = originalInfo, unit = originalUnit;
   const target = $('#original-preview'), page = Number($('#original-page').value || 0);
   target.replaceChildren();
+  resetMedia();
   $('#original-status').textContent = 'Loading preview…';
   const office = ['word', 'spreadsheet'].includes(info.kind);
   if (office && page < info.office_pages) {
     const data = await api(`/api/office-view?content_id=${encodeURIComponent(unit.document_id)}&page=${page}`);
     if (request !== originalRequest) return;
     renderOfficePreview(target, data);
+    layoutMedia();
     $('#original-status').textContent = 'Structured document preview. Open the original for exact print formatting.';
   } else if (office || ['image', 'pdf'].includes(info.kind)) {
     const picture = node('img');
     picture.alt = `${$('#original-name').textContent}, ${info.labels[page]}`;
-    picture.onload = () => { if (request === originalRequest) $('#original-status').textContent = info.labels[page]; };
+    picture.draggable = false;
+    picture.onload = () => { if (request === originalRequest) { layoutMedia(); $('#original-status').textContent = info.labels[page]; } };
     picture.onerror = () => { if (request === originalRequest) $('#original-status').textContent = 'Preview could not load. Open the original document.'; };
     picture.src = `/api/extraction-preview-image?id=${encodeURIComponent(unit.document_id)}&page=${page}`;
     target.append(picture);
   } else {
     if (info.kind === 'text') target.append(node('pre', '', info.text));
     $('#original-status').textContent = info.message || 'Original document text';
+    layoutMedia();
   }
 }
 
 $('#original-page').onchange = () => renderOriginal().catch(receiptError);
 $('#original-zoom').onchange = event => {
-  $('#original-preview').style.width = `${Number(event.target.value) * 100}%`;
-  $('#original-preview').dataset.zoomed = String(Number(event.target.value) !== 1);
+  zoomMedia(Number(event.target.value));
 };
 $('#previous-document').onclick = () => changeDocument(-1);
 $('#next-document').onclick = () => changeDocument(1);
