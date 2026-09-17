@@ -19,15 +19,34 @@ def exact_problems(review):
     return check(review.root, review.manifest, review.manifest_path)
 
 
+def execution_status(review):
+    """Report stopped only after process verification and worker finalization."""
+    worker = getattr(review, "content_thread", None)
+    worker_running = bool(worker and worker.is_alive())
+    active = getattr(getattr(review, "content_engine", None), "active_count", 0)
+    cancelled = getattr(review, "content_cancel", None)
+    requested = bool(cancelled and cancelled.is_set())
+    error = getattr(review, "content_error", "")
+    running = worker_running or bool(active)
+    status = "running" if running else "idle"
+    if requested:
+        status = "stopping" if worker_running else "stop_failed" if active or error else "stopped"
+    if active and not worker_running:
+        status = "stop_failed"
+        error = error or "Process shutdown could not be verified. Another review cannot start."
+    if status == "stopped":
+        error = "Review stopped. Completed results are saved; run again to resume."
+    return {"running": running, "active_processes": active, "stop_requested": requested,
+            "execution_status": status, "run_error": error}
+
+
 def snapshot(review):
     """Read current pass-two candidates without accepting model output as approval."""
     problems = exact_problems(review)
     work = work_path(review)
     result = {"exact_ready": not problems, "exact_problems": problems[:30],
               "prepared": (work / "index.json").is_file(),
-              "running": bool(getattr(review, "content_thread", None) and review.content_thread.is_alive()),
-              "stop_requested": bool(getattr(review, "content_cancel", None) and review.content_cancel.is_set()),
-              "run_error": getattr(review, "content_error", ""), "pairs": []}
+              **execution_status(review), "pairs": []}
     if problems or not result["prepared"]:
         return result
     index, state = load(work)
@@ -80,7 +99,7 @@ def start(review):
     """Run a bounded model batch in the background so the page stays responsive."""
     if exact_problems(review):
         raise ValueError("Finish exact duplicate review first")
-    if getattr(review, "content_thread", None) and review.content_thread.is_alive():
+    if execution_status(review)["running"]:
         raise ValueError("Content review is already running")
     work = work_path(review)
     if not (work / "index.json").is_file():
@@ -103,11 +122,9 @@ def start(review):
         except BudgetReached:
             pass
         except ReviewCancelled:
-            review.content_error = "Review stopped. Completed results are saved; run again to resume."
+            pass
         except Exception as error:
             review.content_error = str(error)
-        finally:
-            review.content_engine = None
 
     review.content_thread = threading.Thread(target=worker, daemon=True)
     review.content_thread.start()
@@ -116,7 +133,7 @@ def start(review):
 
 def stop(review):
     """Cancel active model calls and keep all completed review checkpoints."""
-    if not getattr(review, "content_thread", None) or not review.content_thread.is_alive():
+    if not execution_status(review)["running"]:
         raise ValueError("No content review is running")
     review.content_cancel.set()
     engine = getattr(review, "content_engine", None)
@@ -129,7 +146,7 @@ def decide(review, pair, verdict, reviewer, reason):
     """Record an explicit admin verdict for one completed candidate comparison."""
     if exact_problems(review):
         raise ValueError("Finish exact duplicate review first")
-    if getattr(review, "content_thread", None) and review.content_thread.is_alive():
+    if execution_status(review)["running"]:
         raise ValueError("Wait for the current content-review batch to finish")
     work = work_path(review)
     index, state = load(work)
@@ -144,7 +161,7 @@ def undo(review, pair, reviewer, reason):
     """Clear one admin verdict and retain an audit entry for the reversal."""
     if exact_problems(review):
         raise ValueError("Finish exact duplicate review first")
-    if getattr(review, "content_thread", None) and review.content_thread.is_alive():
+    if execution_status(review)["running"]:
         raise ValueError("Wait for the current content-review batch to finish")
     work = work_path(review)
     index, state = load(work)

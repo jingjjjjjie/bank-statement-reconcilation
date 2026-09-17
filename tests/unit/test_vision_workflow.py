@@ -218,22 +218,7 @@ class WorkflowTests(unittest.TestCase):
 
     def test_cancel_terminates_active_codex_call(self):
         """Stopping an active request leaves no valid cached result."""
-        started, stopped = threading.Event(), threading.Event()
-
-        class WaitingProcess:
-            def __init__(self, *args, **kwargs):
-                self.returncode = None
-                started.set()
-
-            def poll(self):
-                return self.returncode
-
-            def terminate(self):
-                self.returncode = 1
-                stopped.set()
-
-            def communicate(self, input=None, timeout=None):
-                stopped.wait(timeout=5)
+        started = threading.Event()
 
         reviewer = CodexReviewer(self.work, executable="fixture-codex", model="fixture", max_calls=1)
         failures = []
@@ -244,9 +229,15 @@ class WorkflowTests(unittest.TestCase):
             except Exception as error:
                 failures.append(error)
 
-        with patch("reconciliation.codex_reviewer.subprocess.run", return_value=SimpleNamespace(
-                returncode=0, stdout="chatgpt", stderr="")), patch(
-                "reconciliation.codex_reviewer.subprocess.Popen", WaitingProcess):
+        def wait_for_stop(command, **kwargs):
+            """Block a mocked exec until the real review cancellation flag is set."""
+            if command[1:3] == ["login", "status"]:
+                return SimpleNamespace(returncode=0, stdout="chatgpt", stderr="")
+            started.set()
+            reviewer.processes.cancelled.wait(timeout=5)
+            raise ReviewCancelled("Review stopped by user")
+
+        with patch.object(reviewer.processes, "run", side_effect=wait_for_stop):
             worker = threading.Thread(target=read)
             worker.start()
             self.assertTrue(started.wait(timeout=5))

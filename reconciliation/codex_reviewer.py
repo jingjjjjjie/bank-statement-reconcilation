@@ -3,7 +3,6 @@ import hashlib
 import json
 import os
 import shutil
-import subprocess
 import threading
 from copy import copy
 from uuid import uuid4
@@ -12,6 +11,7 @@ from pathlib import Path
 from jsonschema import validate
 from reconciliation.review_settings import DEFAULT_MODEL
 from reconciliation.prompts import load_prompt
+from reconciliation.process_manager import ProcessManager, ReviewCancelled
 from reconciliation.token_usage import record, reported_usage
 
 
@@ -48,10 +48,6 @@ class BudgetReached(Exception):
     """Stop between calls while retaining completed work."""
 
 
-class ReviewCancelled(Exception):
-    """Stop the review after a user request without accepting partial calls."""
-
-
 class CodexReviewer:
     def __init__(self, work, executable=None, model=None, max_calls=20, timeout=240, reasoning="default", cancel_event=None):
         # Keep response caches scoped to model, prompt, schema and image bytes.
@@ -63,8 +59,9 @@ class CodexReviewer:
         self._shared_lock = threading.RLock()
         self._calls = [0]
         self._login_checked = [False]
+        self._login_lock = threading.Lock()
         self._cancelled = cancel_event if cancel_event is not None else threading.Event()
-        self._processes = set()
+        self.processes = ProcessManager(self._cancelled)
         self.cache = work / "model-cache"
         self.usage_path = work / "token-usage.jsonl"
         self.run_id = uuid4().hex
@@ -84,12 +81,13 @@ class CodexReviewer:
         return worker
 
     def cancel(self):
-        """Stop new requests and terminate this review's active Codex calls."""
-        with self._shared_lock:
-            self._cancelled.set()
-            for process in tuple(self._processes):
-                if process.poll() is None:
-                    process.terminate()
+        """Wake all process owners to terminate and verify their entire trees."""
+        self.processes.cancel()
+
+    @property
+    def active_count(self):
+        """Expose unfinished process cleanup to the dashboard."""
+        return self.processes.active_count
 
     def _record(self, entry):
         """Append token events without interleaving parallel writes."""
@@ -116,10 +114,9 @@ class CodexReviewer:
             return result
 
         # Require subscription login; never silently select an API-key connection.
-        with self._shared_lock:
+        with self._login_lock:
             if not self._login_checked[0]:
-                login = subprocess.run([self.executable, "login", "status"], capture_output=True,
-                                       text=True, encoding="utf-8", errors="replace", timeout=30)
+                login = self.processes.run([self.executable, "login", "status"], timeout=30)
                 if login.returncode or "chatgpt" not in (login.stdout + login.stderr).lower():
                     raise ValueError("Run codex login using ChatGPT before starting model review")
                 self._login_checked[0] = True
@@ -151,29 +148,21 @@ class CodexReviewer:
                 raise BudgetReached("Call limit reached; resume with the same command")
             record(self.usage_path, {**entry, "status": "started"})
             self._calls[0] += 1
-        process = None
+        process_audit = {}
+        status = "failed"
         try:
             with events_path.open("w", encoding="utf-8") as events, (folder / f"exec-{attempt_id}.log").open("w", encoding="utf-8") as log:
-                process = subprocess.Popen(command, stdin=subprocess.PIPE, text=True, encoding="utf-8",
-                                           stdout=events, stderr=log, cwd=folder)
-                with self._shared_lock:
-                    self._processes.add(process)
-                    if self._cancelled.is_set():
-                        process.terminate()
-                try:
-                    process.communicate(input=prompt, timeout=self.timeout)
-                except subprocess.TimeoutExpired:
-                    process.kill()
-                    process.communicate()
-                    raise
+                process = self.processes.run(command, input=prompt, timeout=self.timeout,
+                                             stdout=events, stderr=log, cwd=folder, audit=process_audit)
+                status = "finished" if process.returncode == 0 else "failed"
+        except ReviewCancelled:
+            status = "cancelled"
+            raise
         finally:
-            with self._shared_lock:
-                self._processes.discard(process)
             usage = reported_usage(events_path)
-            status = "finished" if process and process.returncode == 0 else "cancelled" if self._cancelled.is_set() else "failed"
             self._record({**entry, "status": status,
-                          "usage": usage})
-        if self._cancelled.is_set() and process.returncode != 0:
+                          "usage": usage, **process_audit})
+        if self._cancelled.is_set():
             raise ReviewCancelled("Review stopped by user")
         if process.returncode or not output_path.exists():
             raise ValueError(f"codex exec failed; see {folder / f'exec-{attempt_id}.log'}")

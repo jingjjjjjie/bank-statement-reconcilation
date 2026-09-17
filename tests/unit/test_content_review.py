@@ -8,6 +8,7 @@ import urllib.error
 import urllib.request
 from http.server import ThreadingHTTPServer
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 
 from PIL import Image
@@ -155,6 +156,29 @@ class ContentPageTests(unittest.TestCase):
         self.assertFalse(self.review.content_thread.is_alive())
         self.assertEqual(load(self.manifest.parent / "review")[1]["units"], {})
         self.assertIn("stopped", content_review.snapshot(self.review)["run_error"])
+
+    def test_stopped_requires_worker_finalization_and_verified_exit(self):
+        """Keep Stop pending until the worker finishes its final checkpoint writes."""
+        self.review.content_cancel = threading.Event()
+        self.review.content_cancel.set()
+        self.review.content_engine = SimpleNamespace(active_count=0)
+        self.review.content_thread = SimpleNamespace(is_alive=lambda: True)
+        self.assertEqual(content_review.execution_status(self.review)["execution_status"], "stopping")
+        self.review.content_thread = SimpleNamespace(is_alive=lambda: False)
+        self.assertEqual(content_review.execution_status(self.review)["execution_status"], "stopped")
+
+    def test_unverified_process_prevents_restart_after_worker_exits(self):
+        """Expose shutdown failures and retain the engine that owns remaining processes."""
+        self.review.content_cancel = threading.Event()
+        self.review.content_cancel.set()
+        self.review.content_engine = SimpleNamespace(active_count=1)
+        self.review.content_thread = SimpleNamespace(is_alive=lambda: False)
+        status = content_review.execution_status(self.review)
+        self.assertEqual(status["execution_status"], "stop_failed")
+        self.assertTrue(status["running"])
+        self.assertIn("could not be verified", status["run_error"])
+        with self.assertRaisesRegex(ValueError, "already running"):
+            content_review.start(self.review)
 
 
 if __name__ == "__main__":

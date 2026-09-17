@@ -7,9 +7,15 @@ function showReviewLoading(running, state) {
   /* Keep the overlay in sync after a click, poll, or page reload. */
   $('#content-loading').hidden = !running;
   if (running && state) {
+    if (state.execution_status === 'stop_failed') {
+      $('#content-loading-title').textContent = 'Could not confirm shutdown';
+      $('#content-loading-progress').textContent = state.run_error;
+      $('#stop-content').disabled = true;
+      return;
+    }
     if (state.stop_requested) {
       $('#content-loading-title').textContent = 'Stopping review';
-      $('#content-loading-progress').textContent = 'Stopping active Codex calls. Completed results remain saved.';
+      $('#content-loading-progress').textContent = 'Waiting for all Codex processes to exit and saved results to finish writing.';
       $('#stop-content').disabled = true;
       return;
     }

@@ -8,6 +8,11 @@ python -m unittest discover -s tests/unit -t .
 
 `unit/` contains offline extraction, workflow, and local HTTP tests. `helpers.py` provides mocked Codex processes; these tests do not need a live model connection.
 
+`test_process_manager` and `test_codex_cancellation` also launch real local Python
+processes and children to verify Stop, timeouts, launch races, and cancellation
+audit records. Run them on Windows and Linux; neither makes live Codex calls.
+See [process cancellation](../docs/PROCESS_CANCELLATION.md) for the guarantees.
+
 `browser/` contains optional Playwright checks. Install `dashboard/requirements-dev.txt` first, then run individual modules, for example:
 
 ```console
