@@ -168,11 +168,17 @@ $('#receipt-match-form').onsubmit = event => {
   });
 };
 $('#run-documents').onclick = () => receiptAction(async () => {
-  if (!documentState.prepared) await api('/api/content/prepare', {});
-  await api('/api/content/run', {});
-  await refreshDocuments();
+  setDocumentRequestMessage(documentState.prepared ? 'Starting document processing...' : 'Preparing document pages...');
+  try {
+    if (!documentState.prepared) await api('/api/content/prepare', {});
+    setDocumentRequestMessage('Starting document processing...');
+    await api('/api/content/run', {});
+    await refreshDocuments();
+  } finally { setDocumentRequestMessage(''); }
 });
 $('#stop-documents').onclick = () => receiptAction(async () => {
-  await api('/api/content/stop', {}); await refreshDocuments();
+  setDocumentRequestMessage('Stopping document processing...');
+  try { await api('/api/content/stop', {}); await refreshDocuments(); }
+  finally { setDocumentRequestMessage(''); }
 });
 loadReceiptResults().catch(receiptError);

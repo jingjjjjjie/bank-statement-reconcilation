@@ -1,5 +1,6 @@
 /* Show saved progress for every prepared content-review document. */
 let documentState = {prepared: false, documents: []};
+let documentRequestMessage = "";
 
 function renderDocuments() {
   /* Filter the current saved snapshot without changing workflow state. */
@@ -41,10 +42,48 @@ async function refreshDocuments() {
   /* Poll the checkpointed review while retaining search and filter choices. */
   documentState = await api('/api/document-status');
   renderDocuments();
-  $('#run-documents').disabled = !!documentState.running;
-  $('#stop-documents').disabled = !documentState.running;
-  if (documentState.running) $('#document-run-status').textContent = 'Processing documents with the parallel and request limits in Settings. Progress is saved automatically.';
-  else $('#document-run-status').textContent = documentState.run_error || 'Ready. Run queues remaining work; request limits apply. Load latest receipt results after a batch finishes.';
+  renderDocumentProgress();
+}
+
+function setDocumentRequestMessage(message) {
+  /* Show immediate feedback while preparing, starting, or stopping a batch. */
+  documentRequestMessage = message;
+  renderDocumentProgress();
+}
+
+function renderDocumentProgress() {
+  /* Report measured progress for the current stage, never an estimated timer. */
+  const rows = documentState.documents;
+  const sum = field => rows.reduce((total, row) => total + row[field], 0);
+  const stages = [
+    {name:'Extracting documents', done:sum('units_read'), total:sum('units_total'), unit:'units'},
+    {name:'Screening possible duplicates', done:sum('pairs_screened') / 2, total:sum('pairs_total') / 2, unit:'pairs'},
+    {name:'Comparing candidates', done:sum('comparisons') / 2, total:sum('candidates') / 2, unit:'comparisons'},
+  ];
+  const stage = stages.find(item => item.done < item.total);
+  const bar = $('#document-progress-bar');
+  const busy = !!documentRequestMessage;
+  $('#run-documents').disabled = busy || !!documentState.running;
+  $('#stop-documents').disabled = busy || !documentState.running || !!documentState.stop_requested;
+  if (busy || (documentState.running && !stage)) {
+    bar.removeAttribute('value');
+    $('#document-progress-stage').textContent = documentRequestMessage || 'Finishing batch';
+    $('#document-progress-count').textContent = 'Please wait';
+  } else if (stage) {
+    const percent = Math.floor(stage.done / stage.total * 100);
+    bar.value = percent;
+    const prefix = documentState.stop_requested && documentState.running ? 'Stopping: ' : documentState.running ? '' : 'Paused: ';
+    $('#document-progress-stage').textContent = prefix + stage.name;
+    $('#document-progress-count').textContent = `${stage.done} / ${stage.total} ${stage.unit} (${percent}%)`;
+  } else {
+    bar.value = documentState.prepared && rows.length ? 100 : 0;
+    const attention = rows.filter(row => row.status === 'Needs attention').length;
+    $('#document-progress-stage').textContent = !documentState.prepared ? 'Not started' : !rows.length ? 'No documents to process' : attention ? 'Processing finished with items needing attention' : 'Processing finished - review results';
+    $('#document-progress-count').textContent = attention ? `${attention} documents need attention` : rows.length ? `${rows.length} documents` : '';
+  }
+  $('#document-run-status').textContent = documentRequestMessage || documentState.run_error ||
+    (documentState.running ? 'Progress is saved automatically. Parallel and request limits follow Settings.' :
+      'Run resumes remaining work within your request limit. Load latest receipt results to review completed extraction.');
 }
 
 function rememberFilters() {
