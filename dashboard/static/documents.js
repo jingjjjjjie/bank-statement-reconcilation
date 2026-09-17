@@ -41,6 +41,10 @@ async function refreshDocuments() {
   /* Poll the checkpointed review while retaining search and filter choices. */
   documentState = await api('/api/document-status');
   renderDocuments();
+  $('#run-documents').disabled = !!documentState.running;
+  $('#stop-documents').disabled = !documentState.running;
+  if (documentState.running) $('#document-run-status').textContent = 'Processing documents with the parallel and request limits in Settings. Progress is saved automatically.';
+  else $('#document-run-status').textContent = documentState.run_error || 'Ready. Run queues remaining work; request limits apply. Load latest receipt results after a batch finishes.';
 }
 
 function rememberFilters() {

@@ -2,7 +2,7 @@
 from pathlib import Path
 
 from reconciliation.vision_workflow import load, removal_plan
-from dashboard.content_review import work_path
+from dashboard.content_review import work_path, execution_status
 
 
 def snapshot(review):
@@ -57,4 +57,4 @@ def snapshot(review):
                      "pairs_total": max(len(eligible) - 1, 0), "candidates": candidates[digest],
                      "comparisons": comparisons[digest], "decisions": decisions[digest]})
     rows.sort(key=lambda row: (row["name"].casefold(), row["path"].casefold()))
-    return {"prepared": True, "documents": rows}
+    return {"prepared": True, "documents": rows, **execution_status(review)}

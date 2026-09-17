@@ -26,7 +26,12 @@ TEXT = {"type": "string"}
 TEXTS = {"type": "array", "items": TEXT}
 MONEY = object_schema({"amount": TEXT, "currency": TEXT,
                        "role": {"type": "string", "enum": ["line_item", "invoice_total", "grand_total"]}})
+RECEIPT = object_schema({
+    "location": TEXT, "document_type": TEXT, "invoice_numbers": TEXTS,
+    "brief_description": TEXT, "total": TEXT, "currency": TEXT, "limitations": TEXTS,
+})
 EXTRACTION = object_schema({
+    "receipts": {"type": "array", "items": RECEIPT},
     "readable": {"type": "boolean"}, "document_type": TEXT,
     "receipt_status": {"type": "string", "enum": ["receipt", "not_receipt", "unsure"]},
     "supporting_evidence_status": {"type": "string", "enum": ["potential_support", "not_supporting", "uncertain"]},

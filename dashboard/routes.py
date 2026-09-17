@@ -14,6 +14,7 @@ from reconciliation.source_selection import SourceSelection
 from reconciliation import development_cache
 from dashboard import content_review, development, document_status, office_preview
 from dashboard.review import Review, workflow_guide
+from dashboard import receipt_review
 
 
 ASSETS = {"/review": ("index.html", "text/html; charset=utf-8"),
@@ -38,6 +39,7 @@ ASSETS = {"/review": ("index.html", "text/html; charset=utf-8"),
           "/common.js": ("common.js", "text/javascript"),
           "/source.js": ("source.js", "text/javascript"),
           "/content-review.js": ("content-review.js", "text/javascript"),
+          "/receipts.js": ("receipts.js", "text/javascript"),
           "/documents.js": ("documents.js", "text/javascript"),
           "/documents.css": ("documents.css", "text/css"),
           "/office-view.js": ("office-view.js", "text/javascript"),
@@ -82,7 +84,7 @@ def handler_for(review, token, sources=None):
             if query.path == "/":
                 self.reply(200, (Path(__file__).parent / "static/source.html").read_bytes(), "text/html; charset=utf-8")
                 return
-            if review is None and query.path not in {"/documents", "/documents/", "/documents.js", "/documents.css", "/api/document-status", "/source", "/source/", "/source.js", "/bank", "/bank/", "/bank.js", "/common.js", "/style.css", "/api/development-mode", "/api/source", "/api/source/browse", "/api/source/preview", "/api/workspace", "/api/session", "/api/bank-statement", "/api/workflow-checks"}:
+            if review is None and query.path not in {"/api/receipts", "/receipts.js", "/documents", "/documents/", "/documents.js", "/documents.css", "/api/document-status", "/source", "/source/", "/source.js", "/bank", "/bank/", "/bank.js", "/common.js", "/style.css", "/api/development-mode", "/api/source", "/api/source/browse", "/api/source/preview", "/api/workspace", "/api/session", "/api/bank-statement", "/api/workflow-checks"}:
                 self.send_response(302)
                 self.send_header("Location", "/source")
                 self.end_headers()
@@ -128,6 +130,8 @@ def handler_for(review, token, sources=None):
                         self.reply(200, review.completion())
                     elif query.path == "/api/content-review":
                         self.reply(200, content_review.snapshot(review))
+                    elif query.path == "/api/receipts":
+                        self.reply(200, receipt_review.snapshot(review))
                     elif query.path == "/api/document-status":
                         self.reply(200, document_status.snapshot(review))
                     elif query.path == "/api/content-file":
@@ -215,6 +219,12 @@ def handler_for(review, token, sources=None):
                         return
                     elif self.path == "/api/development/apply":
                         self.reply(200, development.apply(review, body["reviewer"]))
+                        return
+                    elif self.path == "/api/receipts/accept":
+                        self.reply(200, receipt_review.accept_extraction(review, body))
+                        return
+                    elif self.path == "/api/receipts/match":
+                        self.reply(200, receipt_review.change_match(review, body))
                         return
                     elif self.path == "/api/content/prepare":
                         self.reply(200, content_review.prepare(review))

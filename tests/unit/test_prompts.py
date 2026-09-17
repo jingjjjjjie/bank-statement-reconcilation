@@ -58,7 +58,7 @@ class PromptTests(unittest.TestCase):
 
     def test_non_receipt_support_allows_empty_factual_fields(self):
         """A claim can be potential evidence without fabricated invoice details."""
-        result = {"readable": True, "document_type": "expense_claim",
+        result = {"receipts": [], "readable": True, "document_type": "expense_claim",
                   "receipt_status": "not_receipt", "supporting_evidence_status": "potential_support",
                   "supporting_evidence_reason": "Claim lists expenses, without proof of payment.",
                   "invoice_numbers": [], "company": [], "brief_description": "Travel expense claim",

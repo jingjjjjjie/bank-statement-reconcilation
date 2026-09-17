@@ -22,3 +22,11 @@ Extraction details:
 - Do not repeat a printed total as a line item. If currency or role is unclear, omit that entry from money, preserve the visible text in amounts_and_currencies when readable, and explain the limitation.
 - Record visible stamps, handwritten changes, signatures, and missing context without claiming authenticity.
 - Classification and extraction are suggestions for human review. Do not approve documents, infer duplicate payments, or authorize file removal.
+
+Separate pieces in one image or unit:
+- Return receipts as an array of distinct receipt, invoice, claim, or confirmation pieces visible in this unit. One photograph can contain two or more separate pieces. Never merge their totals because they share an image.
+- For each piece provide location (for example "top half"), document_type, invoice_numbers, brief_description, total, currency, and limitations. Keep all missing factual fields empty. Use an unambiguous three-letter currency code such as MYR; otherwise leave currency empty. Use a decimal string for an explicitly printed final payable total; do not invent a total by adding ambiguous amounts. Keep pieces with unreadable or missing totals, using "" and a limitation.
+- Do not split a single receipt into separate pieces for its line items, subtotal, tax, or payment details. A continuation page without an independent total must not repeat another page's total. Flag uncertain boundaries or repeated evidence in limitations.
+- Use receipts: [] when no individual supporting piece can be identified. Do not invent pieces from blank or unrelated content.
+- IDs are assigned by Python. Do not return IDs or bank matches. Separate records may later support either one combined payment or different payments, subject to human review.
+- If there are multiple pieces, keep unit-level money empty rather than presenting an invented combined payable total; retain their individual totals in receipts and visible amounts in amounts_and_currencies. Unit-level text fields may summarize the unit, but must not imply that its pieces are one expense.

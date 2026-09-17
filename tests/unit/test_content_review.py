@@ -28,7 +28,7 @@ class FixtureReviewer:
     def ask(self, prompt, schema, images=()):
         """Produce matching fields and a comparison requiring admin review."""
         if schema == EXTRACTION:
-            return {"readable": True, "supporting_evidence_status": "potential_support",
+            return {"receipts": [], "readable": True, "supporting_evidence_status": "potential_support",
                     "supporting_evidence_reason": "Visible transaction details", "document_type": "invoice", "receipt_status": "not_receipt", "invoice_numbers": ["INV-1"],
                     "company": ["Example"], "brief_description": "Cleaning",
                     "references": ["INV-1"], "parties": ["Example"], "dates": [],

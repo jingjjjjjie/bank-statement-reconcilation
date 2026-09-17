@@ -4,7 +4,7 @@
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Document status · Bank Statement Reconciliation</title>
   <link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="/documents.css">
-  <script src="/common.js" defer></script><script src="/documents.js" defer></script>
+  <script src="/common.js" defer></script><script src="/documents.js" defer></script><script src="/receipts.js" defer></script>
 </head>
 <body>
   <aside class="rail">
@@ -19,7 +19,8 @@
   </aside>
   <main>
     <header><div class="breadcrumb">Workspace <span>/</span> Document status</div><a class="header-settings" href="/content-review">Content review</a></header>
-    <section class="page-heading"><div><div class="eyebrow">STEP 02 / DOCUMENT STATUS</div><h1>Document status</h1><p>Saved progress for every document in this content review.</p></div></section>
+    <section class="page-heading"><div><div class="eyebrow">STEP 02 / DOCUMENT STATUS</div><h1>Document status</h1><p>Run document extraction, review separate receipts, and allocate them to bank payments.</p></div></section>
+    <section class="settings-card"><div class="content-actions"><button id="run-documents" class="button dark" type="button">Run all documents</button><button id="stop-documents" class="button secondary" type="button" disabled>Stop</button><button id="reload-receipts" class="button secondary" type="button">Load latest receipt results</button></div><p id="document-run-status" role="status">Queues unique documents using the parallel and request limits in Settings. Completed work is saved; run again to resume.</p></section>
     <section class="stats document-stats"><div><span>Documents</span><strong id="document-total">—</strong></div><div><span>Extracted</span><strong id="document-extracted">—</strong></div><div><span>Ready for admin</span><strong id="document-admin">—</strong></div><div><span>Complete</span><strong id="document-complete">—</strong></div></section>
     <section class="settings-card">
       <div class="document-toolbar"><div><h2>All documents</h2><p id="document-summary" role="status">Loading saved progress…</p></div><div class="document-filters"><label>Search documents<input id="document-search" type="search" placeholder="Filename or path"></label><label>Status<select id="document-filter"><option value="all">All statuses</option><option value="Waiting for extraction">Waiting for extraction</option><option value="Extracting">Extracting</option><option value="Waiting for screening">Waiting for screening</option><option value="Screening">Screening</option><option value="Comparing matches">Comparing matches</option><option value="Admin review">Admin review</option><option value="Needs attention">Needs attention</option><option value="Complete">Complete</option></select></label></div></div>
@@ -27,6 +28,23 @@
       <p>Hides copies marked by a reviewer to keep the other document. Files and review decisions stay unchanged.</p>
       <div class="document-table-wrap"><table class="document-table"><thead><tr><th>Document</th><th>Status</th><th>Extraction</th><th>Screening</th><th>Candidate review</th><th>File</th></tr></thead><tbody id="document-rows"></tbody></table></div>
       <p id="document-empty" class="document-empty" hidden></p>
+    </section>
+    <section class="settings-card" id="receipt-review-panel">
+      <h2>Review individual receipts</h2><p>One image can contain several pieces. Check each against the original, correct the split and fields, then accept the extraction. Leave missing fields blank.</p>
+      <p id="receipt-error" class="validation" role="alert" hidden></p>
+      <label class="setting-field">Reviewer name<input id="receipt-reviewer" autocomplete="name"></label>
+      <label class="setting-field">Document / page<select id="receipt-unit"></select></label>
+      <p id="receipt-unit-status" role="status"></p><a id="receipt-original" target="_blank" rel="noopener">Open original document</a>
+      <form id="receipt-form"><div id="receipt-pieces"></div><div class="content-actions"><button id="add-receipt" class="button secondary" type="button">Add separate piece</button><button id="accept-receipts" class="button dark" type="submit">Accept receipt extraction</button></div></form>
+    </section>
+    <section class="settings-card" id="receipt-match-panel">
+      <h2>Match receipts to a bank transaction</h2><p>Select one receipt for a separate payment, or several for a combined payment. Invoice and payment proof for the same expense must not be counted as separate expenses. Amount agreement alone does not prove a match.</p>
+      <label class="setting-field">Find a transaction<input id="receipt-bank-search" type="search" placeholder="Amount, date, party or reference"></label>
+      <label class="setting-field">Bank transaction<select id="receipt-bank"></select></label>
+      <p id="receipt-bank-detail"></p><p><a href="/bank">View bank statement and source</a></p>
+      <form id="receipt-match-form"><div id="receipt-allocations"></div><label class="setting-field">Review notes / reason for any difference<input id="receipt-match-reason"></label><button id="propose-receipt-match" class="button secondary" type="submit">Calculate proposed match</button></form>
+      <div id="receipt-proposal" aria-live="polite"></div>
+      <h3>Saved matches</h3><div id="receipt-saved-matches"></div>
     </section>
   </main>
   <div id="toast" role="status" aria-live="polite" hidden></div>

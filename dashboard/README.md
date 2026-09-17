@@ -50,3 +50,11 @@ Tests (from the repository root, using Python with the project dependencies inst
 python -m unittest discover -s tests/unit -t .
 python -m unittest tests.unit.test_app tests.unit.test_content_review
 ```
+
+## Individual receipts and bank allocations
+
+Document Status includes **Run all documents** (bounded by the configured parallel/request limits) and **Load latest receipt results**. Each extracted unit can contain multiple receipt or claim pieces. Review their locations, invoice numbers, descriptions, totals, and currencies against the original. Correct the pieces or leave missing fields blank, then accept the extraction with a reviewer name.
+
+Select a bank transaction and one or several accepted pieces to calculate a pending match. Python uses decimal arithmetic and shows the bank amount, individual allocations, supporting total, and difference. A separate **Accept match** action records approval; a nonzero difference requires a reason and remains visible. Pieces may be partially allocated across transactions. Accepted allocations reserve their amounts until **Undo match**; competing proposals cannot spend those amounts again. Refreshing extraction, changing source bytes, or changing the bank master invalidates affected approvals/proposals. Undo stale accepted matches before reallocation.
+
+Receipt extraction approvals, matches, and decision history are saved separately in `review/receipt-matches.json`; the original files and bank master are unchanged. Extraction CSV rows also include the raw `receipts` JSON. Old completed extraction units are not guessed into receipt records: refresh the extraction or manually review and enter their pieces. The final statement/unmatched-document export workflow remains separate; receipt match acceptance does not alter the existing bank-only export or completion gate.
