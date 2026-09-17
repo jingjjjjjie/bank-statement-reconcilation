@@ -69,3 +69,8 @@ Provide **Undo / Change match**, retaining decision history. A document discover
 - Unresolved records remain reviewable and exportable; no accounting categorization is added.
 
 Read this file when resuming final-comparison work after the two input branches are ready.
+
+
+## Matching research
+
+See [MATCHING_EXPERIMENTS.md](MATCHING_EXPERIMENTS.md) for measured shortlist and batching experiments. These are design recommendations, not deployed matching behavior or changes to the open decisions above.
