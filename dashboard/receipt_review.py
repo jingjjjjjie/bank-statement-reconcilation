@@ -115,10 +115,10 @@ def verify_source(item):
 
 
 def record(path, saved, action, reviewer, before, after):
-    """Save named decisions and append their previous state in the same atomic write."""
-    if not isinstance(reviewer, str) or not reviewer.strip():
+    """Audit explicit decisions; extraction approval does not require a name."""
+    if not (action == "accept_extraction" and reviewer is None) and (not isinstance(reviewer, str) or not reviewer.strip()):
         raise ValueError("Enter your name")
-    saved["history"].append({"at": datetime.now(timezone.utc).isoformat(), "reviewer": reviewer.strip(),
+    saved["history"].append({"at": datetime.now(timezone.utc).isoformat(), "reviewer": reviewer.strip() if reviewer else None,
                              "action": action, "before": before, "after": after})
     path.parent.mkdir(parents=True, exist_ok=True)
     write_json(path, saved)
@@ -149,9 +149,9 @@ def accept_extraction(review, body):
         if piece["currency"]:
             currency(piece["currency"])
     previous = saved["extractions"].get(body["key"])
-    value = {"source_revision": unit["source_revision"], "receipts": pieces, "reviewer": body["reviewer"]}
+    value = {"source_revision": unit["source_revision"], "receipts": pieces, "reviewer": body.get("reviewer")}
     saved["extractions"][body["key"]] = value
-    record(path, saved, "accept_extraction", body["reviewer"], previous, value)
+    record(path, saved, "accept_extraction", body.get("reviewer"), previous, value)
     return snapshot(review)
 
 

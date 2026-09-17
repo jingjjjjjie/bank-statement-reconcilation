@@ -100,7 +100,7 @@ function showReceiptUnit() {
   $('#receipt-original').href = `/api/content-file?id=${encodeURIComponent(unit.document_id)}`;
   $('#receipt-unit-status').textContent = unit.accepted ? 'Extraction accepted.' : unit.needs_refresh
     ? 'Older extraction has no separate receipt records. Re-extract or enter pieces after checking the original.'
-    : 'Check each separate piece before accepting. Missing values stay blank.';
+    : '';
   if (unit.assembled) {
     $('#receipt-unit-status').textContent += ' ' + unit.source_units.map(source => `${source.number}: ${source.label}`).join(' | ');
     if (unit.assembly_pending) $('#receipt-unit-status').textContent = 'Waiting for document receipt assembly. Run documents to continue.';
@@ -199,7 +199,7 @@ if ($('#receipt-form')) $('#receipt-form').onsubmit = event => {
   receiptAction(async () => {
     const key = $('#receipt-unit').value;
     const data = await api('/api/receipts/accept', {
-      revision:receiptData.revision, key, receipts:readReceiptPieces(), reviewer:$('#receipt-reviewer').value,
+      revision:receiptData.revision, key, receipts:readReceiptPieces(),
     });
     extractionDirty = false;
     setReceiptData(data);

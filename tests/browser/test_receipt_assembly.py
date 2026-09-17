@@ -46,6 +46,7 @@ class ReceiptAssemblyBrowserTests(unittest.TestCase):
             if link.count():
                 link.first.click()
             expect(page.locator("#receipt-pieces fieldset")).to_have_count(2)
+            page.get_by_role("button", name="Piece 2", exact=True).click()
             page.get_by_role("button", name="Merge with previous receipt").last.click()
             expect(page.locator("#receipt-pieces fieldset")).to_have_count(1)
             expect(page.locator('[data-field="total"]')).to_have_value("")
@@ -55,7 +56,6 @@ class ReceiptAssemblyBrowserTests(unittest.TestCase):
             page.get_by_role("button", name="Merge with previous receipt").last.click()
             page.locator('[data-field="total"]').fill("45.00")
             page.locator('[data-boundary-review]').uncheck()
-            page.locator('#receipt-reviewer').fill("Fixture reviewer")
             page.locator('#accept-receipts').click()
             expect(page.locator('#receipt-unit-status')).to_contain_text("Extraction accepted.")
             page.reload()

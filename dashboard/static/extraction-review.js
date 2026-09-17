@@ -78,6 +78,7 @@ function renderPieceNavigation() {
   pieceDocument = selectedUnit; previousPieceCount = cards.length;
   activePiece = Math.max(0, Math.min(activePiece, cards.length - 1));
   $('#piece-count').textContent = `${cards.length} ${cards.length === 1 ? 'piece' : 'pieces'}`;
+  $('#piece-tabs').hidden = cards.length < 2;
   $('#piece-tabs').replaceChildren(...cards.map((card, number) => {
     card.hidden = number !== activePiece;
     card.querySelector('legend').textContent = `Piece ${number + 1} details`;

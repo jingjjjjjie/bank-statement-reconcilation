@@ -57,6 +57,15 @@ class ReceiptMatchingTests(unittest.TestCase):
         return receipt_review.accept_extraction(self.review, {"revision": self.view()["revision"],
             "key": self.key, "receipts": self.pieces if pieces is None else pieces, "reviewer": "Tester"})
 
+    def test_accept_extraction_without_reviewer_keeps_audit_history(self):
+        """Removing the name field still records the explicit approval and its time."""
+        receipt_review.accept_extraction(self.review, {"revision": self.view()["revision"],
+            "key": self.key, "receipts": self.pieces})
+        saved = json.loads((self.work / "receipt-matches.json").read_text())
+        self.assertEqual(saved["history"][-1]["action"], "accept_extraction")
+        self.assertIsNone(saved["history"][-1]["reviewer"])
+        self.assertTrue(saved["history"][-1]["at"])
+
     def change(self, bank, action, items=None, reason=""):
         """Submit one revision-checked match action."""
         return receipt_review.change_match(self.review, {"revision": self.view()["revision"],
