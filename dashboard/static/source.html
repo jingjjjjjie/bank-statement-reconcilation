@@ -29,13 +29,13 @@
     <div class="source-grid">
     <section class="settings-card">
       <div class="source-section-label">01 / DOCUMENT SOURCE</div><h2>Supporting documents</h2><p>Choose the folder containing documents for duplicate review.</p>
-      <div class="source-controls"><button id="browse-source" class="button dark" type="button">Browse folders</button><label class="setting-field"><strong>Folder path</strong><input id="source-path" type="text" autocomplete="off" spellcheck="false" placeholder="C:\path\to\supporting-documents"></label><button id="select-source" class="button secondary" type="button">Check folder</button></div>
+      <div class="source-controls"><button id="browse-source" class="button dark" type="button">Browse folders</button><label class="setting-field"><strong>Folder path</strong><input id="source-path" type="text" autocomplete="off" spellcheck="false" placeholder="Choose a folder with Browse folders"></label><button id="select-source" class="button secondary" type="button">Check folder</button></div>
       <div id="selected-source" class="source-result" hidden></div>
       <div id="source-action" class="source-action" hidden><p id="source-preview">Checking exact duplicates…</p><p>Creating a review moves exact duplicate files from the selected folder into this workspace's <code>duplicated/</code> directory. Original locations are retained in the manifest. Other files stay in place.</p><button id="start-source" class="button dark" type="button" disabled>Create or open review</button></div>
     </section>
     <section class="settings-card">
       <div class="source-section-label">02 / BANK SOURCE</div><h2>Bank statement</h2><p>Choose an AmBank digital statement PDF separately.</p>
-      <div class="source-controls"><button id="browse-bank" class="button dark" type="button">Browse PDF files</button><label class="setting-field"><strong>PDF path</strong><input id="bank-path" type="text" autocomplete="off" spellcheck="false" placeholder="C:\path\to\statement.pdf"></label><button id="select-bank" class="button secondary" type="button">Check PDF</button></div>
+      <div class="source-controls"><button id="browse-bank" class="button dark" type="button">Browse PDF files</button><label class="setting-field"><strong>PDF path</strong><input id="bank-path" type="text" autocomplete="off" spellcheck="false" placeholder="Choose a PDF with Browse PDF files"></label><button id="select-bank" class="button secondary" type="button">Check PDF</button></div>
       <div id="selected-bank" class="source-result" hidden></div>
       <div id="bank-action" class="source-action" hidden><label class="setting-field"><strong>Statement year</strong><input id="bank-year" type="number" min="1900" max="2100" placeholder="2025"></label><p>Extraction creates a bank master for the active review. It does not replace an existing master from a different statement.</p><button id="prepare-bank" class="button dark" type="button">Extract bank statement</button><p id="bank-result" role="status"></p></div>
     </section>

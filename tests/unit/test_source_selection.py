@@ -5,6 +5,7 @@ import unittest
 import urllib.request
 from urllib.parse import urlencode
 import json
+import os
 from http.server import ThreadingHTTPServer
 from pathlib import Path
 from unittest.mock import patch
@@ -15,6 +16,26 @@ from dashboard.app import handler_for
 
 
 class SourceSelectionTests(unittest.TestCase):
+    def test_browser_roots_are_available_on_current_platform(self):
+        """A fresh picker must show drives or POSIX roots without a saved source."""
+        with tempfile.TemporaryDirectory() as folder:
+            sources = SourceSelection(folder, Path(folder) / "data")
+            listing = sources.browse()
+            self.assertTrue(listing["folders"])
+            if os.name != "nt":
+                self.assertIn("/", listing["folders"])
+                self.assertIn(str(Path.home()), listing["folders"])
+
+    @unittest.skipIf(os.name == "nt", "Mounted POSIX roots are used inside Docker")
+    def test_docker_picker_prioritizes_existing_upload_mounts(self):
+        """List mounted uploads first and omit absent mount directories."""
+        with tempfile.TemporaryDirectory() as folder:
+            sources = SourceSelection(folder, Path(folder) / "data")
+            with patch.object(Path, "is_dir", lambda path: str(path) in {"/uploads", "/documents", "/"}):
+                self.assertEqual(sources.browse()["folders"], ["/uploads", "/documents", "/"])
+            with patch.object(Path, "is_dir", lambda path: str(path) == "/"):
+                self.assertEqual(sources.browse()["folders"], ["/"])
+
     def test_preview_counts_moves_and_blocks_changed_source(self):
         """Require a fresh move preview before creating a review."""
         with tempfile.TemporaryDirectory() as folder:

@@ -68,7 +68,7 @@ async function browse(path) {
       button.type = 'button'; button.onclick = () => action(target); items.append(button);
     };
     if (data.path) addItem('↖ Up one level', data.parent, browse);
-    for (const folder of data.folders) addItem('📁 ' + folder.split(/[\\/]/).filter(Boolean).pop(), folder, browse);
+    for (const folder of data.folders) addItem('📁 ' + (folder.split(/[\\/]/).filter(Boolean).pop() || folder), folder, browse);
     for (const file of data.files) addItem('📄 ' + file.split(/[\\/]/).pop(), file, async selected => {
       await sourceAction(async () => {
         const result = await api('/api/source/bank-select', {path: selected});

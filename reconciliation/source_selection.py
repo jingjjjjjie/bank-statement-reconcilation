@@ -1,6 +1,7 @@
 """Select a local supporting folder and create an isolated review when requested."""
 import hashlib
 import json
+import os
 import string
 from pathlib import Path
 
@@ -27,8 +28,11 @@ class SourceSelection:
     def browse(self, path=None, pdfs=False):
         """List one local directory for the dashboard's in-page picker."""
         if not path:
-            roots = [str(Path(f"{letter}:\\")) for letter in string.ascii_uppercase
-                     if Path(f"{letter}:\\").is_dir()]
+            if os.name == "nt":
+                candidates = [Path(f"{letter}:\\") for letter in string.ascii_uppercase]
+            else:
+                candidates = [Path("/uploads"), Path("/documents"), Path.home(), Path("/")]
+            roots = list(dict.fromkeys(str(folder) for folder in candidates if folder.is_dir()))
             return {"path": None, "parent": None, "folders": roots, "files": []}
         folder = Path(path).expanduser().resolve(strict=True)
         if not folder.is_dir():
