@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from dashboard import content_review
-from vision_workflow import load
+from reconciliation.vision_workflow import load
 
 
 def path(review):

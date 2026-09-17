@@ -8,7 +8,7 @@ from pathlib import Path
 WORKSPACE = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(WORKSPACE))
 
-from source_selection import SourceSelection
+from reconciliation.source_selection import SourceSelection
 from dashboard.routes import handler_for
 from dashboard.review import Review, workflow_guide, write_json
 

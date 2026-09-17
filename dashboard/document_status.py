@@ -1,7 +1,7 @@
 """Summarize saved content-review progress for every source document."""
 from pathlib import Path
 
-from vision_workflow import load
+from reconciliation.vision_workflow import load
 from dashboard.content_review import work_path
 
 

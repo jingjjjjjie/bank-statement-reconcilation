@@ -7,11 +7,11 @@ import threading
 from datetime import datetime, timezone
 from pathlib import Path
 
-from duplicate_workflow import check, duplicate_root, fingerprint, supporting_files
-from review_settings import (
+from reconciliation.duplicate_workflow import check, duplicate_root, fingerprint, supporting_files
+from reconciliation.review_settings import (
     DEFAULTS, content_settings, load_config, model_catalog, model_settings, revision,
 )
-from token_usage import summary as token_summary
+from reconciliation.token_usage import summary as token_summary
 from dashboard import office_preview
 
 
@@ -98,7 +98,7 @@ class Review:
 
     def completion(self):
         """Show final usage only after exact, content, and bank checks pass."""
-        from vision_workflow import gate, load
+        from reconciliation.vision_workflow import gate, load
 
         exact_done = not check(self.root, self.manifest, self.manifest_path)
         content_done = False
@@ -143,7 +143,7 @@ class Review:
 
     def workflow_checks(self):
         """Check saved stage results without changing review files or invoking a model."""
-        from vision_workflow import gate, load
+        from reconciliation.vision_workflow import gate, load
 
         exact = not check(self.root, self.manifest, self.manifest_path)
         work = self.manifest_path.parent / "review"
@@ -313,7 +313,7 @@ class Review:
             return {"kind": "image", "pages": 1}
         if suffix in {".docx", ".xlsx"}:
             return office_preview.describe(path)
-        from document_reader import extract
+        from reconciliation.document_reader import extract
         cache = self.data / "previews" / fingerprint(path)
         metadata = cache / "units.json"
         if not metadata.exists():
@@ -335,7 +335,7 @@ def workflow_guide(review):
     stages = [("Sources", "/source", bool(review)),
               ("Exact duplicates", "/", exact),
               ("Content review", "/content-review" if
-               (Path(__file__).parent / "content-review.html").is_file() else None, content),
+               (Path(__file__).parent / "static" / "content-review.html").is_file() else None, content),
               ("Bank extraction", "/bank", bank),
               ("Completion", "/complete", complete)]
     return {"steps": [{"name": name, "href": href, "checked": checked,

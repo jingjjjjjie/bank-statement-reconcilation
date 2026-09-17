@@ -7,9 +7,9 @@ from http.server import BaseHTTPRequestHandler
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
-from duplicate_workflow import fingerprint
-from review_settings import save_config
-from source_selection import SourceSelection
+from reconciliation.duplicate_workflow import fingerprint
+from reconciliation.review_settings import save_config
+from reconciliation.source_selection import SourceSelection
 from dashboard import content_review, development, document_status, office_preview
 from dashboard.review import Review, workflow_guide
 
@@ -145,7 +145,7 @@ def handler_for(review, token, sources=None):
                                   "/office-view.js": ("office-view.js", "text/javascript"),
                                   "/style.css": ("style.css", "text/css")}
                         name, mime = assets[query.path]
-                        self.reply(200, (Path(__file__).parent / name).read_bytes(), mime)
+                        self.reply(200, (Path(__file__).parent / "static" / name).read_bytes(), mime)
             except (KeyError, IndexError, FileNotFoundError):
                 self.reply(404, {"error": "File or page not found"})
             except Exception as error:
@@ -223,7 +223,7 @@ def handler_for(review, token, sources=None):
                     elif self.path == "/api/bank-export":
                         if review is None:
                             raise ValueError("Choose an active review first")
-                        from bank_excel import export
+                        from reconciliation.bank_excel import export
                         master = review.manifest_path.parent / "bank-output" / "master_statement.csv"
                         template = Path(body["template"]).expanduser().resolve(strict=True)
                         if not template.is_file() or template.suffix.lower() != ".xlsx":
