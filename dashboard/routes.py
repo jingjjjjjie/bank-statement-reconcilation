@@ -29,6 +29,8 @@ ASSETS = {"/": ("index.html", "text/html; charset=utf-8"),
           "/content-review/": ("content-review.html", "text/html; charset=utf-8"),
           "/documents": ("documents.html", "text/html; charset=utf-8"),
           "/documents/": ("documents.html", "text/html; charset=utf-8"),
+          "/exact-report": ("exact-report.html", "text/html; charset=utf-8"),
+          "/exact-report.js": ("exact-report.js", "text/javascript"),
           "/app.js": ("app.js", "text/javascript"),
           "/bank.js": ("bank.js", "text/javascript"),
           "/settings.js": ("settings.js", "text/javascript"),
@@ -86,6 +88,8 @@ def handler_for(review, token, sources=None):
             try:
                 if query.path in ASSETS:
                     name, mime = ASSETS[query.path]
+                    if name == "index.html" and review and review.manifest.get("Mode") == "exact_report":
+                        name = "exact-report.html"
                     body = (Path(__file__).parent / "static" / name).read_bytes()
                     self.reply(200, body, mime, '"' + hashlib.sha256(body).hexdigest() + '"')
                     return

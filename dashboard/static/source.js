@@ -8,7 +8,7 @@ async function loadPreview() {
   try {
     const preview = await api('/api/source/preview');
     previewToken = preview.token;
-    $('#source-preview').textContent = `${preview.files} source file${preview.files === 1 ? '' : 's'} · ${preview.groups} exact duplicate group${preview.groups === 1 ? '' : 's'} · ${preview.copies_to_move} copies would move into duplicated/.`;
+    $('#source-preview').textContent = `${preview.files} source file${preview.files === 1 ? '' : 's'} · ${preview.groups} exact duplicate group${preview.groups === 1 ? '' : 's'} · ${preview.copies_to_move} copies in those groups will be reported automatically in output/duplicates/.`;
     $('#start-source').disabled = false;
   } catch (error) {
     $('#source-preview').textContent = error.message;

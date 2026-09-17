@@ -81,6 +81,8 @@ def duplicate_root(manifest, manifest_path):
 
 def review_files(root, manifest, manifest_path):
     # Scan originals and the separate review folder without counting a path twice.
+    if manifest.get("Mode") == "exact_report":
+        return supporting_files(root)
     destination = duplicate_root(manifest, manifest_path)
     excluded = (manifest_path, destination / "original-locations.csv")
     files = supporting_files(root, excluded)
@@ -196,6 +198,9 @@ def organize(root, manifest_path):
 def check(root, manifest, manifest_path):
     if Path(manifest["SupportingRoot"]).resolve() != root:
         raise ValueError("Manifest belongs to a different supporting root.")
+    if manifest.get("Mode") == "exact_report":
+        from reconciliation.exact_report import check as check_report
+        return check_report(root, manifest)
     destination = duplicate_root(manifest, manifest_path)
     problems = []
     expected = {}

@@ -132,7 +132,10 @@ class SourceSelection:
         project = self.workspace / "duplicated" / "projects" / name
         project.mkdir(parents=True, exist_ok=True)
         manifest = project / "duplicate-manifest.json"
-        if not manifest.exists():
+        if source.name == "documents" and (source.parent / "statement").is_dir():
+            from reconciliation.exact_report import prepare
+            prepare(source, manifest)
+        elif not manifest.exists():
             organize(source, manifest)
         else:
             saved = json.loads(manifest.read_text(encoding="utf-8-sig"))

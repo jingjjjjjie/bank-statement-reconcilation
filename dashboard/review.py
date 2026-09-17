@@ -212,7 +212,7 @@ class Review:
         if not count:
             errors.append("No retained file in this group")
         return {"id": name, "files": files, "hash": self.records[ids[0]]["SHA256"],
-                "status": "attention" if errors else "reviewed" if count == 1 else "pending",
+                "status": "attention" if errors else "reviewed" if self.manifest.get("Mode") == "exact_report" or count == 1 else "pending",
                 "errors": errors, "can_undo": bool(action and action["status"] == "done"),
                 "kept": action["keep"] if action and action["status"] == "done" else None}
 
@@ -220,12 +220,16 @@ class Review:
         """Verify every group for the dashboard summary."""
         groups = [self.group_snapshot(name) for name in self.groups]
         return {"groups": groups, "folder": str(self.duplicates),
+                "automatic": self.manifest.get("Mode") == "exact_report",
+                "summary": self.manifest.get("Summary", {}),
                 "reviewed": sum(g["status"] == "reviewed" for g in groups),
                 "pending": sum(g["status"] == "pending" for g in groups),
                 "attention": sum(g["status"] == "attention" for g in groups)}
 
     def keep(self, group, file_id):
         # Save a recovery plan before moving any copies out of the active review folder.
+        if self.manifest.get("Mode") == "exact_report":
+            raise ValueError("Exact duplicates are reported automatically; no selection is needed")
         with self.lock:
             if file_id not in self.groups[group]:
                 raise ValueError("Selected file does not belong to this group")
@@ -273,6 +277,8 @@ class Review:
 
     def undo(self, group):
         # Restore the original copies only if both the survivor and recovery files are unchanged.
+        if self.manifest.get("Mode") == "exact_report":
+            raise ValueError("Automatic exact-duplicate reports have no selection to undo")
         with self.lock:
             action = self.latest(group)
             if not action or action["status"] != "done":

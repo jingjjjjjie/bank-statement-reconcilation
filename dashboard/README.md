@@ -8,6 +8,10 @@ python dashboard/app.py
 
 Open http://127.0.0.1:8765. The Python server, HTML, CSS and JavaScript all live in `dashboard/`.
 
+For work folders containing `documents/` and `statement/`, Proceed verifies exact duplicates automatically. The report at `/review` shows counts and copies every member into `output/duplicates/group-NNN/` beside the input folders. `output/duplicates/report.json` records hashes and original locations. Inputs remain intact, no human selection is required, and content review uses one input per hash. Existing organized copies are copied back to their original locations when upgrading a legacy work-folder review; old recovery files and the legacy manifest are preserved.
+
+The following retain/undo controls apply only to older standalone-folder reviews:
+
 - Browse/search groups and compare image, PDF, spreadsheet or Word previews.
 - Expand **Original location** to see where each copy came from.
 - **Retain this file** leaves it in `Development/duplicated/group-NNN` and moves the others into `dashboard/.data/recovery`. No permanent deletion occurs.
