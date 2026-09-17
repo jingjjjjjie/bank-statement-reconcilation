@@ -6,19 +6,22 @@ function renderDocuments() {
   const rows = documentState.documents;
   const search = $('#document-search').value.trim().toLowerCase();
   const filter = $('#document-filter').value;
-  const visible = rows.filter(item => (filter === 'all' || item.status === filter) &&
+  const hideDuplicates = $('#hide-duplicates').checked;
+  const hidden = hideDuplicates ? rows.filter(item => item.approved_duplicate).length : 0;
+  const visible = rows.filter(item => (!hideDuplicates || !item.approved_duplicate) && (filter === 'all' || item.status === filter) &&
     `${item.name} ${item.path}`.toLowerCase().includes(search));
   $('#document-total').textContent = rows.length;
   $('#document-extracted').textContent = rows.filter(item => item.units_read === item.units_total).length;
   $('#document-admin').textContent = rows.filter(item => item.status === 'Admin review').length;
   $('#document-complete').textContent = rows.filter(item => item.status === 'Complete').length;
   $('#document-summary').textContent = documentState.prepared ?
-    `${visible.length} of ${rows.length} documents shown. Progress updates automatically.` :
+    `${visible.length} of ${rows.length} documents shown. ${hidden} approved duplicates hidden. Progress updates automatically.` :
     'Prepare the content review to see document progress.';
   const body = $('#document-rows'); body.replaceChildren();
   for (const item of visible) {
     const tr = node('tr'), title = node('td');
     title.append(node('strong', '', item.name), node('small', '', item.path));
+    if (item.approved_duplicate) title.append(node('small', '', 'Approved duplicate'));
     const status = node('span', `document-status ${item.status.toLowerCase().replaceAll(' ', '-')}`, item.status);
     const review = item.candidates ? `${item.decisions}/${item.candidates} decisions · ${item.comparisons}/${item.candidates} compared` : 'No candidates yet';
     const open = node('a', '', 'Open file');
@@ -45,6 +48,7 @@ function rememberFilters() {
   try {
     localStorage.setItem('document-status-filters', JSON.stringify({
       search: $('#document-search').value, status: $('#document-filter').value,
+      hideDuplicates: $('#hide-duplicates').checked,
     }));
   } catch { /* Storage restrictions must not prevent filtering. */ }
   renderDocuments();
@@ -53,11 +57,13 @@ function rememberFilters() {
 /* Restore preferences only; document progress always comes from saved review state. */
 try {
   const filters = JSON.parse(localStorage.getItem('document-status-filters') || '{}');
+  $('#hide-duplicates').checked = filters?.hideDuplicates === true;
   if (typeof filters?.search === 'string') $('#document-search').value = filters.search;
   if ([...$('#document-filter').options].some(option => option.value === filters?.status)) {
     $('#document-filter').value = filters.status;
   }
 } catch { /* Ignore unavailable storage or invalid old preferences. */ }
+$('#hide-duplicates').onchange = rememberFilters;
 $('#document-search').oninput = rememberFilters;
 $('#document-filter').onchange = rememberFilters;
 refreshDocuments().catch(error => toast(error.message));

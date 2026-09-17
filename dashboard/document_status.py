@@ -1,7 +1,7 @@
 """Summarize saved content-review progress for every source document."""
 from pathlib import Path
 
-from reconciliation.vision_workflow import load
+from reconciliation.vision_workflow import load, removal_plan
 from dashboard.content_review import work_path
 
 
@@ -16,6 +16,7 @@ def snapshot(review):
     if Path(index["manifest"]).resolve() != review.manifest_path.resolve():
         raise ValueError("Prepared review belongs to a different manifest")
     documents = index["documents"]
+    duplicates = removal_plan(state)
     eligible = {digest for digest, document in documents.items() if document.get("accepted", True)}
     screens = {digest: 0 for digest in eligible}
     candidates = {digest: 0 for digest in eligible}
@@ -51,6 +52,7 @@ def snapshot(review):
             status = "Complete"
         path = document["paths"][0]
         rows.append({"id": digest, "name": Path(path).name, "path": path, "status": status,
+                     "approved_duplicate": digest in duplicates,
                      "units_read": read, "units_total": len(units), "pairs_screened": screens[digest],
                      "pairs_total": max(len(eligible) - 1, 0), "candidates": candidates[digest],
                      "comparisons": comparisons[digest], "decisions": decisions[digest]})
