@@ -4,14 +4,12 @@ The agreed final comparison workflow is recorded in [FINAL_COMPARISON.md](FINAL_
 
 Python 3.12 or later. Pass one uses the standard library. Pass two uses the packages in `requirements.txt` and an installed Codex CLI logged in through ChatGPT.
 
-The existing supporting files have already been organized. Do not run organize again for this batch.
-
 ## Project layout
 
 - `reconciliation/`: extraction, duplicate review, model integration, and workflow state.
 - `dashboard/`: Python server; HTML, JavaScript, and CSS live in `dashboard/static/`.
 - `tests/unit/`: offline regression tests; `tests/browser/`: optional browser checks.
-- `scripts/`: manual migration, benchmark, and live Codex connection tools.
+- `scripts/`: live Codex connection check.
 - `docs/`: bank-extraction and workbook-format documentation.
 
 Run commands from the repository root. For example:
@@ -62,16 +60,10 @@ Check the admin's cleanup from this workspace:
 python -m reconciliation.duplicate_workflow check
 ```
 
-A workspace-local Python runtime is also available:
-
-```console
-python -m reconciliation.duplicate_workflow check
-```
-
 The supporting folder defaults to the path in `duplicate-manifest.json`.
 The checker reads files without modifying them. Exit codes: 0 = exact-duplicate pass complete, 2 = admin cleanup pending, 1 = execution error. Exit 0 permits LLM/vision review; it does not certify that the full duplicate review is complete.
 
-The admin leaves one original-content file in every group under **Development/duplicated**, beside these Python scripts. This review folder is outside the Dropbox supporting folder. Both locations are scanned by the checkers. Missing folders, empty groups, multiple files, changed content, unexpected groups, and remaining exact duplicates block progression. Original claim locations are retained in the manifest and `duplicated/original-locations.csv`.
+The admin leaves one original-content file in every group under **duplicated/** in the review workspace. This review folder is outside the Dropbox supporting folder. Both locations are scanned by the checkers. Missing folders, empty groups, multiple files, changed content, unexpected groups, and remaining exact duplicates block progression. Original claim locations are retained in the manifest and `duplicated/original-locations.csv`.
 
 For a new batch, use a manifest in its own workspace subfolder; its `duplicated` folder is created beside that manifest:
 
@@ -81,8 +73,6 @@ python -m reconciliation.duplicate_workflow check --manifest "new-batch.json"
 ```
 
 Organization verifies size, SHA-256 and actual bytes, records original locations, then moves all copies into one subfolder per group. It does not delete files. If interrupted, inspect the saved manifest and current locations before recovery; do not overwrite the manifest or blindly rerun organization.
-
-Decisions and discussion: `issues.md`.
 
 ## Two-pass duplicate review
 
@@ -97,7 +87,7 @@ The dashboard's **Content review** page is unlocked by pass-one validation. It p
 
 ## Run pass two
 
-The local runtime and dependencies are already installed in this workspace. For another Python installation:
+Install the dependencies and sign in before running model review:
 
 ```console
 python -m pip install -r requirements.txt
@@ -112,7 +102,7 @@ Prepare once (local extraction only; allowed while the admin cleans exact duplic
 python -m reconciliation.vision_workflow prepare
 ```
 
-The current batch is prepared under `review/`. Preparation retains one model input per exact hash and all original file locations. PDFs include every page's native text and optional rendered images according to saved settings. Enabled pictures include all frames. Spreadsheets include hidden sheets, cell coordinates, formulas and cached values. DOCX includes XML text parts and optional embedded images. Office page layout is not reconstructed; unsupported embedded objects and unreadable files block completion. Images are previewed up to 2400 pixels; unclear details must remain unresolved.
+The default preparation directory is `review/`. Preparation retains one model input per exact hash and all original file locations. PDFs include every page's native text and optional rendered images according to saved settings. Enabled pictures include all frames. Spreadsheets include hidden sheets, cell coordinates, formulas and cached values. DOCX includes XML text parts and optional embedded images. Office page layout is not reconstructed; unsupported embedded objects and unreadable files block completion. Images are previewed up to 2400 pixels; unclear details must remain unresolved.
 
 After pass-one cleanup succeeds:
 
@@ -122,7 +112,7 @@ python -m reconciliation.vision_workflow run --max-calls 20
 
 Rerun the same command to resume. It reads every unit, screens every unique document pair through model-extracted summaries in batches, then compares original text/images for candidates. No filename or amount-only filter excludes pairs. Summary screening can still miss matches: this is model-assisted review, not a mathematical guarantee. Very large comparisons remain uncertain for admin inspection rather than being silently truncated.
 
-`--max-calls` bounds new calls per invocation (default 20); `--timeout` bounds each call (default 240 seconds). Cached responses are keyed by prompt, schema, model selector and image contents. The current corpus has 136 unique documents, so full coverage involves 9,180 pair screens, batched into fewer model calls, plus page reads and candidate comparisons. A limited run does not complete the review.
+`--max-calls` bounds new calls per invocation (default 20); `--timeout` bounds each call (default 240 seconds). Cached responses are keyed by prompt, schema, model selector and image contents. Pair screening covers every unique document pair, batched into model calls, followed by candidate comparisons. A limited run does not complete the review.
 
 Read `review/report.md`; `report.json` contains full coverage and evidence. Extraction finishes before pair screening starts. A progress unit is one page, image frame or spreadsheet sheet/chunk, so there can be more units than files. `review/state.json` resumes completed units and comparisons; `review/model-cache` holds prompts, validated responses and CLI logs and remains available after `prepare --refresh` for development tests. Identical prompt, schema, model, reasoning and image bytes reuse a successful response without a new Codex call. Changing any of those inputs requires a new call. Failed, timed-out, unreadable or skipped work cannot pass the final gate. Keep generated review files private with the source documents.
 

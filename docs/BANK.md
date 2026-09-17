@@ -8,11 +8,7 @@ python -m reconciliation.bank_excel bank-output/master_statement.csv "sample.xls
 python -m unittest tests.unit.test_bank_statement
 ```
 
-Two current deliverables:
-
-The latest generated answer is `bank-output/answer_statement_bank_only.xlsx`;
-the earlier `answer_statement.xlsx` was open/locked and could not be replaced.
-The exporter defaults to `answer_statement.xlsx` on subsequent runs.
+Default outputs:
 
 - `bank-output/master_statement.csv`: full bank narration, raw party/details,
   parsed counterparty and role, amounts, balances, statement totals, source file

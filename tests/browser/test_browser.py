@@ -1,4 +1,4 @@
-"""Browser smoke test: read real groups; apply keep/undo only to temporary fixtures."""
+"""Browser smoke test for settings and keep/undo using temporary fixtures."""
 import tempfile
 import threading
 from http.server import ThreadingHTTPServer
@@ -18,31 +18,6 @@ def main():
         page = browser.new_page(viewport={"width": 1440, "height": 1080}, device_scale_factor=1)
         errors = []
         page.on("pageerror", lambda error: errors.append(str(error)))
-        page.goto("http://127.0.0.1:8765")
-        page.wait_for_selector(".group-item")
-        assert page.locator(".group-item").count() == 21
-        page.locator(".preview img").first.wait_for()
-        for image in page.locator(".preview img").all():
-            expect(image).to_have_js_property("complete", True)
-            assert image.evaluate("i => i.naturalWidth > 0")
-
-        # Inspect PDF, DOCX and XLSX previews without changing customer files.
-        for group in ("#014", "#018", "#016"):
-            page.locator(".group-item").filter(has_text=group).click()
-            expect(page.locator(".preview .placeholder")).to_have_count(0)
-            assert page.locator(".file-card").count() >= 2
-            assert page.locator(".preview .placeholder").count() == 0
-        for image in page.locator(".preview img").all():
-            expect(image).to_have_js_property("complete", True)
-            assert image.evaluate("i => i.naturalWidth > 0")
-        page.evaluate("window.scrollTo(0, 0)")
-        page.screenshot(path=".tools/dashboard.png", full_page=True)
-        page.get_by_role("button", name="Validate & continue").click()
-        expect(page.locator("#validation")).to_be_visible()
-        assert "Still to resolve" in page.locator("#validation").inner_text()
-        page.set_viewport_size({"width": 390, "height": 844})
-        assert page.evaluate("document.documentElement.scrollWidth <= innerWidth")
-
         # Exercise actual browser keep/undo actions against isolated fixture documents.
         with tempfile.TemporaryDirectory() as temporary:
             base = Path(temporary)
@@ -101,7 +76,6 @@ def main():
                 expect(page.locator("#save-state")).to_have_text("Unsaved changes")
                 page.get_by_role("button", name="Discard changes").click()
                 expect(page.locator("#max-calls")).to_have_value("7")
-                page.screenshot(path=".tools/settings.png", full_page=True)
                 page.set_viewport_size({"width": 390, "height": 844})
                 assert page.evaluate("document.documentElement.scrollWidth <= innerWidth")
                 page.get_by_role("link", name="Back to review").click()

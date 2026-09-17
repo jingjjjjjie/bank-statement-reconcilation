@@ -14,4 +14,4 @@ python -m unittest discover -s tests/unit -t .
 python -m unittest tests.browser.test_office_preview
 ```
 
-Some browser checks run through `main()` rather than unittest; invoke those with `python -m tests.browser.test_source_browser`. The legacy `test_browser` smoke test expects an existing dashboard and specific sample data. Check its prerequisites before running it.
+Some browser checks run through `main()` rather than unittest; invoke those with `python -m tests.browser.test_source_browser`. The settings and keep/undo smoke test runs with `python -m tests.browser.test_browser` against temporary fixtures.
