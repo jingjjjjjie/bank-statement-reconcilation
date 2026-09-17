@@ -27,7 +27,8 @@ class FakeReviewer:
     def ask(self, prompt, schema, images=()):
         # Deterministic results test orchestration, not model accuracy.
         if schema == EXTRACTION:
-            return {"readable": True, "document_type": "receipt", "receipt_status": "receipt", "invoice_numbers": ["TEST-1"],
+            return {"readable": True, "supporting_evidence_status": "potential_support",
+                    "supporting_evidence_reason": "Visible transaction details", "document_type": "receipt", "receipt_status": "receipt", "invoice_numbers": ["TEST-1"],
                     "company": [], "brief_description": "fixture",
                     "references": ["TEST-1"],
                     "parties": [], "dates": [], "amounts_and_currencies": ["MYR 1"],

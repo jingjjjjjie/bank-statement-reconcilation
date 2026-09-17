@@ -29,6 +29,8 @@ MONEY = object_schema({"amount": TEXT, "currency": TEXT,
 EXTRACTION = object_schema({
     "readable": {"type": "boolean"}, "document_type": TEXT,
     "receipt_status": {"type": "string", "enum": ["receipt", "not_receipt", "unsure"]},
+    "supporting_evidence_status": {"type": "string", "enum": ["potential_support", "not_supporting", "uncertain"]},
+    "supporting_evidence_reason": TEXT,
     "invoice_numbers": TEXTS, "company": TEXTS, "brief_description": TEXT,
     "references": TEXTS, "parties": TEXTS, "dates": TEXTS,
     "amounts_and_currencies": TEXTS, "money": {"type": "array", "items": MONEY}, "details": TEXT,

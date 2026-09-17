@@ -8,7 +8,7 @@ from reconciliation.comparison_policy import combined_total
 
 
 FIELDS = ("document_id", "source_path", "original_path", "exact_duplicate_with", "file_format", "format_status", "unit", "raw_text",
-          "receipt_status", "document_type", "invoice_numbers", "company", "brief_description",
+          "receipt_status", "supporting_evidence_status", "supporting_evidence_reason", "document_type", "invoice_numbers", "company", "brief_description",
           "references", "parties", "dates", "amounts_and_currencies", "combined_total",
           "details", "annotations_and_signatures", "limitations", "status",
           "duplicate_with", "comparison", "error")
@@ -90,7 +90,7 @@ def export(path, index, state):
                            "status": status, "duplicate_with": json.dumps(related_paths, ensure_ascii=False),
                            "comparison": json.dumps(labels, ensure_ascii=False),
                            "error": error or unit.get("blocked", "")}
-                    for field in ("receipt_status", "document_type", "brief_description", "details", "annotations_and_signatures"):
+                    for field in ("receipt_status", "supporting_evidence_status", "supporting_evidence_reason", "document_type", "brief_description", "details", "annotations_and_signatures"):
                         row[field] = data.get(field, "")
                     for field in ("invoice_numbers", "company", "references", "parties", "dates",
                                   "amounts_and_currencies", "limitations"):

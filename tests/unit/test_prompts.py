@@ -5,7 +5,8 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from reconciliation.codex_reviewer import CodexReviewer, object_schema
+from jsonschema import validate, ValidationError
+from reconciliation.codex_reviewer import CodexReviewer, EXTRACTION, object_schema
 from reconciliation.prompts import load_prompt
 from tests.helpers import mock_codex
 
@@ -54,3 +55,20 @@ class PromptTests(unittest.TestCase):
                 (folder / "extraction.md").write_text(" \n", encoding="utf-8")
                 with self.assertRaisesRegex(ValueError, "Prompt file is empty"):
                     load_prompt("extraction")
+
+    def test_non_receipt_support_allows_empty_factual_fields(self):
+        """A claim can be potential evidence without fabricated invoice details."""
+        result = {"readable": True, "document_type": "expense_claim",
+                  "receipt_status": "not_receipt", "supporting_evidence_status": "potential_support",
+                  "supporting_evidence_reason": "Claim lists expenses, without proof of payment.",
+                  "invoice_numbers": [], "company": [], "brief_description": "Travel expense claim",
+                  "references": [], "parties": [], "dates": [], "amounts_and_currencies": [],
+                  "money": [], "details": "", "annotations_and_signatures": "", "limitations": []}
+        validate(result, EXTRACTION)
+        result.update(readable=False, document_type="", receipt_status="unsure",
+                      supporting_evidence_status="uncertain", supporting_evidence_reason="",
+                      brief_description="", limitations=["Document is unreadable."])
+        validate(result, EXTRACTION)
+        result["supporting_evidence_status"] = "accepted"
+        with self.assertRaises(ValidationError):
+            validate(result, EXTRACTION)
