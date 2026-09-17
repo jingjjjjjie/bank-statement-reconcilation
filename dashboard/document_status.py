@@ -7,6 +7,8 @@ from dashboard.content_review import work_path
 
 def snapshot(review):
     """Return document-level stages without starting model work."""
+    if review is None:
+        return {"prepared": False, "documents": []}
     work = work_path(review)
     if not (work / "index.json").is_file():
         return {"prepared": False, "documents": []}

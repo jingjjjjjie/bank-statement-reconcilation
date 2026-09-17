@@ -45,7 +45,7 @@ def handler_for(review, token, sources=None):
                 self.reply(403, {"error": "Local access only"})
                 return
             query = urlparse(self.path)
-            if review is None and query.path not in {"/source", "/source/", "/source.js", "/bank", "/bank/", "/bank.js", "/common.js", "/style.css", "/api/source", "/api/source/browse", "/api/source/preview", "/api/workspace", "/api/session", "/api/bank-statement", "/api/workflow-checks"}:
+            if review is None and query.path not in {"/documents", "/documents/", "/documents.js", "/documents.css", "/api/document-status", "/source", "/source/", "/source.js", "/bank", "/bank/", "/bank.js", "/common.js", "/style.css", "/api/source", "/api/source/browse", "/api/source/preview", "/api/workspace", "/api/session", "/api/bank-statement", "/api/workflow-checks"}:
                 self.send_response(302)
                 self.send_header("Location", "/source")
                 self.end_headers()

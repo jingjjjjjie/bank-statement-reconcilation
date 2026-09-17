@@ -155,6 +155,12 @@ class SourceSelectionTests(unittest.TestCase):
                     self.assertEqual(response.url, root + "/source")
                 with urllib.request.urlopen(root + "/api/source") as response:
                     self.assertIsNone(json.load(response)["active"])
+                for route in ("/documents", "/documents/", "/documents.js", "/documents.css"):
+                    with urllib.request.urlopen(root + route) as response:
+                        self.assertEqual(response.url, root + route)
+                        self.assertEqual(response.status, 200)
+                with urllib.request.urlopen(root + "/api/document-status") as response:
+                    self.assertEqual(json.load(response), {"prepared": False, "documents": []})
                 query = urlencode({"path": str(base), "kind": "bank"})
                 with urllib.request.urlopen(root + "/api/source/browse?" + query) as response:
                     self.assertEqual(json.load(response)["path"], str(base))

@@ -40,7 +40,25 @@ async function refreshDocuments() {
   renderDocuments();
 }
 
-$('#document-search').oninput = renderDocuments;
-$('#document-filter').onchange = renderDocuments;
+function rememberFilters() {
+  /* Keep this browser's document view when navigating away or reloading. */
+  try {
+    localStorage.setItem('document-status-filters', JSON.stringify({
+      search: $('#document-search').value, status: $('#document-filter').value,
+    }));
+  } catch { /* Storage restrictions must not prevent filtering. */ }
+  renderDocuments();
+}
+
+/* Restore preferences only; document progress always comes from saved review state. */
+try {
+  const filters = JSON.parse(localStorage.getItem('document-status-filters') || '{}');
+  if (typeof filters?.search === 'string') $('#document-search').value = filters.search;
+  if ([...$('#document-filter').options].some(option => option.value === filters?.status)) {
+    $('#document-filter').value = filters.status;
+  }
+} catch { /* Ignore unavailable storage or invalid old preferences. */ }
+$('#document-search').oninput = rememberFilters;
+$('#document-filter').onchange = rememberFilters;
 refreshDocuments().catch(error => toast(error.message));
 setInterval(() => refreshDocuments().catch(error => toast(error.message)), 5000);
