@@ -42,13 +42,18 @@ def validate(config):
     if not isinstance(config["model"], str) or not isinstance(config["reasoning"], str):
         raise ValueError("Model and reasoning must be strings")
     if config["model"]:
-        model = next((m for m in model_catalog() if m["id"] == config["model"]), None)
-        if not model:
+        catalog = model_catalog()
+        model = next((m for m in catalog if m["id"] == config["model"]), None)
+        # Fresh installations can use the project default before Codex caches capabilities.
+        uncached_default = (not catalog and config["model"] == DEFAULT_MODEL
+                            and config["reasoning"] == "default")
+        if not model and not uncached_default:
             raise ValueError("Model is not listed in the local Codex catalog; refresh Codex or choose its default")
-        if config["reasoning"] != "default" and config["reasoning"] not in model["reasoning"]:
-            raise ValueError("Selected reasoning level is not supported by this model")
-        if config["pictures_enabled"] and not model["vision"]:
-            raise ValueError("Selected model does not support pictures; disable pictures or choose a vision model")
+        if model:
+            if config["reasoning"] != "default" and config["reasoning"] not in model["reasoning"]:
+                raise ValueError("Selected reasoning level is not supported by this model")
+            if config["pictures_enabled"] and not model["vision"]:
+                raise ValueError("Selected model does not support pictures; disable pictures or choose a vision model")
     elif config["reasoning"] != "default":
         raise ValueError("Choose an explicit model before overriding reasoning")
     stages = config["stages"]
