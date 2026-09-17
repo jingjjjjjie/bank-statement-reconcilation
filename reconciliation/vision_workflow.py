@@ -23,7 +23,7 @@ from reconciliation.supporting_inventory import export as export_inventory
 from reconciliation.token_usage import summary as token_summary
 
 DEFAULT_WORK = WORKSPACE / "review"
-ACCEPTED_SUFFIXES = {".pdf", ".png", ".jpg", ".jpeg", ".tif", ".tiff", ".webp", ".bmp", ".xlsx"}
+ACCEPTED_SUFFIXES = {".pdf", ".png", ".jpg", ".jpeg", ".tif", ".tiff", ".webp", ".bmp", ".xlsx", ".docx"}
 
 
 class ReviewPending(ValueError):

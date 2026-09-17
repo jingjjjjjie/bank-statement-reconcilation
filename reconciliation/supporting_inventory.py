@@ -23,7 +23,7 @@ def disposition(digest, index, state):
     """Summarize all comparisons involving one document without hiding pending work."""
     documents = index["documents"]
     if not documents[digest].get("accepted", True):
-        return "not_accepted", [], [], "Format is outside PDF, picture, and .xlsx review"
+        return "not_accepted", [], [], "Format is outside PDF, picture, .xlsx, and .docx review"
     if documents[digest]["error"]:
         return "unresolved", [], [], documents[digest]["error"]
     units = documents[digest]["units"]

@@ -369,5 +369,31 @@ class WorkflowTests(unittest.TestCase):
                     workflow.run(self.work, index, state, RecordingReviewer())
 
 
+    def test_word_claim_is_prepared_and_read_by_word_stage(self):
+        """Accept Word claim text and send it through the existing Word model stage."""
+        from zipfile import ZipFile
+        with ZipFile(self.root / "claim.docx", "w") as document:
+            document.writestr("word/document.xml",
+                '<w:document xmlns:w="urn:test"><w:t>Travel claim MYR 45.00</w:t></w:document>')
+        index, state = self.prepared()
+        digest, claim = next((key, doc) for key, doc in index["documents"].items()
+                             if doc["paths"][0].endswith(".docx"))
+        self.assertTrue(claim["accepted"])
+        self.assertIsNone(claim["error"])
+        self.assertIn("Travel claim", claim["units"][0]["text"])
+        stages = []
+
+        class WordReviewer(FakeReviewer):
+            def ask(self, prompt, schema, images=()):
+                """Record extraction routing without making live model calls."""
+                if schema == EXTRACTION:
+                    stages.append(self.stage)
+                return super().ask(prompt, schema, images)
+
+        workflow.run(self.work, index, state, WordReviewer())
+        self.assertIn("word", stages)
+        self.assertIn(f"{digest}:0", state["units"])
+
+
 if __name__ == "__main__":
     unittest.main()
