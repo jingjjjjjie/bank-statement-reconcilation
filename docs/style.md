@@ -1,6 +1,6 @@
 # Bank reconciliation workbook style
 
-Reference: `YA24 - TSPLUG GH - BNC (sample).xlsx`, located in `Context.md`.
+Reference: `YA24 - TSPLUG GH - BNC (sample).xlsx`, located in `local/Context.md` (local, Git-ignored).
 Primary reference sheet: `DEC'25`. Other monthly sheets have different widths;
 the measurements below are specifically from December.
 

@@ -8,6 +8,7 @@ dashboard/.data/
 
 # Local customer records and audit helpers contain source-specific details.
 Context.md
+docs/local/
 duplicate-manifest.json
 issues.md
 bank-audit.md
