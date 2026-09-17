@@ -58,3 +58,15 @@ Document Status includes **Run all documents** (bounded by the configured parall
 Select a bank transaction and one or several accepted pieces to calculate a pending match. Python uses decimal arithmetic and shows the bank amount, individual allocations, supporting total, and difference. A separate **Accept match** action records approval; a nonzero difference requires a reason and remains visible. Pieces may be partially allocated across transactions. Accepted allocations reserve their amounts until **Undo match**; competing proposals cannot spend those amounts again. Refreshing extraction, changing source bytes, or changing the bank master invalidates affected approvals/proposals. Undo stale accepted matches before reallocation.
 
 Receipt extraction approvals, matches, and decision history are saved separately in `review/receipt-matches.json`; the original files and bank master are unchanged. Extraction CSV rows also include the raw `receipts` JSON. Old completed extraction units are not guessed into receipt records: refresh the extraction or manually review and enter their pieces. The final statement/unmatched-document export workflow remains separate; receipt match acceptance does not alter the existing bank-only export or completion gate.
+
+
+Multi-page receipt review now includes a document assembly step after page extraction.
+The model sees the page results and original PDF page images, and returns receipts with
+source unit numbers, location labels, and boundary-review flags. A receipt can span pages;
+a page can contain several receipts. This step uses the existing document-stage model,
+request limit, subscription login, and token accounting. Completed page results are reused.
+
+The extraction editor offers merge and split controls. Both clear the printed total for
+verification rather than summing repeated page totals. Resolve boundary flags before
+accepting. Incomplete assembly cannot be approved; changes to its source page results
+invalidate approval. Bank allocations remain separate from receipt boundaries.

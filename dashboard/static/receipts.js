@@ -30,7 +30,8 @@ function setReceiptData(data) {
   if ($('#receipt-unit')) {
   $('#receipt-unit').replaceChildren(...data.units.map(item => new Option(
     `${item.source_path.split(/[\\/]/).pop()} / ${item.label}`, item.key)));
-  if (data.units.some(item => item.key === unit)) $('#receipt-unit').value = unit;
+  const selected = data.units.find(item => item.key === unit) || data.units.find(item => item.document_id === unit?.split(':')[0]);
+  if (selected) $('#receipt-unit').value = selected.key;
   showReceiptUnit();
   }
   if ($('#receipt-bank')) { renderReceiptBanks(); renderSavedMatches(); }
@@ -48,6 +49,13 @@ function addReceiptPiece(piece=emptyPiece()) {
   /* Let the reviewer correct a model split without changing original images. */
   const card = node('fieldset', 'settings-card');
   card.receiptPiece = structuredClone(piece);
+  const unit = receiptData?.units.find(item => item.key === $('#receipt-unit').value);
+  if (unit?.assembled) {
+    receiptField(card, 'Source unit numbers (one per line; see page labels above)', 'source_units', piece.source_units || [], true);
+    const label = node('label', '', ' Boundaries need review');
+    const flag = node('input'); flag.type = 'checkbox'; flag.dataset.boundaryReview = 'true';
+    flag.checked = piece.needs_review !== false; label.prepend(flag); card.append(label);
+  }
   card.append(node('legend', '', 'Separate receipt / supporting piece'));
   receiptField(card, 'Location in image or page', 'location', piece.location);
   receiptField(card, 'Document type', 'document_type', piece.document_type);
@@ -58,6 +66,28 @@ function addReceiptPiece(piece=emptyPiece()) {
   receiptField(card, 'Limitations (one per line)', 'limitations', piece.limitations, true);
   const remove = node('button', 'button secondary', 'Remove this piece from extraction');
   remove.type = 'button'; remove.onclick = () => card.remove(); card.append(remove);
+  const split = node('button', 'button secondary', 'Split receipt');
+  split.type = 'button'; split.onclick = () => {
+    const pieces = readReceiptPieces(), position = [...$('#receipt-pieces').children].indexOf(card);
+    const original = pieces[position];
+    pieces.splice(position, 1, {...original, total:'', needs_review:true}, {...emptyPiece(), source_units:original.source_units, needs_review:true});
+    $('#receipt-pieces').replaceChildren(); pieces.forEach(addReceiptPiece);
+    $('#receipt-unit-status').textContent = 'Set the source locations and printed totals for both pieces, then resolve the boundary flags.';
+  };
+  const merge = node('button', 'button secondary', 'Merge with previous receipt');
+  merge.type = 'button'; merge.onclick = () => {
+    const pieces = readReceiptPieces(), position = [...$('#receipt-pieces').children].indexOf(card);
+    if (position < 1) return;
+    const left = pieces[position - 1], right = pieces[position];
+    const joined = {...left, location:[left.location,right.location].filter(Boolean).join('; '),
+      invoice_numbers:[...new Set([...left.invoice_numbers,...right.invoice_numbers])],
+      limitations:[...left.limitations,...right.limitations], total:'', needs_review:true};
+    if (unit?.assembled) joined.source_units = [...new Set([...left.source_units,...right.source_units])].sort((a,b) => a-b);
+    pieces.splice(position - 1, 2, joined);
+    $('#receipt-pieces').replaceChildren(); pieces.forEach(addReceiptPiece);
+    $('#receipt-unit-status').textContent = 'Merged provisionally. Verify the printed total and receipt boundaries before accepting.';
+  };
+  card.append(split, merge);
   $('#receipt-pieces').append(card);
 }
 
@@ -71,6 +101,12 @@ function showReceiptUnit() {
   $('#receipt-unit-status').textContent = unit.accepted ? 'Extraction accepted.' : unit.needs_refresh
     ? 'Older extraction has no separate receipt records. Re-extract or enter pieces after checking the original.'
     : 'Check each separate piece before accepting. Missing values stay blank.';
+  if (unit.assembled) {
+    $('#receipt-unit-status').textContent += ' ' + unit.source_units.map(source => `${source.number}: ${source.label}`).join(' | ');
+    if (unit.assembly_pending) $('#receipt-unit-status').textContent = 'Waiting for document receipt assembly. Run documents to continue.';
+    else if (unit.limitations?.length) $('#receipt-unit-status').textContent += ' Limitations: ' + unit.limitations.join('; ');
+  }
+  $('#receipt-form').querySelector('[type=submit]').disabled = !!unit.assembly_pending;
   for (const piece of unit.receipts) addReceiptPiece(piece);
   if (typeof showOriginal === 'function') showOriginal(unit).catch(receiptError);
 }
@@ -81,8 +117,12 @@ function readReceiptPieces() {
     const piece = structuredClone(card.receiptPiece || emptyPiece());
     for (const input of card.querySelectorAll('[data-field]')) {
       const key = input.dataset.field;
+      if (key === 'source_units') { piece[key] = input.value.split(/[\s,]+/).filter(Boolean).map(Number); continue; }
       piece[key] = Array.isArray(piece[key]) ? input.value.split('\n').map(value => value.trim()).filter(Boolean) : input.value.trim();
     }
+    const flag = card.querySelector('[data-boundary-review]');
+    if (flag) piece.needs_review = flag.checked;
+    else { delete piece.source_units; delete piece.needs_review; }
     return piece;
   });
 }

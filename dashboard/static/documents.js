@@ -60,6 +60,7 @@ function renderDocumentProgress() {
   const sum = field => rows.reduce((total, row) => total + row[field], 0);
   const stages = [
     {name:'Extracting documents', done:sum('units_read'), total:sum('units_total'), unit:'units'},
+    {name:'Assembling receipts', done:sum('assembly_done'), total:sum('assembly_total'), unit:'documents'},
     {name:'Screening possible duplicates', done:sum('pairs_screened') / 2, total:sum('pairs_total') / 2, unit:'pairs'},
     {name:'Comparing candidates', done:sum('comparisons') / 2, total:sum('candidates') / 2, unit:'comparisons'},
   ];

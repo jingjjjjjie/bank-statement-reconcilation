@@ -1,5 +1,6 @@
 """Summarize saved content-review progress for every source document."""
 from pathlib import Path
+from reconciliation.receipt_assembly import current_assembly
 
 from reconciliation.vision_workflow import load, removal_plan
 from dashboard.content_review import work_path, execution_status
@@ -42,6 +43,8 @@ def snapshot(review):
             status = "Extracting" if read else "Waiting for extraction"
         elif any(not state["units"][f"{digest}:{number}"].get("readable") for number in range(len(units))):
             status = "Needs attention"
+        elif len(units) > 1 and not current_assembly(document, state):
+            status = "Assembling receipts"
         elif screens[digest] < len(eligible) - 1:
             status = "Screening" if screens[digest] else "Waiting for screening"
         elif comparisons[digest] < candidates[digest]:
@@ -53,6 +56,7 @@ def snapshot(review):
         path = document["paths"][0]
         rows.append({"id": digest, "name": Path(path).name, "path": path, "status": status,
                      "approved_duplicate": digest in duplicates,
+                     "assembly_total": int(len(units) > 1), "assembly_done": int(len(units) > 1 and bool(current_assembly(document, state))),
                      "units_read": read, "units_total": len(units), "pairs_screened": screens[digest],
                      "pairs_total": max(len(eligible) - 1, 0), "candidates": candidates[digest],
                      "comparisons": comparisons[digest], "decisions": decisions[digest]})

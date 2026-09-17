@@ -6,6 +6,7 @@ from pathlib import Path
 
 from jsonschema import validate
 from reconciliation.codex_reviewer import RECEIPT
+from reconciliation.receipt_assembly import ASSEMBLED_RECEIPT, current_assembly, validate_assembly
 from reconciliation.duplicate_workflow import fingerprint
 from reconciliation.receipt_matching import allocated, amount, currency, proposal, revision, stale
 from reconciliation.vision_workflow import load, removal_plan
@@ -36,9 +37,14 @@ def context(review):
             if digest in removed or not document.get("accepted", True) or document["error"]:
                 continue
             source_hash = current_hash(document["paths"][0])
-            for number, unit in enumerate(document["units"]):
+            assembled = len(document["units"]) > 1
+            assembly = current_assembly(document, state) if assembled else None
+            review_units = [(-1, {"label": "Whole document", "blocked": False})] if assembled else enumerate(document["units"])
+            for number, unit in review_units:
                 key = f"{digest}:{number}"
-                raw = state["units"].get(key)
+                raw = assembly if assembled else state["units"].get(key)
+                if assembled and not raw:
+                    raw = {"receipts": [], "limitations": ["Waiting for document receipt assembly"]}
                 if not raw or unit.get("blocked"):
                     continue
                 binding = revision([state["index_sha256"], raw, source_hash])
@@ -49,7 +55,11 @@ def context(review):
                 units[key] = {"key": key, "document_id": digest, "unit": number, "label": unit["label"],
                               "source_path": document["paths"][0], "source_revision": binding,
                               "accepted": bool(accepted), "needs_refresh": "receipts" not in raw,
-                              "receipts": pieces, "readable": raw.get("readable", False)}
+                              "receipts": pieces, "readable": raw.get("readable", assembled),
+                              "assembled": assembled, "assembly_pending": assembled and assembly is None,
+                              "limitations": raw.get("limitations", []),
+                              "source_units": [{"number": n + 1, "label": source["label"]}
+                                               for n, source in enumerate(document["units"])]}
                 for position, piece in enumerate(pieces):
                     receipt_id = f"{digest}:u{number}:r{position}"
                     receipts[receipt_id] = {**piece, "receipt_id": receipt_id,
@@ -120,12 +130,19 @@ def accept_extraction(review, body):
     path, saved, units, receipts, banks = context(review)
     unit = units[body["key"]]
     verify_source(unit)
+    if unit.get("assembly_pending"):
+        raise ValueError("Run documents to finish receipt assembly before accepting")
     if any(match["review_status"] == "accepted" and any(
-            item["document_id"] == unit["document_id"] and item["unit"] == unit["unit"]
+            item["document_id"] == unit["document_id"] and (unit.get("assembled") or item["unit"] == unit["unit"])
             for item in match["supporting_items"]) for match in saved["matches"].values()):
         raise ValueError("Undo accepted matches for this unit before changing its receipts")
     pieces = body["receipts"]
-    validate(pieces, {"type": "array", "items": RECEIPT, "maxItems": 100})
+    validate(pieces, {"type": "array", "items": ASSEMBLED_RECEIPT if unit.get("assembled") else RECEIPT, "maxItems": 100})
+    if unit.get("assembled"):
+        validate_assembly({"receipts": pieces, "reviewed_units": [s["number"] for s in unit["source_units"]],
+                           "limitations": []}, len(unit["source_units"]))
+        if any(piece["needs_review"] for piece in pieces):
+            raise ValueError("Resolve flagged receipt boundaries before accepting")
     for piece in pieces:
         if piece["total"]:
             amount(piece["total"])

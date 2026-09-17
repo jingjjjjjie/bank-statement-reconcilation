@@ -21,6 +21,7 @@ from reconciliation.review_settings import CONFIG_PATH, config_for_manifest, loa
 from reconciliation.comparison_policy import route as comparison_route
 from reconciliation.supporting_inventory import export as export_inventory
 from reconciliation.token_usage import summary as token_summary
+from reconciliation.receipt_assembly import ASSEMBLY, current_assembly, input_revision, validate_assembly
 
 DEFAULT_WORK = WORKSPACE / "review"
 ACCEPTED_SUFFIXES = {".pdf", ".png", ".jpg", ".jpeg", ".tif", ".tiff", ".webp", ".bmp", ".xlsx", ".docx"}
@@ -279,6 +280,45 @@ def run(work, index, state, reviewer):
             print(f"Read {digest[:10]} / {label}", flush=True)
 
         run_jobs(unit_jobs(), apply_unit, workers)
+
+        def assembly_jobs():
+            """Join complete multi-unit evidence without repeating page extraction."""
+            for digest, document in documents.items():
+                if (not document.get("accepted", True) or document["error"]
+                        or len(document["units"]) < 2 or current_assembly(document, state)):
+                    continue
+                if any(unit.get("blocked") or f"{digest}:{n}" not in state["units"]
+                       for n, unit in enumerate(document["units"])):
+                    continue
+
+                def job(digest=digest, document=document):
+                    """Inspect all source units before proposing document receipt boundaries."""
+                    evidence = document
+                    if Path(document["paths"][0]).suffix.lower() == ".pdf" and config["pictures_enabled"]:
+                        units = extract(Path(document["paths"][0]), work / "assets" / "receipt-assembly" / digest,
+                                        {**config, "pdf_mode": "vision"})
+                        evidence = {**document, "units": units}
+                    originals, images = pack(evidence)
+                    payload = [{"source_unit": n + 1, "original": original,
+                                "extraction": state["units"][f"{digest}:{n}"]}
+                               for n, original in enumerate(originals)]
+                    prompt = load_prompt("receipt_assembly") + "\n" + json.dumps(payload, ensure_ascii=False)
+                    if len(images) > 40 or len(prompt) > 100000:
+                        raise ReviewPending("Document too large for receipt assembly; boundaries remain unresolved")
+                    value = ask(prompt, ASSEMBLY, images, stage=document_stage(document["paths"][0]),
+                                verify=lambda result: validate_assembly(result, len(document["units"])))
+                    return digest, {**value, "input_revision": input_revision(document, state)}
+
+                yield job
+
+        def apply_assembly(result):
+            """Save each assembled document independently for safe resume."""
+            digest, value = result
+            state.setdefault("assemblies", {})[digest] = value
+            checkpoint()
+            print(f"Assembled receipts {digest[:10]}", flush=True)
+
+        run_jobs(assembly_jobs(), apply_assembly, workers)
 
         # Strong local matches go straight to original comparison; screen all other pairs.
         ready = [d for d in documents if documents[d].get("accepted", True) and not documents[d]["error"] and all(
