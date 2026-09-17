@@ -1,6 +1,6 @@
 # Supporting-document review
 
-The agreed final comparison workflow is recorded in [FINAL_COMPARISON.md](FINAL_COMPARISON.md). Implement it after both extraction branches are ready.
+The agreed final comparison workflow is recorded in [FINAL_COMPARISON.md](docs/FINAL_COMPARISON.md). Implement it after both extraction branches are ready.
 
 Python 3.12 or later. Pass one uses the standard library. Pass two uses the packages in `requirements.txt` and an installed Codex CLI logged in through ChatGPT.
 
@@ -10,7 +10,9 @@ Python 3.12 or later. Pass one uses the standard library. Pass two uses the pack
 - `dashboard/`: Python server; HTML, JavaScript, and CSS live in `dashboard/static/`.
 - `tests/unit/`: offline regression tests; `tests/browser/`: optional browser checks.
 - `scripts/`: live Codex connection check.
-- `docs/`: bank-extraction and workbook-format documentation.
+- `docs/`: bank-extraction, workbook-format, and final-comparison documentation.
+- `config/`: saved review settings.
+- `docker/`: container image definition; `compose.yaml` stays at the root.
 
 Run commands from the repository root. For example:
 
@@ -19,7 +21,7 @@ python -m dashboard.app
 python -m unittest discover -s tests/unit -t .
 ```
 
-Configuration and existing review data stay at their current workspace paths. `AGENTS.md` and `FINAL_COMPARISON.md` remain at the root for the development contract.
+Review settings live in `config/review_config.json`; existing review data stays at its current workspace paths. `AGENTS.md` remains at the root for the development contract.
 
 ## Interactive dashboard
 
