@@ -12,7 +12,8 @@ from jsonschema import validate
 from reconciliation.review_settings import DEFAULT_MODEL
 from reconciliation.prompts import load_prompt
 from reconciliation.process_manager import ProcessManager, ReviewCancelled
-from reconciliation.token_usage import record, reported_usage
+from reconciliation import development_cache
+from reconciliation.token_usage import FIELDS, record, reported_usage
 
 
 def object_schema(properties):
@@ -93,6 +94,9 @@ class CodexReviewer:
         """Append token events without interleaving parallel writes."""
         with self._shared_lock:
             record(self.usage_path, entry)
+            shared = development_cache.root_for(self.work)
+            if shared is not None:
+                record(shared / "runs" / self.run_id / "token-usage.jsonl", entry)
 
     def ask(self, prompt, schema, images=()):
         # Content-addressed requests are resumable without repeating successful calls.
@@ -106,11 +110,22 @@ class CodexReviewer:
         folder.mkdir(exist_ok=True)
         result_path = folder / "result.json"
         self.last_result = result_path
+        self.last_shared = None
+        shared = development_cache.root_for(self.work)
+        if shared is not None:
+            self.last_shared = shared / "model-requests" / folder.name / "result.json"
+            if not result_path.exists() and self.last_shared.is_file():
+                shared_result = json.loads(self.last_shared.read_text(encoding="utf-8"))
+                validate(shared_result, schema)
+                development_cache.write_json(result_path, shared_result)
         if result_path.exists():
             result = json.loads(result_path.read_text(encoding="utf-8"))
             validate(result, schema)
+            (folder / "prompt.txt").write_text(prompt, encoding="utf-8")
+            development_cache.share_request(self.work, folder)
             self._record({"status": "cached", "run_id": self.run_id,
-                          "stage": self.stage, "model": self.model, "request": folder.name})
+                          "stage": self.stage, "model": self.model, "request": folder.name,
+                          "usage": {field: 0 for field in FIELDS}})
             return result
 
         # Require subscription login; never silently select an API-key connection.
@@ -146,8 +161,9 @@ class CodexReviewer:
                 raise ReviewCancelled("Review stopped by user")
             if self._calls[0] >= self.max_calls:
                 raise BudgetReached("Call limit reached; resume with the same command")
-            record(self.usage_path, {**entry, "status": "started"})
+            self._record({**entry, "status": "started"})
             self._calls[0] += 1
+        development_cache.share_request(self.work, folder)
         process_audit = {}
         status = "failed"
         try:
@@ -162,6 +178,7 @@ class CodexReviewer:
             usage = reported_usage(events_path)
             self._record({**entry, "status": status,
                           "usage": usage, **process_audit})
+            development_cache.share_request(self.work, folder)
         if self._cancelled.is_set():
             raise ReviewCancelled("Review stopped by user")
         if process.returncode or not output_path.exists():
@@ -171,8 +188,11 @@ class CodexReviewer:
         temporary = folder / f"result-{attempt_id}.json"
         temporary.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
         temporary.replace(result_path)
+        development_cache.share_request(self.work, folder)
         return result
 
     def invalidate(self):
         # Discard structurally valid responses that fail workflow coverage validation.
         self.last_result.unlink(missing_ok=True)
+        if self.last_shared is not None and development_cache.root_for(self.work) is not None:
+            self.last_shared.unlink(missing_ok=True)

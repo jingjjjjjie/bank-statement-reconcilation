@@ -10,6 +10,7 @@ from urllib.parse import parse_qs, urlparse
 from reconciliation.duplicate_workflow import fingerprint
 from reconciliation.review_settings import save_config
 from reconciliation.source_selection import SourceSelection
+from reconciliation import development_cache
 from dashboard import content_review, development, document_status, office_preview
 from dashboard.review import Review, workflow_guide
 
@@ -45,7 +46,7 @@ def handler_for(review, token, sources=None):
                 self.reply(403, {"error": "Local access only"})
                 return
             query = urlparse(self.path)
-            if review is None and query.path not in {"/documents", "/documents/", "/documents.js", "/documents.css", "/api/document-status", "/source", "/source/", "/source.js", "/bank", "/bank/", "/bank.js", "/common.js", "/style.css", "/api/source", "/api/source/browse", "/api/source/preview", "/api/workspace", "/api/session", "/api/bank-statement", "/api/workflow-checks"}:
+            if review is None and query.path not in {"/documents", "/documents/", "/documents.js", "/documents.css", "/api/document-status", "/source", "/source/", "/source.js", "/bank", "/bank/", "/bank.js", "/common.js", "/style.css", "/api/development-mode", "/api/source", "/api/source/browse", "/api/source/preview", "/api/workspace", "/api/session", "/api/bank-statement", "/api/workflow-checks"}:
                 self.send_response(302)
                 self.send_header("Location", "/source")
                 self.end_headers()
@@ -63,6 +64,8 @@ def handler_for(review, token, sources=None):
                         self.reply(200, workflow_guide(review))
                     elif query.path == "/api/config":
                         self.reply(200, review.settings())
+                    elif query.path == "/api/development-mode":
+                        self.reply(200, development_cache.mode())
                     elif query.path == "/api/development-decisions":
                         self.reply(200, development.snapshot(review))
                     elif query.path == "/api/source":
@@ -165,6 +168,16 @@ def handler_for(review, token, sources=None):
                     raise ValueError("Invalid request size")
                 body = json.loads(self.rfile.read(length))
                 with server_lock:
+                    if self.path.startswith("/api/development/") and not development_cache.mode()["enabled"]:
+                        raise ValueError("Enable Development / testing mode in Settings first")
+                    if self.path == "/api/development-mode":
+                        if review and content_review.execution_status(review)["running"]:
+                            raise ValueError("Stop the current review before changing development mode")
+                        mode = development_cache.set_mode(body["enabled"])
+                        if mode["enabled"] and review:
+                            development.seed(review)
+                        self.reply(200, mode)
+                        return
                     if self.path == "/api/keep":
                         review.keep(body["group"], body["id"])
                     elif self.path == "/api/undo":
@@ -231,6 +244,7 @@ def handler_for(review, token, sources=None):
                         with tempfile.TemporaryDirectory() as temporary:
                             output = export(master, template, body["company"],
                                             Path(temporary) / "answer_statement_bank_only.xlsx")
+                            development_cache.capture(review.manifest_path, "bank-export", [output])
                             self.reply(200, output.read_bytes(),
                                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
                         return

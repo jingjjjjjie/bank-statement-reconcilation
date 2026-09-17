@@ -4,6 +4,7 @@ import json
 import os
 import string
 from pathlib import Path
+from reconciliation import development_cache
 
 from reconciliation.duplicate_workflow import duplicate_groups, fingerprint, finish_organization, organize, supporting_files
 
@@ -116,6 +117,7 @@ class SourceSelection:
         result = extract(source, year)
         output.parent.mkdir(parents=True, exist_ok=True)
         write_master(result, output)
+        development_cache.capture(Path(manifest), "bank-extraction")
         return {"path": str(output), "existing": False}
 
     def start(self, expected=None):

@@ -1,5 +1,12 @@
 /* Shared local API helpers; model calls never originate from these pages. */
 const $ = s => document.querySelector(s);
+function showDevelopmentMode(data) {
+  document.querySelectorAll('[data-development-tools]').forEach(element => {element.hidden = !data.enabled;});
+  const toggle = $('#development-mode');
+  if (toggle) {toggle.checked = data.enabled; toggle.disabled = false;}
+  const status = $('#development-mode-status');
+  if (status) status.textContent = data.enabled ? 'Development tools and shared cache are enabled.' : 'Normal mode. Development tools and shared cache are disabled.';
+}
 let token;
 const node = (tag, cls, text) => {const el = document.createElement(tag); if (cls) el.className = cls; if (text !== undefined) el.textContent = text; return el;};
 async function api(path, body) {
@@ -37,3 +44,7 @@ function renderWorkflow(data) {
   });
 }
 api('/api/workflow-checks').then(renderWorkflow).catch(() => {});
+api('/api/development-mode').then(showDevelopmentMode).catch(error => {
+  const status = $('#development-mode-status');
+  if (status) status.textContent = error.message;
+});

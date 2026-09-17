@@ -1,35 +1,57 @@
 """Remember human duplicate decisions for repeat local test runs."""
 
 import json
+import hashlib
 from datetime import datetime, timezone
 from pathlib import Path
+from uuid import uuid4
 
 from dashboard import content_review
 from reconciliation.vision_workflow import load
+from reconciliation import development_cache
 
 
 def path(review):
-    """Keep the test preset beside the dashboard's recoverable decisions."""
-    return review.data / "development-decisions.json"
+    """Prefer a pinned shared preset, then the latest automatically saved choices."""
+    project = development_cache.project_folder(review.manifest_path)
+    if project is None:
+        return review.data / "development-decisions.json"
+    preset = project / "decisions/preset.json"
+    return preset if preset.exists() else project / "decisions/latest.json"
 
 
 def snapshot(review):
-    """Report whether a saved preset exists without applying it."""
+    """Report reusable decisions and cached outputs without applying anything."""
     target = path(review)
-    if not target.is_file():
-        return {"saved": False, "exact": 0, "content": 0}
-    data = json.loads(target.read_text(encoding="utf-8"))
-    return {"saved": True, "at": data["at"], "exact": len(data["exact"]),
-            "content": len(data["content"])}
+    result = {"saved": False, "exact": 0, "content": 0}
+    if target.is_file():
+        data = json.loads(target.read_text(encoding="utf-8"))
+        result.update(saved=bool(data["exact"] or data["content"]), at=data["at"],
+                      exact=len(data["exact"]), content=len(data["content"]))
+    root = development_cache.root_for(review.manifest_path)
+    if root is not None:
+        result["cache"] = {"path": str(root), "model_results": len(list((root / "model-requests").glob("*/result.json")))}
+    return result
 
 
-def remember(review):
-    """Save completed human choices using original paths and content hashes."""
+def evidence_key(index, state, pair):
+    """Bind reusable content decisions to their evidence and model settings."""
+    value = {"result": state["pairs"][pair], "config": index.get("config"),
+             "models": state.get("stage_models")}
+    return hashlib.sha256(json.dumps(value, sort_keys=True).encode()).hexdigest()
+
+
+def capture(review, pin=False):
+    """Automatically preserve decisions; pinning keeps a preset through later undos."""
+    project = development_cache.project_folder(review.manifest_path)
+    if project is None and not pin:
+        return None
     exact = []
     for group in review.snapshot()["groups"]:
         if group["status"] == "reviewed" and group["kept"]:
             record = review.records[group["kept"]]
-            exact.append({"hash": record["SHA256"], "original": record["OriginalPath"]})
+            exact.append({"hash": record["SHA256"], "original": record["OriginalPath"],
+                          "relative": Path(record["OriginalPath"]).relative_to(review.root).as_posix()})
     content = {}
     work = content_review.work_path(review)
     if (work / "index.json").is_file():
@@ -38,21 +60,47 @@ def remember(review):
             raise ValueError("Prepared content review belongs to another manifest")
         for pair, decision in state["decisions"].items():
             if pair in state["pairs"]:
-                content[pair] = {"verdict": decision["verdict"], "reason": decision["reason"]}
+                content[pair] = {**decision, "evidence": evidence_key(index, state, pair)}
     data = {"at": datetime.now(timezone.utc).isoformat(), "exact": exact, "content": content}
-    target = path(review)
-    target.parent.mkdir(parents=True, exist_ok=True)
-    temporary = target.with_suffix(".tmp")
-    temporary.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
-    temporary.replace(target)
+    data.update(version=1, source=str(review.root), manifest=str(review.manifest_path))
+    if project is None:
+        development_cache.write_json(path(review), data)
+    else:
+        folder = project / "decisions"
+        development_cache.write_json(folder / "history" / f"{uuid4().hex}.json", data)
+        development_cache.write_json(folder / "latest.json", data)
+        if pin:
+            development_cache.write_json(folder / "preset.json", data)
+        development_cache.capture(review.manifest_path, "human-decisions")
     return snapshot(review)
+
+
+def remember(review):
+    """Pin the current human choices for explicit replay during later tests."""
+    return capture(review, pin=True)
+
+
+def seed(review):
+    """Preserve existing outputs and choices when development mode is enabled."""
+    project = development_cache.project_folder(review.manifest_path)
+    if project is None:
+        return
+    for parent in review.manifest_path.parent.rglob("model-cache"):
+        for folder in parent.iterdir():
+            if folder.is_dir():
+                development_cache.share_request(parent.parent, folder)
+    legacy = review.data / "development-decisions.json"
+    preset = project / "decisions/preset.json"
+    if legacy.is_file() and not preset.exists():
+        development_cache.copy_atomic(legacy, preset)
+    capture(review)
 
 
 def apply(review, reviewer):
     """Replay matching human choices only after an explicit named action."""
     if not isinstance(reviewer, str) or not reviewer.strip():
         raise ValueError("Enter your name before applying remembered decisions")
-    if getattr(review, "content_thread", None) and review.content_thread.is_alive():
+    if content_review.execution_status(review)["running"]:
         raise ValueError("Wait for the current content-review batch to finish")
     target = path(review)
     if not target.is_file():
@@ -79,7 +127,7 @@ def apply(review, reviewer):
             raise ValueError("Prepared content review belongs to another manifest")
         for pair, saved in data["content"].items():
             result = state["pairs"].get(pair)
-            if result and pair not in state["decisions"] and (saved["verdict"] == "keep_both" or
+            if result and pair not in state["decisions"] and saved.get("evidence") == evidence_key(index, state, pair) and (saved["verdict"] == "keep_both" or
                     result["classification"] == "same_document"):
                 content_review.decide(review, pair, saved["verdict"], reviewer.strip(),
                                       "Development replay: " + saved["reason"])

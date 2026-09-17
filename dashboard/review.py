@@ -270,6 +270,7 @@ class Review:
                 action["status"] = "rolled_back"
                 write_json(self.state_path, self.state)
                 raise
+            self.cache_decisions()
 
     def undo(self, group):
         # Restore the original copies only if both the survivor and recovery files are unchanged.
@@ -301,6 +302,12 @@ class Review:
                 action["status"] = "done"
                 write_json(self.state_path, self.state)
                 raise
+            self.cache_decisions()
+
+    def cache_decisions(self):
+        """Keep development history outside the review folder when enabled."""
+        from dashboard import development
+        development.capture(self)
 
     def document(self, file_id):
         # PDFs and images use native previews; Office files use structured visual pages.

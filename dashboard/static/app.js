@@ -101,7 +101,10 @@ $('#validate').onclick = async () => {
 function showPreset(data) {
   $('#exact-development-status').textContent = data.saved
     ? `Saved ${data.exact} exact and ${data.content} content decisions on ${new Date(data.at).toLocaleString()}.`
-    : 'No remembered decisions yet.';
+    : 'No saved decisions yet.';
+  const cacheInfo = data.cache ? ` Shared cache: ${data.cache.model_results} model results.` : '';
+  const status = document.querySelector('#exact-development-status, #development-status');
+  if (status) status.textContent += cacheInfo;
   $('#exact-apply').disabled = !data.saved;
 }
 $('#exact-remember').onclick = async () => {

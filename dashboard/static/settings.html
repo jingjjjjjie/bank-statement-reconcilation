@@ -23,6 +23,7 @@
     <header><div class="breadcrumb">Workspace <span>/</span> Settings</div><a class="header-settings" href="/">← Back to review</a></header>
     <section class="page-heading"><div><div class="eyebrow">WORKFLOW CONFIGURATION</div><h1>Review settings</h1><p>Configure document processing, model selection, and request limits. Exact duplicates use fixed byte checks; these defaults control content review.</p></div></section>
     <div id="settings-error" class="validation" role="alert" hidden></div>
+    <section class="settings-card"><label class="setting-switch"><span><strong>Development / testing mode</strong><small>Enable shared output caching and decision replay tools. Turning this off keeps saved data and normal review history.</small></span><input id="development-mode" type="checkbox" role="switch" disabled></label><p id="development-mode-status" role="status">Loading mode?</p></section>
     <form id="settings-form">
       <fieldset id="settings-fields" disabled>
         <section class="settings-card"><div class="section-title"><span>01</span><div><h2>Documents</h2><p>These options affect content review. Dashboard previews stay available.</p></div></div>
@@ -59,9 +60,9 @@
         </section>
       </fieldset>
       <div id="settings-refresh" class="validation" hidden>Prepared inputs need refreshing before the next content review. Previous metadata and decisions are archived.<code class="block-code">.tools\python\python.exe vision_workflow.py prepare --refresh</code></div>
-      <div class="settings-savebar"><div><strong id="save-state" role="status" aria-live="polite">Loading settings…</strong><p>Saving settings does not start a review or make Codex calls.</p></div><div><button type="button" class="button secondary" id="use-defaults" disabled>Use testing defaults</button><button type="button" class="button secondary" id="discard-settings" disabled>Discard changes</button><button type="submit" class="button dark" id="save-settings" disabled>Save settings</button></div></div>
+      <div class="settings-savebar"><div><strong id="save-state" role="status" aria-live="polite">Loading settings…</strong><p>Saving settings does not start a review or make Codex calls.</p></div><div><button type="button" class="button secondary" id="use-defaults" data-development-tools hidden disabled>Use testing defaults</button><button type="button" class="button secondary" id="discard-settings" disabled>Discard changes</button><button type="submit" class="button dark" id="save-settings" disabled>Save settings</button></div></div>
     </form>
-    <section class="settings-card"><h2>Development decisions</h2><p>Save your human decisions from both duplicate passes. Apply them only to the same original paths and unchanged file hashes after you click the button. Content decisions require completed comparisons.</p>
+    <section class="settings-card" data-development-tools hidden><h2>Development cache</h2><p>Save your human decisions from both duplicate passes. Apply them only to the same original paths and unchanged file hashes after you click the button. Content decisions require completed comparisons.</p>
       <p id="development-status" role="status">Loading remembered decisions…</p>
       <label class="setting-field"><strong>Your name for replayed content decisions</strong><input id="development-reviewer" autocomplete="name" placeholder="Admin name"></label>
       <div class="content-actions"><button class="button secondary" id="remember-decisions" type="button">Remember current decisions</button><button class="button secondary" id="apply-decisions" type="button">Apply remembered decisions</button></div>

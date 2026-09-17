@@ -1,5 +1,17 @@
 /* Settings page: changes are explicit and never start document processing. */
 let savedSettings, dirty = false;
+$('#development-mode').onchange = async event => {
+  const enabled = event.target.checked;
+  event.target.disabled = true;
+  try {
+    if (!token) token = (await api('/api/session')).token;
+    showDevelopmentMode(await api('/api/development-mode', {enabled}));
+    showDevelopment(await api('/api/development-decisions'));
+  } catch (error) {
+    showDevelopmentMode({enabled: !enabled});
+    toast(error.message);
+  }
+};
 const stages = [
   ['pdf', 'PDF reading', 'Uses the PDF processing option above: extracted text, vision fallback, or full vision.'],
   ['images', 'JPG / image reading', 'Vision only for now, including PNG and other supported images. No separate OCR step. Picture processing must be on.'],
@@ -106,7 +118,10 @@ Promise.all([api('/api/session'), api('/api/config')]).then(([session, config]) 
 function showDevelopment(data) {
   $('#development-status').textContent = data.saved
     ? `Saved ${data.exact} exact and ${data.content} content decisions on ${new Date(data.at).toLocaleString()}.`
-    : 'No remembered decisions yet.';
+    : 'No saved decisions yet.';
+  const cacheInfo = data.cache ? ` Shared cache: ${data.cache.model_results} model results.` : '';
+  const status = document.querySelector('#exact-development-status, #development-status');
+  if (status) status.textContent += cacheInfo;
   $('#apply-decisions').disabled = !data.saved;
 }
 $('#remember-decisions').onclick = async () => {

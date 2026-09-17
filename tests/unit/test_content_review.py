@@ -45,6 +45,9 @@ class FixtureReviewer:
 class ContentPageTests(unittest.TestCase):
     def setUp(self):
         """Create two nonidentical image files in an isolated source folder."""
+        mode = patch("reconciliation.development_cache.mode", return_value={"enabled": True})
+        mode.start()
+        self.addCleanup(mode.stop)
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         base = Path(self.temp.name)

@@ -8,6 +8,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from pathlib import Path
 from reconciliation.paths import WORKSPACE
+from reconciliation import development_cache
 from reconciliation.prompts import load_prompt
 from time import sleep
 
@@ -471,6 +472,7 @@ def report(work, index, state):
     (work / "report.md").write_text("\n".join(rows), encoding="utf-8")
     save(work / "report.json", {"documents": documents, "state": state, "problems": problems, "token_usage": usage})
     export_inventory(work / "supporting-inventory.csv", index, state)
+    development_cache.capture(Path(index["manifest"]), "content-review")
     return problems
 
 

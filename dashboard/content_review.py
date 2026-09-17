@@ -154,6 +154,8 @@ def decide(review, pair, verdict, reviewer, reason):
         raise ValueError("Prepared review belongs to a different manifest")
     current_inventory(index, state)
     save_decision(work, index, state, pair, verdict, reviewer, reason)
+    from dashboard import development
+    development.capture(review)
     return snapshot(review)
 
 
@@ -169,6 +171,8 @@ def undo(review, pair, reviewer, reason):
         raise ValueError("Prepared review belongs to a different manifest")
     current_inventory(index, state)
     undo_decision(work, index, state, pair, reviewer, reason)
+    from dashboard import development
+    development.capture(review)
     return snapshot(review)
 
 
