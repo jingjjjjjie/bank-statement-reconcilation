@@ -1,4 +1,5 @@
 """Persist receipt-level extraction approvals and human bank allocations."""
+from concurrent.futures import ThreadPoolExecutor
 import csv
 import json
 from datetime import datetime, timezone
@@ -9,7 +10,7 @@ from reconciliation.codex_reviewer import RECEIPT
 from reconciliation.receipt_assembly import ASSEMBLED_RECEIPT, current_assembly, validate_assembly
 from reconciliation.duplicate_workflow import fingerprint
 from reconciliation.receipt_matching import allocated, amount, currency, proposal, revision, stale
-from reconciliation.vision_workflow import load, removal_plan
+from reconciliation.vision_workflow import load_index, removal_plan
 from dashboard.content_review import execution_status, work_path
 from dashboard.review import write_json
 
@@ -31,14 +32,25 @@ def context(review, *, include_banks=True, prepared=None):
     if (work / "index.json").exists():
         from dashboard import regeneration
         jobs = regeneration.snapshot(review)
-        index, state = prepared if prepared is not None else load(work)
+        index, state = prepared if prepared is not None else load_index(work)
         if Path(index["manifest"]).resolve() != review.manifest_path.resolve():
             raise ValueError("Prepared review belongs to another manifest")
         removed = removal_plan(state)
+        originals = {document["paths"][0] for digest, document in index["documents"].items()
+                     if digest not in removed and document.get("accepted", True) and not document["error"]}
+        previews = {unit["image"]: unit["image_sha256"]
+                    for document in index["documents"].values() for unit in document["units"]
+                    if unit["image"]} if prepared is None else {}
+        paths = sorted(originals | previews.keys())
+        # Hash fresh bytes in parallel; never infer integrity from timestamps or cached hashes.
+        with ThreadPoolExecutor(max_workers=8) as pool:
+            hashes = dict(zip(paths, pool.map(current_hash, paths)))
+        if any(hashes[path] != digest for path, digest in previews.items()):
+            raise ValueError("Prepared image changed; create a new review")
         for digest, document in index["documents"].items():
             if digest in removed or not document.get("accepted", True) or document["error"]:
                 continue
-            source_hash = current_hash(document["paths"][0])
+            source_hash = hashes[document["paths"][0]]
             assembled = len(document["units"]) > 1
             assembly = current_assembly(document, state) if assembled else None
             review_units = [(-1, {"label": "Whole document", "blocked": False})] if assembled else enumerate(document["units"])
@@ -100,7 +112,12 @@ def snapshot(review):
     """Expose separate receipts, remaining amounts, and proposed or accepted matches."""
     if review is None:
         return {"revision": "", "units": [], "receipts": [], "transactions": [], "matches": []}
-    path, saved, units, receipts, banks = context(review)
+    return snapshot_context(context(review))
+
+
+def snapshot_context(evidence):
+    """Serialize verified evidence without rereading sources."""
+    path, saved, units, receipts, banks = evidence
     used = allocated(saved["matches"])
     for key, receipt in receipts.items():
         receipt["allocated_amount"] = str(used.get(key, 0))
@@ -117,8 +134,10 @@ def require_current(review, expected):
     """Reject stale browser submissions and concurrent content-review mutations."""
     if execution_status(review)["running"]:
         raise ValueError("Wait for the document batch to finish before approving or matching")
-    if snapshot(review)["revision"] != expected:
+    evidence = context(review)
+    if snapshot_context(evidence)["revision"] != expected:
         raise ValueError("Evidence or decisions changed; reload before saving")
+    return evidence
 
 
 def verify_source(item):
@@ -139,8 +158,8 @@ def record(path, saved, action, reviewer, before, after):
 
 def accept_extraction(review, body):
     """Accept corrected pieces without merging totals or changing the source document."""
-    require_current(review, body["revision"])
-    path, saved, units, receipts, banks = context(review)
+    evidence = require_current(review, body["revision"])
+    path, saved, units, receipts, banks = evidence
     unit = units[body["key"]]
     verify_source(unit)
     if unit.get("regeneration") and unit["regeneration"]["status"] != "completed":
@@ -167,7 +186,24 @@ def accept_extraction(review, body):
     value = {"source_revision": unit["source_revision"], "receipts": pieces, "reviewer": body.get("reviewer")}
     saved["extractions"][body["key"]] = value
     record(path, saved, "accept_extraction", body.get("reviewer"), previous, value)
-    return snapshot(review)
+    unit.update(accepted=True, receipts=pieces)
+    return snapshot_units(evidence)
+
+
+def snapshot_units(evidence):
+    """Rebuild receipt records after a decision without rereading source files."""
+    path, saved, units, receipts, banks = evidence
+    updated = {}
+    for item in units.values():
+        evidence_revision = revision([item["source_revision"], item["receipts"]])
+        for position, piece in enumerate(item["receipts"]):
+            key = f'{item["document_id"]}:u{item["unit"]}:r{position}'
+            updated[key] = {**piece, "receipt_id": key, "document_id": item["document_id"],
+                            "unit": item["unit"], "source_path": item["source_path"],
+                            "accepted": item["accepted"],
+                            "evidence_revision": evidence_revision}
+    return snapshot_context((path, saved, units, updated, banks))
+
 
 
 def change_match(review, body):

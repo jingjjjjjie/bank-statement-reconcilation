@@ -4,7 +4,7 @@ import mimetypes
 from pathlib import Path
 from urllib.parse import quote
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import Response
 
 from dashboard.routes import active_context
@@ -19,22 +19,30 @@ def file_response(path, mime=None):
     return Response(path.read_bytes(), media_type=mime or mimetypes.guess_type(path.name)[0] or "application/octet-stream")
 
 
+def matching_source(kind: str, id: str, request: Request):
+    """Capture one review and validate read-only evidence without the decision lock."""
+    review = request.app.state.context.review
+    if review is None:
+        raise HTTPException(409, "Select a workspace before viewing evidence")
+    return matching_review.evidence(review, kind, id)
+
+
 @router.get("/matching-preview")
-def matching_preview(kind: str, id: str, state=Depends(active_context)):
+def matching_preview(path=Depends(matching_source)):
     """Describe a validated bank or supporting source."""
-    return extraction_preview.describe(matching_review.evidence(state.review, kind, id))
+    return extraction_preview.describe(path)
 
 
 @router.get("/matching-image")
-def matching_image(kind: str, id: str, page: int = Query(0, ge=0), state=Depends(active_context)):
+def matching_image(page: int = Query(0, ge=0), path=Depends(matching_source)):
     """Render one validated evidence page."""
-    return Response(extraction_preview.image(matching_review.evidence(state.review, kind, id), page), media_type="image/png")
+    return Response(extraction_preview.image(path, page), media_type="image/png")
 
 
 @router.get("/matching-office")
-def matching_office(kind: str, id: str, page: int = Query(0, ge=0), state=Depends(active_context)):
+def matching_office(page: int = Query(0, ge=0), path=Depends(matching_source)):
     """Return structured Office evidence without executing embedded content."""
-    return office_preview.page(matching_review.evidence(state.review, kind, id), page)
+    return office_preview.page(path, page)
 
 
 @router.get("/matching-file")
@@ -47,16 +55,35 @@ def matching_file(kind: str, id: str, state=Depends(active_context)):
     return response
 
 
+def extraction_source(id: str, request: Request):
+    """Validate one Step 2 original independently of slow workflow status checks."""
+    review = request.app.state.context.review
+    if review is None:
+        raise HTTPException(409, "Select a workspace before viewing evidence")
+    return content_review.source(review, id)
+
+
 @router.get("/extraction-preview")
-def extraction(id: str, state=Depends(active_context)):
+def extraction(path=Depends(extraction_source)):
     """Describe a source referenced by the prepared review."""
-    return extraction_preview.describe(content_review.source(state.review, id))
+    return extraction_preview.describe(path)
 
 
 @router.get("/extraction-preview-image")
-def extraction_image(id: str, page: int = Query(0, ge=0), state=Depends(active_context)):
+def extraction_image(page: int = Query(0, ge=0), path=Depends(extraction_source)):
     """Render the requested original source page."""
-    return Response(extraction_preview.image(content_review.source(state.review, id), page), media_type="image/png")
+    if page == 0 and path.suffix.lower() in {".jpg", ".jpeg", ".png", ".webp"}:
+        from PIL import Image
+        with Image.open(path) as picture:
+            if getattr(picture, "n_frames", 1) == 1 and picture.format in {"JPEG", "PNG", "WEBP"}:
+                return file_response(path, Image.MIME[picture.format])
+    return Response(extraction_preview.image(path, page), media_type="image/png")
+
+
+@router.get("/extraction-office")
+def extraction_office(page: int = Query(0, ge=0), path=Depends(extraction_source)):
+    """Read one validated Step 2 Office page without the workflow decision lock."""
+    return office_preview.page(path, page)
 
 
 @router.get("/content-file")

@@ -3,6 +3,7 @@ import csv
 import json
 import tempfile
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -56,6 +57,37 @@ class ReceiptMatchingTests(unittest.TestCase):
         """Explicitly accept the supplied extraction as a named fixture reviewer."""
         return receipt_review.accept_extraction(self.review, {"revision": self.view()["revision"],
             "key": self.key, "receipts": self.pieces if pieces is None else pieces, "reviewer": "Tester"})
+
+    def test_accept_response_matches_reload_with_one_evidence_scan(self):
+        """Reuse verified evidence while keeping revised pieces and stale matches exact."""
+        self.accept_pieces()
+        self.change("combined", "propose", [(0, "45.00"), (1, "15.00")])
+        expected = self.view()["revision"]
+        pieces = [{**self.pieces[0], "total": "42.00"}]
+        with patch.object(receipt_review, "context", wraps=receipt_review.context) as scans:
+            result = receipt_review.accept_extraction(self.review, {
+                "revision": expected, "key": self.key, "receipts": pieces})
+        self.assertEqual(scans.call_count, 1)
+        self.assertEqual(result, self.view())
+        self.assertTrue(result["matches"][0]["stale"])
+
+
+    def test_parallel_validation_rejects_modified_prepared_image(self):
+        """Faster review reads and saves must still reject tampered derived evidence."""
+        image = self.work / 'page.png'
+        image.write_bytes(b'prepared image')
+        self.index['documents'][self.digest]['units'][0].update(
+            image=str(image), image_sha256=fingerprint(image))
+        (self.work / 'index.json').write_text(json.dumps(self.index))
+        self.state['index_sha256'] = fingerprint(self.work / 'index.json')
+        self.save_state()
+        revision = self.view()['revision']
+        image.write_bytes(b'changed image')
+        with self.assertRaisesRegex(ValueError, 'Prepared image changed'):
+            receipt_review.accept_extraction(self.review, {
+                'revision': revision, 'key': self.key, 'receipts': self.pieces})
+        self.assertFalse((self.work / 'receipt-matches.json').exists())
+
 
     def test_accept_extraction_without_reviewer_keeps_audit_history(self):
         """Removing the name field still records the explicit approval and its time."""

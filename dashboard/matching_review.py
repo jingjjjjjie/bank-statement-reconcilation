@@ -109,7 +109,7 @@ def snapshot(review):
     """Expose suggestions, human outcomes, remaining evidence and changed-source flags."""
     path,state,banks,items,index,facts = context(review)
     hashes = {digest:source_hash(doc['paths'][0]) for digest,doc in index['documents'].items()}
-    bank_hashes = {bank['source']:source_hash(bank['source']) for bank in banks.values()}
+    bank_hashes = {source: source_hash(source) for source in {bank['source'] for bank in banks.values()}}
     choices = {}
     for stage in ('matching','contextual'):
         for payload in (CACHE/stage).glob('input-*.json'):

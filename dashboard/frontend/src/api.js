@@ -42,7 +42,10 @@ export async function api(path, body, options = {}) {
     appState.changes++;
     if (path === '/api/source/start') await loadSession();
     if (path === '/api/development-mode') appState.development = data.enabled;
-    refreshNavigation().catch(error => toast(error.message));
+    // Reviewing extracted fields does not change pipeline stage completion.
+    if (!['/api/receipts/accept', '/api/receipts/classify'].includes(path)) {
+      refreshNavigation().catch(error => toast(error.message));
+    }
   }
   return data;
 }

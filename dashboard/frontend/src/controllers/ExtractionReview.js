@@ -161,7 +161,7 @@ async function renderOriginal() {
   $('#original-status').textContent = 'Loading preview…';
   const office = ['word', 'spreadsheet'].includes(info.kind);
   if (office && page < info.office_pages) {
-    const data = await api(`/api/office-view?content_id=${encodeURIComponent(unit.document_id)}&page=${page}`);
+    const data = await api(`/api/extraction-office?id=${encodeURIComponent(unit.document_id)}&page=${page}`);
     if (request !== originalRequest) return;
     renderOfficePreview(target, data);
     layoutMedia();

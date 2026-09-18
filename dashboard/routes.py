@@ -36,6 +36,17 @@ async def context(request: Request):
         yield state
 
 
+async def interrupt_context(request: Request):
+    """Allow cancellation and status reads to bypass slow workflow requests."""
+    state = request.app.state.context
+    expected = request.headers.get("X-Review-Id")
+    if request.method == "POST" and expected and expected != state.review_id:
+        raise HTTPException(409, "The active workspace changed. Reload this page before saving.")
+    if state.review is None:
+        raise HTTPException(409, "Select a workspace and proceed first")
+    return state.review
+
+
 def active_context(state=Depends(context)):
     """Require an active project while holding its decision lock."""
     if state.review is None:

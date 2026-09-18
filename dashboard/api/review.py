@@ -1,9 +1,9 @@
 """Review state and explicit human actions; business validation stays in Python workflows."""
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from fastapi.responses import Response
 from pydantic import BaseModel, StrictBool
 
-from dashboard.routes import context, active_context
+from dashboard.routes import context, active_context, interrupt_context
 from dashboard.review import workflow_guide
 from dashboard import content_review, development, document_status, matching_review, receipt_review
 from reconciliation import development_cache
@@ -49,9 +49,9 @@ def workspace(state=Depends(context)):
 
 
 @router.get("/workflow-checks")
-def workflow(state=Depends(context)):
-    """Read verified workflow gates without starting any stage."""
-    return workflow_guide(state.review)
+def workflow(request: Request):
+    """Read header indicators without blocking evidence saves on the decision lock."""
+    return workflow_guide(request.app.state.context.review)
 
 
 @router.get("/state")
@@ -216,9 +216,9 @@ def match_receipts(body: dict, state=Depends(active_context)):
 
 
 @router.get("/matching")
-def matching(state=Depends(active_context)):
-    """Read the existing frozen comparison review."""
-    return matching_review.snapshot(state.review)
+def matching(review=Depends(interrupt_context)):
+    """Read a captured review without queuing behind unrelated workflow checks."""
+    return matching_review.snapshot(review)
 
 
 @router.post("/matching-decide")
