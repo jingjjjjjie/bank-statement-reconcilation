@@ -76,6 +76,7 @@ export function usePage(root, initialize) {
   });
   onActivated(() => {
     active = true;
+    if (queryChanged) queryChanged();
     document.addEventListener('visibilitychange', visibility);
     polls.forEach(schedule);
     if (previousChanges !== appState.changes && !dirty() && refresh) {

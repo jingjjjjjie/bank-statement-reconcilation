@@ -14,7 +14,7 @@ export const router = createRouter({
     { path: '/content-review', redirect: '/documents' },
     { path: '/settings', component: () => import('./views/Settings.vue'), meta: { title: 'Settings' } },
     { path: '/complete', component: () => import('./views/Completion.vue'), meta: { title: 'Completion' } },
-    { path: '/extraction-review', component: () => import('./views/ExtractionReview.vue'), meta: { title: 'Review extraction', body: 'extraction-workspace', fullscreen: true } },
+    { path: '/extraction-review', component: () => import('./views/ExtractionReview.vue'), meta: { title: 'Step 2 · Review results', body: 'extraction-workspace', fullscreen: true } },
     { path: '/matching', component: () => import('./views/Matching.vue'), meta: { title: 'Final review', body: 'matching-app', fullscreen: true } },
   ],
   scrollBehavior(to, from, saved) { return saved || positions.get(to.path) || { top: 0 }; },

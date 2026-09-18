@@ -59,6 +59,13 @@ class DocumentStatusTests(unittest.TestCase):
                     page.screenshot(path=".tools/documents-mobile.png", full_page=True)
                     page.locator("#document-search").fill("first.png")
                     expect(page.locator("#document-rows tr")).to_have_count(1)
+                    for filename in ("first.png", "second.png"):
+                        page.locator("#document-search").fill(filename)
+                        page.locator("#document-rows").get_by_role("link", name="Review results", exact=True).click()
+                        digest = next(key for key, document in index["documents"].items()
+                                      if Path(document["paths"][0]).name == filename)
+                        expect(page.locator("#receipt-unit")).to_have_value(digest + ":0")
+                        page.get_by_role("link", name="Back to document status").click()
                     self.assertFalse(errors)
                     browser.close()
             finally:

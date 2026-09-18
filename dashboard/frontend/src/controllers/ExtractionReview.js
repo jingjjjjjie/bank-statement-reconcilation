@@ -212,11 +212,14 @@ root.addEventListener('click', event => {
 
 const receipts = installReceipts(page, {showOriginal, clearOriginal, saved: () => {extractionDirty = false;}});
 page.dirty(() => extractionDirty);
+page.onRefresh(() => receipts.reload());
 page.onQuery(() => {
   const key = new URLSearchParams(routeQuery()).get('unit');
   if (key && $('#receipt-unit').value !== key) {
-    $('#receipt-unit').value = key;
-    receipts.showUnit();
+    const target = receipts.data?.units.find(unit => unit.key === key || unit.document_id === key.split(':')[0]);
+    if (target?.key === $('#receipt-unit').value) return;
+    if (extractionDirty && !confirm('Discard unsaved results and open this document?')) return;
+    receipts.selectUnit(key, false);
   }
 });
 

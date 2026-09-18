@@ -36,11 +36,19 @@ function setReceiptData(data) {
   if ($('#receipt-unit')) {
   $('#receipt-unit').replaceChildren(...data.units.map(item => new Option(
     `${item.source_path.split(/[\\/]/).pop()} / ${item.label}`, item.key)));
-  const selected = data.units.find(item => item.key === unit) || data.units.find(item => item.document_id === unit?.split(':')[0]);
-  if (selected) $('#receipt-unit').value = selected.key;
-  showReceiptUnit();
+  selectReceiptUnit(unit);
   }
   if ($('#receipt-bank')) { renderReceiptBanks(); renderSavedMatches(); }
+}
+
+function selectReceiptUnit(key, force = true) {
+  /* Open only the requested document, including assembled multi-page results. */
+  const selected = receiptData?.units.find(item => item.key === key) ||
+    receiptData?.units.find(item => item.document_id === key?.split(':')[0]);
+  const value = key ? selected?.key || '' : $('#receipt-unit').value;
+  if (!force && $('#receipt-unit').value === value) return;
+  $('#receipt-unit').value = value;
+  showReceiptUnit();
 }
 
 function receiptField(card, label, key, value, multiline=false) {
@@ -224,5 +232,6 @@ if ($('#stop-documents')) $('#stop-documents').onclick = () => receiptAction(asy
 });
 if ($('#receipt-unit') || $('#receipt-bank')) loadReceiptResults().catch(receiptError);
 
-return {get data() { return receiptData; }, error: receiptError, showUnit: showReceiptUnit};
+return {get data() { return receiptData; }, error: receiptError, showUnit: showReceiptUnit,
+  selectUnit: selectReceiptUnit, reload: loadReceiptResults};
 }

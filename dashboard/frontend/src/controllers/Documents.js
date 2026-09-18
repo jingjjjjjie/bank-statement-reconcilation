@@ -35,7 +35,7 @@ function renderDocuments() {
     open.href = `/api/content-file?id=${encodeURIComponent(item.id)}`;
     open.target = '_blank'; open.rel = 'noopener';
     const file = node('td', 'document-actions');
-    const extraction = node('a', 'receipt-review-link', 'Review receipts');
+    const extraction = node('a', 'receipt-review-link', 'Review results');
     extraction.href = `/extraction-review?unit=${encodeURIComponent(item.id + ':0')}`;
     file.append(extraction, open);
     tr.append(title, node('td'), file);
@@ -103,7 +103,7 @@ function renderDocumentProgress() {
   }
   $('#document-run-status').textContent = documentRequestMessage || documentState.run_error ||
     (documentState.running ? 'You can leave this page; extraction continues and progress is saved.' :
-      'Open Review receipts beside a document to check its extraction.');
+      'Open Review results beside a document to check its extraction.');
 }
 
 function rememberFilters() {
