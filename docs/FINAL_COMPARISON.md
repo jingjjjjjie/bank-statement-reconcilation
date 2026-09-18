@@ -1,6 +1,10 @@
 # Final comparison branch — agreed context
 
-Saved 2026-09-16. Planning only: implement this branch once both the bank-statement extraction branch and supporting-document processor are ready. Do not implement it as part of saving this specification. Existing code is not proof that these requirements are complete.
+Saved 2026-09-16. The user subsequently authorized implementing the in-app final review using the frozen matching cache (2026-09-18). `/matching` now reviews that snapshot; it does not imply that current extraction/assembly or general multi-session imports are complete. The original broader requirements and remaining open decisions follow.
+
+Current implementation: all 240 saved bank entries, original evidence previews, candidate selection, approve/deny/undo, shared remaining balances, unmatched-supporting view, history and CSV export. Human decisions live in the active project's `final-review/decisions.json`, bound to the exact cached evidence. No model calls occur during review. A changed cache requires a separate import/migration; it cannot silently inherit approvals. The frozen cache is currently the explicitly authorized `full-statement-240` experiment and must match the active project manifest. Legacy receipt-match approvals must be migrated or undone before starting this ledger; the two workflows cannot reserve the same evidence independently.
+
+Conservative interim export rule for the still-open partial-support question: only a current approval whose monetary allocations fully cover the bank payment receives Supporting. Partial/context-only approvals remain visibly approved but export No supporting with their difference and notes. This policy is exposed in the UI and can be revisited without losing decision history. Missing source amounts/currencies are not guessed; such documents can be attached as contextual evidence. Cross-currency conversion and correction of cached monetary facts are outside this snapshot review.
 
 ## Purpose and inputs
 

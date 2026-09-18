@@ -14,6 +14,7 @@
     <a class="nav-item" href="/content-review">Content review</a>
     <a class="nav-item active" href="/documents" aria-current="page">Document status</a>
     <a class="nav-item" href="/bank">Bank statement</a>
+    <a class="nav-item" href="/matching">Final review</a>
     <a class="nav-item" href="/settings">Settings</a>
     <a class="nav-item" href="/complete">Completion</a>
   </aside>
@@ -30,14 +31,9 @@
       <p id="document-empty" class="document-empty" hidden></p>
     </section>
     <section class="settings-card"><h2>Review individual receipts</h2><p>Check the original alongside editable receipt pieces on the dedicated review page.</p><a class="button dark" href="/extraction-review">Review extraction</a><p id="receipt-error" class="validation" role="alert" hidden></p><label class="setting-field">Reviewer name<input id="receipt-reviewer" autocomplete="name"></label></section>
-    <section class="settings-card" id="receipt-match-panel">
-      <h2>Match receipts to a bank transaction</h2><p>Select one receipt for a separate payment, or several for a combined payment. Invoice and payment proof for the same expense must not be counted as separate expenses. Amount agreement alone does not prove a match.</p>
-      <label class="setting-field">Find a transaction<input id="receipt-bank-search" type="search" placeholder="Amount, date, party or reference"></label>
-      <label class="setting-field">Bank transaction<select id="receipt-bank"></select></label>
-      <p id="receipt-bank-detail"></p><p><a href="/bank">View bank statement and source</a></p>
-      <form id="receipt-match-form"><div id="receipt-allocations"></div><label class="setting-field">Review notes / reason for any difference<input id="receipt-match-reason"></label><button id="propose-receipt-match" class="button secondary" type="submit">Calculate proposed match</button></form>
-      <div id="receipt-proposal" aria-live="polite"></div>
-      <h3>Saved matches</h3><div id="receipt-saved-matches"></div>
+    <section class="settings-card">
+      <h2>Final matching review</h2><p>Review bank transactions alongside original evidence. Approve or deny suggestions, choose other candidates, and track the remaining supporting amounts in one place.</p>
+      <a class="button dark" href="/matching">Open final review →</a>
     </section>
   </main>
   <div id="toast" role="status" aria-live="polite" hidden></div>

@@ -157,6 +157,9 @@ def accept_extraction(review, body):
 
 def change_match(review, body):
     """Propose, accept, reject, or undo an allocation with immutable decision history."""
+    final_state = review.manifest_path.parent / "final-review/decisions.json"
+    if final_state.exists() and body.get("action") in {"propose", "accept"}:
+        raise ValueError("Use Final review for matching; its saved decisions reserve the available evidence")
     require_current(review, body["revision"])
     path, saved, units, receipts, banks = context(review)
     bank_id, action = body["bank_transaction_id"], body["action"]

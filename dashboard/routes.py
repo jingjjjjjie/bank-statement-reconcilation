@@ -16,9 +16,14 @@ from dashboard import content_review, development, document_status, office_previ
 from dashboard.review import Review, workflow_guide
 from dashboard import receipt_review
 from dashboard import extraction_preview
+from dashboard import matching_review
 
 
 ASSETS = {"/review": ("index.html", "text/html; charset=utf-8"),
+          "/matching": ("matching.html", "text/html; charset=utf-8"),
+          "/matching/": ("matching.html", "text/html; charset=utf-8"),
+          "/matching.js": ("matching.js", "text/javascript"),
+          "/matching.css": ("matching.css", "text/css"),
           "/extraction-review": ("extraction-review.html", "text/html; charset=utf-8"),
           "/extraction-review/": ("extraction-review.html", "text/html; charset=utf-8"),
           "/extraction-review.js": ("extraction-review.js", "text/javascript"),
@@ -107,7 +112,25 @@ def handler_for(review, token, sources=None):
                     self.reply(200, {"token": token})
                     return
                 with server_lock:
-                    if query.path == "/api/state":
+                    if query.path == "/api/matching":
+                        self.reply(200, matching_review.snapshot(review))
+                    elif query.path == "/api/matching-export":
+                        self.reply(200, matching_review.export_csv(review), "text/csv; charset=utf-8")
+                    elif query.path in {"/api/matching-preview", "/api/matching-image", "/api/matching-office", "/api/matching-file"}:
+                        source = matching_review.evidence(review, params["kind"][0], params["id"][0])
+                        page = int(params.get("page", ["0"])[0])
+                        if query.path == "/api/matching-preview":
+                            self.reply(200, extraction_preview.describe(source))
+                        elif query.path == "/api/matching-image":
+                            self.reply(200, extraction_preview.image(source, page), "image/png")
+                        elif query.path == "/api/matching-office":
+                            self.reply(200, office_preview.page(source, page))
+                        else:
+                            mime = mimetypes.guess_type(source.name)[0] or "application/octet-stream"
+                            if source.suffix.lower() not in {".pdf", ".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp", ".txt", ".csv", ".xlsx", ".docx"}:
+                                mime = "application/octet-stream"
+                            self.reply(200, source.read_bytes(), mime)
+                    elif query.path == "/api/state":
                         self.reply(200, {**review.snapshot(), "token": token})
                     elif query.path == "/api/workspace":
                         self.reply(200, review.workspace() if review else {"name": "No active review", "period": "Choose a source folder"})
@@ -211,6 +234,9 @@ def handler_for(review, token, sources=None):
                         if mode["enabled"] and review:
                             development.seed(review)
                         self.reply(200, mode)
+                        return
+                    if self.path == "/api/matching-decide":
+                        self.reply(200, matching_review.decide(review, body))
                         return
                     if self.path == "/api/keep":
                         review.keep(body["group"], body["id"])
