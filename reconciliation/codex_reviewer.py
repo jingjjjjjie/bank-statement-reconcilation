@@ -10,7 +10,7 @@ from pathlib import Path
 
 from jsonschema import validate
 from reconciliation.review_settings import DEFAULT_MODEL
-from reconciliation.prompts import load_prompt
+from reconciliation.prompts import load_prompt, load_schema
 from reconciliation.process_manager import ProcessManager, ReviewCancelled
 from reconciliation import development_cache
 from reconciliation.token_usage import FIELDS, record, reported_usage
@@ -24,23 +24,9 @@ def object_schema(properties):
 
 TEXT = {"type": "string"}
 TEXTS = {"type": "array", "items": TEXT}
-MONEY = object_schema({"amount": TEXT, "currency": TEXT,
-                       "role": {"type": "string", "enum": ["line_item", "invoice_total", "grand_total"]}})
-RECEIPT = object_schema({
-    "location": TEXT, "document_type": TEXT, "invoice_numbers": TEXTS,
-    "brief_description": TEXT, "total": TEXT, "currency": TEXT, "limitations": TEXTS,
-})
-EXTRACTION = object_schema({
-    "receipts": {"type": "array", "items": RECEIPT},
-    "readable": {"type": "boolean"}, "document_type": TEXT,
-    "receipt_status": {"type": "string", "enum": ["receipt", "not_receipt", "unsure"]},
-    "supporting_evidence_status": {"type": "string", "enum": ["potential_support", "not_supporting", "uncertain"]},
-    "supporting_evidence_reason": TEXT,
-    "invoice_numbers": TEXTS, "company": TEXTS, "brief_description": TEXT,
-    "references": TEXTS, "parties": TEXTS, "dates": TEXTS,
-    "amounts_and_currencies": TEXTS, "money": {"type": "array", "items": MONEY}, "details": TEXT,
-    "annotations_and_signatures": TEXT, "limitations": TEXTS,
-})
+EXTRACTION = load_schema("extraction")
+MONEY = EXTRACTION["properties"]["money"]["items"]
+RECEIPT = EXTRACTION["properties"]["receipts"]["items"]
 SCREEN = object_schema({"comparisons": {"type": "array", "items": object_schema({
     "right_id": TEXT, "candidate": {"type": "boolean"}, "reason": TEXT,
 })}})

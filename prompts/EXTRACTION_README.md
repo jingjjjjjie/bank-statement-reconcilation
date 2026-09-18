@@ -1,0 +1,15 @@
+# Extraction prompt files
+
+- `styles.md`: shared instructions prepended to model requests.
+- `extraction.md`: active page/image/sheet extraction instructions.
+- `extraction.schema.json`: editable JSON output schema loaded by Python and
+  supplied to Codex through `--output-schema`. It is also used to validate results.
+- `receipt_assembly.md`: instructions for combining supporting pieces across units.
+- `pdf_text.md`: additional instructions for experimental text-only extraction.
+
+The schema is kept alongside the prompt, rather than duplicated inside its text.
+Both are part of the model request. Preserve required application field names and
+types when editing the schema; changing them may also require Python/UI changes.
+Restart long-running application processes after schema edits. New workflow
+processes load the schema on startup. Changed schemas produce different request
+cache keys. Desktop shortened drafts do not replace the active prompt.
