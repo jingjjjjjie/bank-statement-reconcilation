@@ -66,5 +66,5 @@ def image(path, page):
         picture.seek(page)
         rendered = ImageOps.exif_transpose(picture).convert("RGB")
         output = io.BytesIO()
-        rendered.save(output, format="PNG")
+        rendered.save(output, format="PNG", compress_level=1)
         return output.getvalue()

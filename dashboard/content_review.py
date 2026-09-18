@@ -6,7 +6,7 @@ from pathlib import Path
 from reconciliation.codex_reviewer import BudgetReached, CodexReviewer, ReviewCancelled
 from reconciliation.duplicate_workflow import check, fingerprint
 from reconciliation.review_settings import load_config, stage_settings
-from reconciliation.vision_workflow import active_config, current_inventory, decide as save_decision, load, prepare as prepare_review, run, undo_decision
+from reconciliation.vision_workflow import active_config, current_inventory, decide as save_decision, load, load_index, prepare as prepare_review, run, undo_decision
 
 
 def work_path(review):
@@ -186,8 +186,8 @@ def undo(review, pair, reviewer, reason):
 
 
 def source(review, digest):
-    """Serve only unchanged documents named in the prepared review."""
-    index, _ = load(work_path(review))
+    """Verify the original and its index without scanning unrelated derived previews."""
+    index, _ = load_index(work_path(review))
     path = Path(index["documents"][digest]["paths"][0])
     if fingerprint(path) != digest:
         raise ValueError("Source changed; refresh the review")

@@ -107,11 +107,17 @@ def prepare(manifest_path, work, config_path=None, refresh=False):
     print(f"Prepared {len(documents)} unique documents locally; no model calls made.")
 
 
-def load(work):
-    # Refuse edited input metadata or tampered previews instead of trusting stale approvals.
+def load_index(work):
+    """Validate prepared metadata without reading derived page images."""
     index, state = read(work / "index.json"), read(work / "state.json")
     if fingerprint(work / "index.json") != state["index_sha256"]:
         raise ValueError("Prepared index changed; create a new review")
+    return index, state
+
+
+def load(work):
+    """Validate metadata and every prepared image before using extraction evidence."""
+    index, state = load_index(work)
     for document in index["documents"].values():
         for unit in document["units"]:
             if unit["image"] and fingerprint(Path(unit["image"])) != unit["image_sha256"]:
