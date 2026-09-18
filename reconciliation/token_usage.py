@@ -11,10 +11,14 @@ def record(path, entry):
     """Append one durable audit event before or after a Codex attempt."""
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
+    event = {"at": datetime.now(timezone.utc).isoformat(), **entry}
     with path.open("a", encoding="utf-8") as log:
-        log.write(json.dumps({"at": datetime.now(timezone.utc).isoformat(), **entry}) + "\n")
+        log.write(json.dumps(event) + "\n")
         log.flush()
         os.fsync(log.fileno())
+    if path.name == 'token-usage.jsonl':
+        from reconciliation.workspace_usage import persist
+        persist(path, event)
 
 
 def reported_usage(path):
@@ -36,25 +40,32 @@ def reported_usage(path):
 
 def summary(path):
     """Total reported tokens and expose attempts whose usage is unknown."""
-    totals = {key: 0 for key in FIELDS}
-    attempts = {}
-    cache_hits = 0
+    events = []
     if Path(path).exists():
         for line in Path(path).read_text(encoding="utf-8").splitlines():
             try:
-                event = json.loads(line)
+                events.append(json.loads(line))
             except json.JSONDecodeError:
                 continue
-            if event.get("status") == "cached":
-                cache_hits += 1
-            elif event.get("id"):
-                attempts[event["id"]] = event
+    return summarize(events)
+
+
+def summarize(events):
+    """Aggregate audit events without counting cached or reasoning tokens twice."""
+    totals = {key: 0 for key in FIELDS}
+    attempts = {}
+    cache_hits = 0
+    for event in events:
+        if event.get("status") == "cached":
+            cache_hits += 1
+        elif event.get("id"):
+            attempts[event["id"]] = event
     unknown = 0
     by_stage = {}
     by_model = {}
     for event in attempts.values():
         usage = event.get("usage")
-        if not isinstance(usage, dict):
+        if not isinstance(usage, dict) or any(type(usage.get(k)) is not int or usage[k] < 0 for k in FIELDS):
             unknown += 1
             continue
         stage = by_stage.setdefault(event.get("stage", "unknown"), {key: 0 for key in FIELDS})

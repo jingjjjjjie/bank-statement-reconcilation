@@ -85,6 +85,7 @@ class CodexReviewer:
 
     def _record(self, entry):
         """Append token events without interleaving parallel writes."""
+        entry = {"event_id": uuid4().hex, **entry}
         with self._shared_lock:
             record(self.usage_path, entry)
             shared = development_cache.root_for(self.work)

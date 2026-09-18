@@ -45,7 +45,7 @@ usePage(root, initialize);
           </dl>
           <div class="resume-command"><strong>Start or resume from the Development folder</strong><code>.tools\python\python.exe vision_workflow.py run</code><small>Finish the exact-duplicate review first. A command-line --max-calls value overrides this saved limit for that run.</small></div>
         </section>
-        <section class="settings-card"><div class="section-title"><span>04</span><div><h2>Recorded token usage</h2><p>Codex calls made by this document-review workflow from tracking onward.</p></div></div>
+        <section class="settings-card"><div class="section-title"><span>04</span><div><h2>Workspace token usage</h2><p>Codex calls made by this document-review workflow from tracking onward.</p></div></div>
           <div id="token-usage" aria-live="polite">Loading usage…</div>
           <pre id="token-breakdown"></pre>
           <small>Counts come from Codex's reported usage. Failed or interrupted attempts without a usage event are shown as unknown, so totals may be incomplete. Cached input is part of input tokens.</small>

@@ -12,6 +12,7 @@ from reconciliation.review_settings import (
     DEFAULTS, config_for_manifest, content_settings, load_config, model_catalog, model_settings, revision,
 )
 from reconciliation.token_usage import summary as token_summary
+from reconciliation.workspace_usage import workspace_summary
 from dashboard import office_preview
 
 
@@ -68,7 +69,7 @@ class Review:
                 if state.get("model_config") and model_settings(state["model_config"]) != model_settings(config):
                     refresh = True
         return {"config": config, "defaults": DEFAULTS, "revision": revision(config), "requires_refresh": refresh,
-                "token_usage": token_summary(self.manifest_path.parent / "review" / "token-usage.jsonl"),
+                "token_usage": workspace_summary(),
                 "models": model_catalog()}
 
     def workspace(self):

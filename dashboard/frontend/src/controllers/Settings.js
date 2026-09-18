@@ -64,16 +64,7 @@ function showSettings(data) {
   $('#max-calls').value = data.config.max_calls;
   $('#max-parallel').value = data.config.max_parallel;
   renderStages(data);
-  const usage = data.token_usage;
-  if (usage?.totals) {
-    const totals = usage.totals;
-    $('#token-usage').textContent = `Total ${(totals.input_tokens + totals.output_tokens).toLocaleString()} · Input ${totals.input_tokens.toLocaleString()} (cached ${totals.cached_input_tokens.toLocaleString()}) · Output ${totals.output_tokens.toLocaleString()} (reasoning ${totals.reasoning_output_tokens.toLocaleString()}) · ${usage.attempts} attempts · ${usage.unknown_attempts} unknown · ${usage.cache_hits} cache hits`;
-    const lines = ['By stage:', ...Object.entries(usage.by_stage || {}).map(([name, value]) => `  ${name}: ${(value.input_tokens + value.output_tokens).toLocaleString()}`), 'By model:', ...Object.entries(usage.by_model || {}).map(([name, value]) => `  ${name}: ${(value.input_tokens + value.output_tokens).toLocaleString()}`)];
-    $('#token-breakdown').textContent = usage.attempts ? lines.join('\n') : 'No tracked Codex calls yet.';
-  } else {
-    $('#token-usage').textContent = 'Token tracking is unavailable until the dashboard server is restarted.';
-    $('#token-breakdown').textContent = '';
-  }
+  showUsage(data.token_usage);
   $('#settings-refresh').hidden = !data.requires_refresh;
   $('#settings-fields').disabled = false;
   $('#use-defaults').disabled = false;
@@ -151,4 +142,17 @@ page.dirty(() => dirty);
 
 
 page.onRefresh(async () => showSettings(await api('/api/config')));
+function showUsage(usage) {
+  // Update accounting without resetting unsaved form fields.
+  if (usage?.totals) {
+    const totals = usage.totals;
+    $('#token-usage').textContent = `${usage.complete === false ? "Partial workspace total" : "Workspace total"} ${(totals.input_tokens + totals.output_tokens).toLocaleString()} · Input ${totals.input_tokens.toLocaleString()} (cached ${totals.cached_input_tokens.toLocaleString()}) · Output ${totals.output_tokens.toLocaleString()} (reasoning ${totals.reasoning_output_tokens.toLocaleString()}) · ${usage.attempts} attempts · ${usage.unknown_attempts} unknown · ${usage.cache_hits} cache hits`;
+    const lines = ['By stage:', ...Object.entries(usage.by_stage || {}).map(([name, value]) => `  ${name}: ${(value.input_tokens + value.output_tokens).toLocaleString()}`), 'By model:', ...Object.entries(usage.by_model || {}).map(([name, value]) => `  ${name}: ${(value.input_tokens + value.output_tokens).toLocaleString()}`)];
+    $('#token-breakdown').textContent = usage.attempts ? lines.join('\n') : 'No tracked Codex calls yet.';
+  } else {
+    $('#token-usage').textContent = 'Token tracking is unavailable until the dashboard server is restarted.';
+    $('#token-breakdown').textContent = '';
+  }
+}
+pollVisible(async () => showUsage((await api('/api/config')).token_usage), 10000);
 }
