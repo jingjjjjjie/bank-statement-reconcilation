@@ -29,8 +29,8 @@ usePage(root, initialize);
           <p>Choose a model and reasoning effort for each stage. Local extraction happens before model reading. Exact duplicate checks use no model.</p>
           <div id="stage-settings"></div>
         </section>
-        <section class="settings-card"><div class="section-title"><span>03</span><div><h2>Request limit per run</h2><p>A run is one execution of the content-review command.</p></div></div>
-          <p>One shared allowance across all reading and comparison stages. Changing models does not reset the counter.</p>
+        <section class="settings-card"><div class="section-title"><span>03</span><div><h2>Request limit per run</h2><p>A run processes the remaining document extraction and receipt assembly.</p></div></div>
+          <p>One shared allowance for extraction and receipt assembly. Changing models does not reset the counter.</p>
           <div class="budget-grid">
             <label class="setting-field"><strong>Maximum new Codex requests</strong><input id="max-calls" type="number" min="1" max="1000" required aria-describedby="call-example call-definition"><small>1–1,000 requests. This is a safety ceiling; processing stops earlier when work is finished. Applies when the next run starts; it does not change a batch already running.</small></label>
             <div class="call-example"><span class="eyebrow">WITH YOUR LIMIT</span><p id="call-example" aria-live="polite">Loading saved limit…</p></div>

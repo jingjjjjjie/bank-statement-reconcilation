@@ -106,7 +106,7 @@ class Review:
         work = self.manifest_path.parent / "review"
         if (work / "index.json").exists():
             try:
-                content_done = not gate(*load(work))
+                content_done = not gate(*load(work), extraction_only=True)
             except (OSError, ValueError, KeyError):
                 pass
         exact_done = exact_done or content_done
@@ -151,7 +151,7 @@ class Review:
         content = False
         if exact and (work / "index.json").is_file():
             try:
-                content = not gate(*load(work))
+                content = not gate(*load(work), extraction_only=True)
             except (OSError, ValueError, KeyError):
                 pass
         master = self.manifest_path.parent / "bank-output" / "master_statement.csv"
@@ -348,7 +348,7 @@ def workflow_guide(review):
             pass
     stages = [("Workspace", "/", bool(review)),
               ("Exact duplicates", "/review", exact),
-              ("Content review", "/content-review", content),
+              ("Documents", "/documents", content),
               ("Bank extraction", "/bank", bank),
               ("Completion", "/complete", complete)]
     if review and review.manifest.get("Mode") == "exact_report":

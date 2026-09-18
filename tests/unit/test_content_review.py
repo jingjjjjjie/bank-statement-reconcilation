@@ -128,14 +128,20 @@ class ContentPageTests(unittest.TestCase):
             content_review.prepare(self.review)
 
     def test_run_button_resumes_review_in_background(self):
-        """Starting a batch returns promptly and saves comparable candidates."""
+        """Dashboard runs extract evidence without duplicate screening or comparison."""
         content_review.prepare(self.review)
         with patch("dashboard.content_review.CodexReviewer", side_effect=lambda *args, **kwargs: FixtureReviewer()):
             content_review.start(self.review)
             self.review.content_thread.join(timeout=5)
         self.assertFalse(self.review.content_thread.is_alive())
         self.assertEqual(self.review.content_error, "")
-        self.assertEqual(len(content_review.snapshot(self.review)["pairs"]), 1)
+        snapshot = content_review.snapshot(self.review)
+        self.assertEqual(snapshot["pairs"], [])
+        self.assertEqual(snapshot["units_read"], snapshot["units_total"])
+        state = load(self.manifest.parent / "review")[1]
+        self.assertEqual(state["screens"], {})
+        self.assertTrue(state["extraction_only"])
+        self.assertTrue(self.review.workflow_checks()[1])
 
     def test_stop_keeps_incomplete_work_pending(self):
         """A stop request cancels the active batch without saving partial evidence."""

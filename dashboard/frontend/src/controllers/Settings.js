@@ -23,8 +23,7 @@ const stages = [
   ['pdf', 'PDF reading', 'Uses the PDF processing option above: extracted text, vision fallback, or full vision.'],
   ['images', 'JPG / image reading', 'Vision only for now, including PNG and other supported images. No separate OCR step. Picture processing must be on.'],
   ['excel', 'Excel reading', 'Python extracts cells, formulas and cached values from XLSX files. This model reads that text and any allowed embedded pictures.'],
-  ['word', 'Word reading (inactive)', 'DOCX files are currently listed as not accepted. This setting is retained for future use.'],
-  ['comparison', 'Document comparison', 'Screens summaries and compares candidate originals across all file types, including PDF against JPG. May use vision when originals contain pictures.']
+  ['word', 'Word reading (inactive)', 'DOCX files are currently listed as not accepted. This setting is retained for future use.']
 ];
 function callExample() {
   const n = Number($('#max-calls').value);
@@ -111,7 +110,7 @@ $('#settings-form').onsubmit = async event => {
   $('#settings-fields').disabled = true;
   $('#save-settings').disabled = $('#discard-settings').disabled = true;
   try {
-    const choices = Object.fromEntries(stages.map(([stage]) => [stage, {model: $(`#${stage}-model`).value, reasoning: $(`#${stage}-reasoning`).value}]));
+    const choices = {...savedSettings.config.stages, ...Object.fromEntries(stages.map(([stage]) => [stage, {model: $(`#${stage}-model`).value, reasoning: $(`#${stage}-reasoning`).value}]))};
     const config = {...savedSettings.config, pdf_mode: $('#pdf-mode').value, pictures_enabled: $('#pictures-enabled').checked, codex_enabled: $('#codex-enabled').checked, max_calls: Number($('#max-calls').value), max_parallel: Number($('#max-parallel').value), stages: choices};
     showSettings(await api('/api/config', {config, revision: savedSettings.revision}));
     toast('Settings saved. No review was started.');

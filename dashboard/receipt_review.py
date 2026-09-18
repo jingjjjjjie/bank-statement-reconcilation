@@ -22,14 +22,14 @@ def current_hash(path):
         return ""
 
 
-def context(review):
+def context(review, *, include_banks=True, prepared=None):
     """Load current evidence and mark old approvals stale after an extraction refresh."""
     work = work_path(review)
     path = work / "receipt-matches.json"
     saved = json.loads(path.read_text(encoding="utf-8")) if path.exists() else {"extractions": {}, "matches": {}, "history": []}
     units, receipts, banks = {}, {}, {}
     if (work / "index.json").exists():
-        index, state = load(work)
+        index, state = prepared if prepared is not None else load(work)
         if Path(index["manifest"]).resolve() != review.manifest_path.resolve():
             raise ValueError("Prepared review belongs to another manifest")
         removed = removal_plan(state)
@@ -65,6 +65,8 @@ def context(review):
                     receipts[receipt_id] = {**piece, "receipt_id": receipt_id,
                         "document_id": digest, "unit": number, "source_path": document["paths"][0],
                         "accepted": bool(accepted), "evidence_revision": evidence}
+    if not include_banks:
+        return path, saved, units, receipts, banks
     master = review.manifest_path.parent / "bank-output/master_statement.csv"
     if master.exists():
         master_revision = fingerprint(master)

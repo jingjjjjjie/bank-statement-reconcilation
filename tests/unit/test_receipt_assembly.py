@@ -41,8 +41,11 @@ class AssemblyWorkflowTests(unittest.TestCase):
                     return {"receipts": [piece([1, 2])], "reviewed_units": [1, 2], "limitations": []}
                 return super().ask(prompt, schema, images)
 
-        workflow.run(self.work, index, state, Reviewer())
-        workflow.run(self.work, index, state, Reviewer())
+        workflow.run(self.work, index, state, Reviewer(), extraction_only=True)
+        workflow.run(self.work, index, state, Reviewer(), extraction_only=True)
+        self.assertEqual(state["screens"], {})
+        self.assertEqual(state["pairs"], {})
+        self.assertEqual(workflow.gate(index, state), [])
         self.assertEqual(len(calls), 1)
         self.assertEqual(len(calls[0]), 2)
         assembled = next(iter(state["assemblies"].values()))
@@ -50,6 +53,7 @@ class AssemblyWorkflowTests(unittest.TestCase):
         document = next(doc for doc in index["documents"].values() if len(doc["units"]) == 2)
         state["units"][document["id"] + ":0"]["details"] = "Changed extraction"
         self.assertIsNone(current_assembly(document, state))
+        self.assertTrue(any("assembly pending" in problem for problem in workflow.gate(index, state)))
 
     def test_missing_or_unknown_pages_are_rejected(self):
         """Coverage cannot silently omit a page or reference nonexistent evidence."""

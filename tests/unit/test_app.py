@@ -52,7 +52,7 @@ class DashboardTests(unittest.TestCase):
         self.review.keep(self.group, self.ids[0])
         steps = workflow_guide(self.review)["steps"]
         self.assertTrue(steps[1]["checked"])
-        self.assertEqual(steps[1]["next"], "/content-review")
+        self.assertEqual(steps[1]["next"], "/documents")
         bank = self.base / "bank-output"
         bank.mkdir()
         (bank / "master_statement.csv").write_text(

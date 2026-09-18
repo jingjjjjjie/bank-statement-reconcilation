@@ -38,7 +38,7 @@ class BankBrowserTests(unittest.TestCase):
                         page.goto(f"http://127.0.0.1:{server.server_port}/bank")
                         expect(page.locator("#bank-count")).to_have_text("1")
                         page.get_by_role("button", name="Check bank extraction").click()
-                        expect(page.locator("#bank-step-note")).to_contain_text("Finish content review")
+                        expect(page.locator("#bank-step-note")).to_contain_text("Finish documents")
                         expect(page.locator("#bank-next")).to_be_hidden()
                         expect(page.locator("#bank-rows tr")).to_have_count(1)
                         page.locator("#bank-search").fill("Unique transfer")

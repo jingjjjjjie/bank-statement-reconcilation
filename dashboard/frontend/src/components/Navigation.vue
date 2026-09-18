@@ -3,7 +3,7 @@ import { computed } from 'vue';
 import { appState } from '../api.js';
 const links = [
   ['/source', 'Workspace selection'], ['/review', 'Exact duplicates'],
-  ['/content-review', 'Content review'], ['/documents', 'Document status'],
+  ['/documents', 'Documents'], ['/extraction-review', 'Receipt review'],
   ['/bank', 'Bank statement'], ['/matching', 'Final review'], ['/settings', 'Settings'], ['/complete', 'Completion'],
 ];
 const visibleLinks = computed(() => links.filter(([path]) =>

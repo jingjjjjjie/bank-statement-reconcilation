@@ -37,7 +37,7 @@ class NavigationTests(unittest.TestCase):
                     page.on("request", lambda request: polls.append(request.url) if request.url.endswith('/api/document-status') else None)
                     base = f"http://127.0.0.1:{server.server_port}"
                     page.goto(base + "/documents")
-                    expect(page.locator('#document-summary')).to_contain_text('Prepare the content review')
+                    expect(page.locator('#document-summary')).to_contain_text('Run documents to prepare')
                     page.locator('#document-search').fill('preserved filter')
                     page.evaluate("window.savedInput = document.querySelector('#document-search'); window.savedRail = document.querySelector('.rail')")
                     page.locator('.rail a[href="/settings"]').click()

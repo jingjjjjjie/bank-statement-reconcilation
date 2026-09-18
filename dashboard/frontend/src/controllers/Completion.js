@@ -9,7 +9,7 @@ let token;
 async function showCompletion() {
   try {
     const result = await api('/api/completion');
-    const steps = [['Exact duplicate review', result.exact_done], ['Content review', result.content_done], ['Bank matching', result.bank_done]];
+    const steps = [['Exact duplicates', result.exact_done], ['Document extraction', result.content_done], ['Bank matching', result.bank_done]];
     $('#completion-steps').textContent = steps.map(([name, done]) => `${done ? 'Complete' : 'Pending'} · ${name}`).join('\n');
     $('#completion-steps').style.whiteSpace = 'pre-line';
     $('#completion-title').textContent = result.complete ? 'All workflows complete.' : 'Workflow in progress.';

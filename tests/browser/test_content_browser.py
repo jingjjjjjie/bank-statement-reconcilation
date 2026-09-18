@@ -1,4 +1,4 @@
-"""Browser smoke test for the pass-two admin review page."""
+"""Keep retired content-review links usable without changing historical evidence."""
 
 import json
 import tempfile
@@ -6,7 +6,6 @@ import threading
 import unittest
 from tests.http_server import TestServer
 from pathlib import Path
-from types import SimpleNamespace
 
 from PIL import Image
 from playwright.sync_api import sync_playwright, expect
@@ -18,8 +17,8 @@ from reconciliation.vision_workflow import load, prepare, run
 
 
 class ContentBrowserTests(unittest.TestCase):
-    def test_candidate_can_be_reviewed_in_browser(self):
-        """Render original previews and save a named keep-both verdict."""
+    def test_retired_page_redirects_without_losing_evidence(self):
+        """Redirect the retired page and preserve saved comparison history."""
         chrome = Path(r"C:\Program Files\Google\Chrome\Application\chrome.exe")
         if not chrome.is_file():
             self.skipTest("Installed Chrome is unavailable")
@@ -48,27 +47,10 @@ class ContentBrowserTests(unittest.TestCase):
                     errors = []
                     page.on("pageerror", lambda error: errors.append(str(error)))
                     page.goto(f"http://127.0.0.1:{server.server_port}/content-review")
-                    expect(page.locator(".content-pair")).to_have_count(1)
-                    running = threading.Event()
-                    review.content_cancel = threading.Event()
-                    review.content_engine = SimpleNamespace(cancel=running.set)
-                    review.content_thread = threading.Thread(target=running.wait, daemon=True)
-                    review.content_thread.start()
-                    page.reload()
-                    expect(page.locator("#content-loading")).to_be_visible()
-                    expect(page.locator("#content-loading-title")).to_have_text("Comparing candidate documents")
-                    page.get_by_role("button", name="Stop review").click()
-                    review.content_thread.join(timeout=2)
-                    page.reload()
-                    expect(page.locator("#content-loading")).to_be_hidden()
-                    expect(page.locator(".content-preview").first).to_have_js_property("complete", True)
-                    page.locator("#admin-name").fill("Admin")
-                    page.locator(".content-pair textarea").fill("Separate records")
-                    page.get_by_role("button", name="Keep both").click()
-                    expect(page.locator(".content-decision")).to_contain_text("Admin decision: keep_both by Admin")
-                    expect(page.locator(".content-decision-bar button")).to_have_text("Undo decision")
-                    page.get_by_role("button", name="Undo decision").click()
-                    expect(page.locator(".content-decision")).to_contain_text("Admin decision pending")
+                    expect(page).to_have_url(f"http://127.0.0.1:{server.server_port}/documents")
+                    expect(page.locator("h1")).to_have_text("Documents")
+                    expect(page.locator('.rail a[href="/content-review"]')).to_have_count(0)
+                    self.assertEqual(load(work)[1]["pairs"], state["pairs"])
                     self.assertFalse(errors)
                     browser.close()
             finally:

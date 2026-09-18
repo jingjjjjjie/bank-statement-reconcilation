@@ -11,7 +11,7 @@ export const router = createRouter({
     { path: '/documents', component: () => import('./views/Documents.vue'), meta: { title: 'Document status', body: 'documents-page', public: true } },
     { path: '/review', component: () => import('./views/Review.vue'), meta: { title: 'Exact duplicates' } },
     { path: '/exact-report', redirect: '/review' },
-    { path: '/content-review', component: () => import('./views/ContentReview.vue'), meta: { title: 'Content review' } },
+    { path: '/content-review', redirect: '/documents' },
     { path: '/settings', component: () => import('./views/Settings.vue'), meta: { title: 'Settings' } },
     { path: '/complete', component: () => import('./views/Completion.vue'), meta: { title: 'Completion' } },
     { path: '/extraction-review', component: () => import('./views/ExtractionReview.vue'), meta: { title: 'Review extraction', body: 'extraction-workspace', fullscreen: true } },

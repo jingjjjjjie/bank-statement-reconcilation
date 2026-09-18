@@ -65,7 +65,7 @@ def main():
                 expect(page.locator("#pdf-reasoning")).to_have_value("high")
                 expect(page.locator("#images-model")).to_have_value("gpt-5.6-sol")
                 expect(page.locator("#images-reasoning")).to_have_value("low")
-                expect(page.locator("#comparison-model")).to_have_value(DEFAULTS["model"])
+                expect(page.locator("#comparison-model")).to_have_count(0)
                 expect(page.locator("#excel-model")).to_have_value(DEFAULTS["model"])
                 # Check explicit explanations, saved-state tracking and mobile layout.
                 expect(page.locator("#call-definition")).to_contain_text("failed or timed-out")

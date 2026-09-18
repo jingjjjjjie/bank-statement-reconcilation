@@ -1,14 +1,13 @@
 import { node } from '../dom.js';
-import { renderOfficePreview } from '../office.js';
 import { installReceipts } from '../receipts.js';
 
 // Scope screen state and handlers to this cached Vue view.
 export default function initialize(page) {
-const { root, $, api, toast, pollVisible, showDevelopmentMode, navigate, routeQuery } = page;
-let token;
+const { $, api, toast, pollVisible } = page;
 /* Show saved progress for every prepared content-review document. */
 let documentState = {prepared: false, documents: []};
 let documentRequestMessage = "";
+let progressStage;
 
 function renderDocuments() {
   /* Filter the current saved snapshot without changing workflow state. */
@@ -20,33 +19,31 @@ function renderDocuments() {
   const visible = rows.filter(item => (!hideDuplicates || !item.approved_duplicate) && (filter === 'all' || item.status === filter) &&
     `${item.name} ${item.path}`.toLowerCase().includes(search));
   $('#document-total').textContent = rows.length;
-  $('#document-extracted').textContent = rows.filter(item => item.units_read === item.units_total).length;
-  $('#document-admin').textContent = rows.filter(item => item.status === 'Admin review').length;
+  $('#document-admin').textContent = rows.filter(item => item.status === 'Needs review').length;
   $('#document-complete').textContent = rows.filter(item => item.status === 'Complete').length;
   $('#document-summary').textContent = documentState.prepared ?
-    `${visible.length} of ${rows.length} documents shown. ${hidden} approved duplicates hidden. Progress updates automatically.` :
-    'Prepare the content review to see document progress.';
+    `${visible.length} of ${rows.length} documents${hidden ? ` · ${hidden} duplicates hidden` : ''}` :
+    'Run documents to prepare your files.';
   const body = $('#document-rows'); body.replaceChildren();
   for (const item of visible) {
     const tr = node('tr'), title = node('td');
-    title.append(node('strong', '', item.name), node('small', '', item.path));
+    title.append(node('strong', '', item.name));
+    title.title = item.path;
     if (item.approved_duplicate) title.append(node('small', '', 'Approved duplicate'));
     const status = node('span', `document-status ${item.status.toLowerCase().replaceAll(' ', '-')}`, item.status);
-    const review = item.candidates ? `${item.decisions}/${item.candidates} decisions · ${item.comparisons}/${item.candidates} compared` : 'No candidates yet';
     const open = node('a', '', 'Open file');
     open.href = `/api/content-file?id=${encodeURIComponent(item.id)}`;
     open.target = '_blank'; open.rel = 'noopener';
-    const file = node('td'); file.append(open);
-    const extraction = node('a', '', 'Review extraction');
+    const file = node('td', 'document-actions');
+    const extraction = node('a', 'receipt-review-link', 'Review receipts');
     extraction.href = `/extraction-review?unit=${encodeURIComponent(item.id + ':0')}`;
-    file.append(node('br'), extraction);
-    tr.append(title, node('td'), node('td', '', `${item.units_read}/${item.units_total} units`),
-      node('td', '', `${item.pairs_screened}/${item.pairs_total} pairs`), node('td', '', review), file);
+    file.append(extraction, open);
+    tr.append(title, node('td'), file);
     tr.children[1].append(status);
     body.append(tr);
   }
   $('#document-empty').hidden = !!visible.length;
-  $('#document-empty').textContent = documentState.prepared ? 'No documents match this filter.' : 'No content review has been prepared yet.';
+  $('#document-empty').textContent = documentState.prepared ? 'No documents match this filter.' : 'Click Run all documents to get started.';
 }
 
 async function refreshDocuments() {
@@ -69,8 +66,6 @@ function renderDocumentProgress() {
   const stages = [
     {name:'Extracting documents', done:sum('units_read'), total:sum('units_total'), unit:'units'},
     {name:'Assembling receipts', done:sum('assembly_done'), total:sum('assembly_total'), unit:'documents'},
-    {name:'Screening possible duplicates', done:sum('pairs_screened') / 2, total:sum('pairs_total') / 2, unit:'pairs'},
-    {name:'Comparing candidates', done:sum('comparisons') / 2, total:sum('candidates') / 2, unit:'comparisons'},
   ];
   const stage = stages.find(item => item.done < item.total);
   const bar = $('#document-progress-bar');
@@ -93,9 +88,22 @@ function renderDocumentProgress() {
     $('#document-progress-stage').textContent = !documentState.prepared ? 'Not started' : !rows.length ? 'No documents to process' : attention ? 'Processing finished with items needing attention' : 'Processing finished - review results';
     $('#document-progress-count').textContent = attention ? `${attention} documents need attention` : rows.length ? `${rows.length} documents` : '';
   }
+  // Ease measured updates; reset stage changes without a backwards sweep.
+  const track = $('#document-progress-track'), fill = track.querySelector('.progress-fill');
+  const nextStage = stage?.name || 'idle';
+  const indeterminate = !bar.hasAttribute('value');
+  track.dataset.busy = String(indeterminate);
+  track.dataset.running = String(!!documentState.running && !documentState.stop_requested);
+  if (!indeterminate) {
+    const reset = progressStage === undefined || (stage && progressStage !== nextStage);
+    if (reset) fill.style.transition = 'none';
+    fill.style.transform = `scaleX(${bar.value / 100})`;
+    if (reset) { void fill.offsetWidth; fill.style.transition = ''; }
+    progressStage = nextStage;
+  }
   $('#document-run-status').textContent = documentRequestMessage || documentState.run_error ||
-    (documentState.running ? 'Progress is saved automatically. Parallel and request limits follow Settings.' :
-      'Run resumes remaining work within your request limit. Load latest receipt results to review completed extraction.');
+    (documentState.running ? 'You can leave this page; extraction continues and progress is saved.' :
+      'Open Review receipts beside a document to check its extraction.');
 }
 
 function rememberFilters() {

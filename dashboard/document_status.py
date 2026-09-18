@@ -17,20 +17,13 @@ def snapshot(review):
     if Path(index["manifest"]).resolve() != review.manifest_path.resolve():
         raise ValueError("Prepared review belongs to a different manifest")
     documents = index["documents"]
+    from dashboard.receipt_review import context
+    review_units = context(review, include_banks=False, prepared=(index, state))[2]
+    reviewed = {}
+    for unit in review_units.values():
+        reviewed.setdefault(unit["document_id"], []).append(unit["accepted"])
     duplicates = removal_plan(state)
     eligible = {digest for digest, document in documents.items() if document.get("accepted", True)}
-    screens = {digest: 0 for digest in eligible}
-    candidates = {digest: 0 for digest in eligible}
-    comparisons = {digest: 0 for digest in eligible}
-    decisions = {digest: 0 for digest in eligible}
-    for pair, screen in state["screens"].items():
-        left, right = pair.split(":")
-        for digest in (left, right):
-            screens[digest] += 1
-            if screen["candidate"]:
-                candidates[digest] += 1
-                comparisons[digest] += pair in state["pairs"]
-                decisions[digest] += pair in state["decisions"]
     rows = []
     for digest, document in documents.items():
         if digest not in eligible:
@@ -40,25 +33,19 @@ def snapshot(review):
         if document["error"] or any(unit.get("blocked") for unit in units):
             status = "Needs attention"
         elif read < len(units):
-            status = "Extracting" if read else "Waiting for extraction"
+            status = "Processing" if read else "Queued"
         elif any(not state["units"][f"{digest}:{number}"].get("readable") for number in range(len(units))):
             status = "Needs attention"
         elif len(units) > 1 and not current_assembly(document, state):
-            status = "Assembling receipts"
-        elif screens[digest] < len(eligible) - 1:
-            status = "Screening" if screens[digest] else "Waiting for screening"
-        elif comparisons[digest] < candidates[digest]:
-            status = "Comparing matches"
-        elif decisions[digest] < candidates[digest]:
-            status = "Admin review"
+            status = "Processing"
+        elif not reviewed.get(digest) or not all(reviewed[digest]):
+            status = "Needs review"
         else:
             status = "Complete"
         path = document["paths"][0]
         rows.append({"id": digest, "name": Path(path).name, "path": path, "status": status,
                      "approved_duplicate": digest in duplicates,
                      "assembly_total": int(len(units) > 1), "assembly_done": int(len(units) > 1 and bool(current_assembly(document, state))),
-                     "units_read": read, "units_total": len(units), "pairs_screened": screens[digest],
-                     "pairs_total": max(len(eligible) - 1, 0), "candidates": candidates[digest],
-                     "comparisons": comparisons[digest], "decisions": decisions[digest]})
+                     "units_read": read, "units_total": len(units)})
     rows.sort(key=lambda row: (row["name"].casefold(), row["path"].casefold()))
     return {"prepared": True, "documents": rows, **execution_status(review)}

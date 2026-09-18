@@ -111,7 +111,7 @@ def start(review):
     review.content_engine = None
 
     def worker():
-        """Resume saved extraction, screening, and comparison work."""
+        """Resume extraction and receipt assembly without vision duplicate passes."""
         try:
             index, state = load(work)
             config = load_config(review.config_path)
@@ -120,7 +120,7 @@ def start(review):
                                    cancel_event=review.content_cancel)
             review.content_engine = engine
             engine.stage_choices = stage_settings(config)
-            run(work, index, state, engine)
+            run(work, index, state, engine, extraction_only=True)
         except BudgetReached:
             pass
         except ReviewCancelled:

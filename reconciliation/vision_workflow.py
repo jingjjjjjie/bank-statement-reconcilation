@@ -201,8 +201,8 @@ def run_jobs(jobs, apply, workers):
         raise error
 
 
-def run(work, index, state, reviewer):
-    # Pass-one cleanup must finish before spending subscription usage on pass two.
+def run(work, index, state, reviewer, *, extraction_only=False):
+    """Extract and assemble receipts; retain explicit legacy comparison support for old tools."""
     config = active_config(index)
     if config["pdf_mode"] in pdf_routing.MODES and not development_cache.mode()["enabled"]:
         raise ReviewPending("Experimental PDF modes require development mode; choose Vision in Settings")
@@ -222,6 +222,7 @@ def run(work, index, state, reviewer):
         raise ReviewPending("Model or reasoning changed; run prepare --refresh to avoid mixing reviews")
     state["stage_models"] = choices
     state["model_config"] = model_settings(config)
+    state["extraction_only"] = extraction_only
     documents = index["documents"]
     workers = config["max_parallel"] if hasattr(reviewer, "fork") else 1
 
@@ -330,6 +331,9 @@ def run(work, index, state, reviewer):
             print(f"Assembled receipts {digest[:10]}", flush=True)
 
         run_jobs(assembly_jobs(), apply_assembly, workers)
+
+        if extraction_only:
+            return
 
         # Strong local matches go straight to original comparison; screen all other pairs.
         ready = [d for d in documents if documents[d].get("accepted", True) and not documents[d]["error"] and all(
@@ -444,7 +448,7 @@ def active_config(index):
     return config
 
 
-def gate(index, state):
+def gate(index, state, *, extraction_only=None):
     # Check both coverage and admin dispositions, including approved manual deletions.
     problems = []
     try:
@@ -472,6 +476,13 @@ def gate(index, state):
                 problems.append(f"{digest[:10]} unit {n + 1}: {document['units'][n]['blocked']}")
             if not state["units"].get(f"{digest}:{n}", {}).get("readable"):
                 problems.append(f"{digest[:10]} unit {n + 1}: unread or unreadable")
+    if extraction_only is None:
+        extraction_only = state.get("extraction_only", False)
+    if extraction_only:
+        for digest, document in index["documents"].items():
+            if document.get("accepted", True) and len(document["units"]) > 1 and not current_assembly(document, state):
+                problems.append(f"{digest[:10]}: receipt assembly pending")
+        return problems
     eligible = [digest for digest, doc in index["documents"].items() if doc.get("accepted", True)]
     for left, right in itertools.combinations(eligible, 2):
         pair = pair_key(left, right)
@@ -503,6 +514,10 @@ def report(work, index, state):
             f"Documents: {len(documents)}; units read: {len(state['units'])}; "
             f"pairs screened: {len(state['screens'])}/{eligible_count * (eligible_count - 1) // 2}", "",
             "Model results are review evidence, not proof of duplicate payments. No source files are moved or deleted by pass two.", ""]
+    if state.get("extraction_only"):
+        rows = ["# Document extraction", "", f"Status: {'PENDING' if problems else 'COMPLETE'}",
+                f"Documents: {len(documents)}; units read: {len(state['units'])}", "",
+                "Extraction and receipt assembly only. Vision duplicate screening and comparison are disabled.", ""]
     settings = index.get("config", {"pdf_mode": "vision", "pictures_enabled": True})
     rows += [f"Prepared PDF mode: {settings['pdf_mode']}; pictures: {settings['pictures_enabled']}.",
              f"Stage models used: {json.dumps(state.get('stage_models', {}))}.",
@@ -612,7 +627,7 @@ def main(argv=None):
                                    max_calls, args.timeout, config["reasoning"])
             engine.stage_choices = choices
             try:
-                run(args.work, index, state, engine)
+                run(args.work, index, state, engine, extraction_only=True)
             except BudgetReached as error:
                 print(error)
         elif args.action == "decide":
