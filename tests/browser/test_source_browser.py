@@ -105,7 +105,8 @@ class SourceBrowserTests(unittest.TestCase):
                         self.assertEqual(sources.selected(), documents)
                         page.get_by_role("button", name="Close", exact=True).click()
                         page.get_by_role("button", name="Proceed", exact=True).click()
-                        expect(page).to_have_url(f"http://127.0.0.1:{server.server_port}/review")
+                        expect(page).to_have_url(f"http://127.0.0.1:{server.server_port}/content-review")
+                        self.assertTrue((work / "output/duplicates/report.json").is_file())
                         self.assertTrue((documents / "receipt.txt").exists())
                     finally:
                         browser.close()

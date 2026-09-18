@@ -20,7 +20,7 @@ async function loadPreview() {
     previewToken = preview.token;
     $('#workspace-status').textContent = 'Ready to proceed';
     $('#source-preview').textContent = preview.groups ?
-      `${preview.groups} duplicate groups found. A report will be created when you proceed.` :
+      `${preview.groups} exact duplicate groups found. Proceed to copy them into output/duplicates/ and continue automatically.` :
       'Both input folders are ready. Continue to document review.';
     $('#start-source').disabled = false;
   } catch (error) {
@@ -113,7 +113,7 @@ $('#start-source').onclick = () => sourceAction(async () => {
   $('#start-source').disabled = true;
   try {
     await api('/api/source/start', {preview: previewToken});
-    await navigate('/review');
+    await navigate('/content-review');
   } finally {$('#start-source').disabled = false;}
 });
 Promise.all([api('/api/session'), api('/api/source')]).then(([session, source]) => {

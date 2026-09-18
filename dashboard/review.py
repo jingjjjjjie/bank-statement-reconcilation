@@ -351,6 +351,8 @@ def workflow_guide(review):
               ("Content review", "/content-review", content),
               ("Bank extraction", "/bank", bank),
               ("Completion", "/complete", complete)]
+    if review and review.manifest.get("Mode") == "exact_report":
+        stages = [stage for stage in stages if stage[1] != "/review"]
     return {"steps": [{"name": name, "href": href, "checked": checked,
                        "next": stages[number + 1][1] if checked and number < len(stages) - 1
                        and all(previous[2] for previous in stages[:number]) else None}

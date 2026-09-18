@@ -11,7 +11,7 @@ usePage(root, initialize);
 <template>
   <div ref="root" class="page-view">
 <main class="workspace-picker">
-    <header><span class="picker-kicker">YOUR REVIEW WORKSPACE</span><a class="header-settings" href="/review">Return to review &rarr;</a></header>
+    <header><span class="picker-kicker">YOUR REVIEW WORKSPACE</span><a class="header-settings" href="/content-review">Return to review &rarr;</a></header>
     <WorkflowProgress />
     <section class="picker-heading"><span class="picker-step">01 / GET STARTED</span><h1>Choose your workspace</h1><p>One folder. Your statement and supporting documents, together.</p></section>
     <section class="workspace-card" aria-label="Workspace selection">
