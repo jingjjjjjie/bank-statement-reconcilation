@@ -4,7 +4,7 @@ import { appState } from '../api.js';
 const links = [
   ['/source', 'Workspace selection'], ['/review', 'Exact duplicates'],
   ['/documents', 'Documents'], ['/extraction-review', 'Review results'],
-  ['/bank', 'Bank statement'], ['/matching', 'Final review'], ['/settings', 'Settings'], ['/complete', 'Completion'],
+  ['/bank', 'Bank statement'], ['/matching', 'Final review'], ['/final-report', 'Final report'], ['/settings', 'Settings'], ['/complete', 'Completion'],
 ];
 const visibleLinks = computed(() => links.filter(([path]) =>
   path !== '/review' || appState.session?.mode !== 'exact_report'));

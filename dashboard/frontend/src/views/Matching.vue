@@ -11,7 +11,7 @@ usePage(root, initialize);
 <template>
   <div ref="root" class="page-view">
 <main class="matching-main">
-    <div class="matching-heading"><div class="heading-left"><a class="back-link" href="/documents">← Documents</a><h1>Final review</h1><span id="matching-workspace" class="subtle"></span></div><a class="text-button" href="/api/matching-export" download="reviewed-statement.csv">Export CSV</a></div>
+    <div class="matching-heading"><div class="heading-left"><a class="back-link" href="/documents">← Documents</a><h1>Final review</h1><span id="matching-workspace" class="subtle"></span></div><a class="button dark" href="/final-report">Final report</a></div>
     <div class="matching-toolbar"><div class="review-tabs"><button id="bank-tab" class="selected" type="button">Transactions</button><button id="document-tab" type="button">Unmatched documents</button></div><div id="matching-counts" class="subtle" aria-live="polite"></div></div>
     <div id="matching-error" class="matching-error" role="alert" hidden></div>
     <section class="matching-layout" id="bank-view">

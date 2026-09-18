@@ -2,6 +2,7 @@
 import json
 import mimetypes
 from pathlib import Path
+from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import Response
@@ -41,7 +42,9 @@ def matching_file(kind: str, id: str, state=Depends(active_context)):
     """Return original matching evidence with a conservative content type."""
     path = matching_review.evidence(state.review, kind, id)
     safe = {".pdf", ".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp", ".txt", ".csv", ".xlsx", ".docx"}
-    return file_response(path, None if path.suffix.lower() in safe else "application/octet-stream")
+    response = file_response(path, None if path.suffix.lower() in safe else "application/octet-stream")
+    response.headers['Content-Disposition'] = "inline; filename*=UTF-8''" + quote(path.name, safe='')
+    return response
 
 
 @router.get("/extraction-preview")

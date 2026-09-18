@@ -24,7 +24,13 @@ Actual bank statement and receipt/document content is the evidence. Filenames an
 - Keep bank-only PARTICULAR blank. At final comparison, particulars may be populated from approved supporting evidence; accounting categories remain out of scope.
 - Default model is GPT-5.6 Sol through `codex exec` and the existing ChatGPT login. Python handles deterministic extraction, candidate checks, arithmetic, allocations and state. Follow AGENTS.md for structured responses, unresolved failures and per-attempt usage tracking. Sol is not guaranteed error-free.
 
-## Two final pages
+## Final report after review
+
+`/final-report` is a read-only view of the same saved ledger, reached from Final review or navigation. It lists every transaction with Supporting / No supporting and the human decision, search and support filters, and CSV export. Pending rows remain visible with an explicit incomplete-review notice. It is a live report, not a locked archival snapshot.
+
+View evidence opens a modal with the original statement at the transaction page alongside approved supporting documents. Document switches show each saved allocation; page and zoom controls, original downloads, totals, differences, flags and notes remain available. Pending or rejected proposals are never shown as approved evidence. Changed sources are flagged and previews retain hash validation. Escape or Close restores focus and preserves filters; mobile uses a full-screen stacked pane and transaction cards. No new model calls or review writes occur.
+
+## Two review pages
 
 ### 1. Statement ready for export / final review
 

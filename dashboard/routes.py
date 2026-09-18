@@ -13,7 +13,7 @@ from reconciliation.source_selection import SourceSelection
 
 FRONTEND = Path(os.environ.get("DASHBOARD_FRONTEND", Path(__file__).parent / "frontend/dist"))
 PAGES = {"", "source", "review", "exact-report", "content-review", "documents", "bank",
-         "matching", "extraction-review", "settings", "complete"}
+         "matching", "final-report", "extraction-review", "settings", "complete"}
 
 
 class Context:
