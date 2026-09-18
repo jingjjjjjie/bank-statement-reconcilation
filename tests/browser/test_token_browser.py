@@ -83,7 +83,7 @@ class TokenBrowserTests(unittest.TestCase):
                     expect(page.locator("#selected-source")).to_contain_text("1 bank statement")
                     self.assertTrue(bank_pdf.exists())
                     page.get_by_role("button", name="Proceed", exact=True).click()
-                    expect(page).to_have_url(url + "/content-review")
+                    expect(page).to_have_url(url + "/documents")
                     expect(page.locator('.rail a[href="/review"]')).to_have_count(0)
                     report = json.loads((work / "output/duplicates/report.json").read_text())
                     self.assertEqual(report["Summary"]["groups"], 1)
