@@ -3,12 +3,12 @@ import os
 import tempfile
 import threading
 import unittest
-from http.server import ThreadingHTTPServer
+from tests.http_server import TestServer
 from pathlib import Path
 
 from playwright.sync_api import expect, sync_playwright
 
-from dashboard.app import Review, handler_for
+from dashboard.app import Review, create_app
 from reconciliation.duplicate_workflow import organize
 from reconciliation.source_selection import SourceSelection
 
@@ -25,7 +25,7 @@ class SourceBrowserTests(unittest.TestCase):
             manifest = base / "manifest.json"
             organize(documents, manifest)
             review = Review(manifest, base / "dashboard-data")
-            server = ThreadingHTTPServer(("127.0.0.1", 0), handler_for(review, "test-token"))
+            server = TestServer(("127.0.0.1", 0), create_app(review, "test-token"))
             threading.Thread(target=server.serve_forever, daemon=True).start()
             try:
                 with sync_playwright() as playwright:
@@ -61,7 +61,7 @@ class SourceBrowserTests(unittest.TestCase):
             statement = work / "statement/statement.pdf"
             statement.write_bytes(b"%PDF-1.4\nfixture")
             sources = SourceSelection(base, base / "dashboard-data")
-            server = ThreadingHTTPServer(("127.0.0.1", 0), handler_for(None, "test-token", sources))
+            server = TestServer(("127.0.0.1", 0), create_app(None, "test-token", sources))
             threading.Thread(target=server.serve_forever, daemon=True).start()
             try:
                 with sync_playwright() as playwright:

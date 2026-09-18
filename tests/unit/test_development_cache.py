@@ -6,14 +6,14 @@ import unittest
 import threading
 import urllib.request
 import urllib.error
-from http.server import ThreadingHTTPServer
+from tests.http_server import TestServer
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
 from dashboard import development
 from dashboard.review import Review
-from dashboard.routes import handler_for
+from dashboard.routes import create_app
 from reconciliation import development_cache as cache
 from reconciliation.codex_reviewer import CodexReviewer, object_schema
 from reconciliation.duplicate_workflow import organize
@@ -132,7 +132,7 @@ class DevelopmentCacheTests(unittest.TestCase):
     def test_switch_gates_actions_and_rejects_changes_during_execution(self):
         """The backend enforces the switch even when an old page remains open."""
         review = self.review(self.base / "project")
-        server = ThreadingHTTPServer(("127.0.0.1", 0), handler_for(review, "token"))
+        server = TestServer(("127.0.0.1", 0), create_app(review, "token"))
         threading.Thread(target=server.serve_forever, daemon=True).start()
         self.addCleanup(server.server_close)
         self.addCleanup(server.shutdown)
@@ -140,7 +140,7 @@ class DevelopmentCacheTests(unittest.TestCase):
         def post(path, body):
             """Send an authenticated action to the isolated dashboard."""
             request = urllib.request.Request(f"http://127.0.0.1:{server.server_port}{path}",
-                json.dumps(body).encode(), {"X-Review-Token": "token"})
+                json.dumps(body).encode(), {"X-Review-Token": "token", "Content-Type": "application/json"})
             with urllib.request.urlopen(request) as response:
                 return json.load(response)
 

@@ -6,13 +6,13 @@ import urllib.request
 from urllib.parse import urlencode
 import json
 import os
-from http.server import ThreadingHTTPServer
+from tests.http_server import TestServer
 from pathlib import Path
 from unittest.mock import patch
 
 from reconciliation.duplicate_workflow import check, fingerprint, organize
 from reconciliation.source_selection import SourceSelection
-from dashboard.app import handler_for
+from dashboard.app import create_app
 
 
 class SourceSelectionTests(unittest.TestCase):
@@ -71,7 +71,7 @@ class SourceSelectionTests(unittest.TestCase):
             (work / "documents/receipt.txt").write_text("receipt")
             (work / "statement/bank.pdf").write_bytes(b"statement")
             sources = SourceSelection(base, base / "data")
-            server = ThreadingHTTPServer(("127.0.0.1", 0), handler_for(None, "test-token", sources))
+            server = TestServer(("127.0.0.1", 0), create_app(None, "test-token", sources))
             threading.Thread(target=server.serve_forever, daemon=True).start()
             root = f"http://127.0.0.1:{server.server_port}"
 
@@ -92,16 +92,11 @@ class SourceSelectionTests(unittest.TestCase):
                 post("/api/source/start", {"preview": preview["token"]})
                 with urllib.request.urlopen(root + "/") as response:
                     page = response.read()
-                    self.assertIn(b"Choose your workspace</h1>", page)
-                    self.assertIn(b">Proceed</button>", page)
-                    self.assertNotIn(b'id="bank-year"', page)
-                    self.assertNotIn(b'id="bank-path"', page)
+                    self.assertIn(b'id="app"', page)
                 with urllib.request.urlopen(root + "/bank") as response:
-                    page = response.read()
-                    self.assertIn(b'id="bank-year"', page)
-                    self.assertIn(b'id="prepare-bank"', page)
-                with urllib.request.urlopen(root + "/review") as response:
-                    self.assertIn(b'/exact-report.js', response.read())
+                    self.assertIn(b'id="app"', response.read())
+                with urllib.request.urlopen(root + "/api/session") as response:
+                    self.assertEqual(json.load(response)["mode"], "exact_report")
                 with urllib.request.urlopen(root + "/api/workspace") as response:
                     self.assertEqual(json.load(response)["name"], "December")
             finally:
@@ -238,17 +233,17 @@ class SourceSelectionTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as folder:
             base = Path(folder)
             sources = SourceSelection(base, base / "dashboard-data")
-            server = ThreadingHTTPServer(("127.0.0.1", 0), handler_for(None, "test-token", sources))
+            server = TestServer(("127.0.0.1", 0), create_app(None, "test-token", sources))
             thread = threading.Thread(target=server.serve_forever, daemon=True)
             thread.start()
             try:
                 root = f"http://127.0.0.1:{server.server_port}"
                 with urllib.request.urlopen(root) as response:
                     self.assertEqual(response.url, root)
-                    self.assertIn(b"Workspace selection", response.read())
+                    self.assertIn(b'id="app"', response.read())
                 with urllib.request.urlopen(root + "/api/source") as response:
                     self.assertIsNone(json.load(response)["active"])
-                for route in ("/documents", "/documents/", "/documents.js", "/documents.css"):
+                for route in ("/documents", "/documents/"):
                     with urllib.request.urlopen(root + route) as response:
                         self.assertEqual(response.url, root + route)
                         self.assertEqual(response.status, 200)

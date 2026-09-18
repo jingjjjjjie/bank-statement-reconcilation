@@ -3,7 +3,7 @@ import json
 import tempfile
 import threading
 import unittest
-from http.server import ThreadingHTTPServer
+from tests.http_server import TestServer
 from pathlib import Path
 from unittest.mock import patch
 
@@ -11,8 +11,8 @@ from PIL import Image
 from playwright.sync_api import expect, sync_playwright
 
 from reconciliation.codex_reviewer import ReviewCancelled
-from dashboard.app import Review, handler_for
-from dashboard.test_content_review import FixtureReviewer
+from dashboard.app import Review, create_app
+from tests.unit.test_content_review import FixtureReviewer
 from reconciliation.duplicate_workflow import organize
 from reconciliation.vision_workflow import load, prepare
 
@@ -50,7 +50,7 @@ class StopBrowserTests(unittest.TestCase):
                     cancelled.set()
 
             reviewers = iter((WaitingReviewer(), FixtureReviewer()))
-            server = ThreadingHTTPServer(("127.0.0.1", 0), handler_for(review, "test-token"))
+            server = TestServer(("127.0.0.1", 0), create_app(review, "test-token"))
             threading.Thread(target=server.serve_forever, daemon=True).start()
             try:
                 with patch("dashboard.content_review.CodexReviewer", side_effect=lambda *args, **kwargs: next(reviewers)):

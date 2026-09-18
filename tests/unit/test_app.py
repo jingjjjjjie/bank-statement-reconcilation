@@ -6,10 +6,10 @@ import unittest
 import urllib.error
 import urllib.request
 from pathlib import Path
-from http.server import ThreadingHTTPServer
+from tests.http_server import TestServer
 from unittest.mock import patch
 
-from dashboard.app import Review, handler_for, workflow_guide
+from dashboard.app import Review, create_app, workflow_guide
 from dashboard import development
 from reconciliation.duplicate_workflow import organize, check
 from reconciliation.token_usage import record
@@ -52,8 +52,7 @@ class DashboardTests(unittest.TestCase):
         self.review.keep(self.group, self.ids[0])
         steps = workflow_guide(self.review)["steps"]
         self.assertTrue(steps[1]["checked"])
-        self.assertEqual(steps[1]["next"], "/content-review" if
-                         (Path(__file__).resolve().parents[2] / "dashboard/static/content-review.html").is_file() else None)
+        self.assertEqual(steps[1]["next"], "/content-review")
         bank = self.base / "bank-output"
         bank.mkdir()
         (bank / "master_statement.csv").write_text(
@@ -126,7 +125,7 @@ class DashboardTests(unittest.TestCase):
             encoding="utf-8")
         workbook = bank / "answer_statement_bank_only.xlsx"
         workbook.write_bytes(b"bank workbook fixture")
-        server = ThreadingHTTPServer(("127.0.0.1", 0), handler_for(self.review, "test-token"))
+        server = TestServer(("127.0.0.1", 0), create_app(self.review, "test-token"))
         thread = threading.Thread(target=server.serve_forever, daemon=True)
         thread.start()
         self.addCleanup(server.server_close)
@@ -140,7 +139,7 @@ class DashboardTests(unittest.TestCase):
         with urllib.request.urlopen(url + "/api/bank-workbook") as response:
             self.assertEqual(response.read(), b"bank workbook fixture")
         with urllib.request.urlopen(url + "/bank") as response:
-            self.assertIn(b"Bank statement", response.read())
+            self.assertIn(b'id="app"', response.read())
 
     def test_altered_archive_blocks_undo(self):
         self.review.keep(self.group, self.ids[0])
@@ -150,7 +149,7 @@ class DashboardTests(unittest.TestCase):
 
     def test_http_requires_token_and_disallows_external_origins(self):
         # The local webpage can mutate fixtures; unrelated websites cannot.
-        server = ThreadingHTTPServer(("127.0.0.1", 0), handler_for(self.review, "test-token"))
+        server = TestServer(("127.0.0.1", 0), create_app(self.review, "test-token"))
         thread = threading.Thread(target=server.serve_forever, daemon=True)
         thread.start()
         self.addCleanup(server.server_close)
@@ -161,23 +160,25 @@ class DashboardTests(unittest.TestCase):
             with self.assertRaises(urllib.error.HTTPError) as error:
                 urllib.request.urlopen(urllib.request.Request(url + "/api/keep", body, headers))
             self.assertEqual(error.exception.code, 403)
-        request = urllib.request.Request(url + "/api/keep", body, {"X-Review-Token": "test-token"})
+        request = urllib.request.Request(url + "/api/keep", body, {"X-Review-Token": "test-token", "Content-Type": "application/json"})
         with urllib.request.urlopen(request) as response:
             self.assertEqual(json.load(response)["reviewed"], 1)
 
-    def test_static_assets_keep_their_public_urls(self):
-        """Serve moved pages and assets without changing browser-facing URLs."""
-        server = ThreadingHTTPServer(("127.0.0.1", 0), handler_for(self.review, "test-token"))
+    def test_vue_assets_and_direct_routes(self):
+        """Known routes serve one shell and bundled assets remain local."""
+        from dashboard.routes import FRONTEND
+        server = TestServer(("127.0.0.1", 0), create_app(self.review, "test-token"))
         threading.Thread(target=server.serve_forever, daemon=True).start()
         self.addCleanup(server.server_close)
         self.addCleanup(server.shutdown)
-        assets = Path(__file__).resolve().parents[2] / "dashboard/static"
-        for asset in assets.iterdir():
-            route = "/review" if asset.name == "index.html" else "/" + (
-                asset.stem if asset.suffix == ".html" else asset.name)
-            with self.subTest(route=route):
-                with urllib.request.urlopen(f"http://127.0.0.1:{server.server_port}{route}") as response:
-                    self.assertEqual(response.read(), asset.read_bytes())
+        base = f"http://127.0.0.1:{server.server_port}"
+        for route in ("/", "/bank", "/documents", "/review", "/matching", "/extraction-review", "/settings"):
+            with urllib.request.urlopen(base + route) as response:
+                self.assertEqual(response.read(), (FRONTEND / "index.html").read_bytes())
+        for asset in (FRONTEND / "assets").iterdir():
+            with urllib.request.urlopen(base + "/assets/" + asset.name) as response:
+                self.assertEqual(response.read(), asset.read_bytes())
+                self.assertIn("immutable", response.headers["Cache-Control"])
 
 
 if __name__ == "__main__":

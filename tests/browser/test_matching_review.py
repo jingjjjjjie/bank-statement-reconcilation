@@ -1,12 +1,13 @@
 """Exercise final review interactions against an isolated cache and ledger."""
 import threading
 import unittest
-from http.server import ThreadingHTTPServer
+from tests.http_server import TestServer
 from types import SimpleNamespace
 
 from playwright.sync_api import sync_playwright, expect
 
-from dashboard.routes import handler_for
+from dashboard.routes import create_app
+from tests.browser import browser_options
 from dashboard import matching_review
 from tests.unit import test_matching_review as fixtures
 
@@ -16,13 +17,16 @@ class MatchingReviewBrowserTests(unittest.TestCase):
         """Human decisions survive reload and grouped allocations update both views."""
         fixture = fixtures.MatchingReviewTests()
         fixture.setUp()
+        fixture.review.manifest = {}
+        fixture.review.workspace = lambda: {"name": "Fixture", "period": "December"}
+        fixture.review.workflow_checks = lambda: (False, False, False)
         self.addCleanup(fixture.doCleanups)
-        server = ThreadingHTTPServer(('127.0.0.1',0),handler_for(fixture.review,'test-token',SimpleNamespace()))
+        server = TestServer(('127.0.0.1',0),create_app(fixture.review,'test-token',SimpleNamespace()))
         threading.Thread(target=server.serve_forever,daemon=True).start()
         self.addCleanup(server.server_close)
         self.addCleanup(server.shutdown)
         with sync_playwright() as playwright:
-            browser = playwright.chromium.launch(headless=True)
+            browser = playwright.chromium.launch(**browser_options())
             page = browser.new_page(viewport={'width':1600,'height':1000})
             errors = []
             page.on('pageerror',lambda e: errors.append(str(e)))

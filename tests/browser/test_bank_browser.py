@@ -2,12 +2,12 @@
 import tempfile
 import threading
 import unittest
-from http.server import ThreadingHTTPServer
+from tests.http_server import TestServer
 from pathlib import Path
 
 from playwright.sync_api import sync_playwright, expect
 
-from dashboard.app import Review, handler_for
+from dashboard.app import Review, create_app
 from reconciliation.duplicate_workflow import organize
 
 
@@ -28,7 +28,7 @@ class BankBrowserTests(unittest.TestCase):
                 "8866,MYR,100.00,110.00,10.00,0.00,passed,tx-1,2025-12-01,2,in,10.00,0.00,110.00,Payer,payer,Unique transfer,pending\n",
                 encoding="utf-8")
             review = Review(manifest, base / "dashboard-data")
-            server = ThreadingHTTPServer(("127.0.0.1", 0), handler_for(review, "test-token"))
+            server = TestServer(("127.0.0.1", 0), create_app(review, "test-token"))
             threading.Thread(target=server.serve_forever, daemon=True).start()
             try:
                 with sync_playwright() as playwright:

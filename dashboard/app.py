@@ -1,15 +1,15 @@
-"""Local duplicate-review dashboard. Run with Python; no web framework required."""
+"""Run the FastAPI dashboard and its bundled Vue frontend in one process."""
 import argparse
 import secrets
 import sys
-from http.server import ThreadingHTTPServer
+import uvicorn
 from pathlib import Path
 
 WORKSPACE = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(WORKSPACE))
 
 from reconciliation.source_selection import SourceSelection
-from dashboard.routes import handler_for
+from dashboard.routes import create_app
 from dashboard.review import Review, workflow_guide, write_json
 
 
@@ -26,13 +26,10 @@ def main():
     manifest = sources.active_manifest(args.manifest) if args.manifest == WORKSPACE / "duplicate-manifest.json" else args.manifest
     data = manifest.parent / "dashboard-data" if manifest != args.manifest else args.data
     review = Review(manifest, data) if manifest.is_file() else None
-    server = ThreadingHTTPServer((args.host, args.port), handler_for(review, secrets.token_urlsafe(32), sources))
+    app = create_app(review, secrets.token_urlsafe(32), sources)
     display_host = "127.0.0.1" if args.host == "0.0.0.0" else args.host
-    print(f"Dashboard: http://{display_host}:{server.server_port}", flush=True)
-    try:
-        server.serve_forever()
-    except KeyboardInterrupt:
-        server.server_close()
+    print(f"Dashboard: http://{display_host}:{args.port}", flush=True)
+    uvicorn.run(app, host=args.host, port=args.port, workers=1, access_log=False)
 
 
 if __name__ == "__main__":

@@ -1,14 +1,16 @@
 """Browser smoke test for settings and keep/undo using temporary fixtures."""
 import tempfile
 import threading
-from http.server import ThreadingHTTPServer
+from tests.http_server import TestServer
 from pathlib import Path
+from unittest.mock import patch
 
 from PIL import Image, ImageDraw
 from playwright.sync_api import sync_playwright, expect
-from dashboard.app import Review, handler_for
+from dashboard.app import Review, create_app
 from reconciliation.duplicate_workflow import organize
 from reconciliation.review_settings import DEFAULTS
+from reconciliation import development_cache
 
 
 def main():
@@ -21,6 +23,9 @@ def main():
         # Exercise actual browser keep/undo actions against isolated fixture documents.
         with tempfile.TemporaryDirectory() as temporary:
             base = Path(temporary)
+            isolated_mode = patch.object(development_cache, "WORKSPACE", base)
+            isolated_mode.start()
+            development_cache.set_mode(True)
             root = base / "sources"
             root.mkdir()
             image = Image.new("RGB", (400, 250), "white")
@@ -30,13 +35,13 @@ def main():
             manifest = base / "manifest.json"
             organize(root, manifest)
             review = Review(manifest, base / "data")
-            server = ThreadingHTTPServer(("127.0.0.1", 0), handler_for(review, "browser-test-token"))
+            server = TestServer(("127.0.0.1", 0), create_app(review, "browser-test-token"))
             threading.Thread(target=server.serve_forever, daemon=True).start()
             try:
                 page.set_viewport_size({"width": 1440, "height": 1080})
                 page.goto(f"http://127.0.0.1:{server.server_port}/review")
                 # Save settings only in the fixture workspace and verify they survive reload.
-                page.get_by_role("link", name="Settings", exact=True).click()
+                page.locator('.rail').get_by_role("link", name="Settings", exact=True).click()
                 expect(page).to_have_url(f"http://127.0.0.1:{server.server_port}/settings")
                 expect(page.locator("#settings-fields")).to_be_enabled()
                 page.locator("#pdf-mode").select_option("auto")
@@ -82,7 +87,7 @@ def main():
                 expect(page.locator("#settings-form")).to_have_count(0)
                 page.set_viewport_size({"width": 1440, "height": 1080})
                 page.get_by_role("button", name="Retain this file", exact=True).first.click()
-                expect(page.locator("#group-status")).to_have_text("Review complete")
+                expect(page.locator("#group-status")).to_have_text("Complete")
                 assert page.locator(".file-card.kept").count() == 1
                 assert page.locator(".file-card.archived").count() == 1
                 page.reload()
@@ -92,6 +97,7 @@ def main():
             finally:
                 server.shutdown()
                 server.server_close()
+                isolated_mode.stop()
         browser.close()
         assert not errors, errors
         print("PASS: real previews, validation, mobile layout, fixture keep/undo and reload persistence.")

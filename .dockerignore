@@ -16,3 +16,7 @@ uploads
 
 # Private local project notes.
 docs/local
+
+# Frontend dependencies and reproducible build output.
+dashboard/frontend/node_modules/
+dashboard/frontend/dist/

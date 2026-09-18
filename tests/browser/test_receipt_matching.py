@@ -3,20 +3,24 @@ import threading
 import unittest
 import json
 from pathlib import Path
-from http.server import ThreadingHTTPServer
+from tests.http_server import TestServer
 
 from playwright.sync_api import expect, sync_playwright
-from dashboard.routes import handler_for
+from dashboard.routes import create_app
+from tests.browser import browser_options
 from tests.unit import test_receipt_matching as fixtures
 from PIL import Image, ImageDraw
 from reconciliation.duplicate_workflow import fingerprint
 
 
 class ReceiptMatchingBrowserTests(unittest.TestCase):
-    def test_combined_match_review_accept_reload_and_undo(self):
+    def test_extraction_review_accept_navigation_and_reload(self):
         """Use real local HTTP endpoints without sending documents to a model."""
         fixture = fixtures.ReceiptMatchingTests()
         fixture.setUp()
+        fixture.review.manifest = {}
+        fixture.review.workspace = lambda: {"name": "Fixture", "period": "December"}
+        fixture.review.workflow_checks = lambda: (False, False, False)
         self.addCleanup(fixture.doCleanups)
         picture = Image.new("RGB", (480, 800), "#f5f2e9")
         drawing = ImageDraw.Draw(picture)
@@ -39,12 +43,12 @@ class ReceiptMatchingBrowserTests(unittest.TestCase):
         fixture.review.workflow_checks = lambda: (False, False, False)
         fixture.state.update(screens={}, pairs={})
         fixture.save_state()
-        server = ThreadingHTTPServer(("127.0.0.1", 0), handler_for(fixture.review, "test-token"))
+        server = TestServer(("127.0.0.1", 0), create_app(fixture.review, "test-token"))
         threading.Thread(target=server.serve_forever, daemon=True).start()
         self.addCleanup(server.server_close)
         self.addCleanup(server.shutdown)
         with sync_playwright() as playwright:
-            browser = playwright.chromium.launch(headless=True, args=["--no-sandbox"])
+            browser = playwright.chromium.launch(**browser_options(), args=["--no-sandbox"])
             page = browser.new_page(viewport={"width": 1440, "height": 1000})
             errors = []
             page.on("pageerror", lambda error: errors.append(str(error)))
@@ -102,35 +106,11 @@ class ReceiptMatchingBrowserTests(unittest.TestCase):
             page.locator("#accept-receipts").click()
             expect(page.locator("#receipt-unit-status")).to_have_text("Extraction accepted.")
             page.get_by_role("link", name="Back to document status").click()
-            page.locator("#receipt-reviewer").fill("Fixture reviewer")
-            page.locator("#receipt-bank").select_option("combined")
-            expect(page.locator('#receipt-allocations input[type="checkbox"]')).to_have_count(2)
-            for checkbox in page.locator('#receipt-allocations input[type="checkbox"]').all():
-                checkbox.check()
-            page.locator("#propose-receipt-match").click()
-            expect(page.locator("#receipt-proposal")).to_contain_text("Supporting total: MYR 60.00")
-            expect(page.locator("#receipt-proposal")).to_contain_text("Difference: MYR 0.00")
-            expect(page.locator("#receipt-proposal")).to_contain_text("pending")
-            page.locator("#receipt-proposal").get_by_role("button", name="Accept match", exact=True).click()
-            expect(page.locator("#receipt-proposal")).to_contain_text("accepted")
+            expect(page.locator("h1")).to_have_text("Document status")
+            page.get_by_role("link", name="Review extraction", exact=True).first.click()
+            expect(page.locator("#receipt-unit-status")).to_have_text("Extraction accepted.")
             page.reload()
-            expect(page.locator("#receipt-saved-matches")).to_contain_text("accepted")
-            page.locator("#receipt-reviewer").fill("Fixture reviewer")
-            page.locator("#receipt-saved-matches").get_by_role("button", name="Undo match", exact=True).click()
-            expect(page.locator("#receipt-saved-matches")).to_contain_text("undone")
-            expect(page.locator('#receipt-allocations input[type="checkbox"]')).to_have_count(2)
-            page.locator("#receipt-bank").select_option("first")
-            page.locator('#receipt-allocations input[type="checkbox"]').first.check()
-            page.locator("#propose-receipt-match").click()
-            expect(page.locator("#receipt-proposal")).to_contain_text("Supporting total: MYR 45.00")
-            page.locator("#receipt-proposal").get_by_role("button", name="Accept match", exact=True).click()
-            expect(page.locator("#receipt-proposal")).to_contain_text("accepted")
-            page.locator("#receipt-bank").select_option("second")
-            expect(page.locator('#receipt-allocations input[type="checkbox"]')).to_have_count(1)
-            page.locator('#receipt-allocations input[type="checkbox"]').check()
-            page.locator("#propose-receipt-match").click()
-            expect(page.locator("#receipt-proposal")).to_contain_text("Supporting total: MYR 15.00")
-            page.locator("#receipt-proposal").get_by_role("button", name="Accept match", exact=True).click()
-            expect(page.locator("#receipt-proposal")).to_contain_text("accepted")
+            expect(page.locator('[data-field="total"]').first).to_have_value("45.00")
+            expect(page.locator("#receipt-pieces fieldset")).to_have_count(2)
             self.assertFalse(errors)
             browser.close()

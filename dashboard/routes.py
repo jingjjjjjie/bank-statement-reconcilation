@@ -1,328 +1,137 @@
-"""HTTP routes and request validation for the local review dashboard."""
-import json
+"""FastAPI application, local request protection, and Vue asset delivery."""
+import asyncio
 import hashlib
-import mimetypes
-import tempfile
-import threading
-from http.server import BaseHTTPRequestHandler
+import os
+import secrets
 from pathlib import Path
-from urllib.parse import parse_qs, urlparse
 
-from reconciliation.duplicate_workflow import check, fingerprint
-from reconciliation.review_settings import save_config
+from fastapi import Depends, FastAPI, HTTPException, Request
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import FileResponse, JSONResponse, Response
+
 from reconciliation.source_selection import SourceSelection
-from reconciliation import development_cache
-from dashboard import content_review, development, document_status, office_preview
-from dashboard.review import Review, workflow_guide
-from dashboard import receipt_review
-from dashboard import extraction_preview
-from dashboard import matching_review
+
+FRONTEND = Path(os.environ.get("DASHBOARD_FRONTEND", Path(__file__).parent / "frontend/dist"))
+PAGES = {"", "source", "review", "exact-report", "content-review", "documents", "bank",
+         "matching", "extraction-review", "settings", "complete"}
 
 
-ASSETS = {"/review": ("index.html", "text/html; charset=utf-8"),
-          "/matching": ("matching.html", "text/html; charset=utf-8"),
-          "/matching/": ("matching.html", "text/html; charset=utf-8"),
-          "/matching.js": ("matching.js", "text/javascript"),
-          "/matching.css": ("matching.css", "text/css"),
-          "/extraction-review": ("extraction-review.html", "text/html; charset=utf-8"),
-          "/extraction-review/": ("extraction-review.html", "text/html; charset=utf-8"),
-          "/extraction-review.js": ("extraction-review.js", "text/javascript"),
-          "/extraction-review.css": ("extraction-review.css", "text/css"),
-          "/bank": ("bank.html", "text/html; charset=utf-8"),
-          "/bank/": ("bank.html", "text/html; charset=utf-8"),
-          "/settings": ("settings.html", "text/html; charset=utf-8"),
-          "/settings/": ("settings.html", "text/html; charset=utf-8"),
-          "/complete": ("complete.html", "text/html; charset=utf-8"),
-          "/complete/": ("complete.html", "text/html; charset=utf-8"),
-          "/source": ("source.html", "text/html; charset=utf-8"),
-          "/source/": ("source.html", "text/html; charset=utf-8"),
-          "/content-review": ("content-review.html", "text/html; charset=utf-8"),
-          "/content-review/": ("content-review.html", "text/html; charset=utf-8"),
-          "/documents": ("documents.html", "text/html; charset=utf-8"),
-          "/documents/": ("documents.html", "text/html; charset=utf-8"),
-          "/exact-report": ("exact-report.html", "text/html; charset=utf-8"),
-          "/exact-report.js": ("exact-report.js", "text/javascript"),
-          "/app.js": ("app.js", "text/javascript"),
-          "/bank.js": ("bank.js", "text/javascript"),
-          "/settings.js": ("settings.js", "text/javascript"),
-          "/complete.js": ("complete.js", "text/javascript"),
-          "/common.js": ("common.js", "text/javascript"),
-          "/source.js": ("source.js", "text/javascript"),
-          "/content-review.js": ("content-review.js", "text/javascript"),
-          "/receipts.js": ("receipts.js", "text/javascript"),
-          "/documents.js": ("documents.js", "text/javascript"),
-          "/documents.css": ("documents.css", "text/css"),
-          "/office-view.js": ("office-view.js", "text/javascript"),
-          "/style.css": ("style.css", "text/css")}
+class Context:
+    """Keep the active review and serialized file decisions in one server process."""
 
-def handler_for(review, token, sources=None):
-    """Serve the active review and local source-folder selection."""
-    sources = sources or SourceSelection(review.manifest_path.parent, review.data)
-    review_ref = {"current": review}
-    server_lock = threading.RLock()
+    def __init__(self, review, token, sources):
+        """Create one session without changing saved workflow state."""
+        self.review, self.token, self.sources = review, token, sources
+        self.lock = asyncio.Lock()
+        self.review_id = secrets.token_hex(16)
 
-    class Handler(BaseHTTPRequestHandler):
-        def reply(self, status, body, mime="application/json; charset=utf-8", etag=None):
-            """Send a response with consistent local-dashboard security headers."""
-            if not isinstance(body, bytes):
-                body = json.dumps(body, ensure_ascii=False).encode("utf-8")
-            if etag and self.headers.get("If-None-Match") == etag:
-                status, body = 304, b""
-            self.send_response(status)
-            self.send_header("Content-Type", mime)
-            if status != 304:
-                self.send_header("Content-Length", str(len(body)))
-            self.send_header("Cache-Control", "private, no-cache" if etag else "no-store")
-            if etag:
-                self.send_header("ETag", etag)
-            self.send_header("X-Content-Type-Options", "nosniff")
-            self.send_header("Content-Security-Policy", "default-src 'self'; img-src 'self' blob:; frame-ancestors 'none'; base-uri 'none'")
-            self.end_headers()
-            self.wfile.write(body)
 
-        def local_host(self):
-            """Accept only the loopback hostnames used by the dashboard."""
-            return self.headers.get("Host") in {f"127.0.0.1:{self.server.server_port}", f"localhost:{self.server.server_port}"}
+async def context(request: Request):
+    """Wait for workflow access without occupying request-worker threads."""
+    state = request.app.state.context
+    async with state.lock:
+        expected = request.headers.get("X-Review-Id")
+        if request.method == "POST" and expected and expected != state.review_id:
+            raise HTTPException(409, "The active workspace changed. Reload this page before saving.")
+        yield state
 
-        def do_GET(self):
-            """Read review state, previews, or an explicitly allowed static asset."""
-            review = review_ref["current"]
-            if not self.local_host():
-                self.reply(403, {"error": "Local access only"})
-                return
-            query = urlparse(self.path)
-            if query.path == "/":
-                self.reply(200, (Path(__file__).parent / "static/source.html").read_bytes(), "text/html; charset=utf-8")
-                return
-            if review is None and query.path not in {"/api/receipts", "/receipts.js", "/documents", "/documents/", "/documents.js", "/documents.css", "/api/document-status", "/source", "/source/", "/source.js", "/bank", "/bank/", "/bank.js", "/common.js", "/style.css", "/api/development-mode", "/api/source", "/api/source/browse", "/api/source/preview", "/api/workspace", "/api/session", "/api/bank-statement", "/api/workflow-checks"}:
-                self.send_response(302)
-                self.send_header("Location", "/source")
-                self.end_headers()
-                return
-            params = parse_qs(query.query)
-            try:
-                if query.path in ASSETS:
-                    name, mime = ASSETS[query.path]
-                    if name == "index.html" and review and review.manifest.get("Mode") == "exact_report":
-                        name = "exact-report.html"
-                    body = (Path(__file__).parent / "static" / name).read_bytes()
-                    self.reply(200, body, mime, '"' + hashlib.sha256(body).hexdigest() + '"')
-                    return
-                if query.path == "/api/session":
-                    self.reply(200, {"token": token})
-                    return
-                with server_lock:
-                    if query.path == "/api/matching":
-                        self.reply(200, matching_review.snapshot(review))
-                    elif query.path == "/api/matching-export":
-                        self.reply(200, matching_review.export_csv(review), "text/csv; charset=utf-8")
-                    elif query.path in {"/api/matching-preview", "/api/matching-image", "/api/matching-office", "/api/matching-file"}:
-                        source = matching_review.evidence(review, params["kind"][0], params["id"][0])
-                        page = int(params.get("page", ["0"])[0])
-                        if query.path == "/api/matching-preview":
-                            self.reply(200, extraction_preview.describe(source))
-                        elif query.path == "/api/matching-image":
-                            self.reply(200, extraction_preview.image(source, page), "image/png")
-                        elif query.path == "/api/matching-office":
-                            self.reply(200, office_preview.page(source, page))
-                        else:
-                            mime = mimetypes.guess_type(source.name)[0] or "application/octet-stream"
-                            if source.suffix.lower() not in {".pdf", ".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp", ".txt", ".csv", ".xlsx", ".docx"}:
-                                mime = "application/octet-stream"
-                            self.reply(200, source.read_bytes(), mime)
-                    elif query.path == "/api/state":
-                        self.reply(200, {**review.snapshot(), "token": token})
-                    elif query.path == "/api/workspace":
-                        self.reply(200, review.workspace() if review else {"name": "No active review", "period": "Choose a source folder"})
-                    elif query.path == "/api/workflow-checks":
-                        self.reply(200, workflow_guide(review))
-                    elif query.path == "/api/config":
-                        self.reply(200, review.settings())
-                    elif query.path == "/api/development-mode":
-                        self.reply(200, development_cache.mode())
-                    elif query.path == "/api/development-decisions":
-                        self.reply(200, development.snapshot(review))
-                    elif query.path == "/api/source":
-                        selected = sources.selected()
-                        bank = sources.selected_bank()
-                        self.reply(200, {"active": str(review.root) if review else None,
-                                         "workspace": sources.selected_workspace(),
-                                         "selected": sources.inspect(selected) if selected else None,
-                                         "bank": sources.inspect_bank(bank) if bank else None})
-                    elif query.path == "/api/source/browse":
-                        self.reply(200, sources.browse(params.get("path", [None])[0],
-                                                       params.get("kind", ["folder"])[0] == "bank"))
-                    elif query.path == "/api/source/preview":
-                        self.reply(200, sources.preview())
-                    elif query.path == "/api/completion":
-                        self.reply(200, review.completion())
-                    elif query.path == "/api/content-review":
-                        self.reply(200, content_review.snapshot(review))
-                    elif query.path == "/api/receipts":
-                        self.reply(200, receipt_review.snapshot(review))
-                    elif query.path == "/api/extraction-preview":
-                        self.reply(200, extraction_preview.describe(content_review.source(review, params["id"][0])))
-                    elif query.path == "/api/extraction-preview-image":
-                        self.reply(200, extraction_preview.image(content_review.source(review, params["id"][0]),
-                                   int(params.get("page", ["0"])[0])), "image/png")
-                    elif query.path == "/api/document-status":
-                        self.reply(200, document_status.snapshot(review))
-                    elif query.path == "/api/content-file":
-                        path = content_review.source(review, params["id"][0])
-                        self.reply(200, path.read_bytes(), mimetypes.guess_type(path.name)[0] or "application/octet-stream")
-                    elif query.path == "/api/content-image":
-                        path = content_review.image(review, params["id"][0], int(params["unit"][0]))
-                        self.reply(200, path.read_bytes(), "image/png")
-                    elif query.path == "/api/bank-statement":
-                        self.reply(200, review.bank_statement() if review else
-                                   {"available": False, "transactions": [], "workbook_available": False})
-                    elif query.path == "/api/bank-export-defaults":
-                        self.reply(200, review.export_defaults())
-                    elif query.path == "/api/bank-workbook":
-                        workbook = review.manifest_path.parent / "bank-output" / "answer_statement_bank_only.xlsx"
-                        self.reply(200, workbook.read_bytes(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-                    elif query.path == "/api/document":
-                        self.reply(200, office_preview.describe(content_review.source(review, params["content_id"][0]))
-                                   if "content_id" in params else review.document(params["id"][0]))
-                    elif query.path == "/api/office-view":
-                        path = (content_review.source(review, params["content_id"][0])
-                                if "content_id" in params else review.file_path(params["id"][0]))
-                        self.reply(200, office_preview.page(path, int(params.get("page", ["0"])[0])))
-                    elif query.path in {"/api/file", "/api/preview"}:
-                        file_id = params["id"][0]
-                        path = review.file_path(file_id)
-                        if query.path == "/api/file":
-                            self.reply(200, path.read_bytes(), mimetypes.guess_type(path.name)[0] or "application/octet-stream")
-                        elif path.suffix.lower() == ".pdf":
-                            import pymupdf
-                            with pymupdf.open(path) as pdf:
-                                page = int(params.get("page", ["0"])[0])
-                                self.reply(200, pdf[page].get_pixmap(dpi=110, alpha=False).tobytes("png"), "image/png")
-                        else:
-                            document = review.document(file_id)
-                            if document["kind"] == "office":
-                                units = json.loads((review.data / "previews" / fingerprint(path) / "units.json").read_text(encoding="utf-8"))
-                                path = Path(units[int(params.get("page", ["0"])[0])]["image"])
-                            self.reply(200, path.read_bytes(), mimetypes.guess_type(path.name)[0] or "image/png")
-                    else:
-                        self.reply(404, {"error": "File or page not found"})
-            except (KeyError, IndexError, FileNotFoundError):
-                self.reply(404, {"error": "File or page not found"})
-            except Exception as error:
-                self.reply(400, {"error": str(error)})
 
-        def do_POST(self):
-            # Token and Origin checks prevent another website from making file choices.
-            review = review_ref["current"]
-            origin = self.headers.get("Origin")
-            allowed = {f"http://127.0.0.1:{self.server.server_port}", f"http://localhost:{self.server.server_port}"}
-            if not self.local_host() or self.headers.get("X-Review-Token") != token or (origin and origin not in allowed):
-                self.reply(403, {"error": "Refresh the dashboard before making changes"})
-                return
-            try:
-                length = int(self.headers.get("Content-Length", "0"))
-                if not 0 < length <= 8192:
-                    raise ValueError("Invalid request size")
-                body = json.loads(self.rfile.read(length))
-                with server_lock:
-                    if self.path.startswith("/api/development/") and not development_cache.mode()["enabled"]:
-                        raise ValueError("Enable Development / testing mode in Settings first")
-                    if self.path == "/api/development-mode":
-                        if review and content_review.execution_status(review)["running"]:
-                            raise ValueError("Stop the current review before changing development mode")
-                        mode = development_cache.set_mode(body["enabled"])
-                        if mode["enabled"] and review:
-                            development.seed(review)
-                        self.reply(200, mode)
-                        return
-                    if self.path == "/api/matching-decide":
-                        self.reply(200, matching_review.decide(review, body))
-                        return
-                    if self.path == "/api/keep":
-                        review.keep(body["group"], body["id"])
-                    elif self.path == "/api/undo":
-                        review.undo(body["group"])
-                    elif self.path == "/api/validate":
-                        problems = check(review.root, review.manifest, review.manifest_path)
-                        self.reply(200, {"passed": not problems, "problems": problems})
-                        return
-                    elif self.path == "/api/config":
-                        save_config(review.config_path, body["config"], body["revision"])
-                        self.reply(200, review.settings())
-                        return
-                    elif self.path == "/api/development/remember":
-                        self.reply(200, development.remember(review))
-                        return
-                    elif self.path == "/api/development/apply":
-                        self.reply(200, development.apply(review, body["reviewer"]))
-                        return
-                    elif self.path == "/api/receipts/accept":
-                        self.reply(200, receipt_review.accept_extraction(review, body))
-                        return
-                    elif self.path == "/api/receipts/match":
-                        self.reply(200, receipt_review.change_match(review, body))
-                        return
-                    elif self.path == "/api/content/prepare":
-                        self.reply(200, content_review.prepare(review))
-                        return
-                    elif self.path == "/api/content/run":
-                        self.reply(200, content_review.start(review))
-                        return
-                    elif self.path == "/api/content/stop":
-                        self.reply(200, content_review.stop(review))
-                        return
-                    elif self.path == "/api/content/decide":
-                        self.reply(200, content_review.decide(review, body["pair"], body["verdict"],
-                                                             body["reviewer"], body["reason"]))
-                        return
-                    elif self.path == "/api/content/undo":
-                        self.reply(200, content_review.undo(review, body["pair"],
-                                                           body["reviewer"], body["reason"]))
-                        return
-                    elif self.path == "/api/source/workspace-select":
-                        self.reply(200, sources.save_workspace(body["path"]))
-                        return
-                    elif self.path == "/api/source/select":
-                        self.reply(200, {"selected": sources.save(body["path"])})
-                        return
-                    elif self.path == "/api/source/start":
-                        if not isinstance(body.get("preview"), str) or not body["preview"]:
-                            raise ValueError("Check the folder to preview exact duplicates first")
-                        manifest, data = sources.start(body["preview"])
-                        next_review = Review(manifest, data)
-                        sources.activate(manifest)
-                        review_ref["current"] = next_review
-                        self.reply(200, {"active": str(next_review.root), "groups": len(next_review.groups)})
-                        return
-                    elif self.path == "/api/source/bank-select":
-                        self.reply(200, {"bank": sources.save_bank(body["path"])})
-                        return
-                    elif self.path == "/api/source/bank-prepare":
-                        if review is None:
-                            raise ValueError("Create a supporting-document review first")
-                        if sources.selected_workspace() and sources.selected() != review.root:
-                            raise ValueError("Create or open the selected workspace review before extracting its statement")
-                        self.reply(200, sources.prepare_bank(review.manifest_path, body["year"]))
-                        return
-                    elif self.path == "/api/bank-export":
-                        if review is None:
-                            raise ValueError("Choose an active review first")
-                        from reconciliation.bank_excel import export
-                        master = review.manifest_path.parent / "bank-output" / "master_statement.csv"
-                        with tempfile.TemporaryDirectory() as temporary:
-                            output = export(master, body["company"],
-                                            Path(temporary) / "answer_statement_bank_only.xlsx")
-                            development_cache.capture(review.manifest_path, "bank-export", [output])
-                            self.reply(200, output.read_bytes(),
-                                       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-                        return
-                    else:
-                        raise ValueError("Unknown action")
-                    self.reply(200, review.snapshot())
-            except Exception as error:
-                self.reply(400, {"error": str(error)})
+def active_context(state=Depends(context)):
+    """Require an active project while holding its decision lock."""
+    if state.review is None:
+        raise HTTPException(409, "Select a workspace and proceed first")
+    return state
 
-        def log_message(self, *args):
-            """Suppress routine HTTP access logging."""
-            pass
-    return Handler
+
+def create_app(review=None, token=None, sources=None):
+    """Build the ASGI app without starting a server or performing model calls."""
+    from dashboard.api import files, review as review_api, source
+
+    workspace = Path(__file__).resolve().parent.parent
+    sources = sources or (SourceSelection(review.manifest_path.parent, review.data) if review else
+                          SourceSelection(workspace, workspace / "dashboard/.data"))
+    app = FastAPI(title="Reconciliation dashboard", docs_url=None, redoc_url=None, openapi_url=None)
+    app.state.context = Context(review, token or secrets.token_urlsafe(32), sources)
+
+    @app.middleware("http")
+    async def local_requests(request: Request, call_next):
+        """Retain loopback, origin, token, size, and browser security checks."""
+        port = request.scope["server"][1]
+        hosts = {f"127.0.0.1:{port}", f"localhost:{port}"}
+        if request.headers.get("host") not in hosts:
+            return JSONResponse({"error": "Local access only"}, status_code=403)
+        if request.method == "POST":
+            origin = request.headers.get("origin")
+            if (request.headers.get("X-Review-Token") != app.state.context.token or
+                    (origin and origin not in {f"http://{host}" for host in hosts})):
+                return JSONResponse({"error": "Refresh the dashboard before making changes"}, status_code=403)
+            body = bytearray()
+            async for chunk in request.stream():
+                body.extend(chunk)
+                if len(body) > 8192:
+                    return JSONResponse({"error": "Invalid request size"}, status_code=413)
+            if not body:
+                return JSONResponse({"error": "Invalid request size"}, status_code=400)
+            request._body = bytes(body)
+        response = await call_next(request)
+        response.headers.setdefault("Cache-Control", "no-store")
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["Content-Security-Policy"] = "default-src 'self'; img-src 'self' blob:; frame-ancestors 'none'; base-uri 'none'"
+        return response
+
+    @app.exception_handler(HTTPException)
+    async def http_error(request, error):
+        """Keep the JSON error shape consumed by every dashboard view."""
+        return JSONResponse({"error": str(error.detail)}, status_code=error.status_code)
+
+    @app.exception_handler(RequestValidationError)
+    async def invalid_request(request, error):
+        """Report invalid fields without returning private input contents."""
+        return JSONResponse({"error": "Invalid request fields"}, status_code=422)
+
+    @app.exception_handler(ValueError)
+    @app.exception_handler(OSError)
+    @app.exception_handler(KeyError)
+    @app.exception_handler(IndexError)
+    async def workflow_error(request, error):
+        """Translate expected workflow failures to readable API errors."""
+        status = 404 if isinstance(error, (FileNotFoundError, KeyError, IndexError)) else 400
+        return JSONResponse({"error": str(error)}, status_code=status)
+
+    @app.get("/api/session")
+    async def session():
+        """Return routing metadata without scanning documents or acquiring a workflow lock."""
+        state = app.state.context
+        return {"token": state.token, "review_id": state.review_id,
+                "active": state.review is not None,
+                "mode": state.review.manifest.get("Mode", "legacy") if state.review else None}
+
+    app.include_router(source.router)
+    app.include_router(review_api.router)
+    app.include_router(files.router)
+
+    @app.get("/assets/{name:path}")
+    def asset(name: str):
+        """Serve bundled frontend files with immutable content-hashed URLs."""
+        root = (FRONTEND / "assets").resolve()
+        path = (root / name).resolve()
+        if not path.is_relative_to(root) or not path.is_file():
+            raise HTTPException(404, "Asset not found")
+        return FileResponse(path, headers={"Cache-Control": "public, max-age=31536000, immutable"})
+
+    @app.get("/{page:path}")
+    def page(page: str, request: Request):
+        """Support direct links and browser history for known Vue routes."""
+        if page.strip("/") not in PAGES:
+            raise HTTPException(404, "File or page not found")
+        index = FRONTEND / "index.html"
+        if not index.is_file():
+            raise HTTPException(503, "Build the frontend first: cd dashboard/frontend && npm ci && npm run build")
+        body = index.read_bytes()
+        etag = chr(34) + hashlib.sha256(body).hexdigest() + chr(34)
+        headers = {"ETag": etag, "Cache-Control": "private, no-cache"}
+        cached = request.headers.get("if-none-match") == etag
+        return Response(b"" if cached else body, status_code=304 if cached else 200,
+                        media_type="text/html", headers=headers)
+
+    return app

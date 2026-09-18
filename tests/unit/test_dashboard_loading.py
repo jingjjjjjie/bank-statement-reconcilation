@@ -5,7 +5,7 @@ import tempfile
 import threading
 import unittest
 import urllib.request
-from http.server import ThreadingHTTPServer
+from tests.http_server import TestServer
 from pathlib import Path
 from unittest.mock import patch
 
@@ -62,12 +62,26 @@ class DashboardLoadingTests(unittest.TestCase):
 
     def test_static_assets_and_session_do_not_wait_for_review_scan(self):
         """A blocked review read cannot stall page assets or session loading."""
-        from dashboard.routes import handler_for
+        from dashboard.routes import create_app
         from dashboard.review import Review
         manifest = self.base / "manifest.json"
         organize(self.source, manifest)
         review = Review(manifest, self.base / "data")
-        server = ThreadingHTTPServer(("127.0.0.1", 0), handler_for(review, "token"))
+        app = create_app(review, "token")
+        queued = threading.Event()
+        received = 0
+
+        @app.middleware("http")
+        async def count_reads(request, call_next):
+            """Observe a burst larger than the default request-worker pool."""
+            nonlocal received
+            if request.url.path == "/api/state":
+                received += 1
+                if received == 45:
+                    queued.set()
+            return await call_next(request)
+
+        server = TestServer(("127.0.0.1", 0), app)
         threading.Thread(target=server.serve_forever, daemon=True).start()
         self.addCleanup(server.server_close)
         self.addCleanup(server.shutdown)
@@ -77,7 +91,7 @@ class DashboardLoadingTests(unittest.TestCase):
         def slow_snapshot():
             """Hold the review lock until the test finishes loading assets."""
             entered.set()
-            release.wait(5)
+            release.wait(10)
             return {}
 
         def load_state():
@@ -86,20 +100,23 @@ class DashboardLoadingTests(unittest.TestCase):
                 response.read()
 
         with patch.object(review, "snapshot", side_effect=slow_snapshot):
-            request = threading.Thread(target=load_state)
-            request.start()
+            requests = [threading.Thread(target=load_state) for _ in range(45)]
+            for request in requests:
+                request.start()
             try:
                 self.assertTrue(entered.wait(2))
-                for path in ("/style.css", "/api/session"):
+                self.assertTrue(queued.wait(5))
+                for path in ("/bank", "/api/session"):
                     with urllib.request.urlopen(base + path, timeout=2) as response:
                         self.assertEqual(response.status, 200)
-                with urllib.request.urlopen(base + "/style.css") as response:
+                with urllib.request.urlopen(base + "/bank") as response:
                     etag = response.headers["ETag"]
                     self.assertIn("no-cache", response.headers["Cache-Control"])
-                conditional = urllib.request.Request(base + "/style.css", headers={"If-None-Match": etag})
+                conditional = urllib.request.Request(base + "/bank", headers={"If-None-Match": etag})
                 with self.assertRaises(urllib.error.HTTPError) as result:
                     urllib.request.urlopen(conditional)
                 self.assertEqual(result.exception.code, 304)
             finally:
                 release.set()
-                request.join(5)
+                for request in requests:
+                    request.join(5)

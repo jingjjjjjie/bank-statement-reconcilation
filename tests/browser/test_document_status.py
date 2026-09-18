@@ -3,15 +3,15 @@ import json
 import tempfile
 import threading
 import unittest
-from http.server import ThreadingHTTPServer
+from tests.http_server import TestServer
 from pathlib import Path
 
 from PIL import Image
 from playwright.sync_api import expect, sync_playwright
 
-from dashboard.app import Review, handler_for
+from dashboard.app import Review, create_app
 from dashboard.document_status import snapshot
-from dashboard.test_content_review import FixtureReviewer
+from tests.unit.test_content_review import FixtureReviewer
 from reconciliation.duplicate_workflow import organize
 from reconciliation.vision_workflow import load, prepare, run
 
@@ -38,7 +38,7 @@ class DocumentStatusTests(unittest.TestCase):
             waiting = snapshot(review)["documents"]
             self.assertEqual(len(waiting), 2)
             self.assertTrue(all(item["status"] == "Waiting for extraction" for item in waiting))
-            server = ThreadingHTTPServer(("127.0.0.1", 0), handler_for(review, "test-token"))
+            server = TestServer(("127.0.0.1", 0), create_app(review, "test-token"))
             threading.Thread(target=server.serve_forever, daemon=True).start()
             try:
                 with sync_playwright() as playwright:

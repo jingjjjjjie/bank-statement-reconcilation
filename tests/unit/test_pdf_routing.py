@@ -87,7 +87,7 @@ class PdfRoutingTests(unittest.TestCase):
         config = fixture.base / 'config.json'
         config.write_text(json.dumps({**DEFAULTS, 'pdf_mode': 'compare'}))
         organize(fixture.root, fixture.manifest)
-        with patch('reconciliation.development_cache.mode', return_value={'enabled': True}):
+        with patch('reconciliation.development_cache.mode', return_value={'enabled': True}), patch('reconciliation.pdf_routing.mode', return_value={'enabled': True}):
             vision_workflow.prepare(fixture.manifest, fixture.work, config)
             index, state = vision_workflow.load(fixture.work)
             vision_workflow.run(fixture.work, index, state, FakeReviewer())

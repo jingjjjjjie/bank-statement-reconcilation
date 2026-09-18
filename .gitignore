@@ -27,3 +27,7 @@ config/pdf-layouts.local.json
 # Default host folder mounted into the Docker container.
 documents/
 uploads/
+
+# Frontend dependencies and reproducible build output.
+dashboard/frontend/node_modules/
+dashboard/frontend/dist/

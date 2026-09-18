@@ -1,12 +1,12 @@
 # Bank Statement Reconciliation dashboard
 
-From Development:
+Start the complete application in Docker:
 
 ```console
-python dashboard/app.py
+docker compose up -d --build dashboard
 ```
 
-Open http://127.0.0.1:8765. The Python server, HTML, CSS and JavaScript all live in `dashboard/`.
+Open http://127.0.0.1:8765. FastAPI serves the Vue application and Python API from the same container and port. See [frontend maintenance](frontend/README.md) for the source structure and local build commands.
 
 For work folders containing `documents/` and `statement/`, Proceed verifies exact duplicates automatically. The report at `/review` shows counts and copies every member into `output/duplicates/group-NNN/` beside the input folders. `output/duplicates/report.json` records hashes and original locations. Inputs remain intact, no human selection is required, and content review uses one input per hash. Existing organized copies are copied back to their original locations when upgrading a legacy work-folder review; old recovery files and the legacy manifest are preserved.
 
@@ -36,15 +36,18 @@ The server listens only on loopback. Optional flags: `--port 8766`, `--manifest 
 
 ## Code layout
 
-- `app.py`: command-line options and server startup; retains the existing Python imports.
-- `static/`: HTML pages, JavaScript, and CSS served at the existing URLs.
-- `routes.py`: HTTP endpoints, request validation, and static assets.
+- `app.py`: command-line options and Uvicorn startup.
+- `frontend/src/`: Vue views, shared navigation, scoped page controllers, and styles.
+- `routes.py`: FastAPI creation, local request protection, and compiled asset delivery.
+- `api/`: typed workspace, review, and preview endpoints calling the existing workflow code.
 - `review.py`: manifest access, recoverable keep/undo decisions, and workflow readiness.
 - `content_review.py`: background content-review jobs and human verdicts.
 - `office_preview.py` and `document_status.py`: document previews and review status.
 - `../reconciliation/document_reader.py`: extraction entry point with separate PDF, image, Excel, Word, and embedded-image handlers.
 
 Tests (from the repository root, using Python with the project dependencies installed):
+
+Build the frontend first, or run tests inside the Docker image where it is already compiled. The HTTP and browser fixtures run the same ASGI application on isolated loopback ports. Production uses one Uvicorn worker because active review state and cancellable background jobs belong to that process; increasing the worker count requires shared job coordination first.
 
 ```console
 python -m unittest discover -s tests/unit -t .

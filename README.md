@@ -7,14 +7,14 @@ Python 3.12 or later. Pass one uses the standard library. Pass two uses the pack
 ## Project layout
 
 - `reconciliation/`: extraction, duplicate review, model integration, and workflow state.
-- `dashboard/`: Python server; HTML, JavaScript, and CSS live in `dashboard/static/`.
+- `dashboard/`: FastAPI backend and Vue frontend in `dashboard/frontend/`.
 - `tests/unit/`: offline regression tests; `tests/browser/`: optional browser checks.
 - `scripts/`: live Codex connection check.
 - `docs/`: bank-extraction, workbook-format, and final-comparison documentation.
 - `config/`: saved review settings.
 - `docker/`: container image definition; `compose.yaml` stays at the root.
 
-Run commands from the repository root. For example:
+Docker builds and serves the frontend automatically. For local Python development, first install `requirements.txt` and run `npm ci && npm run build` in `dashboard/frontend/` (Node 22.12+). Then run commands from the repository root:
 
 ```console
 python -m dashboard.app
@@ -34,6 +34,8 @@ Open **http://127.0.0.1:8765** to compare copies, choose which one to keep, undo
 ### Docker
 
 Docker Compose defaults to the `development` target, based on `python:3.12-bookworm`. It includes Codex, Node/npm, Git, ripgrep, curl, process tools, an editor, build tools, pytest, debugpy, and the Python browser-test dependencies. The `runtime` target retains the slim Python image. Docker Compose mounts the repository at `/workspace`, the selected host document folder at `/documents`, and keeps the ChatGPT login in a named volume.
+
+Both targets build Vue in a separate image stage. One Uvicorn process serves the FastAPI endpoints and compiled frontend on port 8765. The compiled files live at `/opt/dashboard-frontend`, so the repository bind mount cannot hide them. Rebuild with `docker compose up -d --build dashboard` after frontend changes. A separate Node server is not needed.
 
 Copy `.env.example` to `.env`, set `DOCUMENTS_PATH` to the folder containing the supporting documents and bank statement, then build and start the dashboard:
 

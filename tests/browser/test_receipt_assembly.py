@@ -2,10 +2,11 @@
 import json
 import threading
 import unittest
-from http.server import ThreadingHTTPServer
+from tests.http_server import TestServer
 
 from playwright.sync_api import expect, sync_playwright
-from dashboard.routes import handler_for
+from dashboard.routes import create_app
+from tests.browser import browser_options
 from reconciliation.duplicate_workflow import fingerprint
 from reconciliation.receipt_assembly import input_revision
 from tests.unit import test_receipt_matching as fixtures
@@ -17,6 +18,9 @@ class ReceiptAssemblyBrowserTests(unittest.TestCase):
         """Correct boundaries without adding repeated totals or losing page references."""
         fixture = fixtures.ReceiptMatchingTests()
         fixture.setUp()
+        fixture.review.manifest = {}
+        fixture.review.workspace = lambda: {"name": "Fixture", "period": "December"}
+        fixture.review.workflow_checks = lambda: (False, False, False)
         self.addCleanup(fixture.doCleanups)
         document = fixture.index["documents"][fixture.digest]
         document["id"] = fixture.digest
@@ -32,19 +36,18 @@ class ReceiptAssemblyBrowserTests(unittest.TestCase):
         fixture.review.workflow_checks = lambda: (False, False, False)
         fixture.state.update(screens={}, pairs={})
         fixture.save_state()
-        server = ThreadingHTTPServer(("127.0.0.1", 0), handler_for(fixture.review, "test-token"))
+        server = TestServer(("127.0.0.1", 0), create_app(fixture.review, "test-token"))
         threading.Thread(target=server.serve_forever, daemon=True).start()
         self.addCleanup(server.server_close)
         self.addCleanup(server.shutdown)
         with sync_playwright() as playwright:
-            browser = playwright.chromium.launch(headless=True, args=["--no-sandbox"])
+            browser = playwright.chromium.launch(**browser_options(), args=["--no-sandbox"])
             page = browser.new_page()
             errors = []
             page.on("pageerror", lambda error: errors.append(str(error)))
             page.goto(f"http://127.0.0.1:{server.server_port}/documents")
             link = page.get_by_role("link", name="Review extraction", exact=True)
-            if link.count():
-                link.first.click()
+            link.first.click()
             expect(page.locator("#receipt-pieces fieldset")).to_have_count(2)
             page.get_by_role("button", name="Piece 2", exact=True).click()
             expect(page.get_by_role("button", name="Merge with previous receipt")).to_have_count(0)

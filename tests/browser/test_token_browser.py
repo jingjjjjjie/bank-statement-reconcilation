@@ -3,12 +3,12 @@ import json
 import tempfile
 import threading
 import unittest
-from http.server import ThreadingHTTPServer
+from tests.http_server import TestServer
 from pathlib import Path
 
 from playwright.sync_api import expect, sync_playwright
 
-from dashboard.app import Review, handler_for
+from dashboard.app import Review, create_app
 from reconciliation.duplicate_workflow import organize
 
 
@@ -23,7 +23,7 @@ class TokenBrowserTests(unittest.TestCase):
             (source / "b.txt").write_text("same", encoding="utf-8")
             manifest = base / "manifest.json"
             organize(source, manifest)
-            server = ThreadingHTTPServer(("127.0.0.1", 0), handler_for(Review(manifest, base / "data"), "test-token"))
+            server = TestServer(("127.0.0.1", 0), create_app(Review(manifest, base / "data"), "test-token"))
             thread = threading.Thread(target=server.serve_forever, daemon=True)
             thread.start()
             try:
@@ -34,7 +34,7 @@ class TokenBrowserTests(unittest.TestCase):
                     page.on("pageerror", lambda error: errors.append(str(error)))
                     url = f"http://127.0.0.1:{server.server_port}"
                     page.goto(url + "/review")
-                    expect(page).to_have_title("bank-statement-reconciliation · Document review")
+                    expect(page).to_have_title("Exact duplicates · Bank Statement Reconciliation")
                     expect(page.locator("h1")).to_have_text("Exact duplicate review")
                     page.screenshot(path=".tools/formal-dashboard.png", full_page=True)
                     page.set_viewport_size({"width": 390, "height": 844})
@@ -84,8 +84,8 @@ class TokenBrowserTests(unittest.TestCase):
                     self.assertTrue(bank_pdf.exists())
                     page.get_by_role("button", name="Proceed", exact=True).click()
                     expect(page).to_have_url(url + "/review")
-                    expect(page.locator("#total")).to_have_text("1")
-                    self.assertFalse((next_source / "one.txt").exists())
+                    expect(page.locator("#duplicate-groups")).to_have_text("1")
+                    self.assertTrue((next_source / "one.txt").exists())
                     self.assertEqual(errors, [])
                     browser.close()
             finally:

@@ -1,3 +1,11 @@
+FROM node:22-bookworm-slim AS frontend
+
+WORKDIR /frontend
+COPY dashboard/frontend/package.json dashboard/frontend/package-lock.json ./
+RUN npm ci --no-fund --no-audit
+COPY dashboard/frontend/ ./
+RUN npm run build
+
 FROM node:22-bookworm-slim AS codex
 
 ARG CODEX_VERSION=0.154.0
@@ -6,7 +14,8 @@ RUN npm install --global "@openai/codex@${CODEX_VERSION}"
 FROM python:3.12-slim-bookworm AS runtime
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1
+    PYTHONUNBUFFERED=1 \
+    DASHBOARD_FRONTEND=/opt/dashboard-frontend
 
 COPY --from=codex /usr/local/bin/node /usr/local/bin/node
 COPY --from=codex /usr/local/lib/node_modules /usr/local/lib/node_modules
@@ -19,6 +28,7 @@ COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY --chown=app:app . .
+COPY --from=frontend /frontend/dist /opt/dashboard-frontend
 RUN mkdir -p /home/app/.codex /workspace/duplicated /workspace/dashboard/.data \
     && chown -R app:app /home/app/.codex /workspace
 
@@ -35,6 +45,7 @@ FROM python:3.12-bookworm AS development
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
+    DASHBOARD_FRONTEND=/opt/dashboard-frontend \
     PATH="/home/app/.local/bin:${PATH}"
 
 RUN apt-get update \
@@ -56,6 +67,7 @@ COPY dashboard/requirements-dev.txt ./dashboard/requirements-dev.txt
 RUN pip install --no-cache-dir -r requirements.txt -r dashboard/requirements-dev.txt pytest debugpy
 
 COPY --chown=app:app . .
+COPY --from=frontend /frontend/dist /opt/dashboard-frontend
 RUN mkdir -p /home/app/.codex /workspace/duplicated /workspace/dashboard/.data \
     && chown -R app:app /home/app/.codex /workspace
 

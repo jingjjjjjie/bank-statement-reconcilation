@@ -348,8 +348,7 @@ def workflow_guide(review):
             pass
     stages = [("Workspace", "/", bool(review)),
               ("Exact duplicates", "/review", exact),
-              ("Content review", "/content-review" if
-               (Path(__file__).parent / "static" / "content-review.html").is_file() else None, content),
+              ("Content review", "/content-review", content),
               ("Bank extraction", "/bank", bank),
               ("Completion", "/complete", complete)]
     return {"steps": [{"name": name, "href": href, "checked": checked,
