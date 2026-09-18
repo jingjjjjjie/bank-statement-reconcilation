@@ -41,4 +41,4 @@ Scrolling reveals bank amount, allocated amount, difference, review notes and so
 - The active real workspace still requires its valid matching snapshot. Synthetic success does not establish that real pairings are ready.
 - The final report reflects current saved decisions; it is not a frozen signed-off archive.
 
-Reproduce screenshots with `FINAL_REPORT_SCREENSHOTS` set to a local directory and run `python .tools/run_tests.py tests.browser.test_final_report` after building the frontend. The test suite uses temporary source files and an isolated review ledger.
+Reproduce screenshots with `FINAL_REPORT_SCREENSHOTS` set to a local directory and run `python -m unittest tests.browser.test_final_report` after building the frontend. The test suite uses temporary source files and an isolated review ledger.

@@ -1,6 +1,6 @@
 # Development / testing mode
 
-Use the switch in **Settings**. New workspaces default to OFF; the local choice
+Use the switch in **Settings**. The switch defaults to OFF when no local setting exists; its repository-wide choice
 is saved in `config/development.local.json` (ignored by Git).
 
 - **ON:** shows testing defaults and decision tools, shares successful model
@@ -10,7 +10,7 @@ is saved in `config/development.local.json` (ignored by Git).
   and writes stop. Saved shared data and ordinary review history remain intact.
   Normal per-review resumability continues.
 
-Stop an active content-review batch before changing the switch.
+Stop an active extraction or regeneration batch before changing the switch.
 
 The shared cache lives under `duplicated/development-cache/`:
 

@@ -1,8 +1,10 @@
 # UI review — 18 September 2026
 
+This is the earlier live-workspace audit captured before document regeneration and the final report. Findings describe that capture, not the latest UI; they have not all been rechecked. The subsequent [final report audit](FINAL_REPORT_UI_REVIEW.md) uses synthetic evidence and does not resolve the real-workspace matching import limitation.
+
 ## Verdict
 
-The simplified document list is clearer, but the live workflow is **not ready for an end-to-end sign-off**. The highest-priority issues are unavailable matching data and blank or slow result-loading states. This is a review report; the findings below have not been implemented as fixes.
+The simplified document list is clearer, but the live workflow is **not ready for an end-to-end sign-off**. The highest-priority issues are unavailable matching data and blank or slow result-loading states. This audit itself made no implementation changes; later work must be evaluated separately.
 
 Scope: current Docker app at `localhost:8765`, desktop 1440 × 1000 and mobile 390 × 844, using local Chrome through Playwright with user permission. All screenshots were captured and inspected during this audit. No extraction calls, approvals, file changes, or exports were triggered. The active workspace has 115 queued documents and no completed extraction units, which limits what could be reviewed in the results editor.
 

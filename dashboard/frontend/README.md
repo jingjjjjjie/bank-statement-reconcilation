@@ -6,12 +6,12 @@ Vue 3 and Vue Router provide a shared layout and navigation without full page re
 
 - `src/App.vue` and `components/`: shared layout, navigation, progress, and notifications.
 - `src/router.js`: known routes, lazy view imports, and browser history.
-- `src/views/`: one Vue template per screen.
+- `src/views/`: one Vue template per screen. `FinalReport.vue` uses Vue bindings for read-only ledger display and a native modal dialog; `components/ReportEvidence.vue` reuses existing preview APIs and the Office renderer.
 - `src/controllers/`: the existing evidence editors, scoped to each view's root. They retain their tested DOM rendering and Python API contracts.
 - `src/page.js`: view lifecycle, polling, request cancellation, dirty-state tracking, and scoped helpers.
 - `src/api.js`: session metadata and API requests. Evidence and approvals remain on the server.
 - `src/receipts.js` and `src/office.js`: shared receipt and preview code.
-- `src/styles/`: existing responsive styles. The build scopes screen-specific CSS to prevent styles leaking between cached views.
+- `src/styles/`: responsive styles. Vite scopes matching, extraction-review and documents styles to their page body classes; final-report styles use explicit report/component class names.
 
 Use Vue bindings for new UI. Existing controllers receive a `page` object instead of using global state or document-wide selectors. Keep selectors scoped through `page.$` or `page.root`. Register polling with `page.pollVisible`, observers with `page.observe`, and unsaved edits with `page.dirty` so leaving or evicting a view cleans up correctly. Do not introduce a second API or business-rule implementation in JavaScript.
 
@@ -45,3 +45,5 @@ python -m unittest discover -s tests/browser -t .
 ```
 
 Browser checks require `dashboard/requirements-dev.txt` and installed Chrome on Windows or Playwright Chromium on Linux. They use temporary fixtures and make no model calls. Navigation checks assert that page switches retain actual DOM instances, preserve unsaved edits, support browser history, and suspend hidden-page polling.
+
+Final report refreshes ledger data when activated, closes its popup when deactivated, and preserves filters during popup dismissal. Keep confidence, human decisions and Supporting / No supporting status distinct. No frontend code may approve evidence or recompute server allocation rules.

@@ -30,7 +30,9 @@ Actual bank statement and receipt/document content is the evidence. Filenames an
 
 View evidence opens a modal with the original statement at the transaction page alongside approved supporting documents. Document switches show each saved allocation; page and zoom controls, original downloads, totals, differences, flags and notes remain available. Pending or rejected proposals are never shown as approved evidence. Changed sources are flagged and previews retain hash validation. Escape or Close restores focus and preserves filters; mobile uses a full-screen stacked pane and transaction cards. No new model calls or review writes occur.
 
-## Two review pages
+## Two review views
+
+The agreed review design is currently implemented as Transactions and Unmatched documents tabs within `/matching`. The separate read-only `/final-report` page follows review.
 
 ### 1. Statement ready for export / final review
 

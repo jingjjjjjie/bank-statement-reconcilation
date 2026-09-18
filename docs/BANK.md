@@ -27,8 +27,8 @@ It checks each running balance, opening/closing balances, and printed debit/cred
 totals using Decimal. Excel export checks the PDF fingerprint and re-extracts the
 source to verify the master rows, dates, text, IDs, account, currency and totals.
 This catches later CSV changes but cannot independently detect a mistake repeated
-by the same extractor. Visual and independent-reader checks are in `bank-audit.md`.
+by the same extractor. The automated bank checks are in `tests/unit/test_bank_statement.py`; they are not independent visual verification of a new statement.
 The year is supplied explicitly because the PDF date header
 contains overlapping text. Formatting is loaded from `prompts/styles/bank_statement.xml` and documented in
-`style.md`. Use `--style path/to/style.xml` to select another compatible style;
+[workbook style](style.md). Use `--style path/to/style.xml` to select another compatible style;
 the original sample workbook is not required.

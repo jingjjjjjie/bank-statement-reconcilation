@@ -1,6 +1,6 @@
 # Application workflow
 
-Updated 18 September 2026, based on committed application revision `14659d1`. This describes the implemented Docker application, including its current matching limitation. Concurrent uncommitted feature work is outside this snapshot. Read this before the older duplicate-comparison examples in the root README.
+Updated 18 September 2026, checked against application revision `d0c3018` (including document regeneration and final report). This describes the implemented Docker application, including its current matching limitation. Concurrent uncommitted feature work is outside this snapshot. The root README summarizes the current flow; historical comparison helpers remain separate.
 
 ## 1. Complete user journey
 
@@ -29,6 +29,9 @@ flowchart TD
     P --> Q["Extraction ends; no vision duplicate screening or comparison"]
     Q --> R["Each document has Review results"]
     R --> S["Step 2 result page: original evidence beside editable receipt pieces"]
+    S --> RG["Optional: Regenerate document; persist queued request"]
+    RG --> RW["Shared worker reruns extraction and assembly; checkpoint status"]
+    RW --> S
     S --> T["Check totals, currency, references, locations, and receipt boundaries"]
     T --> U{"Accept this extraction?"}
     U -->|Edit further| T
@@ -49,11 +52,14 @@ flowchart TD
     IMP -.-> MATCH
     MATCH --> VALID{"Snapshot belongs to workspace and evidence is current?"}
     VALID -->|No| BLOCK["Show blocker; do not inherit unrelated approvals"]
-    VALID -->|Yes| REVIEW["Review bank rows, candidates, originals, and remaining balances"]
+    VALID -->|Yes| REVIEW["Review bank rows with High/Low confidence, candidates, originals, and balances"]
     REVIEW --> DECIDE["Human approves, denies, changes, or undoes allocations"]
     DECIDE --> LEDGER["Save revision-bound final-review/decisions.json and history"]
     LEDGER --> REVIEW
-    LEDGER --> EXPORT["Export all bank rows as CSV with support status and differences"]
+    LEDGER --> REPORT["Final report /final-report; saved decisions and support status"]
+    REPORT --> POPUP["View evidence popup: statement and approved documents, allocations and notes"]
+    POPUP --> REPORT
+    REPORT --> EXPORT["Export all bank rows as CSV with support status and differences"]
 ```
 
 **Current matching limitation:** `/matching` reads the authorized `duplicated/benchmarks/full-statement-240` snapshot. It does not automatically consume a newly extracted workspace or newly accepted receipt results. It checks the manifest and original bank-master hash and rejects mismatches. The dotted connection above is pending work, not an automatic step. See [FINAL_COMPARISON.md](FINAL_COMPARISON.md).
@@ -110,6 +116,7 @@ flowchart LR
 | Review results beside a document | Open `/extraction-review?unit=<document-id>:0`; assembled documents resolve to their whole-document result. |
 | Original preview | View pages, sheets, zoom and source evidence beside the editable results. |
 | Split / Remove / Add piece | Edit receipt extraction pieces; never delete the original file. |
+| Regenerate document | Queue fresh extraction and assembly on the shared worker; retain unresolved failures and require fresh acceptance. Reload completed results unless unsaved edits need protection. |
 | Accept & next | Validate the current evidence revision, save acceptance, then open the next available unaccepted result. |
 | Complete document status | Means extraction results were accepted. It does not mean a bank payment has been matched. |
 
@@ -163,7 +170,35 @@ sequenceDiagram
     end
 ```
 
-## 6. Files, outputs, and implementation map
+## 6. Final report and evidence popup
+
+```mermaid
+sequenceDiagram
+    actor User
+    participant Report as Final report
+    participant API as FastAPI
+    participant Ledger as Saved final review and originals
+    User->>Report: Open Final report
+    Report->>API: GET /api/matching
+    API->>Ledger: Validate snapshot binding, read decisions and source hashes
+    Ledger-->>Report: Bank rows, support status, notes and approved allocations
+    User->>Report: Click View evidence
+    Report->>API: GET /api/matching-preview for bank and approved item
+    API->>Ledger: Resolve corpus ID and verify original bytes
+    alt Original changed or unavailable
+        API-->>Report: Explicit preview error
+    else Current original
+        API-->>Report: Page labels and preview type
+        Report->>API: GET /api/matching-image or /api/matching-office
+        API-->>Report: Original page image or safe Office preview
+    end
+    User->>Report: Close or Escape
+    Report-->>User: Same filters and originating control focused
+```
+
+The report is read-only and makes no model calls. Pending/rejected suggestions do not appear as approved evidence. Approved partial/contextual evidence can be viewed, while its status remains No supporting under the current export policy. Missing snapshot data blocks the report and hides export. The report is refreshed on revisiting; it is not a frozen sign-off record.
+
+## 7. Files, outputs, and implementation map
 
 | Location / module | Purpose |
 | --- | --- |
@@ -172,6 +207,7 @@ sequenceDiagram
 | `duplicated/projects/<workspace-key>/duplicate-manifest.json` | Activated workspace manifest. |
 | Project `review/index.json`, `review/state.json` | Prepared unique documents, saved extraction, assembly, and historical evidence. |
 | Project `review/model-cache/`, `review/token-usage.jsonl` | Successful model cache and durable attempt usage. |
+| Project `review/regeneration.json` | Queued per-document regeneration jobs, status and history. Interrupted work remains unresolved. |
 | Project `review/receipt-matches.json` | Receipt extraction approvals and legacy receipt-allocation history. |
 | Project `bank-output/master_statement.csv` | Deterministic bank master; differing existing masters are protected. |
 | Project `final-review/decisions.json` | Human decisions bound to the frozen matching evidence. |
@@ -179,6 +215,8 @@ sequenceDiagram
 | `dashboard/api/`, `dashboard/routes.py` | HTTP endpoints, local access protections, session token and workspace guards. |
 | `reconciliation/source_selection.py`, `exact_report.py` | Input selection, SHA preview, exact-copy output. |
 | `dashboard/content_review.py`, `reconciliation/vision_workflow.py` | Background extraction/assembly, cancellation, cache, and resume. Historical comparison helpers remain for compatibility. |
+| `dashboard/regeneration.py` | Durable regeneration queue on the shared extraction worker. |
+| `dashboard/frontend/src/views/FinalReport.vue`, `components/ReportEvidence.vue` | Read-only report, modal evidence navigation and original downloads. |
 | `dashboard/document_status.py`, `receipt_review.py` | Five list statuses, current receipt results, and acceptance validation. |
 | `dashboard/matching_review.py` | Frozen-snapshot evidence checks, allocation ledger, remaining balances, and CSV export. |
 

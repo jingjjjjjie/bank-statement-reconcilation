@@ -33,8 +33,7 @@ Ten percent of passing hybrid inputs, selected deterministically by text hash,
 also receive vision. Compare mode always retains the vision result; it attempts
 text only on structurally eligible pages, without requiring an approved layout.
 Differences in receipt count, totals, currencies or invoice numbers are marked
-for human review. No route automatically accepts a receipt. Receipt assembly
-and later document comparisons retain their existing visual evidence.
+for human review. No route automatically accepts a receipt. Receipt assembly retains its existing visual evidence. Normal dashboard/CLI runs end after extraction and assembly; historical duplicate-comparison helpers are not part of that flow.
 
 These checks cannot prove completeness or accuracy. Arithmetic is not inferred
 from an incomplete list of line items; there is no general arithmetic guarantee.

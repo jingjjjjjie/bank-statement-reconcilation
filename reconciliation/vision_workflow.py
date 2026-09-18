@@ -1,4 +1,4 @@
-"""Pass two: prepare, run Codex review, record admin decisions, and check completion."""
+"""Prepare and run extraction/receipt assembly; retain legacy comparison decisions."""
 import argparse
 import itertools
 import json
