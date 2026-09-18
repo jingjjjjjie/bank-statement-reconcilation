@@ -126,10 +126,10 @@ def decide(review, body):
     bank_id,action = body.get('bank_id'),body.get('action')
     if bank_id not in banks or action not in {'approve','deny','undo'}:
         raise ValueError('Choose a valid transaction and action')
-    reviewer = str(body.get('reviewer','')).strip()
+    reviewer = str(body.get('reviewer') or 'Local user').strip() or 'Local user'
     note = str(body.get('note','')).strip()
-    if not reviewer or len(reviewer)>120 or len(note)>4000:
-        raise ValueError('Enter your reviewer name and a note under 4,000 characters')
+    if len(reviewer)>120 or len(note)>4000:
+        raise ValueError('Keep the review note under 4,000 characters')
     bank = banks[bank_id]
     before = state['decisions'].get(bank_id)
     allocations,flags = [],[]

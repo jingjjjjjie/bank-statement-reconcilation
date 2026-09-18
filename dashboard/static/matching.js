@@ -36,12 +36,10 @@ async function refresh() {
   reviewData = await api('/api/matching');
   itemById.clear(); reviewData.items.forEach(i => itemById.set(i.id, i));
   $('#matching-workspace').textContent = reviewData.workspace;
-  const counts = $('#matching-counts'); counts.replaceChildren();
+  const counts = $('#matching-counts');
   const approved = reviewData.banks.filter(b => b.review_status === 'approved').length;
   const denied = reviewData.banks.filter(b => b.review_status === 'denied').length;
-  for (const [label, value] of [['Transactions', reviewData.banks.length], ['Pending', reviewData.banks.length - approved - denied], ['Approved', approved], ['Denied', denied], ['Possible matches', reviewData.banks.filter(b => b.suggestion.assessment === 'tentative').length]]) {
-    const metric = node('div', 'metric'); metric.append(node('strong', '', value), node('span', '', label)); counts.append(metric);
-  }
+  counts.textContent = `${approved + denied} of ${reviewData.banks.length} reviewed`;
   renderQueue(); renderBankPicker(); renderUnmatched();
 }
 function visibleBanks() {
@@ -75,19 +73,20 @@ function chooseBank(id, addItem) {
   source.forEach(a => { if (itemById.has(a.item_id)) selected.set(a.item_id, a.amount); });
   if (addItem) selected.set(addItem, defaultAllocation(itemById.get(addItem)));
   $('#candidate-query').value = ''; $('#all-candidates').checked = false;
+  $('#candidate-picker').open = false; $('#note-details').open = false;
   $('#decision-note').value = b.decision?.note || ''; $('#acknowledge').checked = false;
-  $('#save-status').textContent = b.decision ? `Saved by ${b.decision.reviewer} · ${new Date(b.decision.at).toLocaleString()}` : 'No human decision yet.';
+  $('#save-status').textContent = b.decision ? `Saved · ${new Date(b.decision.at).toLocaleString()}` : '';
   $('#review-editor').hidden = false; $('#undo-match').hidden = !b.decision;
   $('#deny-match').disabled = false;
-  $('#approve-match').textContent = b.review_status === 'approved' ? 'Save approved changes' : 'Approve selected';
+  $('#approve-match').textContent = b.review_status === 'approved' ? 'Save changes' : 'Approve';
   const detail = $('#transaction-detail'); detail.replaceChildren();
-  detail.append(node('span', `badge ${b.review_status}`, `${b.id} · ${b.review_status}`), node('h2', 'transaction-title', b.parties.join(' / ')), node('div', 'bank-amount', formatMoney(b.amount, b.currency)), node('p', 'bank-meta', `${b.date} · ${b.direction === 'in' ? 'Incoming' : 'Outgoing'} · ${b.support_status}`), node('div', 'narration', b.description));
-  const reason = node('div', 'model-reason'); reason.append(node('strong', '', assessmentLabel[b.suggestion.assessment]), node('span', '', b.suggestion.reason)); detail.append(reason);
+  detail.append(node('span', `badge ${b.review_status}`, `${b.id} · ${b.review_status === 'pending' ? assessmentLabel[b.suggestion.assessment] : b.review_status}`), node('h2', 'transaction-title', b.parties.join(' / ')), node('div', 'bank-amount', formatMoney(b.amount, b.currency)), node('p', 'bank-meta', `${b.date} · ${b.direction === 'in' ? 'Incoming' : 'Outgoing'}`));
+  const reason = node('details', 'transaction-notes'); reason.append(node('summary', '', 'Match details'), node('p', '', b.suggestion.reason), node('div', 'narration', b.description), node('p', 'subtle', `Export status: ${b.support_status}`)); detail.append(reason);
   if (b.stale) detail.append(node('p', 'warning', 'Original evidence changed. This transaction cannot be treated as supported until rechecked.'));
   for (const flag of b.decision?.flags || []) detail.append(node('p', 'warning', flag));
   const history = $('#decision-history'); history.replaceChildren();
-  for (const h of b.history.slice().reverse()) history.append(node('p', '', `${new Date(h.at).toLocaleString()} · ${h.reviewer} · ${h.action}${h.note ? '\n' + h.note : ''}`));
-  if (!b.history.length) history.append(node('p', 'subtle', 'No decisions recorded.'));
+  for (const h of b.history.slice().reverse()) history.append(node('p', '', `${new Date(h.at).toLocaleString()} · ${h.action}${h.note ? '\n' + h.note : ''}`));
+  $('.history').hidden = !b.history.length;
   renderQueue(); renderCandidates(); updateSummary(); remember('active', id);
   const first = addItem || selected.keys().next().value || b.candidates.find(key => itemById.has(key));
   if (first) showEvidence('item', first); else showEvidence('bank', id);
@@ -106,7 +105,8 @@ function renderCandidates() {
   /* Display suggestions first, with an explicit option to search the entire corpus. */
   const b = bank(), query = $('#candidate-query').value.toLowerCase(), list = $('#candidate-list'); list.replaceChildren();
   const keys = new Set([...selected.keys(), ...b.candidates]);
-  const items = reviewData.items.filter(i => !i.excluded && ($('#all-candidates').checked || keys.has(i.id)) && `${i.id} ${i.filename} ${i.amount} ${i.description} ${i.parties.join(' ')}`.toLowerCase().includes(query));
+  const expanded = $('#candidate-picker').open;
+  const items = reviewData.items.filter(i => !i.excluded && (expanded ? ($('#all-candidates').checked || keys.has(i.id)) : selected.has(i.id)) && (!expanded || `${i.id} ${i.filename} ${i.amount} ${i.description} ${i.parties.join(' ')}`.toLowerCase().includes(query)));
   items.sort((a, c) => Number(selected.has(c.id)) - Number(selected.has(a.id)) || Number(b.candidates.includes(c.id)) - Number(b.candidates.includes(a.id)));
   for (const item of items) {
     const card = node('div', `candidate-card ${selected.has(item.id) ? 'selected' : ''}`), top = node('label', 'candidate-top');
@@ -114,7 +114,7 @@ function renderCandidates() {
     checkbox.setAttribute('aria-label', `Select ${item.id} ${item.filename}`);
     checkbox.onchange = () => { if (checkbox.checked) selected.set(item.id, defaultAllocation(item)); else selected.delete(item.id); renderCandidates(); updateSummary(); };
     top.append(checkbox, node('span', 'candidate-name', item.filename)); card.append(top);
-    card.append(node('div', 'candidate-info', `${item.id} · ${formatMoney(item.amount, item.currency)}\n${item.location}\n${item.parties.join(' / ')}`));
+    card.append(node('div', 'candidate-info', `${formatMoney(item.amount, item.currency)} · ${item.location}`));
     if (item.currency === b.currency && cents(item.amount) !== null && cents(item.amount) !== cents(b.amount)) card.append(node('p', 'warning', `Bank minus source amount: ${formatMoney(((cents(b.amount) - cents(item.amount)) / 100).toFixed(2), b.currency)}`));
     if (item.used !== '0') card.append(node('p', 'warning', `Reserved across payments: ${formatMoney(item.used, item.currency)} · Available here: ${available(item) === null ? 'unknown' : formatMoney((available(item) / 100).toFixed(2), item.currency)}`));
     if (item.stale) card.append(node('p', 'warning', 'Source changed or unavailable — approval blocked.'));
@@ -127,10 +127,10 @@ function renderCandidates() {
       input.setAttribute('aria-label', `Allocation ${item.id}`);
       input.oninput = () => { selected.set(item.id, input.value.trim()); updateSummary(); };
       label.append(input); bottom.append(label);
-    } else bottom.append(node('span', 'subtle', b.candidates.includes(item.id) ? 'Cached candidate' : 'Other evidence'));
+    }
     bottom.append(button('View evidence ↗', () => showEvidence('item', item.id))); card.append(bottom); list.append(card);
   }
-  if (!items.length) list.append(node('p', 'empty-state', 'No candidates in this view. Try “Search all cached documents”.'));
+  if (!items.length) list.append(node('p', 'empty-state', expanded ? 'No documents found. Try searching all documents.' : 'No support selected. Choose a document above.'));
 }
 function updateSummary() {
   /* Make incomplete, excessive or invalid allocations visible before submitting. */
@@ -142,22 +142,24 @@ function updateSummary() {
   if (values.some(v => v === '')) summary.append(node('div', 'warning', 'Blank allocations link contextual evidence only.'));
   if (values.some(v => v !== '' && cents(v) === null)) summary.append(node('div', 'warning', 'Enter valid amounts with up to two decimal places.'));
   if (selected.size > 1) summary.append(node('div', 'warning', 'Check that the documents represent separate expenses, not an invoice and its payment proof.'));
+  const flagged = difference !== 0 || selected.size > 1 || [...selected].some(([id, value]) => value === '' || itemById.get(id).boundary_unresolved || (cents(value) !== null && cents(value) < cents(itemById.get(id).amount)));
+  summary.hidden = !flagged || !selected.size;
+  $('#acknowledge-label').hidden = !flagged;
+  if (flagged && selected.size) $('#note-details').open = true;
   $('#approve-match').disabled = saving || !selected.size || b.stale || difference < 0 || values.some(v => v !== '' && (cents(v) === null || cents(v) <= 0));
 }
 async function saveDecision(action) {
   /* Send explicit user intent, then reload the authoritative ledger and balances. */
   if (saving) return;
-  const reviewer = $('#matching-reviewer').value.trim();
-  if (!reviewer) { error('Enter your reviewer name before saving.'); $('#matching-reviewer').focus(); return; }
   saving = true; error(); $('#save-status').textContent = 'Saving your decision…';
   let persisted = false;
   document.querySelectorAll('.decision-actions button').forEach(b => b.disabled = true);
   try {
-    await api('/api/matching-decide', {bank_id:activeId,action,reviewer,note:$('#decision-note').value.trim(),
+    await api('/api/matching-decide', {bank_id:activeId,action,note:$('#decision-note').value.trim(),
       binding:reviewData.binding,version:reviewData.version,acknowledged:$('#acknowledge').checked,
       allocations:[...selected].map(([item_id, amount]) => ({item_id,amount}))});
     persisted = true;
-    remember('reviewer', reviewer); await refresh(); saving = false; chooseBank(activeId);
+    await refresh(); saving = false; chooseBank(activeId);
     toast(action === 'undo' ? 'Decision undone. Amounts are available again.' : 'Decision saved.');
   } catch (e) { error(e.message); $('#save-status').textContent = persisted ? 'Decision saved, but refresh failed. Reload to see the latest state.' : 'Decision was not saved. Your draft is still here.'; }
   finally { saving = false; document.querySelectorAll('.decision-actions button').forEach(b => b.disabled = false); updateSummary(); }
@@ -232,7 +234,7 @@ async function initialize() {
   /* Restore display preferences, then fetch the saved corpus and session token. */
   $('#bank-filter').value = preference('filter', 'tentative');
   if (!$('#bank-filter').value) $('#bank-filter').value = 'pending';
-  $('#bank-query').value = preference('query', ''); $('#matching-reviewer').value = preference('reviewer', '');
+  $('#bank-query').value = preference('query', '');
   try {
     token = (await api('/api/session')).token; await refresh();
     const rows = visibleBanks(), remembered = preference('active', '');
@@ -243,7 +245,7 @@ async function initialize() {
 $('#bank-query').oninput = () => { remember('query', $('#bank-query').value); renderQueue(); };
 $('#bank-filter').onchange = () => { remember('filter', $('#bank-filter').value); renderQueue(); };
 $('#candidate-query').oninput = renderCandidates; $('#all-candidates').onchange = renderCandidates;
-$('#matching-reviewer').onchange = () => remember('reviewer', $('#matching-reviewer').value);
+$('#candidate-picker').ontoggle = () => { if (reviewData && activeId) renderCandidates(); };
 $('#restore-suggestion').onclick = () => { selected.clear(); bank().suggestion.allocations.forEach(a => selected.set(a.item_id, a.amount)); renderCandidates(); updateSummary(); };
 $('#approve-match').onclick = () => saveDecision('approve'); $('#deny-match').onclick = () => saveDecision('deny'); $('#undo-match').onclick = () => saveDecision('undo');
 $('#preview-bank').onclick = () => { if (activeId) showEvidence('bank', activeId); };
