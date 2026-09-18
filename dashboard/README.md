@@ -1,5 +1,7 @@
 # Bank Statement Reconciliation dashboard
 
+See [Application workflow](../docs/WORKFLOW.md) for detailed Mermaid diagrams and the current matching integration boundary.
+
 Start the complete application in Docker:
 
 ```console
