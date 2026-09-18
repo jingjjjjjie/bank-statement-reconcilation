@@ -62,6 +62,31 @@ class MatchingReviewTests(unittest.TestCase):
                 'allocations':allocations if allocations is not None else [{'item_id':'D1','amount':'10'}],
                 'reviewer':'Test reviewer','note':'Checked originals','acknowledged':True,**extra}
 
+    def test_confidence_is_separate_from_approval_and_downgrades_stale_evidence(self):
+        """High never approves a pairing; missing or changed support is not high confidence."""
+        suggestions = matching.read(self.cache/'decisions.json')
+        suggestions[0]['assessment'] = 'strong'
+        suggestions[2]['allocations'] = []
+        self.write(self.cache/'decisions.json', suggestions)
+        data = matching.snapshot(self.review)
+        self.assertEqual([b['confidence']['level'] for b in data['banks']], ['high', 'low', None])
+        self.assertTrue(all(b['review_status'] == 'pending' for b in data['banks']))
+        self.assertTrue(all(b['support_status'] == 'No supporting' for b in data['banks']))
+        matching.decide(self.review, self.request())
+        self.assertEqual(matching.snapshot(self.review)['banks'][0]['confidence']['level'], 'high')
+        (self.review.root/'receipt-1.txt').write_text('Changed evidence')
+        self.assertEqual(matching.snapshot(self.review)['banks'][0]['confidence']['level'], 'low')
+
+    def test_high_confidence_requires_full_amount_and_current_selection(self):
+        """Amount gaps and manually changed pairings cannot inherit a high label."""
+        suggestions = matching.read(self.cache/'decisions.json')
+        suggestions[0]['assessment'] = 'strong'
+        suggestions[0]['allocations'][0]['amount'] = '5'
+        self.write(self.cache/'decisions.json', suggestions)
+        self.assertEqual(matching.snapshot(self.review)['banks'][0]['confidence']['level'], 'low')
+        matching.decide(self.review, self.request(allocations=[{'item_id':'D2','amount':'10'}]))
+        self.assertIn('selection changed', matching.snapshot(self.review)['banks'][0]['confidence']['reason'])
+
     def test_approval_persists_and_undo_releases_capacity(self):
         """Only an explicit approval changes support; undo retains history and frees amounts."""
         self.assertTrue(all(b['support_status']=='No supporting' for b in matching.snapshot(self.review)['banks']))

@@ -84,6 +84,27 @@ def reservations(state, excluding=None):
     return used
 
 
+def pairing_confidence(bank, suggestion, items, decision, stale):
+    """Label saved pairing evidence without converting confidence into approval."""
+    allocations = suggestion.get('allocations', [])
+    suggested = {a['item_id']: money(a['amount']) for a in allocations}
+    chosen = {a['item_id']: money(a['amount']) for a in decision['allocations']} if decision else {}
+    if chosen and chosen != suggested:
+        return {'level': 'low', 'reason': 'Supporting selection changed; the saved confidence does not assess this pairing.'}
+    if not allocations:
+        return {'level': None, 'reason': 'No proposed supporting match.'}
+    if stale or any(a['item_id'] not in items or items[a['item_id']]['stale'] or
+                    items[a['item_id']]['excluded'] for a in allocations):
+        return {'level': 'low', 'reason': 'Supporting evidence changed, is unavailable, or is excluded.'}
+    values = [money(a['amount']) for a in allocations]
+    if any(value is None for value in values) or sum(values, Decimal(0)) != money(bank['amount']):
+        return {'level': 'low', 'reason': 'The proposed allocations do not fully explain the bank amount.'}
+    if any(items[a['item_id']].get('boundary_unresolved') for a in allocations):
+        return {'level': 'low', 'reason': 'Receipt boundaries still need checking against the original document.'}
+    level = 'high' if suggestion.get('assessment') == 'strong' else 'low'
+    return {'level': level, 'reason': suggestion.get('reason') or 'The saved pairing needs checking against the original evidence.'}
+
+
 def snapshot(review):
     """Expose suggestions, human outcomes, remaining evidence and changed-source flags."""
     path,state,banks,items,index,facts = context(review)
@@ -111,6 +132,7 @@ def snapshot(review):
         support = bool(decision and status=='approved' and not stale and decision['difference']=='0' and not decision['context_only'])
         bank.update(suggestion=suggestion,candidates=list(dict.fromkeys([a['item_id'] for a in suggestion['allocations']]+choices.get(key,[]))),
                     decision=decision,review_status=status,stale=stale,
+                    confidence=pairing_confidence(bank,suggestion,items,decision,stale),
                     support_status='Supporting' if support else 'No supporting',
                     history=[h for h in state['history'] if h['bank_id']==key])
     return {'binding':state['binding'],'version':state['version'],'banks':list(banks.values()),

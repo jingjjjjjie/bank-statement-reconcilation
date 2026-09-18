@@ -20,6 +20,10 @@ class MatchingReviewBrowserTests(unittest.TestCase):
         fixture.review.manifest = {}
         fixture.review.workspace = lambda: {"name": "Fixture", "period": "December"}
         fixture.review.workflow_checks = lambda: (False, False, False)
+        suggestions = matching_review.read(fixture.cache/'decisions.json')
+        suggestions[0]['assessment'] = 'strong'
+        suggestions[2]['allocations'] = []
+        fixture.write(fixture.cache/'decisions.json', suggestions)
         self.addCleanup(fixture.doCleanups)
         server = TestServer(('127.0.0.1',0),create_app(fixture.review,'test-token',SimpleNamespace()))
         threading.Thread(target=server.serve_forever,daemon=True).start()
@@ -32,6 +36,15 @@ class MatchingReviewBrowserTests(unittest.TestCase):
             page.on('pageerror',lambda e: errors.append(str(e)))
             page.goto(f'http://127.0.0.1:{server.server_port}/matching')
             expect(page.locator('.bank-row')).to_have_count(3)
+            page.locator('#confidence-filter').select_option('high')
+            expect(page.locator('.bank-row')).to_have_count(1)
+            expect(page.locator('.bank-row')).to_contain_text('High confidence')
+            expect(page.locator('.bank-row')).to_contain_text('pending')
+            page.locator('#confidence-filter').select_option('low')
+            expect(page.locator('.bank-row')).to_have_count(1)
+            page.locator('#confidence-filter').select_option('none')
+            expect(page.locator('.bank-row')).to_contain_text('No match')
+            page.locator('#confidence-filter').select_option('all')
             page.get_by_role('button',name='B1 Person 1 MYR 10.00',exact=True).click()
             expect(page.locator('#matching-reviewer')).to_have_count(0)
             expect(page.locator('.candidate-card')).to_have_count(1)

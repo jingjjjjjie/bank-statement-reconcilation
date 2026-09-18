@@ -14,6 +14,8 @@ Actual bank statement and receipt/document content is the evidence. Filenames an
 
 ## Confirmed decisions
 
+- Final pairings stay in one transaction list with High / Low confidence and a separate Pending / Approved / Rejected decision. Confidence can be filtered independently; unpaired transactions show No match. High uses the saved strong assessment, downgraded for stale/excluded evidence, unresolved boundaries, incomplete amount coverage, or a changed saved supporting selection. The saved reason is shown; confidence is not a calibrated probability or approval. Draft edits are not automatically rescored.
+
 - Review every proposed match initially. No automatic approval, including apparently exact matches. The reviewer can approve, reject or correct a proposal.
 - Flag every amount difference, showing both source amounts and the difference. Never silently tolerate, round away or invent a reason for a discrepancy.
 - Final report statuses are **Supporting** and **No supporting**. Supporting requires reviewer-approved evidence. Missing or unresolved evidence remains No supporting, with a separate reason/review state so pending review is distinguishable from a missing document. Update the status when evidence is subsequently confirmed.

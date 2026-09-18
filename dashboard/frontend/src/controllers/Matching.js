@@ -9,7 +9,7 @@ let token;
 let reviewData, activeId, saving = false, previewSerial = 0, previewState;
 const selected = new Map();
 const itemById = new Map();
-const assessmentLabel = {strong: 'Strong suggestion', tentative: 'Possible match', none: 'No candidate'};
+const confidenceLabel = {high: 'High confidence', low: 'Low confidence', none: 'No match'};
 
 function preference(key, fallback) {
   /* Read remembered filters without making local storage a source of decisions. */
@@ -50,9 +50,11 @@ async function refresh() {
   renderQueue(); renderBankPicker(); renderUnmatched();
 }
 function visibleBanks() {
-  /* Filter the queue by saved human status or original model suggestion. */
+  /* Filter confidence separately from the saved human decision. */
   const query = $('#bank-query').value.trim().toLowerCase(), filter = $('#bank-filter').value;
-  return reviewData.banks.filter(b => (filter === 'all' || ['pending', 'approved', 'denied'].includes(filter) && b.review_status === filter || b.suggestion.assessment === filter) &&
+  const confidence = $('#confidence-filter').value;
+  return reviewData.banks.filter(b => (filter === 'all' || b.review_status === filter) &&
+    (confidence === 'all' || (b.confidence.level || 'none') === confidence) &&
     `${b.id} ${b.date} ${b.parties.join(' ')} ${b.amount} ${b.description}`.toLowerCase().includes(query));
 }
 function renderQueue() {
@@ -66,8 +68,10 @@ function renderQueue() {
     row.append(node('span', 'party', b.parties.join(' / ')));
     const meta = node('span', 'row-meta'); meta.append(node('span', '', b.date), node('span', '', b.id)); row.append(meta);
     row.append(node('span', 'row-money', `${b.direction === 'in' ? '+ ' : ''}${formatMoney(b.amount, b.currency)}`));
-    const status = b.review_status === 'pending' ? b.suggestion.assessment : b.review_status;
-    row.append(node('span', `badge ${status}`, b.stale ? 'Evidence changed' : assessmentLabel[status] || status)); list.append(row);
+    row.append(node('span', `badge confidence-${b.confidence.level || 'none'}`, confidenceLabel[b.confidence.level || 'none']));
+    row.append(node('span', `badge ${b.review_status}`, b.review_status === 'denied' ? 'Rejected' : b.review_status));
+    if (b.stale) row.append(node('span', 'warning', 'Evidence changed'));
+    list.append(row);
   }
   if (!rows.length) list.append(node('div', 'empty-state', 'No transactions in this view. Change the filter or search.'));
   list.scrollTop = scroll;
@@ -87,7 +91,10 @@ function chooseBank(id, addItem) {
   $('#deny-match').disabled = false;
   $('#approve-match').textContent = b.review_status === 'approved' ? 'Save changes' : 'Approve';
   const detail = $('#transaction-detail'); detail.replaceChildren();
-  detail.append(node('span', `badge ${b.review_status}`, `${b.id} · ${b.review_status === 'pending' ? assessmentLabel[b.suggestion.assessment] : b.review_status}`), node('h2', 'transaction-title', b.parties.join(' / ')), node('div', 'bank-amount', formatMoney(b.amount, b.currency)), node('p', 'bank-meta', `${b.date} · ${b.direction === 'in' ? 'Incoming' : 'Outgoing'}`));
+  detail.append(node('span', `badge ${b.review_status}`, `${b.id} · ${b.review_status === 'denied' ? 'Rejected' : b.review_status}`), node('h2', 'transaction-title', b.parties.join(' / ')), node('div', 'bank-amount', formatMoney(b.amount, b.currency)), node('p', 'bank-meta', `${b.date} · ${b.direction === 'in' ? 'Incoming' : 'Outgoing'}`));
+  detail.append(node('span', `badge confidence-${b.confidence.level || 'none'}`, confidenceLabel[b.confidence.level || 'none']),
+    node('p', 'confidence-reason', b.confidence.reason),
+    node('p', 'subtle', 'Confidence describes saved pairing evidence. Your approval is a separate decision; edited selections need checking.'));
   const reason = node('details', 'transaction-notes'); reason.append(node('summary', '', 'Match details'), node('p', '', b.suggestion.reason), node('div', 'narration', b.description), node('p', 'subtle', `Export status: ${b.support_status}`)); detail.append(reason);
   if (b.stale) detail.append(node('p', 'warning', 'Original evidence changed. This transaction cannot be treated as supported until rechecked.'));
   for (const flag of b.decision?.flags || []) detail.append(node('p', 'warning', flag));
@@ -239,8 +246,11 @@ function renderBankPicker() {
 }
 async function initialize() {
   /* Restore display preferences, then fetch the saved corpus and session token. */
-  $('#bank-filter').value = preference('filter', 'tentative');
-  if (!$('#bank-filter').value) $('#bank-filter').value = 'pending';
+  const previous = preference('filter', 'all');
+  $('#bank-filter').value = previous;
+  if (!$('#bank-filter').value) $('#bank-filter').value = 'all';
+  $('#confidence-filter').value = preference('confidence', {strong:'high', tentative:'low', none:'none'}[previous] || 'all');
+  if (!$('#confidence-filter').value) $('#confidence-filter').value = 'all';
   $('#bank-query').value = preference('query', '');
   try {
     token = (await api('/api/session')).token; await refresh();
@@ -251,6 +261,7 @@ async function initialize() {
 }
 $('#bank-query').oninput = () => { remember('query', $('#bank-query').value); renderQueue(); };
 $('#bank-filter').onchange = () => { remember('filter', $('#bank-filter').value); renderQueue(); };
+$('#confidence-filter').onchange = () => { remember('confidence', $('#confidence-filter').value); renderQueue(); };
 $('#candidate-query').oninput = renderCandidates; $('#all-candidates').onchange = renderCandidates;
 $('#candidate-picker').ontoggle = () => { if (reviewData && activeId) renderCandidates(); };
 $('#restore-suggestion').onclick = () => { selected.clear(); bank().suggestion.allocations.forEach(a => selected.set(a.item_id, a.amount)); renderCandidates(); updateSummary(); };

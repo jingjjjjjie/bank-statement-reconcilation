@@ -1,4 +1,5 @@
 /* Transaction queue, human decision editor and original evidence in one view. */
+.badge.confidence-high{background:#e5f1e9;color:#245b40}.badge.confidence-low{background:#fff1da;color:#735016}.badge.confidence-none{background:#edf0ee;color:#53635a}.confidence-reason{font-size:12px;line-height:1.5;margin:9px 0}.bank-row .badge{margin-right:5px}
 .matching-app{--nav:#18392f;--paper:#f5f6f2;background:var(--paper)}
 .matching-layout .decision-panel{display:flex;flex-direction:column;padding:0;overflow:hidden;min-height:0}.decision-scroll{flex:1;min-height:0;overflow:auto;padding:20px}.decision-footer{padding:12px 20px;background:white;border-top:1px solid var(--line);box-shadow:0 -4px 16px #24383308}.decision-footer .decision-actions{margin-top:6px}.decision-footer #save-status{margin:8px 0 0;font-size:10px}#candidate-list{max-height:430px;overflow:auto;padding-right:3px}
 .unmatched-bank-picker{display:flex;gap:20px;padding:16px 0}.unmatched-bank-picker label{display:flex;flex-direction:column;gap:7px;font-size:12px;min-width:0}.unmatched-bank-picker select{max-width:500px}.unmatched-bank-picker input{width:250px}
