@@ -6,7 +6,7 @@ from unittest.mock import patch
 
 from playwright.sync_api import expect, sync_playwright
 
-from dashboard import content_review
+from dashboard import content_review, regeneration
 from dashboard.routes import create_app
 from reconciliation.vision_workflow import load, run
 from tests.browser import browser_options
@@ -46,21 +46,16 @@ class RegenerationBrowserTests(unittest.TestCase):
                 errors = []
                 page.on("pageerror", lambda error: errors.append(str(error)))
                 page.goto(f"http://127.0.0.1:{server.server_port}/extraction-review")
-                button = page.locator("#regenerate-extraction")
-                expect(button).to_be_enabled()
-                button.click()
+                expect(page.locator("#original-preview img")).to_be_visible()
+                expect(page.locator("#regenerate-extraction")).to_have_count(0)
+                key = page.locator("#receipt-unit").input_value()
+                regeneration.enqueue(fixture.review, key.split(":")[0])
                 expect(page.locator("#regeneration-status")).to_contain_text("background")
-                expect(button).to_be_disabled()
                 expect(page.locator("#regeneration-status")).to_have_attribute("aria-busy", "true")
                 expect(page.locator("#accept-receipts")).to_be_disabled()
-                page.locator("#next-document").click()
-                expect(button).to_be_enabled()
-                page.locator("#previous-document").click()
-                expect(button).to_be_disabled()
                 release.set()
                 expect(page.locator("#supporting-evidence")).to_contain_text("KWSP contribution report", timeout=10000)
                 expect(page.locator("#regeneration-status")).to_contain_text("complete")
-                expect(button).to_be_enabled()
                 expect(page.locator("#accept-receipts")).to_be_enabled()
                 page.screenshot(path=str(Path(__file__).resolve().parents[2] / ".tools/regeneration-review.png"))
                 page.reload()

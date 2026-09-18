@@ -8,7 +8,7 @@ let token;
 let receiptData = null, receiptBusy = false;
 let regenerationJobs = {};
 const relevanceLabels = {potential_support:'Potential supporting document', not_supporting:'Clearly unrelated', uncertain:'Relevance uncertain'};
-if ($('#regenerate-extraction')) {
+if ($('#regeneration-status')) {
   const evidence = node('div'); evidence.id = 'supporting-evidence';
   $('#receipt-unit-status').after(evidence);
 }
@@ -123,13 +123,10 @@ function showReceiptUnit() {
 
 function renderRegeneration() {
   /* Update live progress without replacing edits or the original preview. */
-  const button = $('#regenerate-extraction');
-  if (!button) return;
+  if (!$('#regeneration-status')) return;
   const unit = receiptData?.units.find(item => item.key === $('#receipt-unit').value);
   const job = regenerationJobs[unit?.document_id];
   const pending = ['queued', 'running'].includes(job?.status);
-  button.disabled = !unit || pending;
-  button.textContent = job?.status === 'queued' ? 'Queued…' : pending ? 'Regenerating…' : 'Regenerate document';
   const messages = {queued:'Queued for background extraction. You can continue browsing.',
     running:'Regenerating in the background. You can continue browsing.',
     completed:'Regeneration complete. Review the new result.', failed:`Regeneration unresolved: ${job?.error || 'Retry to finish.'}`};
@@ -151,16 +148,7 @@ async function pollRegeneration() {
   else if (changed && page.isDirty()) $('#regeneration-status').textContent += ' New results available; reload after saving or discarding edits.';
 }
 
-if ($('#regenerate-extraction')) {
-  $('#regenerate-extraction').onclick = () => receiptAction(async () => {
-    if (page.isDirty() && !confirm('Discard unsaved edits and regenerate this document?')) return;
-    const unit = receiptData?.units.find(item => item.key === $('#receipt-unit').value);
-    if (!unit) return;
-    regenerationJobs = (await api('/api/receipts/regenerate', {document_id:unit.document_id})).jobs;
-    hooks.saved?.();
-    renderRegeneration();
-    toast('Document queued for regeneration. You can continue browsing.');
-  });
+if ($('#regeneration-status')) {
   page.pollVisible(pollRegeneration, 1500);
 }
 
