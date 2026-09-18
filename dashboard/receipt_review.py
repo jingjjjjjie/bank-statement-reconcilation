@@ -29,6 +29,8 @@ def context(review, *, include_banks=True, prepared=None):
     saved = json.loads(path.read_text(encoding="utf-8")) if path.exists() else {"extractions": {}, "matches": {}, "history": []}
     units, receipts, banks = {}, {}, {}
     if (work / "index.json").exists():
+        from dashboard import regeneration
+        jobs = regeneration.snapshot(review)
         index, state = prepared if prepared is not None else load(work)
         if Path(index["manifest"]).resolve() != review.manifest_path.resolve():
             raise ValueError("Prepared review belongs to another manifest")
@@ -47,7 +49,11 @@ def context(review, *, include_banks=True, prepared=None):
                     raw = {"receipts": [], "limitations": ["Waiting for document receipt assembly"]}
                 if not raw or unit.get("blocked"):
                     continue
-                binding = revision([state["index_sha256"], raw, source_hash])
+                job = jobs.get(digest)
+                binding_parts = [state["index_sha256"], raw, source_hash]
+                if job:
+                    binding_parts.append(job["id"])
+                binding = revision(binding_parts)
                 accepted = saved["extractions"].get(key)
                 accepted = accepted if accepted and accepted["source_revision"] == binding and source_hash == digest else None
                 pieces = accepted["receipts"] if accepted else raw.get("receipts", [])
@@ -58,6 +64,11 @@ def context(review, *, include_banks=True, prepared=None):
                               "receipts": pieces, "readable": raw.get("readable", assembled),
                               "assembled": assembled, "assembly_pending": assembled and assembly is None,
                               "limitations": raw.get("limitations", []),
+                              "regeneration": job,
+                              "supporting_evidence": [{"label": source["label"],
+                                  "status": state["units"].get(f"{digest}:{n}", {}).get("supporting_evidence_status", "uncertain"),
+                                  "reason": state["units"].get(f"{digest}:{n}", {}).get("supporting_evidence_reason", "")}
+                                  for n, source in enumerate(document["units"])],
                               "source_units": [{"number": n + 1, "label": source["label"]}
                                                for n, source in enumerate(document["units"])]}
                 for position, piece in enumerate(pieces):
@@ -132,6 +143,8 @@ def accept_extraction(review, body):
     path, saved, units, receipts, banks = context(review)
     unit = units[body["key"]]
     verify_source(unit)
+    if unit.get("regeneration") and unit["regeneration"]["status"] != "completed":
+        raise ValueError("Finish regeneration before accepting this extraction")
     if unit.get("assembly_pending"):
         raise ValueError("Run documents to finish receipt assembly before accepting")
     if any(match["review_status"] == "accepted" and any(

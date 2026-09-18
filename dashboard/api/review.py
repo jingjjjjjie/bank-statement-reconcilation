@@ -195,6 +195,20 @@ def accept_receipts(body: dict, state=Depends(active_context)):
     return receipt_review.accept_extraction(state.review, body)
 
 
+@router.post("/receipts/regenerate")
+def regenerate_receipts(body: dict, state=Depends(active_context)):
+    """Queue a document on the shared background extraction worker."""
+    from dashboard import regeneration
+    return {"jobs": regeneration.enqueue(state.review, body["document_id"])}
+
+
+@router.get("/receipts/regeneration")
+def regeneration_status(state=Depends(active_context)):
+    """Poll regeneration progress without rebuilding document previews."""
+    from dashboard import regeneration
+    return {"jobs": regeneration.snapshot(state.review)}
+
+
 @router.post("/receipts/match")
 def match_receipts(body: dict, state=Depends(active_context)):
     """Apply explicitly requested receipt allocations."""

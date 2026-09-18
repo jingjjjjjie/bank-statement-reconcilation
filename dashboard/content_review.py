@@ -95,7 +95,7 @@ def prepare(review):
     return snapshot(review)
 
 
-def start(review):
+def start(review, *, regeneration_only=False):
     """Run a bounded model batch in the background so the page stays responsive."""
     if exact_problems(review):
         raise ValueError("Finish exact duplicate review first")
@@ -109,6 +109,7 @@ def start(review):
     review.content_error = ""
     review.content_cancel = threading.Event()
     review.content_engine = None
+    review.content_accepting = True
 
     def worker():
         """Resume extraction and receipt assembly without vision duplicate passes."""
@@ -120,13 +121,19 @@ def start(review):
                                    cancel_event=review.content_cancel)
             review.content_engine = engine
             engine.stage_choices = stage_settings(config)
-            run(work, index, state, engine, extraction_only=True)
+            if not regeneration_only:
+                run(work, index, state, engine, extraction_only=True)
+            from dashboard import regeneration
+            regeneration.drain(review, work, engine)
         except BudgetReached:
             pass
         except ReviewCancelled:
             pass
         except Exception as error:
             review.content_error = str(error)
+        finally:
+            from dashboard import regeneration
+            regeneration.finish(review, review.content_error)
 
     review.content_thread = threading.Thread(target=worker, daemon=True)
     review.content_thread.start()

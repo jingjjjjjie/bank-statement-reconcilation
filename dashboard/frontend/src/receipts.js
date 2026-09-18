@@ -6,6 +6,12 @@ const { $, api, toast } = page;
 let token;
 /* Keep receipt pieces separate until a reviewer explicitly allocates them. */
 let receiptData = null, receiptBusy = false;
+let regenerationJobs = {};
+const relevanceLabels = {potential_support:'Potential supporting document', not_supporting:'Clearly unrelated', uncertain:'Relevance uncertain'};
+if ($('#regenerate-extraction')) {
+  const evidence = node('div'); evidence.id = 'supporting-evidence';
+  $('#receipt-unit-status').after(evidence);
+}
 const emptyPiece = () => ({location:'', document_type:'', invoice_numbers:[], brief_description:'', total:'', currency:'', limitations:[]});
 
 function receiptError(error) {
@@ -33,6 +39,9 @@ function setReceiptData(data) {
   /* Retain selected document and transaction while refreshing saved results. */
   const unit = $('#receipt-unit')?.value || new URLSearchParams(page.routeQuery()).get('unit');
   receiptData = data;
+  for (const item of data.units) {
+    if (item.regeneration) regenerationJobs[item.document_id] = item.regeneration;
+  }
   if ($('#receipt-unit')) {
   $('#receipt-unit').replaceChildren(...data.units.map(item => new Option(
     `${item.source_path.split(/[\\/]/).pop()} / ${item.label}`, item.key)));
@@ -93,6 +102,9 @@ function showReceiptUnit() {
   const unit = receiptData?.units.find(item => item.key === $('#receipt-unit').value);
   $('#receipt-pieces').replaceChildren();
   $('#receipt-form').hidden = !unit; $('#receipt-original').hidden = !unit;
+  renderRegeneration();
+  if ($('#supporting-evidence')) $('#supporting-evidence').replaceChildren(...(unit?.supporting_evidence || []).map(item =>
+    node('p', '', `${item.label}: ${relevanceLabels[item.status] || 'Relevance uncertain'}${item.reason ? ' — ' + item.reason : ''}`)));
   if (!unit) { if (hooks.clearOriginal) hooks.clearOriginal(); $('#receipt-unit-status').textContent = 'No extracted receipt units yet. Run documents, then load the results.'; return; }
   $('#receipt-original').href = `/api/content-file?id=${encodeURIComponent(unit.document_id)}`;
   $('#receipt-unit-status').textContent = unit.accepted ? 'Extraction accepted.' : unit.needs_refresh
@@ -105,7 +117,51 @@ function showReceiptUnit() {
   }
   $('#receipt-form').querySelector('[type=submit]').disabled = !!unit.assembly_pending;
   for (const piece of unit.receipts) addReceiptPiece(piece);
+  renderRegeneration();
   if (hooks.showOriginal) hooks.showOriginal(unit).catch(receiptError);
+}
+
+function renderRegeneration() {
+  /* Update live progress without replacing edits or the original preview. */
+  const button = $('#regenerate-extraction');
+  if (!button) return;
+  const unit = receiptData?.units.find(item => item.key === $('#receipt-unit').value);
+  const job = regenerationJobs[unit?.document_id];
+  const pending = ['queued', 'running'].includes(job?.status);
+  button.disabled = !unit || pending;
+  button.textContent = job?.status === 'queued' ? 'Queued…' : pending ? 'Regenerating…' : 'Regenerate document';
+  const messages = {queued:'Queued for background extraction. You can continue browsing.',
+    running:'Regenerating in the background. You can continue browsing.',
+    completed:'Regeneration complete. Review the new result.', failed:`Regeneration unresolved: ${job?.error || 'Retry to finish.'}`};
+  const count = Object.values(regenerationJobs).filter(item => ['queued', 'running'].includes(item.status)).length;
+  $('#regeneration-status').textContent = (messages[job?.status] || '') + (count ? ` ${count} document(s) queued or regenerating.` : '');
+  $('#regeneration-status').setAttribute('aria-busy', String(pending));
+  if (unit) $('#receipt-form').querySelector('[type=submit]').disabled = pending || !!unit.assembly_pending || job?.status === 'failed';
+}
+
+async function pollRegeneration() {
+  /* Load fresh results on completion, preserving any unsaved edits elsewhere. */
+  regenerationJobs = (await api('/api/receipts/regeneration')).jobs;
+  renderRegeneration();
+  const changed = receiptData?.units.some(unit => {
+    const job = regenerationJobs[unit.document_id];
+    return job?.status === 'completed' && (unit.regeneration?.id !== job.id || unit.regeneration?.status !== 'completed');
+  });
+  if (changed && !page.isDirty() && !receiptBusy) await loadReceiptResults();
+  else if (changed && page.isDirty()) $('#regeneration-status').textContent += ' New results available; reload after saving or discarding edits.';
+}
+
+if ($('#regenerate-extraction')) {
+  $('#regenerate-extraction').onclick = () => receiptAction(async () => {
+    if (page.isDirty() && !confirm('Discard unsaved edits and regenerate this document?')) return;
+    const unit = receiptData?.units.find(item => item.key === $('#receipt-unit').value);
+    if (!unit) return;
+    regenerationJobs = (await api('/api/receipts/regenerate', {document_id:unit.document_id})).jobs;
+    hooks.saved?.();
+    renderRegeneration();
+    toast('Document queued for regeneration. You can continue browsing.');
+  });
+  page.pollVisible(pollRegeneration, 1500);
 }
 
 function readReceiptPieces() {

@@ -4,7 +4,7 @@ import itertools
 import json
 import subprocess
 import sys
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 from datetime import datetime, timezone
 from pathlib import Path
 from reconciliation.paths import WORKSPACE
@@ -166,9 +166,9 @@ def pack(document):
     return text, images
 
 
-def run_jobs(jobs, apply, workers):
+def run_jobs(jobs, apply, workers, refill=None):
     """Run a bounded number of model jobs and checkpoint every finished result."""
-    if workers == 1:
+    if workers == 1 and refill is None:
         for job in jobs:
             apply(job())
         return
@@ -176,10 +176,16 @@ def run_jobs(jobs, apply, workers):
     with ThreadPoolExecutor(max_workers=workers) as pool:
         def submit_one():
             """Keep only one queued job per available worker."""
+            nonlocal remaining
             try:
                 job = next(remaining)
             except StopIteration:
-                return False
+                if refill is None:
+                    return False
+                remaining = iter(refill())
+                job = next(remaining, None)
+                if job is None:
+                    return False
             pending[pool.submit(job)] = None
             return True
 
@@ -187,7 +193,13 @@ def run_jobs(jobs, apply, workers):
             if not submit_one():
                 break
         while pending:
-            future = next(as_completed(pending))
+            if error is None:
+                while len(pending) < workers and submit_one():
+                    pass
+            completed, _ = wait(pending, timeout=0.2, return_when=FIRST_COMPLETED)
+            if not completed:
+                continue
+            future = next(iter(completed))
             del pending[future]
             try:
                 result = future.result()
@@ -201,7 +213,8 @@ def run_jobs(jobs, apply, workers):
         raise error
 
 
-def run(work, index, state, reviewer, *, extraction_only=False):
+def run(work, index, state, reviewer, *, extraction_only=False, regeneration=None, progress=None,
+        queued_regenerations=None):
     """Extract and assemble receipts; retain explicit legacy comparison support for old tools."""
     config = active_config(index)
     if config["pdf_mode"] in pdf_routing.MODES and not development_cache.mode()["enabled"]:
@@ -224,6 +237,9 @@ def run(work, index, state, reviewer, *, extraction_only=False):
     state["model_config"] = model_settings(config)
     state["extraction_only"] = extraction_only
     documents = index["documents"]
+    regeneration = regeneration or {}
+    selected = {key: value for key, value in documents.items() if not regeneration or key in regeneration}
+    dispatched = set()
     workers = config["max_parallel"] if hasattr(reviewer, "fork") else 1
 
     def checkpoint():
@@ -258,29 +274,39 @@ def run(work, index, state, reviewer, *, extraction_only=False):
         # Vision reads each page/image; structured text supplies cells and paragraphs.
         def unit_jobs():
             """Yield unread document units without queuing the entire corpus."""
-            for digest, document in documents.items():
+            for digest, document in selected.items():
                 if document["error"] or not document.get("accepted", True):
                     continue
                 for number, unit in enumerate(document["units"]):
                     if unit.get("blocked"):
                         continue
                     key = f"{digest}:{number}"
-                    if key in state["units"]:
+                    if key in dispatched:
+                        continue
+                    if key in state["units"] and digest not in regeneration:
                         continue
 
                     def job(digest=digest, document=document, unit=unit, key=key):
                         """Read one page, sheet, or image with its selected model."""
+                        if progress:
+                            progress(digest, "running")
+                        def extract_ask(prompt, schema, images=(), **kwargs):
+                            """Keep explicit regeneration requests outside previous response caches."""
+                            if digest in regeneration:
+                                prompt += "\nRegeneration request: " + regeneration[digest]
+                            return ask(prompt, schema, images, **kwargs)
                         if document_stage(document["paths"][0]) == "pdf" and config["pdf_mode"] in pdf_routing.MODES:
-                            value = pdf_routing.extract_unit(unit, ask, config["pdf_mode"],
+                            value = pdf_routing.extract_unit(unit, extract_ask, config["pdf_mode"],
                                 work / "pdf-routing" / (key.replace(":", "-") + ".json"))
                             return key, digest, unit["label"], value
                         prompt = load_prompt("extraction") + "\n" + json.dumps({
                             "location": unit["label"], "text": unit["text"],
                             "limitation": unit.get("limitation", "")}, ensure_ascii=False)
-                        return key, digest, unit["label"], ask(prompt, EXTRACTION,
+                        return key, digest, unit["label"], extract_ask(prompt, EXTRACTION,
                             [unit["image"]] if unit["image"] else [],
                             stage=document_stage(document["paths"][0]))
 
+                    dispatched.add(key)
                     yield job
 
         def apply_unit(result):
@@ -288,15 +314,25 @@ def run(work, index, state, reviewer, *, extraction_only=False):
             key, digest, label, value = result
             state["units"][key] = value
             checkpoint()
+            if progress and len(documents[digest]["units"]) == 1:
+                progress(digest, "completed")
             print(f"Read {digest[:10]} / {label}", flush=True)
 
-        run_jobs(unit_jobs(), apply_unit, workers)
+        def refill_units():
+            """Pick up newly queued documents while extraction workers are occupied."""
+            for digest, request_id in queued_regenerations().items():
+                if digest not in regeneration:
+                    regeneration[digest] = request_id
+                    selected[digest] = documents[digest]
+            return unit_jobs()
+
+        run_jobs(unit_jobs(), apply_unit, workers, refill_units if queued_regenerations else None)
 
         def assembly_jobs():
             """Join complete multi-unit evidence without repeating page extraction."""
-            for digest, document in documents.items():
+            for digest, document in selected.items():
                 if (not document.get("accepted", True) or document["error"]
-                        or len(document["units"]) < 2 or current_assembly(document, state)):
+                        or len(document["units"]) < 2 or (digest not in regeneration and current_assembly(document, state))):
                     continue
                 if any(unit.get("blocked") or f"{digest}:{n}" not in state["units"]
                        for n, unit in enumerate(document["units"])):
@@ -315,6 +351,8 @@ def run(work, index, state, reviewer, *, extraction_only=False):
                                 "extraction": state["units"][f"{digest}:{n}"]}
                                for n, original in enumerate(originals)]
                     prompt = load_prompt("receipt_assembly") + "\n" + json.dumps(payload, ensure_ascii=False)
+                    if digest in regeneration:
+                        prompt += "\nRegeneration request: " + regeneration[digest]
                     if len(images) > 40 or len(prompt) > 100000:
                         raise ReviewPending("Document too large for receipt assembly; boundaries remain unresolved")
                     value = ask(prompt, ASSEMBLY, images, stage=document_stage(document["paths"][0]),
@@ -328,6 +366,8 @@ def run(work, index, state, reviewer, *, extraction_only=False):
             digest, value = result
             state.setdefault("assemblies", {})[digest] = value
             checkpoint()
+            if progress:
+                progress(digest, "completed")
             print(f"Assembled receipts {digest[:10]}", flush=True)
 
         run_jobs(assembly_jobs(), apply_assembly, workers)

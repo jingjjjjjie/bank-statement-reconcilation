@@ -48,6 +48,13 @@ class AssemblyWorkflowTests(unittest.TestCase):
         self.assertEqual(workflow.gate(index, state), [])
         self.assertEqual(len(calls), 1)
         self.assertEqual(len(calls[0]), 2)
+        document = next(doc for doc in index["documents"].values() if len(doc["units"]) == 2)
+        progress = []
+        workflow.run(self.work, index, state, Reviewer(), extraction_only=True,
+                     regeneration={document["id"]: "fresh-attempt"},
+                     progress=lambda digest, status: progress.append((digest, status)))
+        self.assertEqual(len(calls), 2)
+        self.assertEqual(progress[-1], (document["id"], "completed"))
         assembled = next(iter(state["assemblies"].values()))
         self.assertEqual(assembled["receipts"][0]["total"], "45.00")
         document = next(doc for doc in index["documents"].values() if len(doc["units"]) == 2)
