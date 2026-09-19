@@ -12,7 +12,7 @@ if ($('#regeneration-status')) {
   const evidence = node('div'); evidence.id = 'supporting-evidence';
   $('#receipt-unit-status').after(evidence);
 }
-const emptyPiece = () => ({location:'', document_type:'', invoice_numbers:[], brief_description:'', total:'', currency:'', limitations:[]});
+const emptyPiece = () => ({location:'', document_type:'', invoice_numbers:[], payee:'', references:[], dates:[], amount_basis:'', brief_description:'', total:'', currency:'', limitations:[]});
 
 function receiptError(error) {
   /* Keep action failures visible without discarding edited fields. */
@@ -25,7 +25,21 @@ async function receiptAction(task) {
   if (receiptBusy) return;
   receiptBusy = true; $('#receipt-error').hidden = true;
   try { await task(); } catch (error) { receiptError(error); }
-  finally { receiptBusy = false; }
+  finally { receiptBusy = false; renderRegeneration(); }
+}
+
+async function saveReceiptDecision(path, body, button) {
+  /* Keep edits stable until the server confirms an explicit review decision. */
+  const label = button.textContent;
+  const controls = [...page.root.querySelectorAll('button, input, select, textarea')];
+  const disabled = controls.map(control => control.disabled);
+  controls.forEach(control => { control.disabled = true; });
+  button.textContent = 'Saving…'; button.setAttribute('aria-busy', 'true');
+  try { return await api(path, body); }
+  finally {
+    controls.forEach((control, index) => { control.disabled = disabled[index]; });
+    button.textContent = label; button.removeAttribute('aria-busy');
+  }
 }
 
 async function loadReceiptResults() {
@@ -35,19 +49,16 @@ async function loadReceiptResults() {
   setReceiptData(data);
 }
 
-function setReceiptData(data) {
+function setReceiptData(data, selectedKey) {
   /* Retain selected document and transaction while refreshing saved results. */
-  const unit = $('#receipt-unit')?.value || new URLSearchParams(page.routeQuery()).get('unit');
+  const unit = selectedKey ?? ($('#receipt-unit')?.value || new URLSearchParams(page.routeQuery()).get('unit'));
   receiptData = data;
   for (const item of data.units) {
     if (item.regeneration) regenerationJobs[item.document_id] = item.regeneration;
   }
   if ($('#receipt-unit')) {
-  $('#receipt-unit').replaceChildren(...data.units.map(item => new Option(
-    `${item.source_path.split(/[\\/]/).pop()} / ${item.label}`, item.key)));
-  selectReceiptUnit(unit);
+  selectReceiptUnit(unit || data.units[0]?.key);
   }
-  if ($('#receipt-bank')) { renderReceiptBanks(); renderSavedMatches(); }
 }
 
 function selectReceiptUnit(key, force = true) {
@@ -82,17 +93,38 @@ function addReceiptPiece(piece=emptyPiece()) {
   card.append(node('legend', '', 'Separate receipt / supporting piece'));
   receiptField(card, 'Location in image or page', 'location', piece.location);
   receiptField(card, 'Document type', 'document_type', piece.document_type);
-  receiptField(card, 'Invoice numbers (one per line)', 'invoice_numbers', piece.invoice_numbers, true);
+  receiptField(card, 'Payee', 'payee', piece.payee || '');
+  receiptField(card, 'References (type: value)', 'references', (piece.references || (piece.invoice_numbers || []).map(value => ({type:'invoice', value}))).map(r => `${r.type}: ${r.value}`), true);
+  receiptField(card, 'Dates / periods (type: value)', 'dates', (piece.dates || []).map(r => `${r.type}: ${r.value}`), true);
   receiptField(card, 'Short description', 'brief_description', piece.brief_description);
   receiptField(card, 'Printed total', 'total', piece.total);
+  receiptField(card, 'Amount basis', 'amount_basis', piece.amount_basis || '');
   receiptField(card, 'Currency (for example MYR)', 'currency', piece.currency);
   receiptField(card, 'Limitations (one per line)', 'limitations', piece.limitations, true);
   card.splitPiece = () => {
     const pieces = readReceiptPieces(), position = [...$('#receipt-pieces').children].indexOf(card);
     const original = pieces[position];
-    pieces.splice(position, 1, {...original, total:'', needs_review:true}, {...emptyPiece(), source_units:original.source_units, needs_review:true});
+    const parents = original.piece_id ? [original.piece_id] : original.parent_piece_ids || [];
+    pieces.splice(position, 1, {...original, piece_id:'', parent_piece_ids:parents, total:'', needs_review:true}, {...emptyPiece(), parent_piece_ids:parents, source_units:original.source_units, needs_review:true});
     $('#receipt-pieces').replaceChildren(); pieces.forEach(addReceiptPiece);
     $('#receipt-unit-status').textContent = 'Set the source locations and printed totals for both pieces, then resolve the boundary flags.';
+  };
+  card.mergeNext = () => {
+    /* Merge only on explicit request, preserving lineage without inventing a total. */
+    const pieces = readReceiptPieces(), position = [...$('#receipt-pieces').children].indexOf(card);
+    const left = pieces[position], right = pieces[position + 1];
+    if (!right) return;
+    const parents = [...new Set([left, right].flatMap(p => p.piece_id ? [p.piece_id] : p.parent_piece_ids || []))];
+    const sourceUnits = [...new Set([...(left.source_units || []), ...(right.source_units || [])])];
+    const distinct = values => [...new Map(values.map(value => [JSON.stringify(value), value])).values()];
+    pieces.splice(position, 2, {...left, piece_id:'', parent_piece_ids:parents, total:'',
+      payee:left.payee === right.payee ? left.payee : '',
+      brief_description:[left.brief_description, right.brief_description].filter(Boolean).join(' / '),
+      references:distinct([...(left.references || []), ...(right.references || [])]),
+      dates:distinct([...(left.dates || []), ...(right.dates || [])]),
+      limitations:distinct([...(left.limitations || []), ...(right.limitations || [])]),
+      location:[left.location, right.location].filter(Boolean).join(' | '), source_units:sourceUnits, needs_review:true});
+    $('#receipt-pieces').replaceChildren(); pieces.forEach(addReceiptPiece);
   };
   $('#receipt-pieces').append(card);
 }
@@ -116,17 +148,25 @@ function showReceiptUnit() {
     else if (unit.limitations?.length) $('#receipt-unit-status').textContent += ' Limitations: ' + unit.limitations.join('; ');
   }
   $('#receipt-form').querySelector('[type=submit]').disabled = !!unit.assembly_pending;
-  for (const piece of unit.receipts) addReceiptPiece(piece);
+  $('#receipt-form').querySelector('[type=submit]').hidden = !!unit.trash;
+  $('#add-receipt').hidden = !!unit.trash;
+  if ($('#discard-document')) $('#discard-document').textContent = unit.trash ? 'Restore document' : 'Not useful — discard';
+  if (unit.trash) {
+    $('#receipt-unit-status').textContent = 'Trash — excluded from supporting evidence. Original file preserved.';
+    $('#supporting-evidence')?.replaceChildren();
+  } else for (const piece of unit.receipts) addReceiptPiece(piece);
   renderRegeneration();
   if (hooks.showOriginal) hooks.showOriginal(unit).catch(receiptError);
 }
 
 function renderRegeneration() {
   /* Update live progress without replacing edits or the original preview. */
+  if (receiptBusy) return;
   if (!$('#regeneration-status')) return;
   const unit = receiptData?.units.find(item => item.key === $('#receipt-unit').value);
   const job = regenerationJobs[unit?.document_id];
   const pending = ['queued', 'running'].includes(job?.status);
+  if ($('#discard-document')) $('#discard-document').disabled = !unit || pending;
   const messages = {queued:'Queued for background extraction. You can continue browsing.',
     running:'Regenerating in the background. You can continue browsing.',
     completed:'Regeneration complete. Review the new result.', failed:`Regeneration unresolved: ${job?.error || 'Retry to finish.'}`};
@@ -158,123 +198,85 @@ function readReceiptPieces() {
     const piece = structuredClone(card.receiptPiece || emptyPiece());
     for (const input of card.querySelectorAll('[data-field]')) {
       const key = input.dataset.field;
+      if (key === 'references' || key === 'dates') {
+        piece[key] = input.value.split('\n').map(value => value.trim()).filter(Boolean).map(value => {
+          const split = value.indexOf(':');
+          return split < 0 ? {type:'other', value} : {type:value.slice(0, split).trim() || 'other', value:value.slice(split + 1).trim()};
+        });
+        continue;
+      }
       if (key === 'source_units') { piece[key] = input.value.split(/[\s,]+/).filter(Boolean).map(Number); continue; }
       piece[key] = Array.isArray(piece[key]) ? input.value.split('\n').map(value => value.trim()).filter(Boolean) : input.value.trim();
     }
     const flag = card.querySelector('[data-boundary-review]');
+    if (piece.references) piece.invoice_numbers = piece.references.filter(r => r.type === 'invoice').map(r => r.value);
     if (flag) piece.needs_review = flag.checked;
     else { delete piece.source_units; delete piece.needs_review; }
     return piece;
   });
 }
 
-function renderReceiptBanks() {
-  /* Search bank facts while preserving the selected transaction when possible. */
-  const selected = $('#receipt-bank').value, query = $('#receipt-bank-search').value.toLowerCase();
-  const banks = receiptData.transactions.filter(bank =>
-    `${bank.date} ${bank.amount} ${bank.counterparty} ${bank.narration}`.toLowerCase().includes(query));
-  $('#receipt-bank').replaceChildren(...banks.map(bank => new Option(
-    `${bank.date} / ${bank.direction} / ${bank.currency} ${bank.amount} / ${bank.counterparty || bank.narration}`, bank.transaction_id)));
-  if (banks.some(bank => bank.transaction_id === selected)) $('#receipt-bank').value = selected;
-  showReceiptBank();
-}
-
-function showReceiptBank() {
-  /* Offer independently approved pieces with their remaining allocation amounts. */
-  const bank = receiptData?.transactions.find(item => item.transaction_id === $('#receipt-bank').value);
-  $('#receipt-allocations').replaceChildren(); $('#receipt-proposal').replaceChildren();
-  $('#receipt-match-form').hidden = !bank;
-  $('#receipt-bank-detail').textContent = bank ? `${bank.currency} ${bank.amount} / ${bank.narration}` : 'Extract the bank statement to create matches.';
-  if (!bank) return;
-  const available = receiptData.receipts.filter(item => item.accepted && item.currency === bank.currency && Number(item.remaining_amount) > 0);
-  for (const receipt of available) {
-    const row = node('div', 'settings-card'); row.dataset.receiptId = receipt.receipt_id;
-    const label = node('label'), checkbox = node('input'); checkbox.type = 'checkbox';
-    label.append(checkbox, document.createTextNode(` ${receipt.brief_description || 'Supporting piece'} / ${receipt.location || 'Location unspecified'} / ${receipt.currency} ${receipt.total}`));
-    const allocation = node('input'); allocation.value = receipt.remaining_amount; allocation.inputMode = 'decimal';
-    allocation.setAttribute('aria-label', `Allocate amount for ${receipt.brief_description || receipt.receipt_id}`);
-    const source = node('a', '', 'Open original'); source.href = `/api/content-file?id=${encodeURIComponent(receipt.document_id)}`;
-    source.target = '_blank'; source.rel = 'noopener';
-    row.append(label, node('p', '', `Already allocated: ${receipt.allocated_amount}. Remaining: ${receipt.remaining_amount}.`), allocation, source);
-    $('#receipt-allocations').append(row);
-  }
-  if (!available.length) $('#receipt-allocations').append(node('p', '', 'No accepted receipts with available amounts in this currency. Review missing fields above.'));
-  const existing = receiptData.matches.find(match => match.bank_transaction_id === bank.transaction_id);
-  if (existing) $('#receipt-proposal').append(matchCard(existing));
-}
-
-function matchCard(match) {
-  /* Present Python-calculated totals and require a separate acceptance click. */
-  const card = node('section', 'settings-card');
-  card.append(node('h3', '', `${match.currency} ${match.bank_amount} bank transaction`));
-  for (const item of match.supporting_items) card.append(node('p', '', `${item.brief_description || item.receipt_id} / ${item.location} / ${match.currency} ${item.allocated_amount}`));
-  card.append(node('p', '', `Supporting total: ${match.currency} ${match.supporting_total}`),
-    node('p', match.difference !== '0' && Number(match.difference) !== 0 ? 'validation' : '', `Difference: ${match.currency} ${match.difference}`),
-    node('p', '', `${match.review_status}${match.stale ? ' / Evidence changed: undo and review again.' : ''}`));
-  if (match.reason) card.append(node('p', '', `Notes: ${match.reason}`));
-  const actions = match.review_status === 'accepted' ? [['undo','Undo match']] : match.review_status === 'pending'
-    ? [...(match.stale ? [] : [['accept','Accept match']]), ['reject','Reject proposal']] : [];
-  for (const [action,label] of actions) {
-    const button = node('button', 'button secondary', label); button.type = 'button';
-    button.onclick = () => receiptAction(async () => setReceiptData(await api('/api/receipts/match', {
-      revision:receiptData.revision, bank_transaction_id:match.bank_transaction_id, action,
-      reviewer:$('#receipt-reviewer').value, reason:$('#receipt-match-reason').value,
-    })));
-    card.append(button);
-  }
-  return card;
-}
-
-function renderSavedMatches() {
-  /* Show persistent combined and separate matches, including rejected history heads. */
-  $('#receipt-saved-matches').replaceChildren(...receiptData.matches.map(matchCard));
-}
-
 if ($('#receipt-unit')) $('#receipt-unit').onchange = showReceiptUnit;
 if ($('#add-receipt')) $('#add-receipt').onclick = () => addReceiptPiece();
-if ($('#receipt-bank-search')) $('#receipt-bank-search').oninput = renderReceiptBanks;
-if ($('#receipt-bank')) $('#receipt-bank').onchange = showReceiptBank;
 if ($('#reload-receipts')) $('#reload-receipts').onclick = () => receiptAction(loadReceiptResults);
+if ($('#accept-all-receipts')) $('#accept-all-receipts').onclick = () => receiptAction(async () => {
+  /* Accept the loaded batch, carrying unsaved edits through the same validated write. */
+  if (!receiptData) return;
+  const key = $('#receipt-unit').value;
+  const body = {revision:receiptData.revision};
+  if (page.isDirty()) body.draft = {key, receipts:readReceiptPieces()};
+  const data = await saveReceiptDecision('/api/receipts/accept-all', body, $('#accept-all-receipts'));
+  hooks.saved?.();
+  setReceiptData(data, key);
+  const skipped = data.bulk.skipped.length;
+  toast(`${data.bulk.accepted} accepted.${skipped ? ` ${skipped} still need attention.` : ''}`);
+  if (skipped) receiptError(new Error(data.bulk.skipped.map(item => {
+    const unit = data.units.find(unit => unit.key === item.key);
+    return `${unit?.source_path.split('/').pop() || item.key}: ${item.reason}`;
+  }).join('\n')));
+});
 if ($('#receipt-form')) $('#receipt-form').onsubmit = event => {
   event.preventDefault();
   receiptAction(async () => {
     const key = $('#receipt-unit').value;
-    const data = await api('/api/receipts/accept', {
-      revision:receiptData.revision, key, receipts:readReceiptPieces(),
-    });
+    const body = {revision:receiptData.revision, key, receipts:readReceiptPieces()};
+    const button = $('#accept-receipts') || $('#receipt-form [type=submit]');
+    const data = await saveReceiptDecision('/api/receipts/accept', body, button);
     hooks.saved?.();
-    setReceiptData(data);
-    const next = data.units.find(item => !item.accepted && item.key !== key);
-    if (next) { $('#receipt-unit').value = next.key; showReceiptUnit(); }
+    const next = data.units.find(item => !item.accepted && !item.trash && item.key !== key);
+    setReceiptData(data, next?.key || key);
     toast(next ? 'Extraction accepted. Next item opened.' : 'Extraction accepted. All available items reviewed.');
   });
 };
-if ($('#receipt-match-form')) $('#receipt-match-form').onsubmit = event => {
-  event.preventDefault();
-  receiptAction(async () => {
-    const selected = [...$('#receipt-allocations').querySelectorAll('[data-receipt-id]')]
-      .filter(row => row.querySelector('[type=checkbox]').checked)
-      .map(row => ({receipt_id:row.dataset.receiptId, allocated_amount:row.querySelector('input:not([type=checkbox])').value}));
-    setReceiptData(await api('/api/receipts/match', {revision:receiptData.revision,
-      bank_transaction_id:$('#receipt-bank').value, action:'propose', supporting_items:selected,
-      reviewer:$('#receipt-reviewer').value, reason:$('#receipt-match-reason').value}));
-  });
-};
+if ($('#discard-document')) $('#discard-document').onclick = () => receiptAction(async () => {
+  const key = $('#receipt-unit').value;
+  const unit = receiptData.units.find(item => item.key === key);
+  const action = unit.trash ? 'restore' : 'trash';
+  const data = await saveReceiptDecision('/api/receipts/classify', {
+    revision: receiptData.revision, key, action,
+  }, $('#discard-document'));
+  hooks.saved?.();
+  const next = action === 'trash' && data.units.find(item => !item.accepted && !item.trash && item.key !== key);
+  setReceiptData(data, next?.key || key);
+  toast(action === 'trash' ? 'Classified as trash. Original file preserved.' : 'Document restored.');
+});
 if ($('#run-documents')) $('#run-documents').onclick = () => receiptAction(async () => {
   hooks.setDocumentRequestMessage(hooks.getDocumentState().prepared ? 'Starting document processing...' : 'Preparing document pages...');
   try {
     if (!hooks.getDocumentState().prepared) await api('/api/content/prepare', {});
     hooks.setDocumentRequestMessage('Starting document processing...');
     await api('/api/content/run', {});
+    await hooks.refreshExecution();
     await hooks.refreshDocuments();
   } finally { hooks.setDocumentRequestMessage(''); }
 });
-if ($('#stop-documents')) $('#stop-documents').onclick = () => receiptAction(async () => {
-  hooks.setDocumentRequestMessage('Stopping document processing...');
-  try { await api('/api/content/stop', {}); await hooks.refreshDocuments(); }
-  finally { hooks.setDocumentRequestMessage(''); }
-});
-if ($('#receipt-unit') || $('#receipt-bank')) loadReceiptResults().catch(receiptError);
+if ($('#stop-documents')) $('#stop-documents').onclick = async () => {
+  /* Stop must bypass the action queue, including an unfinished Start request. */
+  hooks.setExecution({stop_requested: true});
+  try { hooks.setExecution(await api('/api/content/stop', {})); }
+  catch (error) { hooks.setExecution({stop_requested: false}); receiptError(error); }
+};
+if ($('#receipt-unit')) loadReceiptResults().catch(receiptError);
 
 return {get data() { return receiptData; }, error: receiptError, showUnit: showReceiptUnit,
   selectUnit: selectReceiptUnit, reload: loadReceiptResults};

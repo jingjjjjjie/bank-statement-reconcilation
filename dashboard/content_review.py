@@ -1,6 +1,7 @@
 """Expose pass-two evidence and admin decisions to the local dashboard."""
 
 import threading
+from time import monotonic
 from pathlib import Path
 
 from reconciliation.codex_reviewer import BudgetReached, CodexReviewer, ReviewCancelled
@@ -36,7 +37,10 @@ def execution_status(review):
         error = error or "Process shutdown could not be verified. Another review cannot start."
     if status == "stopped":
         error = "Review stopped. Completed results are saved; run again to resume."
+    started = getattr(review, "content_started", None)
     return {"running": running, "active_processes": active, "stop_requested": requested,
+            "phase": getattr(review, "content_phase", ""),
+            "elapsed_seconds": int(monotonic() - started) if running and started is not None else 0,
             "execution_status": status, "run_error": error}
 
 
@@ -110,6 +114,8 @@ def start(review, *, regeneration_only=False):
     review.content_cancel = threading.Event()
     review.content_engine = None
     review.content_accepting = True
+    review.content_started = monotonic()
+    review.content_phase = "Checking prepared documents"
 
     def worker():
         """Resume extraction and receipt assembly without vision duplicate passes."""
@@ -121,12 +127,13 @@ def start(review, *, regeneration_only=False):
                                    cancel_event=review.content_cancel)
             review.content_engine = engine
             engine.stage_choices = stage_settings(config)
+            review.content_phase = "Extracting pages and assembling receipts"
             if not regeneration_only:
                 run(work, index, state, engine, extraction_only=True)
             from dashboard import regeneration
             regeneration.drain(review, work, engine)
-        except BudgetReached:
-            pass
+        except BudgetReached as error:
+            review.content_error = str(error)
         except ReviewCancelled:
             pass
         except Exception as error:
@@ -137,7 +144,7 @@ def start(review, *, regeneration_only=False):
 
     review.content_thread = threading.Thread(target=worker, daemon=True)
     review.content_thread.start()
-    return snapshot(review)
+    return execution_status(review)
 
 
 def stop(review):
@@ -148,7 +155,7 @@ def stop(review):
     engine = getattr(review, "content_engine", None)
     if engine is not None:
         engine.cancel()
-    return snapshot(review)
+    return execution_status(review)
 
 
 def decide(review, pair, verdict, reviewer, reason):

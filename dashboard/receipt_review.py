@@ -5,8 +5,9 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 
-from jsonschema import validate
+from jsonschema import validate, ValidationError
 from reconciliation.codex_reviewer import RECEIPT
+from reconciliation.pieces import identify, assign_submitted
 from reconciliation.receipt_assembly import ASSEMBLED_RECEIPT, current_assembly, validate_assembly
 from reconciliation.duplicate_workflow import fingerprint
 from reconciliation.receipt_matching import allocated, amount, currency, proposal, revision, stale
@@ -51,6 +52,7 @@ def context(review, *, include_banks=True, prepared=None):
             if digest in removed or not document.get("accepted", True) or document["error"]:
                 continue
             source_hash = hashes[document["paths"][0]]
+            trash = digest in saved.get("trash", {}) and source_hash == digest
             assembled = len(document["units"]) > 1
             assembly = current_assembly(document, state) if assembled else None
             review_units = [(-1, {"label": "Whole document", "blocked": False})] if assembled else enumerate(document["units"])
@@ -68,11 +70,12 @@ def context(review, *, include_banks=True, prepared=None):
                 binding = revision(binding_parts)
                 accepted = saved["extractions"].get(key)
                 accepted = accepted if accepted and accepted["source_revision"] == binding and source_hash == digest else None
-                pieces = accepted["receipts"] if accepted else raw.get("receipts", [])
+                pieces = identify(accepted["receipts"] if accepted else raw.get("receipts", []), digest, number, binding)
                 evidence = revision([binding, pieces])
                 units[key] = {"key": key, "document_id": digest, "unit": number, "label": unit["label"],
                               "source_path": document["paths"][0], "source_revision": binding,
-                              "accepted": bool(accepted), "needs_refresh": "receipts" not in raw,
+                              "accepted": bool(accepted) and not trash, "trash": trash,
+                              "needs_refresh": "receipts" not in raw,
                               "receipts": pieces, "readable": raw.get("readable", assembled),
                               "assembled": assembled, "assembly_pending": assembled and assembly is None,
                               "limitations": raw.get("limitations", []),
@@ -83,7 +86,7 @@ def context(review, *, include_banks=True, prepared=None):
                                   for n, source in enumerate(document["units"])],
                               "source_units": [{"number": n + 1, "label": source["label"]}
                                                for n, source in enumerate(document["units"])]}
-                for position, piece in enumerate(pieces):
+                for position, piece in enumerate([] if trash else pieces):
                     receipt_id = f"{digest}:u{number}:r{position}"
                     receipts[receipt_id] = {**piece, "receipt_id": receipt_id,
                         "document_id": digest, "unit": number, "source_path": document["paths"][0],
@@ -116,7 +119,7 @@ def snapshot(review):
 
 
 def snapshot_context(evidence):
-    """Serialize verified evidence without rereading sources."""
+    """Serialize one verified evidence set without rereading every source file."""
     path, saved, units, receipts, banks = evidence
     used = allocated(saved["matches"])
     for key, receipt in receipts.items():
@@ -148,7 +151,7 @@ def verify_source(item):
 
 def record(path, saved, action, reviewer, before, after):
     """Audit explicit decisions; extraction approval does not require a name."""
-    if not (action == "accept_extraction" and reviewer is None) and (not isinstance(reviewer, str) or not reviewer.strip()):
+    if not (action in {"accept_extraction", "trash_extraction", "restore_extraction"} and reviewer is None) and (not isinstance(reviewer, str) or not reviewer.strip()):
         raise ValueError("Enter your name")
     saved["history"].append({"at": datetime.now(timezone.utc).isoformat(), "reviewer": reviewer.strip() if reviewer else None,
                              "action": action, "before": before, "after": after})
@@ -161,7 +164,20 @@ def accept_extraction(review, body):
     evidence = require_current(review, body["revision"])
     path, saved, units, receipts, banks = evidence
     unit = units[body["key"]]
+    pieces = validate_acceptance(unit, body["receipts"], saved)
+    previous = saved["extractions"].get(body["key"])
+    value = {"source_revision": unit["source_revision"], "receipts": pieces, "reviewer": body.get("reviewer")}
+    saved["extractions"][body["key"]] = value
+    record(path, saved, "accept_extraction", body.get("reviewer"), previous, value)
+    unit.update(accepted=True, receipts=pieces)
+    return snapshot_units(evidence)
+
+
+def validate_acceptance(unit, pieces, saved):
+    """Apply the same source, boundary and field checks to individual and bulk acceptance."""
     verify_source(unit)
+    if unit.get("trash"):
+        raise ValueError("Restore this document from trash before accepting its extraction")
     if unit.get("regeneration") and unit["regeneration"]["status"] != "completed":
         raise ValueError("Finish regeneration before accepting this extraction")
     if unit.get("assembly_pending"):
@@ -170,7 +186,6 @@ def accept_extraction(review, body):
             item["document_id"] == unit["document_id"] and (unit.get("assembled") or item["unit"] == unit["unit"])
             for item in match["supporting_items"]) for match in saved["matches"].values()):
         raise ValueError("Undo accepted matches for this unit before changing its receipts")
-    pieces = body["receipts"]
     validate(pieces, {"type": "array", "items": ASSEMBLED_RECEIPT if unit.get("assembled") else RECEIPT, "maxItems": 100})
     if unit.get("assembled"):
         validate_assembly({"receipts": pieces, "reviewed_units": [s["number"] for s in unit["source_units"]],
@@ -182,12 +197,41 @@ def accept_extraction(review, body):
             amount(piece["total"])
         if piece["currency"]:
             currency(piece["currency"])
-    previous = saved["extractions"].get(body["key"])
-    value = {"source_revision": unit["source_revision"], "receipts": pieces, "reviewer": body.get("reviewer")}
-    saved["extractions"][body["key"]] = value
-    record(path, saved, "accept_extraction", body.get("reviewer"), previous, value)
-    unit.update(accepted=True, receipts=pieces)
-    return snapshot_units(evidence)
+    return assign_submitted(pieces, unit['receipts'])
+
+
+def accept_all_extractions(review, body):
+    """Accept eligible results in one write, retaining current edits and reporting skipped units."""
+    evidence = require_current(review, body['revision'])
+    path, saved, units, _, _ = evidence
+    draft = body.get('draft')
+    prepared, skipped = {}, []
+    if draft:
+        unit = units[draft['key']]
+        prepared[unit['key']] = validate_acceptance(unit, draft['receipts'], saved)
+    for key, unit in units.items():
+        if key in prepared or unit['accepted'] or unit.get('trash'):
+            continue
+        try:
+            if not unit['readable'] or unit['needs_refresh']:
+                raise ValueError('Extraction requires review or regeneration')
+            if any(piece.get('needs_review') for piece in unit['receipts']):
+                raise ValueError('Resolve flagged receipt boundaries before accepting')
+            prepared[key] = validate_acceptance(unit, unit['receipts'], saved)
+        except (ValueError, ValidationError, OSError) as error:
+            skipped.append({'key': key, 'reason': str(error)})
+    for key, pieces in prepared.items():
+        unit = units[key]
+        value = {'source_revision': unit['source_revision'], 'receipts': pieces, 'reviewer': None}
+        saved['history'].append({'at': datetime.now(timezone.utc).isoformat(), 'reviewer': None,
+            'action': 'accept_extraction', 'bulk': True, 'key': key,
+            'before': saved['extractions'].get(key), 'after': value})
+        saved['extractions'][key] = value
+        unit.update(accepted=True, receipts=pieces)
+    if prepared:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        write_json(path, saved)
+    return {**snapshot_units(evidence), 'bulk': {'accepted': len(prepared), 'skipped': skipped}}
 
 
 def snapshot_units(evidence):
@@ -195,6 +239,8 @@ def snapshot_units(evidence):
     path, saved, units, receipts, banks = evidence
     updated = {}
     for item in units.values():
+        if item.get("trash"):
+            continue
         evidence_revision = revision([item["source_revision"], item["receipts"]])
         for position, piece in enumerate(item["receipts"]):
             key = f'{item["document_id"]}:u{item["unit"]}:r{position}'
@@ -204,6 +250,48 @@ def snapshot_units(evidence):
                             "evidence_revision": evidence_revision}
     return snapshot_context((path, saved, units, updated, banks))
 
+
+def classify_extraction(review, body):
+    """Audit reversible trash classifications without moving or deleting originals."""
+    action = body.get("action")
+    if action not in {"trash", "restore"}:
+        raise ValueError("Choose trash or restore")
+    evidence = require_current(review, body["revision"])
+    path, saved, units, receipts, banks = evidence
+    unit = units[body["key"]]
+    verify_source(unit)
+    digest = unit["document_id"]
+    if (unit.get("regeneration") or {}).get("status") in {"queued", "running"}:
+        raise ValueError("Wait for regeneration to finish before classifying this document")
+    if action == "trash":
+        if any(match["review_status"] == "accepted" and any(
+                item["document_id"] == digest for item in match["supporting_items"])
+                for match in saved["matches"].values()):
+            raise ValueError("Undo accepted matches for this document before discarding it")
+        if (review.manifest_path.parent / "final-review/decisions.json").exists():
+            from dashboard import matching_review
+            _, ledger, _, items, _, _ = matching_review.context(review)
+            if any(decision["status"] == "approved" and any(
+                    items[allocation["item_id"]]["document"] == digest
+                    for allocation in decision["allocations"])
+                    for decision in ledger["decisions"].values()):
+                raise ValueError("Undo approved Final review matches before discarding this document")
+    discarded = saved.setdefault("trash", {})
+    previous = discarded.get(digest)
+    value = {"document_id": digest, "source_path": unit["source_path"], "classification": "trash"}
+    if action == "trash":
+        discarded[digest] = value
+    else:
+        discarded.pop(digest, None)
+        value = None
+    record(path, saved, f"{action}_extraction", None, previous, value)
+    for item in units.values():
+        if item["document_id"] != digest:
+            continue
+        item["trash"] = action == "trash"
+        accepted = saved["extractions"].get(item["key"])
+        item["accepted"] = bool(accepted and accepted["source_revision"] == item["source_revision"]) and not item["trash"]
+    return snapshot_units(evidence)
 
 
 def change_match(review, body):

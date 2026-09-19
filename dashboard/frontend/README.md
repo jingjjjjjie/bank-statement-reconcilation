@@ -2,6 +2,8 @@
 
 Vue 3 and Vue Router provide a shared layout and navigation without full page reloads. Vite compiles the application; FastAPI serves the result. Docker performs the build automatically for both image targets.
 
+Navigation retains cached screens within the active review. Proceed on the same workspace preserves its session and unsaved edits; activating a different workspace requires confirmation when edits are pending and resets the cached views. Controllers refresh after changes to the data they display, rather than after unrelated actions. The final report checks the saved ledger on return while keeping existing rows and filters visible. Evidence page, zoom, and scroll preferences are retained within that review; saved decisions remain server-owned.
+
 ## Small source structure
 
 - `src/App.vue` and `components/`: shared layout, navigation, progress, and notifications.
@@ -47,3 +49,5 @@ python -m unittest discover -s tests/browser -t .
 Browser checks require `dashboard/requirements-dev.txt` and installed Chrome on Windows or Playwright Chromium on Linux. They use temporary fixtures and make no model calls. Navigation checks assert that page switches retain actual DOM instances, preserve unsaved edits, support browser history, and suspend hidden-page polling.
 
 Final report refreshes ledger data when activated, closes its popup when deactivated, and preserves filters during popup dismissal. Keep confidence, human decisions and Supporting / No supporting status distinct. No frontend code may approve evidence or recompute server allocation rules.
+
+The active workspace shows Resume workspace. It returns to the last visited page in the current browser session without calling preview or start again. A fresh page load defaults to Documents; changing workspaces resets the return page.

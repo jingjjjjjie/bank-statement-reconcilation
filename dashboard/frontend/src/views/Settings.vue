@@ -1,8 +1,8 @@
 <script setup>
+import PageHelp from '../components/PageHelp.vue';
 import { ref } from 'vue';
 import { usePage } from '../page.js';
 import initialize from '../controllers/Settings.js';
-import WorkflowProgress from '../components/WorkflowProgress.vue';
 
 const root = ref(null);
 usePage(root, initialize);
@@ -11,55 +11,47 @@ usePage(root, initialize);
 <template>
   <div ref="root" class="page-view">
 <main class="settings-page">
-    <header><div class="breadcrumb">Workspace <span>/</span> Settings</div><a class="header-settings" href="/review">← Back to review</a></header>
-    <WorkflowProgress />
-    <section class="page-heading"><div><div class="eyebrow">WORKFLOW CONFIGURATION</div><h1>Review settings</h1><p>Configure document processing, model selection, and request limits. Exact duplicates use fixed byte checks; these defaults control content review.</p></div></section>
+    <section class="page-heading"><div><div class="page-title"><h1>Review settings</h1><PageHelp page="Settings" /></div></div></section>
     <div id="settings-error" class="validation" role="alert" hidden></div>
-    <section class="settings-card"><label class="setting-switch"><span><strong>Development / testing mode</strong><small>Enable shared output caching and decision replay tools. Turning this off keeps saved data and normal review history.</small></span><input id="development-mode" type="checkbox" role="switch" disabled></label><p id="development-mode-status" role="status">Loading mode?</p></section>
+    <section class="settings-card"><label class="setting-switch"><span><strong>Development / testing mode</strong></span><input id="development-mode" type="checkbox" role="switch" disabled></label><p id="development-mode-status" role="status">Loading mode?</p></section>
     <form id="settings-form">
       <fieldset id="settings-fields" disabled>
-        <section class="settings-card"><div class="section-title"><span>01</span><div><h2>Documents</h2><p>These options affect content review. Dashboard previews stay available.</p></div></div>
+        <section class="settings-card"><div class="section-title"><div><h2>Documents</h2></div></div>
           <div class="settings-grid">
-            <label class="setting-field"><strong>PDF processing</strong><select id="pdf-mode"><option value="vision">Vision: every page</option><option value="hybrid" data-development-tools hidden>Text + checked vision fallback (testing)</option><option value="compare" data-development-tools hidden>Compare text and vision (testing)</option><option value="text_only">Legacy: extractor only</option><option value="auto">Legacy: vision for sparse pages only</option></select><small>Testing modes require development mode and pictures. Text-only routing requires a locally validated layout; compare mode retains vision results. Changing modes requires preparing a new review; previous results and decisions are archived.</small></label>
-            <label class="setting-switch"><span><strong>Allow picture processing</strong><small>Send pictures and permitted PDF page images to Codex. Off leaves image-dependent documents unresolved.</small></span><input id="pictures-enabled" type="checkbox" role="switch"></label>
+            <label class="setting-field"><strong>PDF processing</strong><select id="pdf-mode"><option value="vision">Vision: every page</option><option value="hybrid" data-development-tools hidden>Text + checked vision fallback (testing)</option><option value="compare" data-development-tools hidden>Compare text and vision (testing)</option><option value="text_only">Legacy: extractor only</option><option value="auto">Legacy: vision for sparse pages only</option></select></label>
+            <label class="setting-switch"><span><strong>Allow picture processing</strong></span><input id="pictures-enabled" type="checkbox" role="switch"></label>
           </div>
         </section>
-        <section class="settings-card"><div class="section-title"><span>02</span><div><h2>Codex</h2><p>Uses your existing ChatGPT login through codex exec.</p></div></div>
-          <label class="setting-switch codex-master"><span><strong>Enable Codex reasoning and vision</strong><small>Off stops new workflow requests. An in-progress request may finish. Local extraction, duplicate checks and previews still work.</small></span><input id="codex-enabled" type="checkbox" role="switch"></label>
-          <p>Choose a model and reasoning effort for each stage. Local extraction happens before model reading. Exact duplicate checks use no model.</p>
+        <section class="settings-card"><div class="section-title"><div><h2>Codex</h2></div></div>
+          <label class="setting-switch codex-master"><span><strong>Enable Codex reasoning and vision</strong></span><input id="codex-enabled" type="checkbox" role="switch"></label>
+
           <div id="stage-settings"></div>
         </section>
-        <section class="settings-card"><div class="section-title"><span>03</span><div><h2>Request limit per run</h2><p>A run processes the remaining document extraction and receipt assembly.</p></div></div>
-          <p>One shared allowance for extraction and receipt assembly. Changing models does not reset the counter.</p>
+        <section class="settings-card"><div class="section-title"><div><h2>Request limit per run</h2></div></div>
+
           <div class="budget-grid">
-            <label class="setting-field"><strong>Maximum new Codex requests</strong><input id="max-calls" type="number" min="1" max="1000" required aria-describedby="call-example call-definition"><small>1–1,000 requests. This is a safety ceiling; processing stops earlier when work is finished. Applies when the next run starts; it does not change a batch already running.</small></label>
-            <div class="call-example"><span class="eyebrow">WITH YOUR LIMIT</span><p id="call-example" aria-live="polite">Loading saved limit…</p></div>
+            <label class="setting-field"><strong>Maximum new Codex requests</strong><input id="max-calls" type="number" min="1" max="1000" required aria-describedby="call-example"></label>
+            <div class="call-example"><p id="call-example" aria-live="polite">Loading saved limit…</p></div>
           </div>
-          <label class="setting-field"><strong>Codex requests in parallel</strong><input id="max-parallel" type="number" min="1" max="8" required><small>1–8 at once. Applies to the next run; all workers share the request limit above. More simultaneous calls may hit subscription rate limits.</small></label>
-          <dl class="call-rules" id="call-definition">
-            <div><dt>What is one request?</dt><dd>One new Codex model invocation to read or compare content. A document may need several requests; one request may compare multiple documents.</dd></div>
-            <div><dt>What counts?</dt><dd>Each started request, including failed or timed-out attempts. Reading cached results and local PDF extraction count as zero.</dd></div>
-            <div><dt>When the limit is reached</dt><dd>Completed work is saved. The workflow pauses before the next new request. It can finish early if no work remains.</dd></div>
-            <div><dt>How to continue</dt><dd>Run the command again. It resumes saved work with a fresh request allowance; cached results are reused.</dd></div>
-            <div><dt>What this does not limit</dt><dd>File count, token usage, elapsed time or daily subscription usage. A smaller request limit is not a guaranteed spending cap.</dd></div>
-          </dl>
-          <div class="resume-command"><strong>Start or resume from the Development folder</strong><code>.tools\python\python.exe vision_workflow.py run</code><small>Finish the exact-duplicate review first. A command-line --max-calls value overrides this saved limit for that run.</small></div>
+          <label class="setting-field"><strong>Codex requests in parallel</strong><input id="max-parallel" type="number" min="1" max="8" required></label>
+
+
         </section>
-        <section class="settings-card"><div class="section-title"><span>04</span><div><h2>Workspace token usage</h2><p>Codex calls made by this document-review workflow from tracking onward.</p></div></div>
+        <section class="settings-card"><div class="section-title"><div><h2>Workspace token usage</h2></div></div>
           <div id="token-usage" aria-live="polite">Loading usage…</div>
           <pre id="token-breakdown"></pre>
-          <small>Counts come from Codex's reported usage. Failed or interrupted attempts without a usage event are shown as unknown, so totals may be incomplete. Cached input is part of input tokens.</small>
+
         </section>
       </fieldset>
       <div id="settings-refresh" class="validation" hidden>Prepared inputs need refreshing before the next content review. Previous metadata and decisions are archived.<code class="block-code">.tools\python\python.exe vision_workflow.py prepare --refresh</code></div>
-      <div class="settings-savebar"><div><strong id="save-state" role="status" aria-live="polite">Loading settings…</strong><p>Saving settings does not start a review or make Codex calls.</p></div><div><button type="button" class="button secondary" id="use-defaults" data-development-tools hidden disabled>Use testing defaults</button><button type="button" class="button secondary" id="discard-settings" disabled>Discard changes</button><button type="submit" class="button dark" id="save-settings" disabled>Save settings</button></div></div>
+      <div class="settings-savebar"><div><strong id="save-state" role="status" aria-live="polite">Loading settings…</strong></div><div><button type="button" class="button secondary" id="use-defaults" data-development-tools hidden disabled>Use testing defaults</button><button type="button" class="button secondary" id="discard-settings" disabled>Discard changes</button><button type="submit" class="button dark" id="save-settings" disabled>Save settings</button></div></div>
     </form>
-    <section class="settings-card" data-development-tools hidden><h2>Development cache</h2><p>Save your human decisions from both duplicate passes. Apply them only to the same original paths and unchanged file hashes after you click the button. Content decisions require completed comparisons.</p>
+    <section class="settings-card" data-development-tools hidden><h2>Development cache</h2>
       <p id="development-status" role="status">Loading remembered decisions…</p>
       <label class="setting-field"><strong>Your name for replayed content decisions</strong><input id="development-reviewer" autocomplete="name" placeholder="Admin name"></label>
       <div class="content-actions"><button class="button secondary" id="remember-decisions" type="button">Remember current decisions</button><button class="button secondary" id="apply-decisions" type="button">Apply remembered decisions</button></div>
     </section>
-    <footer class="page-footer"><span>BANK STATEMENT RECONCILIATION / SETTINGS</span><span>Saved in config/review_config.json</span></footer>
+
   </main>
   </div>
 </template>

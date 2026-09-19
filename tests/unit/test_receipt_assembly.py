@@ -7,6 +7,7 @@ import pymupdf
 
 from reconciliation import vision_workflow as workflow
 from reconciliation.receipt_assembly import ASSEMBLY, current_assembly, input_revision, validate_assembly
+from reconciliation.pieces import ASSEMBLY as PIECE_ASSEMBLY
 from reconciliation.duplicate_workflow import fingerprint
 from tests.unit import test_vision_workflow as workflow_fixtures
 from tests.unit.test_vision_workflow import FakeReviewer
@@ -24,6 +25,14 @@ class AssemblyWorkflowTests(unittest.TestCase):
     setUp = workflow_fixtures.WorkflowTests.setUp
     prepared = workflow_fixtures.WorkflowTests.prepared
 
+    def test_duplicate_source_references_are_rejected_locally(self):
+        """Keep uniqueness checks without unsupported Codex schema keywords."""
+        self.assertNotIn('uniqueItems', json.dumps(ASSEMBLY))
+        with self.assertRaisesRegex(ValueError, 'repeats a reviewed'):
+            validate_assembly({'receipts': [piece([1, 2])], 'reviewed_units': [1, 2, 2], 'limitations': []}, 2)
+        with self.assertRaisesRegex(ValueError, 'repeats a source'):
+            validate_assembly({'receipts': [piece([1, 1, 2])], 'reviewed_units': [1, 2], 'limitations': []}, 2)
+
     def test_pages_are_assembled_once_with_original_images(self):
         """A continuation does not double a total, and resume skips the saved assembly."""
         with pymupdf.open() as pdf:
@@ -36,7 +45,7 @@ class AssemblyWorkflowTests(unittest.TestCase):
         class Reviewer(FakeReviewer):
             def ask(self, prompt, schema, images=()):
                 """Return one receipt across two source pages without live calls."""
-                if schema == ASSEMBLY:
+                if schema in (ASSEMBLY, PIECE_ASSEMBLY):
                     calls.append(list(images))
                     return {"receipts": [piece([1, 2])], "reviewed_units": [1, 2], "limitations": []}
                 return super().ask(prompt, schema, images)

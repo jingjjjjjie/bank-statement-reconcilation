@@ -17,9 +17,9 @@ needed. Document data is appended as JSON, and images are attached separately.
 These files contain instructions only: no placeholders or Python expressions
 are required. Missing or empty files fail the request rather than falling back
 to hidden instructions. Keep requested output fields compatible with the JSON
-schemas in `reconciliation/codex_reviewer.py`, `reconciliation/receipt_assembly.py` and `reconciliation/pdf_routing.py`.
+active `extraction.schema.json` and `receipt_assembly.schema.json` contracts in this folder.
 
-Normal dashboard and CLI runs use extraction and assembly; retained duplicate prompts do not imply a second vision duplicate pass. Final pairing experiment prompts live in `scripts/test_statement_matching.py`; the current final-review/report pages read saved proposals and make no model calls.
+Normal dashboard and CLI runs use extraction and assembly; retained duplicate prompts do not imply a second vision duplicate pass. Final pairing experiment prompts live in `scripts/test_statement_matching.py`; the final-review/report pages read saved proposals; the explicit Generate matches action uses `matching_policy.md` plus `piece_matching.md` to generate fresh proposals from current pieces and complete document context. The selection policy and limits are documented in `docs/MATCHING_RETRIEVAL.md`.
 
 Stop an active review before editing. To apply edits to already completed units
 or comparisons, run the existing `prepare --refresh` workflow before reviewing

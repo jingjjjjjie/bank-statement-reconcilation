@@ -16,6 +16,7 @@ import pymupdf
 
 import reconciliation.vision_workflow as workflow
 from reconciliation.codex_reviewer import BudgetReached, CodexReviewer, EXTRACTION, ReviewCancelled, SCREEN
+from reconciliation.pieces import EXTRACTION as PIECE_EXTRACTION
 from reconciliation.document_reader import extract
 from reconciliation.prompts import load_prompt
 from reconciliation.duplicate_workflow import organize
@@ -26,7 +27,7 @@ class FakeReviewer:
 
     def ask(self, prompt, schema, images=()):
         # Deterministic results test orchestration, not model accuracy.
-        if schema == EXTRACTION:
+        if schema in (EXTRACTION, PIECE_EXTRACTION):
             return {"receipts": [], "readable": True, "supporting_evidence_status": "potential_support",
                     "supporting_evidence_reason": "Visible transaction details", "document_type": "receipt", "receipt_status": "receipt", "invoice_numbers": ["TEST-1"],
                     "company": [], "brief_description": "fixture",
@@ -260,7 +261,7 @@ class WorkflowTests(unittest.TestCase):
 
             def ask(self, prompt, schema, images=()):
                 """Require two extraction calls to overlap."""
-                if schema == EXTRACTION:
+                if schema in (EXTRACTION, PIECE_EXTRACTION):
                     barrier.wait(timeout=5)
                 return super().ask(prompt, schema, images)
 
@@ -295,7 +296,7 @@ class WorkflowTests(unittest.TestCase):
             reads = 0
 
             def ask(self, prompt, schema, images=()):
-                if schema == EXTRACTION:
+                if schema in (EXTRACTION, PIECE_EXTRACTION):
                     self.reads += 1
                     result = super().ask(prompt, schema, images)
                     result["invoice_numbers"] = [f"OTHER-{self.reads}"]
@@ -359,8 +360,8 @@ class WorkflowTests(unittest.TestCase):
                 return super().ask(prompt, schema, images)
         with patch("reconciliation.vision_workflow.active_config", return_value=config):
             workflow.run(self.work, index, state, RecordingReviewer())
-            self.assertEqual({c[0] for c in calls if c[2] == EXTRACTION}, {"images", "pdf", "excel"})
-            self.assertTrue(all(c[0] == "comparison" for c in calls if c[2] != EXTRACTION))
+            self.assertEqual({c[0] for c in calls if c[2] in (EXTRACTION, PIECE_EXTRACTION)}, {"images", "pdf", "excel"})
+            self.assertTrue(all(c[0] == "comparison" for c in calls if c[2] not in (EXTRACTION, PIECE_EXTRACTION)))
             self.assertTrue(all(c[1] == "high" for c in calls))
             self.assertTrue(all(c[3] for c in calls if c[0] == "images"))
             changed = {**config, "stages": {**choices, "pdf": {"model": "different", "reasoning": "low"}}}
@@ -386,7 +387,7 @@ class WorkflowTests(unittest.TestCase):
         class WordReviewer(FakeReviewer):
             def ask(self, prompt, schema, images=()):
                 """Record extraction routing without making live model calls."""
-                if schema == EXTRACTION:
+                if schema in (EXTRACTION, PIECE_EXTRACTION):
                     stages.append(self.stage)
                 return super().ask(prompt, schema, images)
 

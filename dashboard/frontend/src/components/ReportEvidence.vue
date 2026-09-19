@@ -2,9 +2,20 @@
 import { ref, watch, nextTick } from 'vue';
 import { api } from '../api.js';
 import { renderOfficePreview } from '../office.js';
-const props = defineProps(['kind', 'id', 'title', 'preferred']);
-const info = ref(null), page = ref(0), zoom = ref(100), error = ref(''), loading = ref(false), office = ref(null);
+const props = defineProps(['kind', 'id', 'title', 'preferred', 'positions']);
+const info = ref(null), page = ref(0), zoom = ref(100), error = ref(''), loading = ref(false), office = ref(null), viewport = ref(null);
 let serial = 0;
+// Retain display preferences in this review only; evidence still comes from the server.
+function remember() {
+  if (info.value && !loading.value) props.positions?.set(`${props.kind}:${props.id}`, {
+    page: page.value, zoom: zoom.value, left: viewport.value?.scrollLeft || 0, top: viewport.value?.scrollTop || 0,
+  });
+}
+function restoreScroll() {
+  const saved = props.positions?.get(`${props.kind}:${props.id}`);
+  if (saved && viewport.value) viewport.value.scrollTo(saved.left, saved.top);
+}
+watch([page, zoom], remember);
 // Encode only server-resolved evidence IDs; never accept arbitrary source paths.
 function url(endpoint, includePage = false) {
   return `/api/matching-${endpoint}?${new URLSearchParams({kind: props.kind, id: props.id, ...(includePage ? {page: page.value} : {})})}`;
@@ -16,8 +27,11 @@ async function load() {
   try {
     const result = await api(url('preview'));
     if (request !== serial) return;
-    page.value = Math.max(0, Math.min(props.preferred || 0, result.pages - 1));
+    const saved = props.positions?.get(`${props.kind}:${props.id}`);
+    page.value = Math.max(0, Math.min(saved?.page ?? props.preferred ?? 0, result.pages - 1));
+    zoom.value = saved?.zoom || 100;
     info.value = result;
+    await nextTick(); restoreScroll();
   } catch (e) { if (request === serial) error.value = e.message; }
   finally { if (request === serial) loading.value = false; }
 }
@@ -43,14 +57,14 @@ watch([info, page], async () => {
       <label>Page <select v-model.number="page" :aria-label="`${title} page`"><option v-for="(label, index) in info.labels" :value="index" :key="index">{{ label }}</option></select></label>
       <label>Zoom <select v-model.number="zoom" :aria-label="`${title} zoom`"><option v-for="value in [100, 125, 150, 200]" :key="value" :value="value">{{ value }}%</option></select></label>
     </div>
-    <div class="report-preview">
+    <div class="report-preview" ref="viewport" @scroll="remember">
       <p v-if="loading" role="status">Loading original evidence…</p>
       <p v-if="error" role="alert">{{ error }}</p>
       <div v-if="info && !error" :style="{width: `${zoom}%`}">
         <pre v-if="info.kind === 'text'">{{ info.text }}</pre>
         <p v-else-if="info.kind === 'unsupported'">{{ info.message }}</p>
         <div v-else-if="['word', 'spreadsheet'].includes(info.kind) && page < info.office_pages" ref="office"></div>
-        <img v-else :key="url('image', true)" :src="url('image', true)" :alt="`${title} — ${info.labels[page]}`" @error="error = 'Preview unavailable. Download the original to inspect it.'">
+        <img v-else :key="url('image', true)" :src="url('image', true)" :alt="`${title} — ${info.labels[page]}`" @load="restoreScroll" @error="error = 'Preview unavailable. Download the original to inspect it.'">
       </div>
     </div>
   </section>

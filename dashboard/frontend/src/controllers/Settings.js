@@ -46,7 +46,7 @@ function renderStages(data) {
     const section = document.createElement('section');
     section.className = 'stage-setting';
     // Only fixed stage identifiers enter markup; catalog labels use Option text.
-    section.innerHTML = `<h3>${title}</h3><p>${description}</p><div class="settings-grid"><label class="setting-field"><strong>Model</strong><select id="${stage}-model" aria-label="${title} model"></select></label><label class="setting-field"><strong>Reasoning effort</strong><select id="${stage}-reasoning" aria-label="${title} reasoning"></select></label></div>`;
+    section.innerHTML = `<h3>${title}</h3><div class="settings-grid"><label class="setting-field"><strong>Model</strong><select id="${stage}-model" aria-label="${title} model"></select></label><label class="setting-field"><strong>Reasoning effort</strong><select id="${stage}-reasoning" aria-label="${title} reasoning"></select></label></div>`;
     $('#stage-settings').append(section);
     const choice = data.config.stages?.[stage] || data.config;
     const select = $(`#${stage}-model`);
@@ -141,7 +141,8 @@ api('/api/development-decisions').then(showDevelopment).catch(error => {
 page.dirty(() => dirty);
 
 
-page.onRefresh(async () => showSettings(await api('/api/config')));
+page.onRefresh(async () => showSettings(await api('/api/config')), ['/api/config', '/api/development/']);
+
 function showUsage(usage) {
   // Update accounting without resetting unsaved form fields.
   if (usage?.totals) {

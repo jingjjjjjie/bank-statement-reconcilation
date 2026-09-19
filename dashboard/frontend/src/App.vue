@@ -1,10 +1,8 @@
 <script setup>
+import Navigation from './components/Navigation.vue';
 import { onMounted, onBeforeUnmount } from 'vue';
-import { useRoute } from 'vue-router';
 import { router } from './router.js';
 import { appState, pages, refreshNavigation, toast } from './api.js';
-import Navigation from './components/Navigation.vue';
-const route = useRoute();
 
 // Keep source-file downloads and new-tab links native; route only application links.
 function navigate(event) {
@@ -28,8 +26,8 @@ onBeforeUnmount(() => window.removeEventListener('beforeunload', beforeUnload));
 
 <template>
   <div class="application" @click="navigate">
-    <Navigation v-if="!route.meta.fullscreen" />
-    <RouterView v-slot="{ Component }">
+    <Navigation />
+    <RouterView v-slot="{ Component, route }">
       <KeepAlive :key="appState.session.review_id" :max="10">
         <component :is="Component" :key="route.path" />
       </KeepAlive>

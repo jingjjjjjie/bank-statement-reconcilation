@@ -17,11 +17,11 @@ def extract(path, output, config=None):
     units = []
     config = validate(config if config is not None else dict(DEFAULTS))
 
-    def add(label, text="", image=None, limitation="", blocked="", pdf_probe=None):
+    def add(label, text="", image=None, limitation="", blocked="", pdf_probe=None, whole_text=False):
         # Split long text without dropping rows or pages from coverage.
-        chunks = [text] if pdf_probe is not None else ([text[i:i + 12000] for i in range(0, len(text), 12000)] or [""])
+        chunks = [text] if whole_text or pdf_probe is not None else ([text[i:i + 12000] for i in range(0, len(text), 12000)] or [""])
         for part, chunk in enumerate(chunks, 1):
-            item = {"label": f"{label} / part {part}", "text": chunk, "image": None,
+            item = {"label": label if whole_text else f"{label} / part {part}", "text": chunk, "image": None,
                     "limitation": limitation, "blocked": blocked}
             if pdf_probe is not None:
                 item["pdf_probe"] = pdf_probe
@@ -102,7 +102,8 @@ def _extract_excel(path, add):
                         cells.append(f"{cell.coordinate}={json.dumps(content, ensure_ascii=False)}")
                 if cells:
                     rows.append(" | ".join(cells))
-            add(f"sheet {sheet.title} ({sheet.sheet_state})", "\n".join(rows))
+            # Keep headings, complete cells, and totals together for each worksheet.
+            add(f"sheet {sheet.title} ({sheet.sheet_state})", "\n".join(rows), whole_text=True)
     finally:
         formulas.close()
         values.close()

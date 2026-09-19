@@ -13,6 +13,7 @@ from unittest.mock import patch
 
 from PIL import Image
 
+from reconciliation.pieces import EXTRACTION as PIECE_EXTRACTION
 from reconciliation.codex_reviewer import COMPARISON, EXTRACTION, ReviewCancelled, SCREEN
 from dashboard.app import Review, create_app
 from dashboard import content_review, development, regeneration, receipt_review
@@ -27,7 +28,7 @@ class FixtureReviewer:
 
     def ask(self, prompt, schema, images=()):
         """Produce matching fields and a comparison requiring admin review."""
-        if schema == EXTRACTION:
+        if schema in (EXTRACTION, PIECE_EXTRACTION):
             return {"receipts": [], "readable": True, "supporting_evidence_status": "potential_support",
                     "supporting_evidence_reason": "Visible transaction details", "document_type": "invoice", "receipt_status": "not_receipt", "invoice_numbers": ["INV-1"],
                     "company": ["Example"], "brief_description": "Cleaning",

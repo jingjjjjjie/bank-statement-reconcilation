@@ -26,3 +26,37 @@
 .candidate-card{padding:12px}.candidate-info{font-size:11px;line-height:1.5}.candidate-controls{margin-bottom:0}.candidate-name{font-size:12px}.candidate-card.selected{background:#fbfcf8;border-color:#d1dec8}.candidate-top input{margin-top:2px}.review-note{margin-top:18px}.review-note[open]>label:first-of-type{display:none}.history{margin-top:18px;padding-top:14px}.selection-summary{font-size:11px;padding:10px}.decision-footer{padding:12px 20px}.decision-footer:has(#save-status:empty) #save-status{display:none}.evidence-heading{padding:16px 18px 8px}.evidence-heading h2{font-size:12px;margin:0}.evidence-content{padding:24px}.evidence-navigation{padding-bottom:12px}
 @media(max-width:1050px){.matching-main{margin:0;width:100%;padding:14px}.matching-layout{height:auto;grid-template-columns:210px 1fr;min-height:0}.decision-panel{height:650px}.evidence-panel{height:750px}.heading-left .subtle{display:none}}
 @media(max-width:650px){.matching-heading{flex-direction:row;align-items:center;gap:10px}.heading-left{gap:10px;flex-wrap:wrap}.heading-left .back-link{width:100%}.matching-heading .text-button{white-space:nowrap;font-size:11px}.matching-layout{display:block}.transaction-panel{max-height:265px}.decision-panel{height:auto;min-height:450px}.decision-scroll{overflow:visible}.matching-toolbar{gap:8px}.review-tabs{gap:14px}.matching-heading h1{font-size:19px}.evidence-content{padding:12px}}
+
+/* Keep the proposed group distinct from optional alternatives. */
+#support-group{border-left:3px solid #90b393;padding-left:12px;margin-bottom:18px}.candidate-reason{font-size:12px;line-height:1.6;color:#40594b}#alternative-list{margin-top:12px}
+
+/* Review the payment and its evidence first; edit allocations only when needed. */
+.matching-layout{grid-template-columns:minmax(210px,22fr) minmax(340px,34fr) minmax(0,44fr);height:calc(100vh - 200px)}
+#support-group{border-left:0;padding-left:0;margin:24px 0 16px}
+#support-status{margin:0 0 12px;font-size:11px}
+.transaction-notes{margin-bottom:18px}.bank-meta{margin-bottom:10px}
+.candidate-card.selected{background:white;border-color:#dce5df;padding:16px}
+.candidate-name{font-size:14px}.candidate-reason{margin:10px 0;font-size:12px}
+#candidate-list .candidate-top input{display:none}
+.decision-scroll:has(#candidate-picker[open]) #candidate-list .candidate-top input{display:block}
+.candidate-bottom{justify-content:flex-start}.candidate-bottom button{padding-left:0}
+.source-details{margin-top:8px;font-size:11px}.source-details summary{cursor:pointer;color:#708075}
+.source-details .allocation-label{margin-top:10px}
+.decision-actions{margin-top:10px}.decision-footer{background:#fff}
+@media(max-width:1050px){.matching-layout{grid-template-columns:210px minmax(0,1fr);height:auto}}
+@media(max-width:650px){.matching-layout{display:block}.decision-scroll{padding:18px}.candidate-card.selected{padding:12px}}
+
+/* Match-generation progress stays compact and independent of review counts. */
+.matching-progress{margin:0 0 16px;padding:14px 16px;background:#f4f7f4;border:1px solid #dce6dd;border-radius:12px;display:grid;gap:8px}
+.matching-progress[hidden]{display:none}
+.matching-progress-label{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;font-size:13px}
+.matching-progress progress{display:block;width:100%;height:9px;border:0;border-radius:9px;overflow:hidden;appearance:none;background:#dfe7e0;accent-color:var(--green,#52755b)}
+.matching-progress progress::-webkit-progress-bar{background:#dfe7e0;border-radius:9px}
+.matching-progress progress::-webkit-progress-value{background:var(--green,#52755b);border-radius:9px;transition:width .6s ease}
+.matching-progress progress::-moz-progress-bar{background:var(--green,#52755b);border-radius:9px}
+.matching-progress[data-running="true"] progress{animation:matching-pulse 2s ease-in-out infinite}
+.matching-progress[data-error="true"]{border-color:#d8bb87}
+#matching-progress-detail{font-size:12px;color:#655d4f;overflow-wrap:anywhere}
+#matching-progress-detail:empty{display:none}
+@keyframes matching-pulse{50%{opacity:.65}}
+@media(prefers-reduced-motion:reduce){.matching-progress progress{animation:none!important}.matching-progress progress::-webkit-progress-value{transition:none}}

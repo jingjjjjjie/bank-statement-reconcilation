@@ -4,6 +4,7 @@ import hashlib
 import os
 import secrets
 from pathlib import Path
+from jsonschema.exceptions import ValidationError as SchemaValidationError
 
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
@@ -99,6 +100,12 @@ def create_app(review=None, token=None, sources=None):
     async def invalid_request(request, error):
         """Report invalid fields without returning private input contents."""
         return JSONResponse({"error": "Invalid request fields"}, status_code=422)
+
+    @app.exception_handler(SchemaValidationError)
+    async def invalid_evidence(request, error):
+        """Return a readable validation error rather than an unparseable server failure."""
+        location = ".".join(str(part) for part in error.absolute_path) or "submitted evidence"
+        return JSONResponse({"error": f"Invalid {location}: {error.message}"}, status_code=422)
 
     @app.exception_handler(ValueError)
     @app.exception_handler(OSError)

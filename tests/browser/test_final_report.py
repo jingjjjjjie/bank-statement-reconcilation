@@ -1,5 +1,6 @@
 """Verify the read-only report and modal against synthetic original evidence."""
 import csv
+import json
 import os
 from pathlib import Path
 import threading
@@ -31,6 +32,34 @@ def fake_pdf(path, title, lines, pages=1):
 
 
 class FinalReportBrowserTests(unittest.TestCase):
+    def test_return_keeps_rows_and_evidence_position(self):
+        """Back navigation keeps rows during refresh and restores PDF page and zoom."""
+        with sync_playwright() as playwright:
+            browser = playwright.chromium.launch(**browser_options())
+            page = browser.new_page()
+            page.goto(self.url + '/final-report')
+            expect(page.locator('.report-table tbody tr')).to_have_count(3)
+            page.get_by_label('Find a transaction').fill('Cedar')
+            page.get_by_role('button', name='View evidence for B1').click()
+            page.get_by_label('Bank statement page', exact=True).select_option('0')
+            page.get_by_label('Bank statement zoom', exact=True).select_option('150')
+            page.get_by_role('button', name='Close evidence').click()
+            page.locator('.app-header a[href="/matching"]').click()
+            expect(page).to_have_url(self.url + '/matching')
+            saved = page.request.get(self.url + '/api/matching').json()
+            pending = []
+            page.route('**/api/matching', lambda route: pending.append(route))
+            page.go_back()
+            expect(page.get_by_label('Find a transaction')).to_have_value('Cedar')
+            expect(page.locator('.report-table tbody tr')).to_have_count(1)
+            expect(page.locator('.final-report')).to_have_attribute('aria-busy', 'true')
+            self.assertTrue(pending)
+            pending.pop().fulfill(status=200, content_type='application/json', body=json.dumps(saved))
+            page.get_by_role('button', name='View evidence for B1').click()
+            expect(page.get_by_label('Bank statement page', exact=True)).to_have_value('0')
+            expect(page.get_by_label('Bank statement zoom', exact=True)).to_have_value('150')
+            browser.close()
+
     def setUp(self):
         """Use a temporary cache and saved decisions; never touch live review data."""
         fixture = fixtures.MatchingReviewTests()

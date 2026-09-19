@@ -79,39 +79,83 @@ mediaViewport.addEventListener('dblclick', resetMedia);
 page.observe(new ResizeObserver(layoutMedia), mediaViewport);
 
 function renderPieceNavigation() {
-  /* Edit one piece at a time while preserving every piece in the submitted form. */
+  /* Show every piece as one editable row; retain secondary fields in its disclosure. */
   const cards = [...$('#receipt-pieces').children];
   if (pieceDocument !== selectedUnit) activePiece = 0;
   else if (cards.length > previousPieceCount) activePiece = cards.length - 1;
   pieceDocument = selectedUnit; previousPieceCount = cards.length;
   activePiece = Math.max(0, Math.min(activePiece, cards.length - 1));
-  $('#piece-count').textContent = `${cards.length} ${cards.length === 1 ? 'piece' : 'pieces'}`;
-  $('#piece-tabs').hidden = cards.length < 2;
+  $('#piece-count').textContent = `${cards.length} pieces${cards.length ? ` | Editing ${activePiece + 1}` : ''}`;
+  $('#piece-tabs').hidden = true;
+  $('#merge-piece').disabled = activePiece >= cards.length - 1;
   $('#split-piece').disabled = $('#remove-piece').disabled = !cards.length;
-  $('#piece-tabs').replaceChildren(...cards.map((card, number) => {
-    card.hidden = number !== activePiece;
-    card.querySelector('legend').textContent = `Piece ${number + 1} details`;
-    const button = node('button', '', `Piece ${number + 1}`);
-    button.type = 'button'; button.setAttribute('aria-pressed', String(number === activePiece));
-    button.onclick = () => { activePiece = number; renderPieceNavigation(); $('#receipt-pieces').scrollTop = 0; };
-    return button;
-  }));
+  cards.forEach((card, number) => {
+    card.hidden = false;
+    card.classList.toggle('active-piece', number === activePiece);
+    card.querySelector('legend').textContent = `Piece ${number + 1}`;
+    if (!card.querySelector('.piece-row')) {
+      const row = node('div', 'piece-row'), select = node('button', 'piece-number');
+      select.type = 'button'; row.append(select);
+      const details = node('details', 'piece-details');
+      details.append(node('summary', '', 'Details'));
+      for (const key of ['payee', 'brief_description', 'total', 'currency']) {
+        const field = card.querySelector(`[data-field="${key}"]`);
+        if (field) {
+          const label = field.closest('label');
+          label.firstChild.textContent = {payee:'Payee', brief_description:'Description', total:'Amount', currency:'Currency'}[key];
+          row.append(label);
+        }
+      }
+      for (const label of [...card.querySelectorAll(':scope > label')]) details.append(label);
+      card.append(row, details);
+      const warnings = card.receiptPiece.limitations || [];
+      if (warnings.length || card.querySelector('[data-boundary-review]:checked')) {
+        card.append(node('p', 'piece-warning', [...warnings, ...(card.querySelector('[data-boundary-review]:checked') ? ['Boundaries need review'] : [])].join(' | ')));
+      }
+      card.addEventListener('focusin', () => {
+        const index = [...$('#receipt-pieces').children].indexOf(card);
+        if (index !== activePiece) { activePiece = index; renderPieceNavigation(); }
+      });
+    }
+    const select = card.querySelector('.piece-number');
+    select.textContent = String(number + 1);
+    select.setAttribute('aria-label', `Select piece ${number + 1}`);
+    select.setAttribute('aria-pressed', String(number === activePiece));
+    select.onclick = () => { activePiece = number; renderPieceNavigation(); };
+  });
 }
 
 function updateReviewNavigation() {
-  /* Show real review progress and bound previous/next navigation. */
-  const select = $('#receipt-unit'), count = select.options.length;
-  $('#document-position').textContent = count ? `${select.selectedIndex + 1} / ${count}` : '0 / 0';
-  $('#previous-document').disabled = select.selectedIndex <= 0;
-  $('#next-document').disabled = select.selectedIndex >= count - 1;
-  const accepted = receipts.data?.units.filter(unit => unit.accepted).length || 0;
+  /* Show ten numbered documents with accepted and current states kept separate. */
+  const units = receipts.data?.units || [], count = units.length;
+  const index = units.findIndex(unit => unit.key === $('#receipt-unit').value);
+  const start = Math.floor(Math.max(0, index) / 10) * 10;
+  const current = units[index];
+  const name = current ? current.source_path.split(/[\\/]/).pop() : 'No document selected';
+  $('#current-document-name').textContent = name;
+  $('#current-document-name').title = current ? `${name} / ${current.label}` : '';
+  $('#previous-document').disabled = start === 0;
+  $('#next-document').disabled = start + 10 >= count;
+  $('#document-buttons').replaceChildren(...units.slice(start, start + 10).map((unit, offset) => {
+    const number = start + offset + 1;
+    const button = node('button', unit.trash ? 'trash' : unit.accepted ? 'reviewed' : '', String(number));
+    button.type = 'button';
+    button.setAttribute('aria-label', `Document ${number}${unit.trash ? ', trash' : unit.accepted ? ', reviewed' : ', not reviewed'}`);
+    if (unit.key === current?.key) button.setAttribute('aria-current', 'true');
+    button.title = unit.source_path.split(/[\\/]/).pop();
+    button.onclick = () => changeDocument(start + offset);
+    return button;
+  }));
+  const accepted = units.filter(unit => unit.accepted || unit.trash).length;
   $('#review-progress').textContent = `${accepted} of ${count} reviewed`;
 }
 
-function changeDocument(offset) {
+function changeDocument(index) {
   /* Reuse the selection event so unsaved-change protection applies to navigation. */
   const select = $('#receipt-unit');
-  select.selectedIndex += offset;
+  const unit = receipts.data?.units[index];
+  if (!unit) return;
+  select.value = unit.key;
   select.dispatchEvent(new Event('change', {bubbles:true}));
 }
 
@@ -185,12 +229,49 @@ $('#original-page').onchange = () => renderOriginal().catch(receipts.error);
 $('#original-zoom').onchange = event => {
   zoomMedia(Number(event.target.value));
 };
-$('#previous-document').onclick = () => changeDocument(-1);
-$('#next-document').onclick = () => changeDocument(1);
+$('#previous-document').onclick = () => {
+  const index = receipts.data.units.findIndex(unit => unit.key === selectedUnit);
+  changeDocument(Math.max(0, Math.floor(index / 10) * 10 - 10));
+};
+$('#next-document').onclick = () => {
+  const index = receipts.data.units.findIndex(unit => unit.key === selectedUnit);
+  changeDocument(Math.floor(index / 10) * 10 + 10);
+};
 $('#split-piece').onclick = () => {
   /* Apply the split to the selected piece, retaining all other edits. */
   const card = $('#receipt-pieces').children[activePiece];
   if (card) { extractionDirty = true; card.splitPiece(); }
+};
+$('#merge-piece').onclick = () => {
+  /* Merge adjacent pieces only after the user explicitly selects this action. */
+  const card = $('#receipt-pieces').children[activePiece];
+  if (card) { extractionDirty = true; card.mergeNext(); }
+};
+$('#piece-query').oninput = () => {
+  /* Find pieces across documents while retaining normal unsaved-edit protection. */
+  const query = $('#piece-query').value.trim().toLowerCase();
+  const results = [];
+  if (query) (receipts.data?.units || []).forEach((unit, index) => {
+    if (unit.trash) return;
+    unit.receipts.forEach((piece, position) => {
+      const text = [piece.payee, piece.brief_description, piece.total, piece.currency,
+        ...(piece.invoice_numbers || []), ...(piece.references || []).map(r => r.value),
+        ...(piece.dates || []).map(r => r.value)].join(' ');
+      if (!text.toLowerCase().includes(query)) return;
+      const button = node('button', '', `${piece.payee || piece.brief_description || 'Piece'} / ${piece.currency} ${piece.total}`);
+      button.type = 'button';
+      button.onclick = () => {
+        changeDocument(index);
+        if ($('#receipt-unit').value !== unit.key) return;
+        selectedUnit = unit.key; pieceDocument = selectedUnit;
+        previousPieceCount = unit.receipts.length; activePiece = position;
+        renderPieceNavigation();
+        $('#receipt-pieces').children[position]?.scrollIntoView({block:'nearest'});
+      };
+      results.push(button);
+    });
+  });
+  $('#piece-search-results').replaceChildren(...results.slice(0, 30));
 };
 $('#remove-piece').onclick = () => {
   /* Remove only the selected extraction piece, never the source file. */
@@ -199,7 +280,7 @@ $('#remove-piece').onclick = () => {
 };
 page.observe(new MutationObserver(renderPieceNavigation), $('#receipt-pieces'), {childList:true});
 root.addEventListener('input', event => { if (event.target.closest('#receipt-pieces')) extractionDirty = true; });
-root.addEventListener('click', event => { if (event.target.closest('#receipt-pieces button, #add-receipt')) extractionDirty = true; });
+root.addEventListener('click', event => { if (event.target.closest('#receipt-pieces button:not(.piece-number), #add-receipt')) extractionDirty = true; });
 root.addEventListener('change', event => {
   if (event.target.id !== 'receipt-unit' || !extractionDirty) return;
   if (!confirm('Discard unsaved extraction changes?')) {
@@ -212,7 +293,7 @@ root.addEventListener('click', event => {
 
 const receipts = installReceipts(page, {showOriginal, clearOriginal, saved: () => {extractionDirty = false;}});
 page.dirty(() => extractionDirty);
-page.onRefresh(() => receipts.reload());
+page.onRefresh(() => receipts.reload(), ['/api/receipts/', '/api/content/']);
 page.onQuery(() => {
   const key = new URLSearchParams(routeQuery()).get('unit');
   if (key && $('#receipt-unit').value !== key) {

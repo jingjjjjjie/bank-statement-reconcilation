@@ -13,3 +13,5 @@ types when editing the schema; changing them may also require Python/UI changes.
 Restart long-running application processes after schema edits. New workflow
 processes load the schema on startup. Changed schemas produce different request
 cache keys. Desktop shortened drafts do not replace the active prompt.
+
+New model output is document context plus pieces. `receipt_assembly.schema.json` adds source-unit coverage and boundary flags. `extraction.legacy.schema.json` is a compatibility validation contract for older records, not the active model output. Python adapters retain old export/routing accessors without asking the model to generate duplicate prose. IDs and approvals are assigned by Python, never the model.

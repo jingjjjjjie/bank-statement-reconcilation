@@ -3,7 +3,7 @@ import { reactive } from 'vue';
 // Only shared display state lives here. The server owns evidence and decisions.
 export const appState = reactive({
   session: null, workspace: { name: 'Loading review…', period: '' },
-  steps: [], development: false, changes: 0, toast: '', error: '',
+  resumePath: '/documents', steps: [], development: false, changes: 0, revisions: {}, toast: '', error: '',
 });
 export const pages = new Set();
 let sessionRequest, navigationRequest, toastTimer;
@@ -28,18 +28,28 @@ export async function loadSession() {
 export async function api(path, body, options = {}) {
   const session = appState.session || await loadSession();
   if (path === '/api/session' && body === undefined) return session;
-  if (path === '/api/source/start' && [...pages].some(page => page.isDirty()) &&
-      !confirm('Switch workspace and discard unsaved edits?')) throw Error('Workspace switch cancelled');
+  if (path === '/api/source/start' && [...pages].some(page => page.isDirty())) {
+    const source = await api('/api/source');
+    if (source.active !== source.selected?.path &&
+        !confirm('Switch workspace and discard unsaved edits?')) throw Error('Workspace switch cancelled');
+  }
   const response = await fetch(path, body === undefined ? { signal: options.signal } : {
     method: 'POST', signal: options.signal,
     headers: { 'Content-Type': 'application/json', 'X-Review-Token': session.token,
       'X-Review-Id': options.reviewId || session.review_id },
     body: JSON.stringify(body),
   });
-  const data = await response.json();
+  const text = await response.text();
+  let data;
+  try { data = JSON.parse(text); }
+  catch { throw Error(`The server could not complete this request (HTTP ${response.status}). Your edits are still on this page.`); }
   if (!response.ok) throw Error(data.error || 'Request failed');
   if (body !== undefined) {
-    appState.changes++;
+    const selectionOnly = path.startsWith('/api/source/') && path !== '/api/source/bank-prepare';
+    if (!selectionOnly) {
+      appState.changes++;
+      appState.revisions[path] = (appState.revisions[path] || 0) + 1;
+    }
     if (path === '/api/source/start') await loadSession();
     if (path === '/api/development-mode') appState.development = data.enabled;
     // Reviewing extracted fields does not change pipeline stage completion.
@@ -48,6 +58,13 @@ export async function api(path, body, options = {}) {
     }
   }
   return data;
+}
+
+// Refresh a cached view only after a write to the data it displays.
+export function revisionFor(prefixes) {
+  if (!prefixes) return appState.changes;
+  return Object.entries(appState.revisions).reduce((total, [path, revision]) =>
+    total + (prefixes.some(prefix => path.startsWith(prefix)) ? revision : 0), 0);
 }
 
 export async function refreshNavigation() {

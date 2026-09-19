@@ -20,6 +20,7 @@ def snapshot(review):
     from dashboard.receipt_review import context
     review_units = context(review, include_banks=False, prepared=(index, state))[2]
     reviewed = {}
+    discarded = {unit["document_id"] for unit in review_units.values() if unit.get("trash")}
     for unit in review_units.values():
         reviewed.setdefault(unit["document_id"], []).append(unit["accepted"])
     duplicates = removal_plan(state)
@@ -30,7 +31,9 @@ def snapshot(review):
             continue
         units = document["units"]
         read = sum(f"{digest}:{number}" in state["units"] for number in range(len(units)))
-        if document["error"] or any(unit.get("blocked") for unit in units):
+        if digest in discarded:
+            status = "Trash"
+        elif document["error"] or any(unit.get("blocked") for unit in units):
             status = "Needs attention"
         elif read < len(units):
             status = "Processing" if read else "Queued"
@@ -45,6 +48,7 @@ def snapshot(review):
         path = document["paths"][0]
         rows.append({"id": digest, "name": Path(path).name, "path": path, "status": status,
                      "approved_duplicate": digest in duplicates,
+                     "extracted": bool(units) and status in {"Needs review", "Complete", "Trash"},
                      "assembly_total": int(len(units) > 1), "assembly_done": int(len(units) > 1 and bool(current_assembly(document, state))),
                      "units_read": read, "units_total": len(units)})
     rows.sort(key=lambda row: (row["name"].casefold(), row["path"].casefold()))

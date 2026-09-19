@@ -58,19 +58,71 @@ class ReceiptMatchingTests(unittest.TestCase):
         return receipt_review.accept_extraction(self.review, {"revision": self.view()["revision"],
             "key": self.key, "receipts": self.pieces if pieces is None else pieces, "reviewer": "Tester"})
 
-    def test_accept_response_matches_reload_with_one_evidence_scan(self):
-        """Reuse verified evidence while keeping revised pieces and stale matches exact."""
-        self.accept_pieces()
-        self.change("combined", "propose", [(0, "45.00"), (1, "15.00")])
-        expected = self.view()["revision"]
-        pieces = [{**self.pieces[0], "total": "42.00"}]
-        with patch.object(receipt_review, "context", wraps=receipt_review.context) as scans:
-            result = receipt_review.accept_extraction(self.review, {
-                "revision": expected, "key": self.key, "receipts": pieces})
-        self.assertEqual(scans.call_count, 1)
-        self.assertEqual(result, self.view())
-        self.assertTrue(result["matches"][0]["stale"])
+    def test_accept_all_saves_draft_once_and_rejects_stale_repeat(self):
+        """Bulk acceptance retains edits and audits them without matching bank entries."""
+        view = self.view()
+        draft = view['units'][0]['receipts']
+        draft[0]['total'] = '42.00'
+        body = {'revision': view['revision'], 'draft': {'key': self.key, 'receipts': draft}}
+        result = receipt_review.accept_all_extractions(self.review, body)
+        self.assertEqual(result['bulk'], {'accepted': 1, 'skipped': []})
+        self.assertEqual(result['units'][0]['receipts'][0]['total'], '42.00')
+        self.assertEqual(result['matches'], [])
+        saved = json.loads((self.work / 'receipt-matches.json').read_text())
+        self.assertTrue(saved['history'][0]['bulk'])
+        with self.assertRaisesRegex(ValueError, 'changed'):
+            receipt_review.accept_all_extractions(self.review, body)
+        repeated = receipt_review.accept_all_extractions(self.review, {'revision': self.view()['revision']})
+        self.assertEqual(repeated['bulk']['accepted'], 0)
 
+    def test_accept_all_skips_unreadable_and_changed_sources(self):
+        """Unresolved extraction and changed original bytes cannot become bulk approvals."""
+        self.state['units'][self.key]['readable'] = False
+        self.save_state()
+        result = receipt_review.accept_all_extractions(self.review, {'revision': self.view()['revision']})
+        self.assertEqual(result['bulk']['accepted'], 0)
+        self.assertEqual(len(result['bulk']['skipped']), 1)
+        self.state['units'][self.key]['readable'] = True
+        self.save_state()
+        self.source.write_bytes(b'changed original')
+        result = receipt_review.accept_all_extractions(self.review, {'revision': self.view()['revision']})
+        self.assertEqual(result['bulk']['accepted'], 0)
+        self.assertIn('source changed', result['bulk']['skipped'][0]['reason'])
+        self.assertFalse((self.work / 'receipt-matches.json').exists())
+
+    def test_accept_all_rejects_invalid_draft_without_writing(self):
+        """Invalid edits stay unsaved rather than being dropped during a bulk action."""
+        view = self.view()
+        draft = view['units'][0]['receipts']
+        draft[0]['total'] = 'invalid'
+        with self.assertRaises(ValueError):
+            receipt_review.accept_all_extractions(self.review, {'revision': view['revision'],
+                'draft': {'key': self.key, 'receipts': draft}})
+        self.assertFalse((self.work / 'receipt-matches.json').exists())
+
+    def test_remove_assembled_piece_preserves_extended_fields(self):
+        """Removing a generated piece from four pages accepts the remaining editor fields."""
+        from reconciliation.receipt_assembly import input_revision
+        document = self.index['documents'][self.digest]
+        document['id'] = self.digest
+        document['units'] = [{'label': f'page {n}', 'image': None} for n in range(1, 5)]
+        (self.work / 'index.json').write_text(json.dumps(self.index))
+        self.state['index_sha256'] = fingerprint(self.work / 'index.json')
+        self.state['assemblies'] = {self.digest: {
+            'input_revision': input_revision(document, self.state), 'reviewed_units': [1, 2, 3, 4],
+            'limitations': [], 'receipts': [{**piece, 'source_units': [1, 2, 3, 4], 'needs_review': False}
+                                           for piece in self.pieces]}}
+        self.save_state()
+        view = self.view()
+        unit = view['units'][0]
+        remaining = {**unit['receipts'][0], 'payee': '', 'references': [{'type': 'invoice', 'value': '336617430'}],
+                     'dates': [], 'amount_basis': '', 'total': '273.48'}
+        result = receipt_review.accept_extraction(self.review, {
+            'revision': view['revision'], 'key': unit['key'], 'receipts': [remaining]})
+        self.assertEqual(len(result['units'][0]['receipts']), 1)
+        self.assertEqual(result['units'][0]['receipts'][0]['total'], '273.48')
+        self.assertEqual(result['units'][0]['receipts'][0]['references'], remaining['references'])
+        self.assertEqual(result, self.view())
 
     def test_parallel_validation_rejects_modified_prepared_image(self):
         """Faster review reads and saves must still reject tampered derived evidence."""
@@ -88,7 +140,6 @@ class ReceiptMatchingTests(unittest.TestCase):
                 'revision': revision, 'key': self.key, 'receipts': self.pieces})
         self.assertFalse((self.work / 'receipt-matches.json').exists())
 
-
     def test_accept_extraction_without_reviewer_keeps_audit_history(self):
         """Removing the name field still records the explicit approval and its time."""
         receipt_review.accept_extraction(self.review, {"revision": self.view()["revision"],
@@ -97,6 +148,78 @@ class ReceiptMatchingTests(unittest.TestCase):
         self.assertEqual(saved["history"][-1]["action"], "accept_extraction")
         self.assertIsNone(saved["history"][-1]["reviewer"])
         self.assertTrue(saved["history"][-1]["at"])
+
+    def test_accept_response_matches_reload_with_one_evidence_scan(self):
+        """Reuse verified evidence while keeping revised pieces and stale matches exact."""
+        self.accept_pieces()
+        self.change("combined", "propose", [(0, "45.00"), (1, "15.00")])
+        expected = self.view()["revision"]
+        pieces = [{**self.pieces[0], "total": "42.00"}]
+        with patch.object(receipt_review, "context", wraps=receipt_review.context) as scans:
+            result = receipt_review.accept_extraction(self.review, {
+                "revision": expected, "key": self.key, "receipts": pieces})
+        self.assertEqual(scans.call_count, 1)
+        self.assertEqual(result, self.view())
+        self.assertTrue(result["matches"][0]["stale"])
+
+    def test_trash_is_audited_reversible_and_excluded_from_receipts(self):
+        """Discarding preserves original bytes and makes pending evidence unusable."""
+        from dashboard import document_status
+        self.accept_pieces()
+        self.change("combined", "propose", [(0, "45.00"), (1, "15.00")])
+        original = self.source.read_bytes()
+        discarded = receipt_review.classify_extraction(self.review, {
+            "revision": self.view()["revision"], "key": self.key, "action": "trash"})
+        self.assertTrue(discarded["units"][0]["trash"])
+        self.assertFalse(discarded["units"][0]["accepted"])
+        self.assertEqual(discarded["receipts"], [])
+        self.assertTrue(discarded["matches"][0]["stale"])
+        self.assertEqual(discarded, self.view())
+        self.assertEqual(document_status.snapshot(self.review)["documents"][0]["status"], "Trash")
+        with self.assertRaisesRegex(ValueError, "Restore"):
+            receipt_review.accept_extraction(self.review, {
+                "revision": discarded["revision"], "key": self.key, "receipts": self.pieces})
+        restored = receipt_review.classify_extraction(self.review, {
+            "revision": discarded["revision"], "key": self.key, "action": "restore"})
+        self.assertFalse(restored["units"][0]["trash"])
+        self.assertEqual(len(restored["receipts"]), 2)
+        self.assertEqual(restored, self.view())
+        self.assertEqual(self.source.read_bytes(), original)
+        history = json.loads((self.work / "receipt-matches.json").read_text())["history"]
+        self.assertEqual([entry["action"] for entry in history[-2:]], ["trash_extraction", "restore_extraction"])
+
+    def test_trash_rejects_stale_requests_and_approved_allocations(self):
+        """Keep approved support intact and reject old or changed-source decisions."""
+        old = self.view()["revision"]
+        self.accept_pieces()
+        with self.assertRaisesRegex(ValueError, "reload"):
+            receipt_review.classify_extraction(self.review, {"revision": old, "key": self.key, "action": "trash"})
+        self.change("combined", "propose", [(0, "45.00"), (1, "15.00")])
+        self.change("combined", "accept")
+        with self.assertRaisesRegex(ValueError, "Undo accepted matches"):
+            receipt_review.classify_extraction(self.review, {
+                "revision": self.view()["revision"], "key": self.key, "action": "trash"})
+
+        self.change("combined", "undo")
+        self.source.write_bytes(b"changed original")
+        with self.assertRaisesRegex(ValueError, "source changed"):
+            receipt_review.classify_extraction(self.review, {
+                "revision": self.view()["revision"], "key": self.key, "action": "trash"})
+
+    def test_trash_requires_undo_of_final_review_approval(self):
+        """A discard cannot silently remove evidence reserved by the final ledger."""
+        from dashboard import matching_review
+        folder = self.base / "final-review"
+        folder.mkdir()
+        (folder / "decisions.json").write_text('{}')
+        ledger = {"decisions": {"B1": {"status": "approved", "allocations": [{"item_id": "D1"}]}}}
+        final_context = (None, ledger, {}, {"D1": {"document": self.digest}}, {}, {})
+        expected = self.view()["revision"]
+        with patch.object(matching_review, "context", return_value=final_context):
+            with self.assertRaisesRegex(ValueError, "Undo approved Final review"):
+                receipt_review.classify_extraction(self.review, {
+                    "revision": expected, "key": self.key, "action": "trash"})
+        self.assertFalse(self.view()["units"][0]["trash"])
 
     def change(self, bank, action, items=None, reason=""):
         """Submit one revision-checked match action."""

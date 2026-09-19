@@ -3,6 +3,7 @@ import tempfile
 import threading
 import unittest
 from tests.http_server import TestServer
+from tests.browser import browser_options
 from pathlib import Path
 
 from playwright.sync_api import sync_playwright, expect
@@ -32,7 +33,7 @@ class BankBrowserTests(unittest.TestCase):
             threading.Thread(target=server.serve_forever, daemon=True).start()
             try:
                 with sync_playwright() as playwright:
-                    browser = playwright.chromium.launch(executable_path=r"C:\Program Files\Google\Chrome\Application\chrome.exe", headless=True)
+                    browser = playwright.chromium.launch(**browser_options())
                     try:
                         page = browser.new_page()
                         page.goto(f"http://127.0.0.1:{server.server_port}/bank")

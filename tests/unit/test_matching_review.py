@@ -55,6 +55,17 @@ class MatchingReviewTests(unittest.TestCase):
         """Write fixture JSON to an isolated location."""
         path.write_text(json.dumps(data),encoding='utf-8')
 
+    def test_trash_document_cannot_be_approved_as_support(self):
+        """Final review respects explicit document trash classifications."""
+        item = matching.context(self.review)[3]['D1']
+        folder = self.project / 'review'
+        folder.mkdir()
+        self.write(folder / 'receipt-matches.json', {'matches': {}, 'trash': {item['document']: {'classification': 'trash'}}})
+        data = matching.snapshot(self.review)
+        self.assertTrue(next(entry for entry in data['items'] if entry['id'] == 'D1')['excluded'])
+        with self.assertRaisesRegex(ValueError, 'excluded'):
+            matching.decide(self.review, self.request())
+
     def request(self, bank='B1', action='approve', allocations=None, **extra):
         """Build a request bound to the current persisted revision."""
         state = matching.context(self.review)[1]
@@ -86,6 +97,21 @@ class MatchingReviewTests(unittest.TestCase):
         self.assertEqual(matching.snapshot(self.review)['banks'][0]['confidence']['level'], 'low')
         matching.decide(self.review, self.request(allocations=[{'item_id':'D2','amount':'10'}]))
         self.assertIn('selection changed', matching.snapshot(self.review)['banks'][0]['confidence']['reason'])
+
+    def test_evidence_explanations_do_not_turn_amounts_into_matches(self):
+        """Explain name/currency gaps and stale evidence without changing decisions."""
+        bank = {'parties': ['Nur Fajrina'], 'amount': '150', 'currency': 'MYR'}
+        item = {'parties': [' nur   FAJRINA '], 'amount': '150.00', 'currency': 'MYR'}
+        self.assertIn('Same extracted party name and amount', matching.evidence_reason(bank, item))
+        self.assertIn('Amount alone', matching.evidence_reason(bank, {**item, 'parties': ['Siti']}))
+        self.assertIn('differs or is unknown', matching.evidence_reason(bank, {**item, 'currency': 'USD'}))
+        self.assertIn('differs or is unknown', matching.evidence_reason(bank, {**item, 'amount': ''}))
+        self.assertIn('Unavailable', matching.evidence_reason(bank, {**item, 'stale': True}))
+        self.assertIn('No exact', matching.evidence_reason(bank, {**item, 'parties': [], 'amount': ''}))
+        before = matching.context(self.review)[1]
+        snapshot = matching.snapshot(self.review)
+        self.assertIn('Same extracted', snapshot['banks'][0]['evidence_reasons']['D1'])
+        self.assertEqual(before, matching.context(self.review)[1])
 
     def test_approval_persists_and_undo_releases_capacity(self):
         """Only an explicit approval changes support; undo retains history and frees amounts."""

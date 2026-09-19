@@ -14,6 +14,26 @@ from tests.http_server import TestServer
 
 
 class FastApiTests(unittest.TestCase):
+    def test_resume_keeps_session_and_switch_replaces_it(self):
+        """Only activating a different workspace invalidates cached browser views."""
+        state = self.app.state.context
+        identities = []
+        for name in ("first", "first", "second"):
+            work = state.sources.workspace / name
+            (work / "documents").mkdir(parents=True, exist_ok=True)
+            (work / "statement").mkdir(exist_ok=True)
+            (work / "statement/bank.pdf").write_bytes(b"fixture")
+            state.sources.save_workspace(work)
+            request = urllib.request.Request(self.base + "/api/source/start",
+                json.dumps({"preview": state.sources.preview()["token"]}).encode(),
+                {"Content-Type": "application/json", "X-Review-Token": "token"})
+            with urllib.request.urlopen(request) as response:
+                result = json.load(response)
+            self.assertEqual(result["resumed"], len(identities) == 1)
+            identities.append(state.review_id)
+        self.assertEqual(identities[0], identities[1])
+        self.assertNotEqual(identities[1], identities[2])
+
     def setUp(self):
         """Start a session without any customer files or model calls."""
         temporary = tempfile.TemporaryDirectory()
@@ -34,6 +54,19 @@ class FastApiTests(unittest.TestCase):
             urllib.request.urlopen(request)
         self.assertEqual(error.exception.code, expected)
         return json.load(error.exception)
+
+    def test_schema_validation_returns_readable_json(self):
+        """Invalid evidence must not turn into a plain-text 500 response."""
+        from unittest.mock import patch
+        from jsonschema import validate
+
+        def invalid_path(path):
+            """Raise the same validator class used by receipt saves."""
+            validate({'unexpected': True}, {'type': 'object', 'additionalProperties': False})
+
+        with patch.object(self.app.state.context.sources, 'save_workspace', side_effect=invalid_path):
+            error = self.post_error('/api/source/workspace-select', {'path': 'fixture'}, 422)
+        self.assertIn('Additional properties', error['error'])
 
     def test_stale_workspace_cannot_mutate_current_project(self):
         """A cached tab may not write after another tab switches workspaces."""

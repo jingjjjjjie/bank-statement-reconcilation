@@ -4,6 +4,7 @@ import itertools
 import json
 import subprocess
 import sys
+from contextlib import nullcontext
 from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 from datetime import datetime, timezone
 from pathlib import Path
@@ -172,17 +173,23 @@ def pack(document):
     return text, images
 
 
-def run_jobs(jobs, apply, workers, refill=None):
+def run_jobs(jobs, apply, workers, refill=None, acceptance=nullcontext):
     """Run a bounded number of model jobs and checkpoint every finished result."""
     if workers == 1 and refill is None:
         for job in jobs:
-            apply(job())
+            with acceptance():
+                pass
+            result = job()
+            with acceptance():
+                apply(result)
         return
     pending, remaining, error = {}, iter(jobs), None
     with ThreadPoolExecutor(max_workers=workers) as pool:
         def submit_one():
             """Keep only one queued job per available worker."""
             nonlocal remaining
+            with acceptance():
+                pass
             try:
                 job = next(remaining)
             except StopIteration:
@@ -209,7 +216,8 @@ def run_jobs(jobs, apply, workers, refill=None):
             del pending[future]
             try:
                 result = future.result()
-                apply(result)
+                with acceptance():
+                    apply(result)
             except Exception as failure:
                 if error is None:
                     error = failure
@@ -266,7 +274,14 @@ def run(work, index, state, reviewer, *, extraction_only=False, regeneration=Non
         worker.model = choice["model"] or None
         worker.reasoning = choice["reasoning"]
         worker.stage = stage
-        result = worker.ask(prompt, schema, images)
+        from reconciliation import pieces
+        model_schema = pieces.EXTRACTION if schema is EXTRACTION else pieces.ASSEMBLY if schema is ASSEMBLY else schema
+        result = worker.ask(prompt, model_schema, images)
+        if schema is EXTRACTION:
+            result = pieces.legacy_result(result)
+        elif schema is ASSEMBLY and 'pieces' in result:
+            result = {k: v for k, v in result.items() if k != 'pieces'} | {
+                'receipts': [pieces.legacy_piece(p) for p in result['pieces']]}
         if verify is not None:
             try:
                 verify(result)
@@ -332,7 +347,8 @@ def run(work, index, state, reviewer, *, extraction_only=False, regeneration=Non
                     selected[digest] = documents[digest]
             return unit_jobs()
 
-        run_jobs(unit_jobs(), apply_unit, workers, refill_units if queued_regenerations else None)
+        run_jobs(unit_jobs(), apply_unit, workers, refill_units if queued_regenerations else None,
+                 acceptance=getattr(reviewer, "acceptance", nullcontext))
 
         def assembly_jobs():
             """Join complete multi-unit evidence without repeating page extraction."""
@@ -376,7 +392,7 @@ def run(work, index, state, reviewer, *, extraction_only=False, regeneration=Non
                 progress(digest, "completed")
             print(f"Assembled receipts {digest[:10]}", flush=True)
 
-        run_jobs(assembly_jobs(), apply_assembly, workers)
+        run_jobs(assembly_jobs(), apply_assembly, workers, acceptance=getattr(reviewer, "acceptance", nullcontext))
 
         if extraction_only:
             return
@@ -432,7 +448,7 @@ def run(work, index, state, reviewer, *, extraction_only=False, regeneration=Non
                 state["screens"][pair_key(left, row["right_id"])] = row
             checkpoint()
 
-        run_jobs(screen_jobs(), apply_screen, workers)
+        run_jobs(screen_jobs(), apply_screen, workers, acceptance=getattr(reviewer, "acceptance", nullcontext))
 
         # Candidate verdicts inspect original text and visuals, not summaries alone.
         def pair_jobs():
@@ -469,7 +485,7 @@ def run(work, index, state, reviewer, *, extraction_only=False, regeneration=Non
             left, right = pair.split(":")
             print(f"Compared {left[:10]} / {right[:10]}", flush=True)
 
-        run_jobs(pair_jobs(), apply_pair, workers)
+        run_jobs(pair_jobs(), apply_pair, workers, acceptance=getattr(reviewer, "acceptance", nullcontext))
     finally:
         # Partial work always gets a report and remains visibly incomplete.
         checkpoint()

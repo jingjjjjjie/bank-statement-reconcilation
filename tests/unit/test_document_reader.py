@@ -6,6 +6,7 @@ import zipfile
 from pathlib import Path
 
 from PIL import Image
+import openpyxl
 
 from reconciliation.document_reader import extract
 from reconciliation.review_settings import DEFAULTS
@@ -50,6 +51,31 @@ class DocumentReaderTests(unittest.TestCase):
         units = extract(source, self.output)
         self.assertEqual([unit["label"] for unit in units], ["image 1 / part 1", "image 2 / part 1"])
         self.assertTrue(all(Path(unit["image"]).is_file() for unit in units))
+
+    def test_excel_keeps_full_sheet_context(self):
+        """Long sheets retain headings, whole cells, formulas, and final totals."""
+        source = self.base / "payroll.xlsx"
+        workbook = openpyxl.Workbook()
+        sheet = workbook.active
+        sheet.append(["Employee", "Net pay"])
+        for number in range(100):
+            sheet.append([f"Employee {number} " + "x" * 300, number])
+        sheet.append(["TOTAL", "=SUM(B2:B101)"])
+        hidden = workbook.create_sheet("Hidden")
+        hidden.sheet_state = "hidden"
+        hidden.append(["Hidden evidence"])
+        workbook.save(source)
+        workbook.close()
+        original = source.read_bytes()
+        units = extract(source, self.output)
+        self.assertEqual(len(units), 2)
+        self.assertNotIn("part", units[0]["label"])
+        self.assertGreater(len(units[0]["text"]), 24000)
+        self.assertIn('A1={"value": "Employee"}', units[0]["text"])
+        self.assertIn('A101={"value": "Employee 99 ', units[0]["text"])
+        self.assertIn('B102={"value": "=SUM(B2:B101)", "cached": "None"}', units[0]["text"])
+        self.assertIn("(hidden)", units[1]["label"])
+        self.assertEqual(source.read_bytes(), original)
 
     def test_embedded_object_remains_unresolved(self):
         """Unsupported Office objects fail extraction instead of losing evidence."""

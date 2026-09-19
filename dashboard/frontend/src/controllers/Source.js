@@ -1,3 +1,4 @@
+import { appState } from '../api.js';
 import { node } from '../dom.js';
 import { renderOfficePreview } from '../office.js';
 
@@ -8,9 +9,20 @@ let token;
 /* Folder selection is read-only until the user starts a review. */
 let sourceState = {};
 let previewToken = null;
+// Returning to the active workspace only navigates; it never starts processing.
+function canResume() {
+  return !!sourceState.active && sourceState.active === sourceState.selected?.path;
+}
 async function loadPreview() {
   const workspace = sourceState.workspace;
   previewToken = null;
+  $('#start-source').textContent = canResume() ? 'Resume workspace' : 'Proceed';
+  if (canResume()) {
+    $('#workspace-status').textContent = 'Workspace in progress';
+    $('#source-preview').textContent = 'Continue where you left off.';
+    $('#start-source').disabled = false;
+    return;
+  }
   $('#start-source').disabled = true;
   $('#workspace-status').textContent = 'Checking workspace';
   $('#source-preview').textContent = 'Checking exact duplicates…';
@@ -112,6 +124,10 @@ $('#select-source').onclick = () => sourceAction(async () => {
 $('#start-source').onclick = () => sourceAction(async () => {
   $('#start-source').disabled = true;
   try {
+    if (canResume()) {
+      await navigate(appState.resumePath);
+      return;
+    }
     await api('/api/source/start', {preview: previewToken});
     await navigate('/documents');
   } finally {$('#start-source').disabled = false;}

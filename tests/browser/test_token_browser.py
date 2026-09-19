@@ -3,13 +3,16 @@ import json
 import tempfile
 import threading
 import unittest
+from unittest.mock import patch
 from tests.http_server import TestServer
+from tests.browser import browser_options
 from pathlib import Path
 
 from playwright.sync_api import expect, sync_playwright
 
 from dashboard.app import Review, create_app
 from reconciliation.duplicate_workflow import organize
+from reconciliation.token_usage import summary
 
 
 class TokenBrowserTests(unittest.TestCase):
@@ -17,6 +20,9 @@ class TokenBrowserTests(unittest.TestCase):
         """Show usage safely and keep final totals hidden before completion."""
         with tempfile.TemporaryDirectory() as folder:
             base = Path(folder)
+            usage = patch('dashboard.review.workspace_summary', return_value=summary(base / 'usage.jsonl'))
+            usage.start()
+            self.addCleanup(usage.stop)
             source = base / "sources"
             source.mkdir()
             (source / "a.txt").write_text("same", encoding="utf-8")
@@ -28,7 +34,7 @@ class TokenBrowserTests(unittest.TestCase):
             thread.start()
             try:
                 with sync_playwright() as playwright:
-                    browser = playwright.chromium.launch(executable_path=r"C:\Program Files\Google\Chrome\Application\chrome.exe", headless=True)
+                    browser = playwright.chromium.launch(**browser_options())
                     page = browser.new_page()
                     errors = []
                     page.on("pageerror", lambda error: errors.append(str(error)))
@@ -40,7 +46,7 @@ class TokenBrowserTests(unittest.TestCase):
                     page.set_viewport_size({"width": 390, "height": 844})
                     self.assertTrue(page.evaluate("document.documentElement.scrollWidth <= innerWidth"))
                     page.goto(url + "/settings")
-                    expect(page.locator("#token-usage")).to_contain_text("Total 0")
+                    expect(page.locator("#token-usage")).to_contain_text("Workspace total 0")
                     expect(page.locator("#max-parallel")).to_have_value("4")
                     page.locator("#max-parallel").fill("2")
                     page.locator("#save-settings").click()

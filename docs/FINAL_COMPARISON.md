@@ -1,5 +1,25 @@
 # Final comparison branch — agreed context
 
+## Live piece pipeline (2026-09-19)
+
+Live candidate retrieval now reserves exact references, merges up to 20 name and
+20 amount matches, and tops up to 10 using meaningful BM25 description matches if
+needed. The final allocation shortlist is capped at 40 IDs; other pieces in complete
+parent documents remain context only. This supersedes earlier permission to allocate
+any contextual piece automatically. Omitted candidates remain explicitly unresolved.
+See [retrieval rules and prompt](MATCHING_RETRIEVAL.md).
+
+The user authorized consolidating extraction, piece review/search, and matching. The active implementation supports a reversible migration via **Use reviewed pieces**. It uses current edited pieces, with persistent piece IDs, rather than freezing new matching to the historical benchmark cache. Generate matches supplies complete shortlisted documents and all their pieces to the subscription model. Models only propose allocations; final decisions stay in `final-review/decisions.json`.
+
+Two separate receipts are two pieces, even for one payee; two payees in a schedule are two pieces; multiple purchased items on one receipt are one piece. Continuation pages and repeated totals do not create extra payable capacity. Document totals remain context. Add, split, merge, edit and search work at piece level. Split/merge creates fresh IDs with parent lineage; edits and reordering preserve identity.
+
+Migration backs up the old ledger. Historical allocations remain reserved and visibly stale until explicitly reviewed or undone; they do not inherit current piece approvals. If the bank master belongs to an earlier verified run, a provenance-bound bank import retains that branch without modifying its originals. The source hash is still checked. Legacy receipt allocations must be undone before activating the final ledger; the old matching editor is removed from the current UI and cannot create a second ledger after migration.
+
+Old extraction records remain readable through compatibility adapters. Missing payees, typed references or dates are not guessed; use manual edits or document regeneration to fill them. New extraction and assembly calls use the lean schemas in `prompts/`. See [detailed pipeline review](PIECE_PIPELINE_REVIEW.md).
+
+The sections below record the original frozen-snapshot implementation and still-applicable review/export rules. The former general-import deferral is superseded for this explicitly authorized piece workflow.
+
+
 Saved 2026-09-16. The user subsequently authorized implementing the in-app final review using the frozen matching cache (2026-09-18). `/matching` now reviews that snapshot; it does not imply that current extraction/assembly or general multi-session imports are complete. The original broader requirements and remaining open decisions follow.
 
 Current implementation: all 240 saved bank entries, original evidence previews, candidate selection, approve/deny/undo, shared remaining balances, unmatched-supporting view, history and CSV export. Human decisions live in the active project's `final-review/decisions.json`, bound to the exact cached evidence. No model calls occur during review. A changed cache requires a separate import/migration; it cannot silently inherit approvals. The frozen cache is currently the explicitly authorized `full-statement-240` experiment and must match the active project manifest. Legacy receipt-match approvals must be migrated or undone before starting this ledger; the two workflows cannot reserve the same evidence independently.
@@ -88,3 +108,14 @@ Read this file when resuming final-comparison work after the two input branches 
 ## Matching research
 
 See [MATCHING_EXPERIMENTS.md](MATCHING_EXPERIMENTS.md) for measured shortlist and batching experiments. These are design recommendations, not deployed matching behavior or changes to the open decisions above.
+
+## Supporting verification presentation
+
+Extraction review can classify an original document as trash without deleting or
+moving it. The saved classification excludes its pieces from receipt matching and
+frozen final-review candidates. Approved allocations must be undone before discard.
+Restore reverses the classification, with both actions retained in the audit history.
+
+Final review presents one proposed evidence group per bank payment, preserving row-level allocations. Each record shows its extracted party, date, amount and source location with a conservative factual comparison. Equal amounts alone do not establish support; name differences require checking context. Alternatives appear only under Change evidence and never under the selected group. Rejection means the suggestion was rejected, not that no supporting document exists. Partial/contextual approvals retain No supporting until full monetary coverage is confirmed. No new matching or model assessment is implied by these display explanations.
+
+The default review hides detailed payment narration and source/allocation editing behind disclosures. Keep payee, amount, factual supporting explanation, evidence preview and decision actions visible. Show allocation summaries when warnings need attention; avoid repeating the ordinary fully-covered total above the footer.

@@ -1,0 +1,166 @@
+{
+  "type": "object",
+  "properties": {
+    "readable": {
+      "type": "boolean"
+    },
+    "document_type": {
+      "type": "string"
+    },
+    "summary": {
+      "type": "string"
+    },
+    "totals": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "label": {
+            "type": "string"
+          },
+          "amount": {
+            "type": "string"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "location": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "label",
+          "amount",
+          "currency",
+          "location"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "limitations": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "pieces": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "piece_type": {
+            "type": "string"
+          },
+          "payee": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "references": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string"
+                },
+                "value": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "type",
+                "value"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "dates": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string"
+                },
+                "value": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "type",
+                "value"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "amount": {
+            "type": "string"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "amount_basis": {
+            "type": "string"
+          },
+          "source_locations": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "limitations": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "source_units": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "minItems": 1
+          },
+          "needs_review": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "piece_type",
+          "payee",
+          "description",
+          "references",
+          "dates",
+          "amount",
+          "currency",
+          "amount_basis",
+          "source_locations",
+          "limitations",
+          "source_units",
+          "needs_review"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "reviewed_units": {
+      "type": "array",
+      "items": {
+        "type": "integer",
+        "minimum": 1
+      }
+    }
+  },
+  "required": [
+    "readable",
+    "document_type",
+    "summary",
+    "totals",
+    "limitations",
+    "pieces",
+    "reviewed_units"
+  ],
+  "additionalProperties": false
+}

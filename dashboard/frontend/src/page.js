@@ -1,6 +1,6 @@
 import { onMounted, onActivated, onDeactivated, onBeforeUnmount, watch } from 'vue';
 import { useRoute, useRouter, onBeforeRouteUpdate } from 'vue-router';
-import { api, appState, pages, toast } from './api.js';
+import { api, appState, pages, toast, revisionFor } from './api.js';
 
 // Adapt each existing evidence controller to one Vue-owned root and explicit lifecycle.
 export function usePage(root, initialize) {
@@ -8,6 +8,7 @@ export function usePage(root, initialize) {
   const polls = [], observers = [], requests = new Set();
   let active = false, disposed = false, dirty = () => false, refresh, queryChanged, element;
   let previousChanges = appState.changes;
+  let refreshPaths;
   const reviewId = appState.session.review_id;
   const page = {
     get root() { return element; },
@@ -18,7 +19,7 @@ export function usePage(root, initialize) {
     routeQuery: () => new URLSearchParams(route.query).toString(),
     dirty: callback => { dirty = callback; },
     isDirty: () => !disposed && dirty(),
-    onRefresh: callback => { refresh = callback; },
+    onRefresh: (callback, paths) => { refresh = callback; refreshPaths = paths; previousChanges = revisionFor(paths); },
     onQuery: callback => { queryChanged = callback; },
     observe(observer, element, options) {
       observers.push(observer);
@@ -79,10 +80,10 @@ export function usePage(root, initialize) {
     if (queryChanged) queryChanged();
     document.addEventListener('visibilitychange', visibility);
     polls.forEach(schedule);
-    if (previousChanges !== appState.changes && !dirty() && refresh) {
+    if (previousChanges !== revisionFor(refreshPaths) && !dirty() && refresh) {
       Promise.resolve(refresh()).catch(error => page.toast(error.message));
     }
-    previousChanges = appState.changes;
+    if (!dirty()) previousChanges = revisionFor(refreshPaths);
   });
   onDeactivated(() => {
     active = false;

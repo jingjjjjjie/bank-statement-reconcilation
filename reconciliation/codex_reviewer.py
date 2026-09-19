@@ -4,6 +4,7 @@ import json
 import os
 import shutil
 import threading
+from contextlib import contextmanager
 from copy import copy
 from uuid import uuid4
 from pathlib import Path
@@ -24,9 +25,14 @@ def object_schema(properties):
 
 TEXT = {"type": "string"}
 TEXTS = {"type": "array", "items": TEXT}
-EXTRACTION = load_schema("extraction")
+EXTRACTION = load_schema("extraction.legacy")
 MONEY = EXTRACTION["properties"]["money"]["items"]
 RECEIPT = EXTRACTION["properties"]["receipts"]["items"]
+from reconciliation.pieces import FACTS, TOTALS
+# Old saved receipts remain valid; the model uses the lean canonical schema.
+RECEIPT['properties'].update({'payee': TEXT, 'references': FACTS, 'dates': FACTS, 'amount_basis': TEXT,
+    'piece_id': TEXT, 'parent_piece_ids': TEXTS})
+EXTRACTION['properties'].update({'summary': TEXT, 'totals': TOTALS})
 SCREEN = object_schema({"comparisons": {"type": "array", "items": object_schema({
     "right_id": TEXT, "candidate": {"type": "boolean"}, "reason": TEXT,
 })}})
@@ -51,6 +57,7 @@ class CodexReviewer:
         self.reasoning = reasoning
         self.max_calls, self.timeout = max_calls, timeout
         self._shared_lock = threading.RLock()
+        self._commit_lock = threading.RLock()
         self._calls = [0]
         self._login_checked = [False]
         self._login_lock = threading.Lock()
@@ -77,6 +84,17 @@ class CodexReviewer:
     def cancel(self):
         """Wake all process owners to terminate and verify their entire trees."""
         self.processes.cancel()
+        # Wait only for a publication already underway, never for model execution.
+        with self._commit_lock:
+            pass
+
+    @contextmanager
+    def acceptance(self):
+        """Fence cache publication and checkpoint acceptance against cancellation."""
+        with self._commit_lock:
+            if self._cancelled.is_set():
+                raise ReviewCancelled("Review stopped by user")
+            yield
 
     @property
     def active_count(self):
@@ -111,7 +129,8 @@ class CodexReviewer:
             if not result_path.exists() and self.last_shared.is_file():
                 shared_result = json.loads(self.last_shared.read_text(encoding="utf-8"))
                 validate(shared_result, schema)
-                development_cache.write_json(result_path, shared_result)
+                with self.acceptance():
+                    development_cache.write_json(result_path, shared_result)
         if result_path.exists():
             result = json.loads(result_path.read_text(encoding="utf-8"))
             validate(result, schema)
@@ -120,7 +139,8 @@ class CodexReviewer:
             self._record({"status": "cached", "run_id": self.run_id,
                           "stage": self.stage, "model": self.model, "request": folder.name,
                           "usage": {field: 0 for field in FIELDS}})
-            return result
+            with self.acceptance():
+                return result
 
         # Require subscription login; never silently select an API-key connection.
         with self._login_lock:
@@ -181,8 +201,10 @@ class CodexReviewer:
         validate(result, schema)
         temporary = folder / f"result-{attempt_id}.json"
         temporary.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
-        temporary.replace(result_path)
-        development_cache.share_request(self.work, folder)
+        with self.acceptance():
+            temporary.replace(result_path)
+            if self.last_shared is not None:
+                development_cache.copy_atomic(result_path, self.last_shared)
         return result
 
     def invalidate(self):

@@ -166,9 +166,15 @@ def run(state=Depends(active_context)):
 
 
 @router.post("/content/stop")
-def stop(state=Depends(active_context)):
+def stop(review=Depends(interrupt_context)):
     """Cancel active model processes and retain completed checkpoints."""
-    return content_review.stop(state.review)
+    return content_review.stop(review)
+
+
+@router.get("/content/execution")
+def execution(review=Depends(interrupt_context)):
+    """Report process shutdown without reading document evidence."""
+    return content_review.execution_status(review)
 
 
 @router.post("/content/decide")
@@ -195,11 +201,23 @@ def accept_receipts(body: dict, state=Depends(active_context)):
     return receipt_review.accept_extraction(state.review, body)
 
 
+@router.post("/receipts/accept-all")
+def accept_all_receipts(body: dict, state=Depends(active_context)):
+    """Accept current eligible extraction results without creating matching approvals."""
+    return receipt_review.accept_all_extractions(state.review, body)
+
+
 @router.post("/receipts/regenerate")
 def regenerate_receipts(body: dict, state=Depends(active_context)):
     """Queue a document on the shared background extraction worker."""
     from dashboard import regeneration
     return {"jobs": regeneration.enqueue(state.review, body["document_id"])}
+
+
+@router.post("/receipts/classify")
+def classify_receipts(body: dict, state=Depends(active_context)):
+    """Record an explicit trash or restore decision for a supporting document."""
+    return receipt_review.classify_extraction(state.review, body)
 
 
 @router.get("/receipts/regeneration")
@@ -225,6 +243,34 @@ def matching(review=Depends(interrupt_context)):
 def matching_decide(body: dict, state=Depends(active_context)):
     """Keep evidence checks, revision checks, and human approval in the existing ledger."""
     return matching_review.decide(state.review, body)
+
+
+@router.post('/matching-pieces')
+def matching_pieces(body: dict, state=Depends(active_context)):
+    """Switch to reviewed pieces while preserving previous decisions as history."""
+    from dashboard.piece_matching import activate
+    return activate(state.review)
+
+
+@router.post('/matching-run')
+def matching_run(body: dict, state=Depends(active_context)):
+    """Generate proposals from complete documents without approving allocations."""
+    from dashboard.piece_match_jobs import start
+    return start(state.review)
+
+
+@router.get('/matching-run')
+def matching_run_status(review=Depends(interrupt_context)):
+    """Keep matching progress available while the background pool is working."""
+    from dashboard.piece_match_jobs import status
+    return status(review)
+
+
+@router.post('/matching-stop')
+def matching_stop(body: dict, review=Depends(interrupt_context)):
+    """Allow cancellation without waiting behind other review requests."""
+    from dashboard.piece_match_jobs import stop
+    return stop(review)
 
 
 @router.get("/matching-export")

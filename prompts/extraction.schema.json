@@ -1,31 +1,114 @@
 {
   "type": "object",
   "properties": {
-    "receipts": {
+    "readable": {
+      "type": "boolean"
+    },
+    "document_type": {
+      "type": "string"
+    },
+    "summary": {
+      "type": "string"
+    },
+    "totals": {
       "type": "array",
       "items": {
         "type": "object",
         "properties": {
-          "location": {
+          "label": {
             "type": "string"
           },
-          "document_type": {
-            "type": "string"
-          },
-          "invoice_numbers": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "brief_description": {
-            "type": "string"
-          },
-          "total": {
+          "amount": {
             "type": "string"
           },
           "currency": {
             "type": "string"
+          },
+          "location": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "label",
+          "amount",
+          "currency",
+          "location"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "limitations": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "pieces": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "piece_type": {
+            "type": "string"
+          },
+          "payee": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "references": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string"
+                },
+                "value": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "type",
+                "value"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "dates": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string"
+                },
+                "value": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "type",
+                "value"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "amount": {
+            "type": "string"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "amount_basis": {
+            "type": "string"
+          },
+          "source_locations": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           },
           "limitations": {
             "type": "array",
@@ -35,140 +118,28 @@
           }
         },
         "required": [
-          "location",
-          "document_type",
-          "invoice_numbers",
-          "brief_description",
-          "total",
+          "piece_type",
+          "payee",
+          "description",
+          "references",
+          "dates",
+          "amount",
           "currency",
+          "amount_basis",
+          "source_locations",
           "limitations"
         ],
         "additionalProperties": false
       }
-    },
-    "readable": {
-      "type": "boolean"
-    },
-    "document_type": {
-      "type": "string"
-    },
-    "receipt_status": {
-      "type": "string",
-      "enum": [
-        "receipt",
-        "not_receipt",
-        "unsure"
-      ]
-    },
-    "supporting_evidence_status": {
-      "type": "string",
-      "enum": [
-        "potential_support",
-        "not_supporting",
-        "uncertain"
-      ]
-    },
-    "supporting_evidence_reason": {
-      "type": "string"
-    },
-    "invoice_numbers": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      }
-    },
-    "company": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      }
-    },
-    "brief_description": {
-      "type": "string"
-    },
-    "references": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      }
-    },
-    "parties": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      }
-    },
-    "dates": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      }
-    },
-    "amounts_and_currencies": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      }
-    },
-    "money": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "properties": {
-          "amount": {
-            "type": "string"
-          },
-          "currency": {
-            "type": "string"
-          },
-          "role": {
-            "type": "string",
-            "enum": [
-              "line_item",
-              "invoice_total",
-              "grand_total"
-            ]
-          }
-        },
-        "required": [
-          "amount",
-          "currency",
-          "role"
-        ],
-        "additionalProperties": false
-      }
-    },
-    "details": {
-      "type": "string"
-    },
-    "annotations_and_signatures": {
-      "type": "string"
-    },
-    "limitations": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      }
     }
   },
   "required": [
-    "receipts",
     "readable",
     "document_type",
-    "receipt_status",
-    "supporting_evidence_status",
-    "supporting_evidence_reason",
-    "invoice_numbers",
-    "company",
-    "brief_description",
-    "references",
-    "parties",
-    "dates",
-    "amounts_and_currencies",
-    "money",
-    "details",
-    "annotations_and_signatures",
-    "limitations"
+    "summary",
+    "totals",
+    "limitations",
+    "pieces"
   ],
   "additionalProperties": false
 }

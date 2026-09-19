@@ -25,6 +25,39 @@ class MatchingExperimentTests(unittest.TestCase):
         self.assertTrue(specific_name(['WU WENJUN'], ['Wenjun Wu']))
         self.assertFalse(specific_name(['NURUL AIN NORDIN'], ['NURUL FATIMAH AZANAN']))
 
+    def test_claim_amount_survives_unrelated_same_recipient_documents(self):
+        """Keep a merchant receipt in view without assuming who claimed the expense."""
+        bank = {'id': 'claim', 'amount': '250.00', 'currency': 'MYR', 'direction': 'out',
+                'parties': ['WU WENJUN'], 'references': ['Canva'],
+                'description': 'Canva zuotufei'}
+        receipt = {'id': 'canva', 'amount': '250.00', 'currency': 'MYR', 'direction': '',
+                   'parties': ['Canva Pty Ltd'], 'references': [],
+                   'description': 'Canva Pro subscription'}
+        documents = [receipt] + [{**receipt, 'id': f'travel-{n}', 'amount': str(50 + n),
+                                 'parties': ['WU WENJUN'], 'description': 'Travel receipt'}
+                                for n in range(6)]
+        documents += [{**receipt, 'id': 'wrong-currency', 'currency': 'USD'},
+                      {**receipt, 'id': 'wrong-direction', 'direction': 'in'}]
+        pool, ranked, _ = build_candidates([bank], documents, grouped=False, specific=True)
+        choices = {'claim': shortlist(ranked['claim'], 'adaptive')}
+        self.assertEqual(choices['claim'][0][1], 'canva')
+        self.assertFalse({'wrong-currency', 'wrong-direction'} & {key for _, key in choices['claim']})
+        self.assertEqual(fastlane([bank], pool, choices), [])
+
+    def test_truncated_bank_name_keeps_recipient_in_shortlist(self):
+        """Anchored truncation beats amount-only ties but never establishes approval."""
+        from reconciliation.candidates import truncated_name
+        bank = {'id': 'payment', 'amount': '90', 'currency': 'MYR', 'direction': 'out',
+                'parties': ['SAFINAH BINTI ABDULL'], 'references': []}
+        row = {'id': 'z-recipient', 'amount': '90', 'currency': 'MYR', 'direction': '',
+               'parties': ['Safinah binti Abdullah'], 'references': []}
+        others = [{**row, 'id': f'a-{n}', 'parties': ['Another recipient']} for n in range(15)]
+        _, ranked, _ = build_candidates([bank], others + [row], grouped=False, specific=True)
+        self.assertEqual(shortlist(ranked['payment'], 'adaptive')[0][1], 'z-recipient')
+        self.assertFalse(specific_name(bank['parties'], row['parties']))
+        self.assertFalse(truncated_name(['NURUL BINTI ABDULL'], row['parties']))
+        self.assertFalse(truncated_name(['SAFINAH BINTI AB'], row['parties']))
+
     def test_competing_claims_are_globally_flagged_but_instalments_survive(self):
         """Global arithmetic catches cross-batch reuse while allowing explicit partial payments."""
         rows = [{'bank_id': 'S0-B' + tag, 'status': 'proposal', 'candidate_ids': ['S0-' + candidate], 'reason': ''}

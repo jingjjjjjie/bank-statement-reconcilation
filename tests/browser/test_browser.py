@@ -41,7 +41,7 @@ def main():
                 page.set_viewport_size({"width": 1440, "height": 1080})
                 page.goto(f"http://127.0.0.1:{server.server_port}/review")
                 # Save settings only in the fixture workspace and verify they survive reload.
-                page.locator('.rail').get_by_role("link", name="Settings", exact=True).click()
+                page.locator('.app-header a[href="/settings"]').click()
                 expect(page).to_have_url(f"http://127.0.0.1:{server.server_port}/settings")
                 expect(page.locator("#settings-fields")).to_be_enabled()
                 page.locator("#pdf-mode").select_option("auto")
@@ -83,7 +83,7 @@ def main():
                 expect(page.locator("#max-calls")).to_have_value("7")
                 page.set_viewport_size({"width": 390, "height": 844})
                 assert page.evaluate("document.documentElement.scrollWidth <= innerWidth")
-                page.get_by_role("link", name="Back to review").click()
+                page.locator('.app-header a[href="/review"]').click()
                 expect(page.locator("#settings-form")).to_have_count(0)
                 page.set_viewport_size({"width": 1440, "height": 1080})
                 page.get_by_role("button", name="Retain this file", exact=True).first.click()

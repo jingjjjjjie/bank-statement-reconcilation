@@ -14,8 +14,8 @@ from reconciliation.source_selection import SourceSelection
 
 
 class SourceBrowserTests(unittest.TestCase):
-    def test_exact_review_shows_undo_and_contextual_next(self):
-        """Keep reversal beside the group and reveal the next step after validation."""
+    def test_exact_review_shows_undo_and_validation(self):
+        """Keep reversal and validation working with the single page selector."""
         with tempfile.TemporaryDirectory() as temporary:
             base = Path(temporary)
             documents = base / "documents"
@@ -41,7 +41,7 @@ class SourceBrowserTests(unittest.TestCase):
                         expect(page.locator("#undo")).to_be_hidden()
                         page.get_by_role("button", name="Retain this file").first.click()
                         page.get_by_role("button", name="Validate exact review").click()
-                        expect(page.locator("#next-content")).to_be_visible()
+                        expect(page.locator("#validation-text")).to_have_text("Exact duplicate review complete.")
                     finally:
                         browser.close()
             finally:
@@ -71,18 +71,10 @@ class SourceBrowserTests(unittest.TestCase):
                     try:
                         page = browser.new_page()
                         page.goto(f"http://127.0.0.1:{server.server_port}/")
-                        navigation = page.locator(".rail").bounding_box()
-                        heading = page.locator("h1").bounding_box()
-                        self.assertLess(navigation["height"], 100)
-                        self.assertGreater(heading["y"], navigation["y"] + navigation["height"])
+                        expect(page.get_by_role("navigation", name="Main navigation")).to_have_count(1)
+                        expect(page.locator(".page-navigation")).to_have_count(0)
                         expect(page.locator(".workspace-card")).to_have_count(1)
-                        expect(page.locator(".workflow-step")).to_have_count(5)
-                        expect(page.locator(".workflow-check-button")).to_have_count(0)
-                        expect(page.locator("#workflow-progress")).to_be_hidden()
-                        page.locator('.rail a[href="/bank"]').click()
-                        expect(page).to_have_url(f"http://127.0.0.1:{server.server_port}/bank")
-                        expect(page.locator("#bank-note")).to_contain_text("No prepared bank statement")
-                        page.goto(f"http://127.0.0.1:{server.server_port}/")
+                        expect(page.locator(".workflow-step")).to_have_count(0)
                         page.get_by_text("Enter a folder path manually", exact=True).click()
                         page.locator("#source-path").fill(str(work))
                         page.locator("#select-source").click()
@@ -95,7 +87,7 @@ class SourceBrowserTests(unittest.TestCase):
                         self.assertEqual(sources.selected(), documents)
                         self.assertEqual(sources.selected_bank(), statement)
                         page.set_viewport_size({"width": 390, "height": 844})
-                        expect(page.locator(".rail .nav-item").first).to_be_visible()
+                        expect(page.get_by_role("button", name="How to use this page")).to_be_visible()
                         self.assertTrue(page.evaluate("document.documentElement.scrollWidth <= innerWidth"))
                         page.get_by_role("button", name="Change workspace", exact=True).click()
                         expect(page.locator("#path-browser")).to_be_visible()

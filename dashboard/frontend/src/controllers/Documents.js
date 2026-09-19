@@ -7,7 +7,7 @@ const { $, api, toast, pollVisible } = page;
 /* Show saved progress for every prepared content-review document. */
 let documentState = {prepared: false, documents: []};
 let documentRequestMessage = "";
-let progressStage;
+let executionRevision = 0;
 
 function renderDocuments() {
   /* Filter the current saved snapshot without changing workflow state. */
@@ -43,12 +43,14 @@ function renderDocuments() {
     body.append(tr);
   }
   $('#document-empty').hidden = !!visible.length;
-  $('#document-empty').textContent = documentState.prepared ? 'No documents match this filter.' : 'Click Run all documents to get started.';
+  $('#document-empty').textContent = documentState.prepared ? 'No documents match this filter.' : 'Click Extract documents to get started.';
 }
 
 async function refreshDocuments() {
   /* Poll the checkpointed review while retaining search and filter choices. */
-  documentState = await api('/api/document-status');
+  const revision = executionRevision;
+  const snapshot = await api('/api/document-status');
+  documentState = revision === executionRevision ? snapshot : {...snapshot, ...executionFields()};
   renderDocuments();
   renderDocumentProgress();
 }
@@ -59,51 +61,60 @@ function setDocumentRequestMessage(message) {
   renderDocumentProgress();
 }
 
+function executionFields() {
+  /* Keep a slow document snapshot from overwriting a newer stop acknowledgement. */
+  return Object.fromEntries(['running', 'stop_requested', 'active_processes', 'execution_status', 'run_error', 'phase', 'elapsed_seconds']
+    .map(key => [key, documentState[key]]));
+}
+
+function setExecution(state) {
+  /* Apply lightweight execution updates independently of document scans. */
+  executionRevision++;
+  Object.assign(documentState, state);
+  renderDocumentProgress();
+}
+
+async function refreshExecution() {
+  /* Keep Stop responsive while a full document snapshot is still loading. */
+  const revision = executionRevision;
+  const state = await api('/api/content/execution');
+  if (revision === executionRevision) setExecution(state);
+}
+
 function renderDocumentProgress() {
-  /* Report measured progress for the current stage, never an estimated timer. */
+  /* Count saved pages and assemblies together so progress never resets by stage. */
   const rows = documentState.documents;
-  const sum = field => rows.reduce((total, row) => total + row[field], 0);
-  const stages = [
-    {name:'Extracting documents', done:sum('units_read'), total:sum('units_total'), unit:'units'},
-    {name:'Assembling receipts', done:sum('assembly_done'), total:sum('assembly_total'), unit:'documents'},
-  ];
-  const stage = stages.find(item => item.done < item.total);
+  const sum = field => rows.reduce((total, row) => total + (row[field] || 0), 0);
+  const done = sum('units_read') + sum('assembly_done');
+  const total = sum('units_total') + sum('assembly_total');
+  const extracted = rows.filter(row => row.extracted).length;
+  const processed = rows.filter(row => row.units_total > 0 && row.units_read === row.units_total &&
+    row.assembly_done === row.assembly_total).length;
+  const stopping = documentState.stop_requested && documentState.running;
   const bar = $('#document-progress-bar');
   const busy = !!documentRequestMessage;
-  $('#run-documents').disabled = busy || !!documentState.running;
-  $('#stop-documents').disabled = busy || !documentState.running || !!documentState.stop_requested;
-  if (busy || (documentState.running && !stage)) {
-    bar.removeAttribute('value');
-    $('#document-progress-stage').textContent = documentRequestMessage || 'Finishing batch';
-    $('#document-progress-count').textContent = 'Please wait';
-  } else if (stage) {
-    const percent = Math.floor(stage.done / stage.total * 100);
-    bar.value = percent;
-    const prefix = documentState.stop_requested && documentState.running ? 'Stopping: ' : documentState.running ? '' : 'Paused: ';
-    $('#document-progress-stage').textContent = prefix + stage.name;
-    $('#document-progress-count').textContent = `${stage.done} / ${stage.total} ${stage.unit} (${percent}%)`;
-  } else {
-    bar.value = documentState.prepared && rows.length ? 100 : 0;
-    const attention = rows.filter(row => row.status === 'Needs attention').length;
-    $('#document-progress-stage').textContent = !documentState.prepared ? 'Not started' : !rows.length ? 'No documents to process' : attention ? 'Processing finished with items needing attention' : 'Processing finished - review results';
-    $('#document-progress-count').textContent = attention ? `${attention} documents need attention` : rows.length ? `${rows.length} documents` : '';
-  }
-  // Ease measured updates; reset stage changes without a backwards sweep.
-  const track = $('#document-progress-track'), fill = track.querySelector('.progress-fill');
-  const nextStage = stage?.name || 'idle';
-  const indeterminate = !bar.hasAttribute('value');
-  track.dataset.busy = String(indeterminate);
-  track.dataset.running = String(!!documentState.running && !documentState.stop_requested);
-  if (!indeterminate) {
-    const reset = progressStage === undefined || (stage && progressStage !== nextStage);
-    if (reset) fill.style.transition = 'none';
-    fill.style.transform = `scaleX(${bar.value / 100})`;
-    if (reset) { void fill.offsetWidth; fill.style.transition = ''; }
-    progressStage = nextStage;
-  }
-  $('#document-run-status').textContent = documentRequestMessage || documentState.run_error ||
-    (documentState.running ? 'You can leave this page; extraction continues and progress is saved.' :
-      'Open Review results beside a document to check its extraction.');
+  const preparing = busy && !documentState.prepared;
+  $('#run-documents').textContent = documentState.running ? (stopping ? 'Stopping...' : 'Extracting...') :
+    preparing ? 'Preparing...' : busy ? 'Starting...' : extracted || done ? 'Resume extraction' : 'Extract documents';
+  $('#run-documents').disabled = busy || !!documentState.running || (!!rows.length && extracted === rows.length);
+  $('#stop-documents').disabled = !documentState.running || !!documentState.stop_requested;
+  $('#stop-documents').textContent = stopping ? 'Stopping...' : 'Stop';
+  bar.value = total ? Math.floor(done / total * 100) : 0;
+  const percent = bar.value;
+  if (preparing) bar.removeAttribute('value');
+  $('#document-progress-stage').textContent = preparing ? 'Preparing documents...' : rows.length
+    ? `${processed} / ${rows.length} documents processed` : 'Ready to extract';
+  $('#document-progress-count').textContent = preparing || !total ? '' : `${done} / ${total} steps (${percent}%)`;
+  const track = $('#document-progress-track');
+  track.dataset.busy = String(preparing);
+  track.dataset.running = String(!!documentState.running && !stopping);
+  track.querySelector('.progress-fill').style.transform = `scaleX(${percent / 100})`;
+  $('#document-run-status').textContent = documentState.execution_status === 'stop_failed'
+    ? documentState.run_error : stopping
+    ? `Stopping - waiting for ${documentState.active_processes || 0} active processes to exit.`
+    : (!documentState.running && documentRequestMessage) || documentState.run_error ||
+      (documentState.running ? `${documentState.phase || 'Extracting pages and assembling receipts'} - ${documentState.active_processes || 0} active processes - ${documentState.elapsed_seconds || 0}s elapsed` :
+        'Open Review results beside a document to check its extraction.');
 }
 
 function rememberFilters() {
@@ -130,10 +141,11 @@ $('#hide-duplicates').onchange = rememberFilters;
 $('#document-search').oninput = rememberFilters;
 $('#document-filter').onchange = rememberFilters;
 refreshDocuments().catch(error => toast(error.message));
-pollVisible(refreshDocuments, 5000);
+pollVisible(refreshDocuments, 2000);
+pollVisible(refreshExecution, 500);
 
-installReceipts(page, {getDocumentState: () => documentState, setDocumentRequestMessage, refreshDocuments});
+installReceipts(page, {getDocumentState: () => documentState, setDocumentRequestMessage, refreshDocuments, setExecution, refreshExecution});
 
 
-page.onRefresh(refreshDocuments);
+page.onRefresh(refreshDocuments, ['/api/receipts/', '/api/content/']);
 }

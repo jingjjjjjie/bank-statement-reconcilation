@@ -18,7 +18,6 @@ function render() {
   $('#progress').style.width = `${state.groups.length ? state.reviewed / state.groups.length * 100 : 0}%`;
   $('#attention').textContent = state.attention ? `${state.attention} group(s) require attention` : 'One selection per group';
   $('#validate').classList.toggle('ready', state.pending === 0 && state.attention === 0);
-  $('#folder').textContent = state.folder;
   const groups = visibleGroups(); $('#queue-count').textContent = `${groups.length} ${groups.length === 1 ? 'group' : 'groups'}`;
   if (!groups.some(g => g.id === selected)) selected = groups[0]?.id;
   $('#group-list').replaceChildren();
@@ -104,7 +103,7 @@ $('#search').oninput = render;
 root.querySelectorAll('[data-filter]').forEach(button => button.onclick = () => {filter = button.dataset.filter; root.querySelectorAll('[data-filter]').forEach(b => b.classList.toggle('selected', b === button)); render();});
 $('#validate').onclick = async () => {
   if (busy) return; busy = true; render();
-  try {const result = await api('/api/validate', {}); const panel = $('#validation'); panel.hidden = false; panel.className = `validation ${result.passed ? 'success' : ''}`; $('#validation-text').textContent = result.passed ? 'Exact duplicate review complete.' : `Outstanding issues:\n${result.problems.join('\n')}`; $('#next-content').hidden = !result.passed; state = await api('/api/state'); token = state.token; render();} catch (error) {toast(error.message);} finally {busy = false; render();}
+  try {const result = await api('/api/validate', {}); const panel = $('#validation'); panel.hidden = false; panel.className = `validation ${result.passed ? 'success' : ''}`; $('#validation-text').textContent = result.passed ? 'Exact duplicate review complete.' : `Outstanding issues:\n${result.problems.join('\n')}`; state = await api('/api/state'); token = state.token; render();} catch (error) {toast(error.message);} finally {busy = false; render();}
 };
 function showPreset(data) {
   $('#exact-development-status').textContent = data.saved

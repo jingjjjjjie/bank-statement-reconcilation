@@ -27,14 +27,11 @@ async function loadBank() {
   try {
     const data = await api('/api/bank-statement');
     $('#bank-extraction').hidden = true;
-    $('#bank-source-link').hidden = true;
     if (!data.available) {
       $('#bank-note').textContent = 'No prepared bank statement was found.';
       const source = await api('/api/source');
       const ready = source.bank && source.selected && source.active === source.selected.path;
       $('#bank-extraction').hidden = !ready;
-      $('#bank-source-link').hidden = !!ready;
-      $('#bank-source-link').textContent = 'Select a workspace and proceed';
       if (ready) $('#statement-source').textContent = source.bank.path;
       return;
     }
@@ -82,7 +79,6 @@ $('#check-bank').onclick = async () => {
     const status = await api('/api/workflow-checks');
     const bank = status.steps[3];
     const pending = status.steps.slice(1, 3).filter(step => !step.checked).map(step => step.name.toLowerCase());
-    $('#bank-next').hidden = !bank.next;
     $('#bank-step-note').textContent = !bank.checked ? 'Bank balance checks need review.' :
       bank.next ? 'Bank extraction passed. Continue to the completion checks.' :
       `Bank extraction passed. Finish ${pending.join(' and ')} before continuing.`;
@@ -92,19 +88,29 @@ $('#check-bank').onclick = async () => {
 $('#export-button').addEventListener('click', exportWorkbook);
 $('#prepare-bank').onclick = async () => {
   const button = $('#prepare-bank');
+  const yearField = $('#bank-year');
+  const year = Number(yearField.value);
+  if (!yearField.value.trim() || !Number.isInteger(year) || year < 1900 || year > 2100) {
+    $('#bank-error').textContent = 'Enter the statement year (1900–2100).';
+    $('#bank-error').hidden = false;
+    yearField.focus();
+    return;
+  }
   button.disabled = true;
+  const label = button.textContent;
+  button.textContent = 'Extracting...';
   $('#bank-error').hidden = true;
   try {
     token = (await api('/api/session')).token;
-    await api('/api/source/bank-prepare', {year: Number($('#bank-year').value)});
+    await api('/api/source/bank-prepare', {year});
     await loadBank();
   } catch (error) {
     $('#bank-error').textContent = error.message;
     $('#bank-error').hidden = false;
-  } finally { button.disabled = false; }
+  } finally { button.disabled = false; button.textContent = label; }
 };
 loadBank();
 
 
-page.onRefresh(loadBank);
+page.onRefresh(loadBank, ['/api/source/bank-prepare']);
 }

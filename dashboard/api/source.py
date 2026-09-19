@@ -77,15 +77,18 @@ def select_bank(body: PathChoice, state=Depends(context)):
 
 @router.post("/source/start")
 def start(body: StartChoice, state=Depends(context)):
-    """Activate verified inputs and invalidate cached browser views."""
-    if state.review and content_review.execution_status(state.review)["running"]:
+    """Resume the same review; invalidate cached views only for a different project."""
+    same_source = state.review and state.sources.selected() == state.review.root
+    if state.review and not same_source and content_review.execution_status(state.review)["running"]:
         raise ValueError("Stop document processing before changing workspaces")
     manifest, data = state.sources.start(body.preview)
+    if state.review and state.review.manifest_path.resolve() == manifest.resolve():
+        return {"active": str(state.review.root), "groups": len(state.review.groups), "resumed": True}
     review = Review(manifest, data)
     state.sources.activate(manifest)
     state.review = review
     state.review_id = secrets.token_hex(16)
-    return {"active": str(review.root), "groups": len(review.groups)}
+    return {"active": str(review.root), "groups": len(review.groups), "resumed": False}
 
 
 @router.post("/source/bank-prepare")
