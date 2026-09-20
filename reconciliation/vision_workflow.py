@@ -281,7 +281,8 @@ def run(work, index, state, reviewer, *, extraction_only=False, regeneration=Non
             result = pieces.legacy_result(result)
         elif schema is ASSEMBLY and 'pieces' in result:
             result = {k: v for k, v in result.items() if k != 'pieces'} | {
-                'receipts': [pieces.legacy_piece(p) for p in result['pieces']]}
+                'receipts': [pieces.legacy_piece(p) for p in result['pieces']],
+                'limitations': result.get('limitations', [])}
         if verify is not None:
             try:
                 verify(result)

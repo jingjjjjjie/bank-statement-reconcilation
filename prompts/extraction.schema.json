@@ -4,9 +4,6 @@
     "readable": {
       "type": "boolean"
     },
-    "document_type": {
-      "type": "string"
-    },
     "summary": {
       "type": "string"
     },
@@ -35,12 +32,6 @@
           "location"
         ],
         "additionalProperties": false
-      }
-    },
-    "limitations": {
-      "type": "array",
-      "items": {
-        "type": "string"
       }
     },
     "pieces": {
@@ -109,12 +100,6 @@
             "items": {
               "type": "string"
             }
-          },
-          "limitations": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
           }
         },
         "required": [
@@ -126,8 +111,7 @@
           "amount",
           "currency",
           "amount_basis",
-          "source_locations",
-          "limitations"
+          "source_locations"
         ],
         "additionalProperties": false
       }
@@ -135,10 +119,8 @@
   },
   "required": [
     "readable",
-    "document_type",
     "summary",
     "totals",
-    "limitations",
     "pieces"
   ],
   "additionalProperties": false

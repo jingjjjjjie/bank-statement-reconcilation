@@ -13,7 +13,7 @@ Repeated totals, subtotals, continuation pages, and embedded copies of the same 
 must not become additional expenses. Never sum page totals to invent a receipt total.
 
 For each piece record source_units, source_locations, piece_type, payee, description,
-typed references and dates, amount, currency, amount_basis, limitations and needs_review.
+typed references and dates, amount, currency, amount_basis and needs_review.
 Two receipts are two pieces, even for the same payee. Two payees in a schedule are
 separate pieces. Two purchases on one receipt are one piece. Do not merge payroll
 entries into the schedule total. Payment schedules and collaboration payout tables retain
@@ -23,16 +23,15 @@ references of type other. Shared project codes do not justify merging recipients
 Printed schedule totals remain document context only. Keep unknown text fields empty
 and unknown lists empty. Screenshots and claims can be supporting evidence. Exclude
 clearly unrelated material. For uncertain boundaries preserve provisional pieces, set
-needs_review true and explain the ambiguity; do not force a merge. Put document-wide
-coverage or legibility problems in limitations. Model output never grants approval.
+needs_review true; do not force a merge. Set readable false when key content cannot
+reliably be read. Leave conflicting factual fields empty. Model output never grants approval.
 
 Extract claim, wage and invoice totals independently of payment status and currency.
 A document need not prove payment to have a supported printed total; an unknown currency
-stays empty without erasing that total. Do not add generic lack-of-payment-proof limitations
-to claims. Read spreadsheet total labels with the title, rate and work entries: a printed
+stays empty without erasing that total. Read spreadsheet total labels with the title, rate and work entries: a printed
 claim total may sit under an hours column. For example, 1 training hour, hourly rate 25,
 and a labelled total of 25 support total "25". Do not mistake a clearly labelled hours or
 count total for money, invent an unprinted total, or apply a bonus-only currency label to
 the entire claim without supporting context.
 
-Return document_type, readable, a short summary and explicitly labelled totals as document context. Document totals are not extra pieces or additional payable capacity.
+Return readable, a short summary and explicitly labelled totals as document context. Document totals are not extra pieces or additional payable capacity.

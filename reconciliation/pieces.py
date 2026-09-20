@@ -44,7 +44,8 @@ def legacy_result(result):
         return result
     pieces = [legacy_piece(p) for p in result['pieces']]
     return {**{k: v for k, v in result.items() if k != 'pieces'}, 'receipts': pieces, 'brief_description': result['summary'], 'details': '',
-        'receipt_status': 'receipt' if result['document_type'] == 'receipt' else 'unsure',
+        'document_type': result.get('document_type', ''), 'limitations': result.get('limitations', []),
+        'receipt_status': 'receipt' if result.get('document_type') == 'receipt' else 'unsure',
         'supporting_evidence_status': 'potential_support' if pieces else 'uncertain',
         'supporting_evidence_reason': '', 'company': [],
         'parties': list(dict.fromkeys(p['payee'] for p in pieces if p['payee'])),

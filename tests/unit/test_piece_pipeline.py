@@ -119,8 +119,10 @@ class PiecePipelineTests(unittest.TestCase):
         """The model emits only document context and pieces, preserving typed facts."""
         piece = pieces.canonical({**self.fixture.pieces[0], 'payee': 'Merchant',
             'references': [{'type': 'receipt', 'value': '000123'}]})
-        result = {'readable': True, 'document_type': 'mixed', 'summary': 'Two receipts',
-            'totals': [], 'limitations': [], 'pieces': [piece, pieces.canonical(self.fixture.pieces[1])]}
+        result = {'readable': True, 'summary': 'Two receipts',
+            'totals': [], 'pieces': [piece, pieces.canonical(self.fixture.pieces[1])]}
+        for piece in result['pieces']:
+            piece.pop('limitations', None)
         validate(result, pieces.EXTRACTION)
         adapted = pieces.legacy_result(result)
         self.assertEqual(adapted['receipts'][0]['references'][0]['value'], '000123')
@@ -196,9 +198,11 @@ class PiecePipelineTests(unittest.TestCase):
             'total': value, 'references': [{'type': 'other', 'value': 'shared-project'}],
             'dates': [{'type': 'other', 'value': '26/11/2025'}],
             'location': f'Sheet1 row {n + 9}'}) for n, value in enumerate(amounts)]
-        result = {'readable': True, 'document_type': 'payment_schedule', 'summary': 'Seven recipients',
+        result = {'readable': True, 'summary': 'Seven recipients',
             'totals': [{'label': 'Grand total', 'amount': '2030', 'currency': 'MYR', 'location': 'Sheet1 I16'}],
-            'limitations': [], 'pieces': rows}
+            'pieces': rows}
+        for piece in result['pieces']:
+            piece.pop('limitations', None)
         validate(result, pieces.EXTRACTION)
         self.fixture.state['units'][self.fixture.key] = pieces.legacy_result(result)
         self.fixture.save_state()
@@ -291,8 +295,10 @@ class PiecePipelineTests(unittest.TestCase):
         fixture.setUp()
         self.addCleanup(fixture.doCleanups)
         index, state = fixture.prepared()
-        supplied = {'readable': True, 'document_type': 'receipt', 'summary': 'Two receipts',
-            'totals': [], 'limitations': [], 'pieces': [pieces.canonical(p) for p in self.fixture.pieces]}
+        supplied = {'readable': True, 'summary': 'Two receipts',
+            'totals': [], 'pieces': [pieces.canonical(p) for p in self.fixture.pieces]}
+        for piece in supplied['pieces']:
+            piece.pop('limitations', None)
         supplied['pieces'][0]['payee'] = 'Merchant A'
         calls = []
 

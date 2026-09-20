@@ -4,9 +4,6 @@
     "readable": {
       "type": "boolean"
     },
-    "document_type": {
-      "type": "string"
-    },
     "summary": {
       "type": "string"
     },
@@ -35,12 +32,6 @@
           "location"
         ],
         "additionalProperties": false
-      }
-    },
-    "limitations": {
-      "type": "array",
-      "items": {
-        "type": "string"
       }
     },
     "pieces": {
@@ -110,12 +101,6 @@
               "type": "string"
             }
           },
-          "limitations": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
           "source_units": {
             "type": "array",
             "items": {
@@ -138,7 +123,6 @@
           "currency",
           "amount_basis",
           "source_locations",
-          "limitations",
           "source_units",
           "needs_review"
         ],
@@ -155,10 +139,8 @@
   },
   "required": [
     "readable",
-    "document_type",
     "summary",
     "totals",
-    "limitations",
     "pieces",
     "reviewed_units"
   ],

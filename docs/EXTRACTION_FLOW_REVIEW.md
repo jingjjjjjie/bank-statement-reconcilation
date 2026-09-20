@@ -56,9 +56,8 @@ Python handles hashing, exact duplicates, file preparation, bank extraction, can
 | Readable | Whether key supplied content can reliably be read |
 | Summary | Short document context |
 | Labelled totals | Explicit total label, amount, currency and source location |
-| Limitations | Missing evidence, ambiguity or contradictions |
 
-Document-level `document_type` has been removed from the active extraction and assembly schemas. Existing saved results remain compatible. Long-running application processes need to reload the schemas before using the change.
+Document-level `document_type` and document/piece `limitations` have been removed from the active extraction and assembly schemas. Existing saved results remain compatible. Long-running application processes need to reload the schemas before using the change.
 
 ### Each payable piece
 
@@ -73,7 +72,6 @@ Document-level `document_type` has been removed from the active extraction and a
 | Currency | Explicit currency when supported |
 | Amount basis | Meaning of the amount, such as invoice total or net salary |
 | Source locations | Page, image region, row or cell |
-| Limitations | Piece-specific missing facts or uncertainty |
 
 Assembly also records reviewed source units, each piece's source units and whether its boundaries need review. Python assigns piece identities; the model does not assign approvals.
 
