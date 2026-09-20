@@ -60,7 +60,7 @@ class ReceiptAssemblyBrowserTests(unittest.TestCase):
             expect(page.locator("#receipt-pieces fieldset")).to_have_count(2)
             page.get_by_role("button", name="Remove this piece from extraction").click()
             page.locator('[data-field="total"]').fill("45.00")
-            page.locator('[data-boundary-review]').uncheck()
+            expect(page.locator('[data-boundary-review]')).to_have_count(0)
             page.locator('#accept-receipts').click()
             expect(page.locator('#receipt-unit-status')).to_contain_text("Extraction accepted.")
             page.reload()

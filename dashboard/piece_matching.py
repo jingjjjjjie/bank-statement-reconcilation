@@ -45,7 +45,7 @@ def current(review):
             'date': '', 'location': receipt.get('location', ''), 'direction': '',
             'source_cells': [], 'claim_group': '', 'expense_id': '',
             'accepted': receipt['accepted'], 'excluded': False,
-            'boundary_unresolved': bool(receipt.get('needs_review')),
+            'boundary_unresolved': False,  # Live pieces use the normal human extraction review.
             'evidence_revision': revision([receipt['document_id'], facts, receipt.get('source_units', []), receipt['accepted']])}
     documents = {}
     for digest, document in index['documents'].items():
@@ -175,7 +175,7 @@ def model_payload(banks, items, index, facts, choices, selected, retrieval=None)
             'pieces': [{k: v for k, v in item.items() if k in {
                 'id', 'piece_type', 'payee', 'description', 'typed_references', 'dates',
                 'amount', 'currency', 'amount_basis', 'source_locations',
-                'boundary_unresolved', 'claim_group', 'expense_id'} and (v or k in {'amount', 'currency'})}
+                'claim_group', 'expense_id'} and (v or k in {'amount', 'currency'})}
                 for item in facts['documents'][digest]['pieces']]}
     for bank in selected:
         bank_documents = {items[key]['document'] for key in choices[bank]}

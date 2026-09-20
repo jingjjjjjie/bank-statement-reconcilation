@@ -94,6 +94,18 @@ class PiecePipelineTests(unittest.TestCase):
         self.assertEqual(bank['support_status'], 'Supporting')
         self.assertEqual(path.read_bytes(), before)
 
+    def test_legacy_review_flag_does_not_warn_in_live_matching(self):
+        """Ignore old model flags without rewriting saved evidence or approvals."""
+        self.accept()
+        path = self.fixture.work / 'receipt-matches.json'
+        saved = json.loads(path.read_text())
+        saved['extractions'][self.fixture.key]['receipts'][0]['needs_review'] = True
+        path.write_text(json.dumps(saved))
+        before = path.read_bytes()
+        piece_matching.activate(self.review)
+        self.assertFalse(any(item['boundary_unresolved'] for item in matching_review.snapshot(self.review)['items']))
+        self.assertEqual(path.read_bytes(), before)
+
     def test_removed_piece_stays_visible_in_saved_approval(self):
         """Removing a piece cannot delete its saved allocation history or reservation."""
         view = self.accept()

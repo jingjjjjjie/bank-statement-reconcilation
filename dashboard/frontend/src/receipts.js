@@ -86,9 +86,6 @@ function addReceiptPiece(piece=emptyPiece()) {
   const unit = receiptData?.units.find(item => item.key === $('#receipt-unit').value);
   if (unit?.assembled) {
     receiptField(card, 'Source unit numbers (one per line; see page labels above)', 'source_units', piece.source_units || [], true);
-    const label = node('label', '', ' Boundaries need review');
-    const flag = node('input'); flag.type = 'checkbox'; flag.dataset.boundaryReview = 'true';
-    flag.checked = piece.needs_review !== false; label.prepend(flag); card.append(label);
   }
   card.append(node('legend', '', 'Separate receipt / supporting piece'));
   receiptField(card, 'Location in image or page', 'location', piece.location);
@@ -184,10 +181,10 @@ function readReceiptPieces() {
       if (key === 'source_units') { piece[key] = input.value.split(/[\s,]+/).filter(Boolean).map(Number); continue; }
       piece[key] = Array.isArray(piece[key]) ? input.value.split('\n').map(value => value.trim()).filter(Boolean) : input.value.trim();
     }
-    const flag = card.querySelector('[data-boundary-review]');
+    const assembled = receiptData?.units.find(unit => unit.key === $('#receipt-unit').value)?.assembled;
     if (piece.references) piece.invoice_numbers = piece.references.filter(r => r.type === 'invoice').map(r => r.value);
-    if (flag) piece.needs_review = flag.checked;
-    else { delete piece.source_units; delete piece.needs_review; }
+    delete piece.needs_review;
+    if (!assembled) delete piece.source_units;
     return piece;
   });
 }

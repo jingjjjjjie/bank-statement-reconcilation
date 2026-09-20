@@ -194,8 +194,6 @@ def validate_acceptance(unit, pieces, saved):
     if unit.get("assembled"):
         validate_assembly({"receipts": pieces, "reviewed_units": [s["number"] for s in unit["source_units"]],
                            "limitations": []}, len(unit["source_units"]))
-        if any(piece["needs_review"] for piece in pieces):
-            raise ValueError("Resolve flagged receipt boundaries before accepting")
     for piece in pieces:
         if piece["total"]:
             amount(piece["total"])
@@ -220,8 +218,6 @@ def accept_all_extractions(review, body):
                 raise ValueError('Review the extraction warning individually before accepting')
             if not unit['readable'] or unit['needs_refresh']:
                 raise ValueError('Extraction requires review or regeneration')
-            if any(piece.get('needs_review') for piece in unit['receipts']):
-                raise ValueError('Resolve flagged receipt boundaries before accepting')
             prepared[key] = validate_acceptance(unit, unit['receipts'], saved)
         except (ValueError, ValidationError, OSError) as error:
             skipped.append({'key': key, 'reason': str(error)})

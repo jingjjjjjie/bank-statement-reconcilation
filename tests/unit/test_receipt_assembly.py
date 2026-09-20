@@ -18,7 +18,7 @@ def piece(units, total="45.00"):
     """Build a receipt spanning named source units with one printed total."""
     return {"location": "pages " + ", ".join(map(str, units)), "document_type": "receipt",
             "invoice_numbers": ["INV-1"], "brief_description": "Supplies", "total": total,
-            "currency": "MYR", "limitations": [], "source_units": units, "needs_review": False}
+            "currency": "MYR", "limitations": [], "source_units": units}
 
 
 class AssemblyWorkflowTests(unittest.TestCase):
@@ -90,7 +90,7 @@ class AssemblyApprovalTests(unittest.TestCase):
     view = receipt_fixtures.ReceiptMatchingTests.view
     accept_pieces = receipt_fixtures.ReceiptMatchingTests.accept_pieces
 
-    def test_assembled_receipts_replace_page_pieces_and_require_resolved_boundaries(self):
+    def test_assembled_receipts_allow_human_acceptance_with_legacy_flag(self):
         """Only document receipts become allocatable, and page refresh invalidates approval."""
         document = self.index["documents"][self.digest]
         document["id"] = self.digest
@@ -107,9 +107,7 @@ class AssemblyApprovalTests(unittest.TestCase):
             "reviewed_units": [1, 2], "limitations": [], "input_revision": input_revision(document, self.state)}}
         self.save_state()
         flagged = {**piece([1, 2]), "needs_review": True}
-        with self.assertRaisesRegex(ValueError, "Resolve flagged"):
-            self.accept_pieces([flagged])
-        view = self.accept_pieces([piece([1, 2])])
+        view = self.accept_pieces([flagged])
         self.assertEqual(len(view["receipts"]), 1)
         self.assertTrue(view["receipts"][0]["accepted"])
         self.state["units"][self.digest + ":1"]["details"] = "new result"

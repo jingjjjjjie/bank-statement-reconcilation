@@ -9,7 +9,7 @@ ASSEMBLED_RECEIPT = object_schema({**RECEIPT["properties"],
     "source_units": {"type": "array", "items": {"type": "integer", "minimum": 1}, "minItems": 1},
     "needs_review": {"type": "boolean"},
 })
-ASSEMBLED_RECEIPT['required'] = [*RECEIPT['required'], 'source_units', 'needs_review']
+ASSEMBLED_RECEIPT['required'] = [*RECEIPT['required'], 'source_units']  # Old records may retain an ignored needs_review flag.
 ASSEMBLY = object_schema({
     "receipts": {"type": "array", "items": ASSEMBLED_RECEIPT},
     "reviewed_units": {"type": "array", "items": {"type": "integer", "minimum": 1}},

@@ -44,7 +44,7 @@ Accepting extraction means the document facts were reviewed. Approving a match i
 | --- | --- | --- | --- |
 | Whole-PDF extraction | All PDF units and their prepared images/text | Document context, pieces and complete source coverage | Eligible new or regenerated PDFs up to the configured limit |
 | Per-unit extraction | Page/image evidence or prepared worksheet/text | Document context and payable pieces | Longer PDFs, fallback routes and other document units |
-| Receipt assembly | All unit results plus source evidence from the same document | Pieces with source-unit coverage and uncertain-boundary flags | Multi-unit documents using per-unit extraction |
+| Receipt assembly | All unit results plus source evidence from the same document | Pieces with source-unit coverage | Multi-unit documents using per-unit extraction |
 | Matching | Bank transactions, shortlisted pieces and their complete parent-document evidence | Proposed allocations and reasons | When Generate matches runs |
 
 The default workflow model is `gpt-5.6-sol`, through `codex exec` using the existing ChatGPT subscription login. Model output is structured and validated. Images accompany vision requests.
@@ -77,7 +77,7 @@ Document-level `document_type` and document/piece `limitations` have been remove
 | Amount basis | Meaning of the amount, such as invoice total or net salary |
 | Source locations | Page, image region, row or cell |
 
-Whole-document extraction and assembly both record reviewed source units, each piece's source units and whether its boundaries need review. Python assigns piece identities; the model does not assign approvals.
+Whole-document extraction and assembly both record reviewed source units and each piece's source units. The user checks all pieces against the original before accepting; no `needs_review` flag or boundary checkbox is used. Python assigns piece identities; the model does not assign approvals.
 
 Python normalizes RM to MYR in new extraction results, accepted edits and read-only displays/comparisons. Other currency codes remain allowed, and amounts are never converted. No MYR-only prompt or schema restriction is used. Historical saved evidence is not rewritten automatically. Unknown facts stay empty. Purchase line items, taxes and subtotals within one receipt do not become separate payable pieces. Document totals provide context and do not add payable capacity.
 
@@ -91,7 +91,7 @@ When extraction reads individual units, assembly determines how their results be
 | Three separate receipts in one PDF | Three pieces |
 | The same receipt repeated within a file | Avoid treating the repeated evidence as another expense |
 | A payment schedule with several recipients | Keep each separately payable recipient as a piece |
-| Unclear continuation or receipt boundaries | Flag for human review |
+| Unclear continuation or receipt boundaries | Retain provisional pieces for the user to check against the original |
 
 Single-unit documents and eligible whole-document PDFs skip the separate assembly call. Assembly is an LLM judgment and can be wrong; Python validates coverage and source references, while human review resolves uncertain boundaries.
 
@@ -122,7 +122,7 @@ Settings > Documents > **Whole-document PDF page limit** controls `pdf_whole_doc
 
 Changing the limit does not clear existing results or invalidate approvals. It applies to unread PDFs and explicit regeneration. Partially extracted PDFs finish their existing per-unit route, preserving successful calls. A threshold change during processing stops subsequent requests; run again to resume.
 
-Whole-document results use the existing document review record, including source units and boundary flags, without a second model call. Compatibility page records assign each piece to its first supporting unit and retain document context once, avoiding duplicate amounts in inventory exports. Review and matching use the complete document result.
+Whole-document results use the existing document review record, including source units, without a second model call. Compatibility page records assign each piece to its first supporting unit and retain document context once, avoiding duplicate amounts in inventory exports. Review and matching use the complete document result.
 
 Successful whole-document results are checkpointed together. Invalid coverage or failed model calls publish no new partial document result; failures remain unresolved. Whole-document attempts use the `pdf_document` usage stage and the configured PDF model through the existing Codex runner, including cache and token accounting.
 
@@ -160,7 +160,7 @@ Historical extraction JSON, receipt adapters and approval fingerprints retain th
 
 The experimental PDF router previously depended on document classification and limitations. It now checks piece type, readability, source-backed values and totals. Historical uncertainty notes still trigger conservative visual fallback. Text/vision disagreements produce a Python-generated review warning, visible in extraction review and excluded from untouched bulk acceptance. This is a processing warning, not a new free-form model extraction field.
 
-Removing model limitations loses the model's written explanation of ambiguity. Missing or conflicting facts stay blank; unreadable results, assembly boundary flags and system warnings still require attention. Checking the original remains part of human review.
+Removing model limitations loses the model's written explanation of ambiguity. Missing or conflicting facts stay blank; unreadable results and system warnings still require attention. Checking the original remains part of human review.
 
 
 ### Verification and activation

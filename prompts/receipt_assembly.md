@@ -13,7 +13,7 @@ Repeated totals, subtotals, continuation pages, and embedded copies of the same 
 must not become additional expenses. Never sum page totals to invent a receipt total.
 
 For each piece record source_units, source_locations, piece_type, payee, description,
-typed references and dates, amount, currency, amount_basis and needs_review.
+typed references and dates, amount, currency, amount_basis.
 Two receipts are two pieces, even for the same payee. Two payees in a schedule are
 separate pieces. Two purchases on one receipt are one piece. Do not merge payroll
 entries into the schedule total. Payment schedules and collaboration payout tables retain
@@ -22,8 +22,8 @@ date meaning and source cells. Keep recipient handles and project codes as separ
 references of type other. Shared project codes do not justify merging recipients.
 Printed schedule totals remain document context only. Keep unknown text fields empty
 and unknown lists empty. Screenshots and claims can be supporting evidence. Exclude
-clearly unrelated material. For uncertain boundaries preserve provisional pieces, set
-needs_review true; do not force a merge. Set readable false when key content cannot
+clearly unrelated material. For uncertain boundaries preserve provisional pieces; do not force a merge.
+The user checks the pieces against the original before accepting. Set readable false when key content cannot
 reliably be read. Leave conflicting factual fields empty. Model output never grants approval.
 
 Extract claim, wage and invoice totals independently of payment status and currency.

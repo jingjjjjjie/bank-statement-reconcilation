@@ -38,7 +38,7 @@ class Reviewer:
             'pieces': [piece]}
         if schema == pieces.ASSEMBLY:
             result['reviewed_units'] = list(range(1, self.pages + 1))
-            piece.update(source_units=list(range(1, self.pages + 1)), needs_review=False)
+            piece.update(source_units=list(range(1, self.pages + 1)))
             if self.invalid:
                 result['reviewed_units'].pop()
         validate(result, schema)

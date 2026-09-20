@@ -87,12 +87,11 @@ Receipt extraction approvals, matches, and decision history are saved separately
 
 Multi-page receipt review includes a document assembly step after page extraction.
 The model sees the page results and original PDF page images, and returns receipts with
-source unit numbers, location labels, and boundary-review flags. A receipt can span pages;
+source unit numbers and location labels. A receipt can span pages;
 a page can contain several receipts. This step uses the existing document-stage model,
 request limit, subscription login, and token accounting. Completed page results are reused.
 
-The extraction editor offers Split, Remove and Add piece controls. Split clears
-printed totals for verification; it never sums repeated page totals. There is no
-separate Merge control in the current editor. Resolve boundary flags before
-accepting. Incomplete assembly cannot be approved; changes to its source page results
+The extraction editor lets the user correct pieces and their source references.
+Check each piece against the original before accepting. There is no model-generated
+`needs_review` flag or boundary checkbox. Incomplete assembly cannot be approved; changes to its source page results
 invalidate approval. Bank allocations remain separate from receipt boundaries.
