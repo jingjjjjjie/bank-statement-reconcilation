@@ -47,7 +47,8 @@ class ExtractionPreviewTests(unittest.TestCase):
         workbook.active['A42'] = 'last row'
         workbook.create_sheet('Second')['A1'] = 'second sheet'
         path = self.base / 'source.xlsx'; workbook.save(path)
-        self.assertEqual(describe(path)['pages'], 3)
+        self.assertEqual(describe(path)['kind'], 'pdf')
+        self.assertEqual(describe(path)['pages'], 2)
         path = self.base / 'source.docx'
         with ZipFile(path, 'w') as archive:
             archive.writestr('word/document.xml', '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body/></w:document>')

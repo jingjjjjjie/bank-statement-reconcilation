@@ -23,6 +23,10 @@ RUN ln -s /usr/local/lib/node_modules/@openai/codex/bin/codex.js /usr/local/bin/
     && groupadd --gid 1000 app \
     && useradd --uid 1000 --gid app --create-home app
 
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends libreoffice-calc fonts-crosextra-carlito fonts-crosextra-caladea fonts-noto-cjk \
+    && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /workspace
 COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
@@ -60,6 +64,10 @@ RUN ln -s /usr/local/lib/node_modules/@openai/codex/bin/codex.js /usr/local/bin/
     && ln -s /usr/local/lib/node_modules/npm/bin/npx-cli.js /usr/local/bin/npx \
     && groupadd --gid 1000 app \
     && useradd --uid 1000 --gid app --create-home app
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends libreoffice-calc fonts-crosextra-carlito fonts-crosextra-caladea fonts-noto-cjk \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /workspace
 COPY requirements.txt ./
