@@ -53,6 +53,8 @@ class ReviewLayoutTests(unittest.TestCase):
             page.get_by_role('button', name='Select piece 21', exact=True).click()
             expect(page.locator('.active-piece .piece-number')).to_have_text('21')
             expect(page.locator('#merge-piece')).to_have_count(0)
+            expect(page.locator('#piece-query')).to_have_count(0)
+            expect(page.locator('.document-bar')).to_have_count(0)
             expect(page.locator('.piece-selection')).to_have_count(0)
             expect(page.get_by_role('button', name='+ Add entry', exact=True)).to_be_visible()
             page.locator('#add-receipt').click()
@@ -63,11 +65,16 @@ class ReviewLayoutTests(unittest.TestCase):
             expect(page.locator('[data-field="payee"]').last).to_have_value('Merchant 21')
             page.get_by_role('button', name='Select piece 1', exact=True).click()
             page.locator('.piece-details summary').first.click()
+            header = page.locator('.review-header')
+            self.assertLessEqual(header.evaluate('(el) => el.scrollWidth - el.clientWidth'), 1)
             page.screenshot(path=str(folder / 'desktop.png'))
             for width in (900, 390, 360):
                 page.set_viewport_size({'width': width, 'height': 900})
                 expect(page.get_by_role('heading', name='Review results', exact=True)).to_be_visible()
                 self.assertTrue(page.evaluate('document.documentElement.scrollWidth <= innerWidth'))
+                centers = header.locator(':scope > *').evaluate_all(
+                    '(els) => els.map(el => { const r = el.getBoundingClientRect(); return r.y + r.height / 2; })')
+                self.assertLess(max(centers) - min(centers), 2)
                 if width < 650:
                     page.locator('#accept-receipts').scroll_into_view_if_needed()
                     footer = page.locator('.editor-footer').bounding_box()

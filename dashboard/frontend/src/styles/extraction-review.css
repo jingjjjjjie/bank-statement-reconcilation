@@ -8,8 +8,9 @@
 #supporting-evidence { padding:0 20px; font-size:12px; color:#52695b; max-height:130px; overflow:auto; }
 @keyframes regeneration-spin { to { transform:rotate(360deg); } }
 @media (prefers-reduced-motion:reduce) { #regeneration-status[aria-busy="true"]::before { animation:none; } }
-.review-header { flex:none; height:58px; padding:0 24px; margin:0; display:flex; justify-content:space-between; gap:20px; border-bottom:1px solid #dce3dd; background:#fff; }
-.review-title,.review-header-actions { display:flex; align-items:center; gap:16px; min-width:0; }
+.review-header { flex:none; height:58px; padding:0 24px; margin:0; display:flex; align-items:center; gap:16px; overflow-x:auto; border-bottom:1px solid #dce3dd; background:#fff; }
+.review-title,.review-header-actions { flex:none; white-space:nowrap; display:flex; align-items:center; gap:16px; min-width:0; }
+.review-title .page-title { flex-wrap:nowrap; }
 .review-title a { color:#64756c; font-size:13px; white-space:nowrap; text-decoration:none; }
 .review-title h1 { white-space:nowrap; font-size:17px; margin:0; font-weight:650; letter-spacing:-.5px; }
 .header-divider { height:22px; width:1px; background:#dce3dd; }
@@ -17,7 +18,7 @@
 .extraction-workspace input,.extraction-workspace select,.extraction-workspace textarea { border:1px solid #dce3dd; border-radius:6px; padding:9px 10px; background:#fff; color:#263a30; font:inherit; font-size:14px; box-sizing:border-box; }
 .extraction-workspace :is(input,select,textarea):focus { outline:2px solid #94b49d; outline-offset:1px; }
 .extraction-workspace .button { min-height:36px; padding:8px 13px; font-size:12px; border-radius:6px; }
-.document-choice { min-width:0; flex:1; max-width:none; }
+.document-choice { min-width:140px; flex:1; }
 .document-choice label,.pane-label { display:block; font-size:10px; font-weight:700; color:#7a8980; letter-spacing:1.4px; }
 #current-document-name { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:13px; font-weight:600; }
 .document-navigation { display:flex; align-items:center; gap:6px; flex-shrink:0; }
@@ -64,12 +65,11 @@
 .discard-document { background:#fff; border:1px solid #dfcfc5; color:#86513d; }
 .discard-document:hover { background:#f7eee8; }
 @media(max-width:1100px) { .editor-footer { flex-wrap:wrap; } .editor-footer .discard-document { flex-basis:100%; } }
-@media(max-width:900px) { .review-progress,.header-divider { display:none; } .review-header { padding:0 14px; } .review-title { gap:10px; } .review-title h1 { font-size:16px; } .review-header-actions { gap:6px; } .extraction-layout { grid-template-columns:minmax(0,3fr) minmax(0,2fr); } }
-@media(max-width:650px) { .extraction-workspace main { height:auto; min-height:100dvh; } .review-header { flex-wrap:wrap; height:auto; padding:12px; } .extraction-layout { display:flex; flex-direction:column; } .extraction-original { height:52dvh; } .extraction-editor { border-left:0; } #receipt-pieces { overflow:visible; } .editor-footer { position:sticky; bottom:0; } .viewer-footer { gap:8px; padding:8px; } .viewer-footer select { max-width:140px; } #original-status { display:none; } }
+@media(max-width:900px) { .review-header { padding:0 14px; } .review-title { gap:10px; } .review-title h1 { font-size:16px; } .review-header-actions { gap:6px; } .extraction-layout { grid-template-columns:minmax(0,3fr) minmax(0,2fr); } }
+@media(max-width:650px) { .extraction-workspace main { height:auto; min-height:100dvh; } .extraction-layout { display:flex; flex-direction:column; } .extraction-original { height:52dvh; } .extraction-editor { border-left:0; } #receipt-pieces { overflow:visible; } .editor-footer { position:sticky; bottom:0; } .viewer-footer { gap:8px; padding:8px; } .viewer-footer select { max-width:140px; } #original-status { display:none; } }
 
 @media(max-width:1100px) { .review-header { gap:12px; } }
-@media(max-width:650px) { .document-choice { flex-basis:60%; } .document-navigation { margin-left:auto; } }
-@media(max-width:650px) { .document-navigation { width:100%; justify-content:center; order:3; } #document-buttons { gap:3px; } #document-buttons button { width:24px; height:28px; } .document-navigation>button { width:26px; } }
+@media(max-width:650px) { #document-buttons { gap:3px; } #document-buttons button { width:24px; height:28px; } .document-navigation>button { width:26px; } }
 
 .piece-bar { display:flex; align-items:center; gap:12px; padding:14px 22px; min-height:48px; border-bottom:1px solid #e7ece5; }
 #receipt-unit-status:empty { display:none; }
@@ -83,19 +83,13 @@
 
 .original-link { color:#526958; font-size:12px; white-space:nowrap; margin-left:auto; text-decoration:none; }
 
-.piece-search { padding: 6px 16px; position: relative; }
-.piece-search input { width:100%; }
-#piece-search-results:not(:empty) { position: absolute; z-index: 15; top: 100%; left: 16px; background: white; box-shadow: 0 5px 20px #0002; max-height: 300px; overflow: auto; width: min(520px, calc(100vw - 32px)); }
-#piece-search-results button { display: block; width: 100%; text-align: left; padding: 10px; }
 
-/* Separate document navigation, piece editing, and document-level decisions. */
-.document-bar { display:flex; align-items:center; gap:24px; padding:12px 24px; background:#fff; border-bottom:1px solid #dce3dd; }
+/* Keep evidence and entry editing clear beneath the single review bar. */
 .original-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:14px 20px; background:#f5f7f3; border-bottom:1px solid #dce3dd; }
 .original-heading h2,.piece-heading h2 { margin:0; font-size:14px; font-weight:650; letter-spacing:0; }
 .piece-heading { display:flex; align-items:center; gap:10px; min-width:0; }
 .piece-bar { justify-content:space-between; padding:14px 18px; min-height:0; border-bottom:0; }
 .piece-count { white-space:nowrap; font-weight:500; }
-.piece-search { padding:0 18px 12px; background:#fff; }
 .piece-selection { display:flex; justify-content:space-between; align-items:center; gap:8px; padding:10px 18px; background:#f7f9f6; border-block:1px solid #e7ece5; }
 #selected-piece { font-size:12px; color:#526958; font-weight:600; }
 .piece-selection .piece-actions { flex-basis:auto; }
@@ -126,7 +120,6 @@
   .review-header { gap:10px; padding:12px; align-items:center; }
   .review-title h1 { display:block; font-size:17px; }
   .review-header-actions { margin-left:auto; }
-  .document-bar { flex-direction:column; align-items:stretch; gap:12px; padding:12px; }
   .document-choice { flex-basis:auto; }
   .document-navigation { margin:0; order:0; }
   .original-heading { padding:12px; }
@@ -134,7 +127,6 @@
   .piece-bar { padding:14px 12px; }
   .piece-heading { gap:8px; }
   .piece-heading h2 { font-size:13px; }
-  .piece-search { padding:0 12px 12px; }
   .piece-selection { padding:10px 12px; }
   #receipt-pieces { padding:12px; }
   #receipt-pieces fieldset { padding:10px; }
@@ -143,21 +135,16 @@
   .editor-footer .discard-document { flex-basis:auto; }
 }
 @media(max-width:380px) {
-  .review-header-actions { width:100%; justify-content:flex-end; }
   .piece-row { grid-template-columns:24px minmax(0,1fr) 72px 66px; }
   .piece-heading { gap:5px; }
 }
 
 /* One toolbar leaves more room for reviewing the entries themselves. */
 .entry-toolbar { position:relative; display:flex; align-items:center; gap:8px; padding:12px 18px; border-bottom:1px solid #e7ece5; background:white; }
-.entry-toolbar .piece-count { flex:none; background:none; padding:0; font-size:12px; font-weight:600; }
-.entry-toolbar .piece-search { position:static; flex:1; min-width:90px; padding:0; }
-.entry-toolbar .piece-search input { font-size:12px; min-height:36px; }
+.entry-toolbar .piece-count { margin-right:auto; flex:none; background:none; padding:0; font-size:12px; font-weight:600; }
 .entry-toolbar .button { flex:none; white-space:nowrap; }
-.entry-toolbar #piece-search-results:not(:empty) { left:12px; right:12px; width:auto; }
 @media(max-width:650px) {
   .entry-toolbar { gap:6px; padding:10px 12px; flex-wrap:wrap; }
-  .entry-toolbar .piece-search { min-width:0; }
   .entry-toolbar .button { padding:8px; }
   .entry-toolbar .piece-count { font-size:11px; }
 }

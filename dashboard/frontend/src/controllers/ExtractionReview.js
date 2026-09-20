@@ -234,32 +234,6 @@ $('#next-document').onclick = () => {
   const index = receipts.data.units.findIndex(unit => unit.key === selectedUnit);
   changeDocument(Math.floor(index / 10) * 10 + 10);
 };
-$('#piece-query').oninput = () => {
-  /* Find pieces across documents while retaining normal unsaved-edit protection. */
-  const query = $('#piece-query').value.trim().toLowerCase();
-  const results = [];
-  if (query) (receipts.data?.units || []).forEach((unit, index) => {
-    if (unit.trash) return;
-    unit.receipts.forEach((piece, position) => {
-      const text = [piece.payee, piece.brief_description, piece.total, piece.currency,
-        ...(piece.invoice_numbers || []), ...(piece.references || []).map(r => r.value),
-        ...(piece.dates || []).map(r => r.value)].join(' ');
-      if (!text.toLowerCase().includes(query)) return;
-      const button = node('button', '', `${piece.payee || piece.brief_description || 'Piece'} / ${piece.currency} ${piece.total}`);
-      button.type = 'button';
-      button.onclick = () => {
-        changeDocument(index);
-        if ($('#receipt-unit').value !== unit.key) return;
-        selectedUnit = unit.key; pieceDocument = selectedUnit;
-        previousPieceCount = unit.receipts.length; activePiece = position;
-        renderPieceNavigation();
-        $('#receipt-pieces').children[position]?.scrollIntoView({block:'nearest'});
-      };
-      results.push(button);
-    });
-  });
-  $('#piece-search-results').replaceChildren(...results.slice(0, 30));
-};
 $('#remove-piece').onclick = () => {
   /* Remove only the selected extraction piece, never the source file. */
   const card = $('#receipt-pieces').children[activePiece];

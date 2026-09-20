@@ -13,12 +13,10 @@ usePage(root, initialize);
     <main>
       <header class="review-header">
         <div class="review-title"><div class="page-title"><h1>Review results</h1><PageHelp page="ExtractionReview" /></div></div>
-        <div class="review-header-actions"><span id="review-progress" class="review-progress"></span><button id="accept-all-receipts" class="button secondary" type="button" title="Accept all ready extraction results">Accept all</button><button id="reload-receipts" class="button secondary" type="button" title="Load latest saved results">Reload</button></div>
-      </header>
-      <div class="document-bar">
         <div class="document-choice"><span id="current-document-name"></span><input id="receipt-unit" type="hidden"></div>
         <div class="document-navigation"><button id="previous-document" type="button" aria-label="Previous 10 documents">&larr;</button><div id="document-buttons" aria-label="Choose document"></div><button id="next-document" type="button" aria-label="Next 10 documents">&rarr;</button></div>
-      </div>
+        <div class="review-header-actions"><span id="review-progress" class="review-progress"></span><button id="accept-all-receipts" class="button secondary" type="button" title="Accept all ready extraction results">Accept all</button><button id="reload-receipts" class="button secondary" type="button" title="Load latest saved results">Reload</button></div>
+      </header>
       <div class="regeneration-controls"><span id="regeneration-status" role="status" aria-live="polite"></span></div>
       <div class="extraction-layout">
         <section class="extraction-original" aria-label="Original document">
@@ -29,7 +27,6 @@ usePage(root, initialize);
         <section class="extraction-editor" id="receipt-review-panel" aria-label="Extracted pieces">
           <div class="entry-toolbar">
             <span id="piece-count" class="piece-count" role="status">0 entries</span>
-            <div class="piece-search"><input id="piece-query" type="search" aria-label="Search pieces" placeholder="Search entries"><div id="piece-search-results"></div></div>
             <button id="add-receipt" class="button secondary" type="button">+ Add entry</button>
             <button id="remove-piece" class="button secondary" type="button" aria-label="Remove this piece from extraction">Remove</button>
             <div id="piece-tabs" hidden></div>

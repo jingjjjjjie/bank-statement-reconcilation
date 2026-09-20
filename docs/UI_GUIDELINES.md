@@ -27,6 +27,8 @@ Shared help control: `dashboard/frontend/src/components/PageHelp.vue`.
 
 - Step 2 displays all pieces together as editable rows. Keep payee, description, amount and currency visible; put secondary fields under Details. Selecting a row targets Remove; Split and Merge are not offered. Narrow screens wrap the fields and place save actions after the rows without overlap.
 
-- Pieces represent separate receipts or payees, not purchase lines. Show editable payee, description, amount and currency together; keep source details, references and dates in the piece disclosure. Search works across pieces. Add entry and Remove are explicit edits; existing identities are preserved.
+- Pieces represent separate receipts or payees, not purchase lines. Show editable payee, description, amount and currency together; keep source details, references and dates in the piece disclosure. Add entry and Remove are explicit edits; existing identities are preserved.
 
-- Review results uses one compact toolbar for entry count, search, Add entry and Remove. The highlighted row indicates selection; do not add separate heading or selection bars. Keep Accept & next in the save footer. Keep the title visible on narrow screens.
+- Review results uses one compact toolbar for entry count, Add entry and Remove. The highlighted row indicates selection; do not add separate heading or selection bars. Keep Accept & next in the save footer. Keep the title visible on narrow screens.
+
+- Review results combines title, filename, document numbers, progress and actions in one horizontal bar; scroll the bar on narrow screens. Do not show entry search.
