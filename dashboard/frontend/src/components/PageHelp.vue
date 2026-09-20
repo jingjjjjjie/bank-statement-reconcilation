@@ -59,17 +59,19 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
-:global(.page-title) { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+:global(.page-title) { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 :global(.page-title h1) { margin-bottom: 0; }
-.page-help { display: inline-flex; flex: 0 0 auto; font-size: 14px; font-weight: 400; letter-spacing: normal; text-transform: none; }
+.page-help { display: inline-flex; flex: 0 0 auto; align-self: flex-start; margin-top: -3px; font-size: 14px; font-weight: 400; letter-spacing: normal; text-transform: none; }
 .page-help-button {
   display: inline-flex; align-items: center; justify-content: center;
-  width: 32px; height: 32px; min-width: 32px; padding: 0;
-  border: 1px solid transparent; border-radius: 50%;
+  position: relative; width: 18px; height: 18px; min-width: 18px; padding: 0;
+  border: 1px solid #c9d3cc; border-radius: 50%;
   background: #e9eee8; color: #526b5b; cursor: help;
   transition: background-color 160ms ease, color 160ms ease, box-shadow 160ms ease;
 }
-.page-help-button svg { width: 20px; height: 20px; overflow: visible; }
+/* Keep the visible circle tight while leaving a larger pointer target. */
+.page-help-button::after { content: ""; position: absolute; inset: -4px; border-radius: 50%; }
+.page-help-button svg { width: 16px; height: 16px; overflow: visible; }
 .page-help-button path { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .page-help-button circle { fill: currentColor; }
 .page-help-button:hover, .page-help-button[aria-expanded="true"] {

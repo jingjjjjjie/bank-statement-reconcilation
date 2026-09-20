@@ -4,7 +4,7 @@ User preference, recorded 2026-09-18:
 
 - Keep copy functional and concise. Remove decorative subtitles, repeated labels,
   and explanations that duplicate a title or control.
-- Put page instructions in one circled question-mark control beside the title.
+- Put page instructions in one small, tightly fitted circled question mark raised like a superscript beside the title.
   Show help on hover, keyboard focus, or tap; support Escape to dismiss it.
 - Keep field labels, values, progress, validation errors and review warnings visible.
 - Keep the horizontal header navigation bar. This is the single navigation area;
