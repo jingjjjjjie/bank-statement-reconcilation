@@ -1,8 +1,2 @@
 /* Views keep their existing responsive layout inside the shared application shell. */
 .application, .page-view { display: contents; }
-
-/* Keep local preparation progress readable on desktop and mobile. */
-#source-preparation { padding:20px; border-top:1px solid #dce3dd; }
-#preparation-bar { display:block; width:100%; margin:12px 0; accent-color:#365d43; }
-#preparation-detail { overflow-wrap:anywhere; }
-#preparation-warnings { white-space:pre-wrap; overflow-wrap:anywhere; }

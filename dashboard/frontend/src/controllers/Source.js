@@ -8,7 +8,7 @@ const { root, $, api, toast, pollVisible, showDevelopmentMode, navigate, routeQu
 let token;
 /* Folder selection is read-only until the user starts a review. */
 let sourceState = {};
-let previewToken = null, preparing = false;
+let previewToken = null;
 // Returning to the active workspace only navigates; it never starts processing.
 function canResume() {
   return !!sourceState.active && sourceState.active === sourceState.selected?.path;
@@ -16,7 +16,6 @@ function canResume() {
 async function loadPreview() {
   const workspace = sourceState.workspace;
   previewToken = null;
-  $('#prepare-source').hidden = !canResume();
   $('#start-source').textContent = canResume() ? 'Resume workspace' : 'Proceed';
   if (canResume()) {
     $('#workspace-status').textContent = 'Workspace in progress';
@@ -122,56 +121,20 @@ $('#select-source').onclick = () => sourceAction(async () => {
   const result = await api('/api/source/workspace-select', {path: $('#source-path').value});
   showSource(result);
 });
-function showPreparation(data) {
-  // Display measured stage counts and keep failures visible for retry.
-  if (data.status === 'idle') return;
-  $('#source-preparation').hidden = false;
-  if (data.status === 'running') $('#workspace-status').textContent = 'Preparing files';
-  const labels = {duplicates:'Copying exact duplicates', excel:'Converting Excel previews',
-    files:'Preparing PDF pages and other files', complete:'Preparation complete'};
-  $('#preparation-stage').textContent = data.status === 'failed' ? 'Preparation needs attention' : labels[data.stage];
-  $('#preparation-bar').value = data.percent || 0;
-  $('#preparation-detail').textContent = data.error || `${data.file || ''}${data.total ? ` (${data.done} / ${data.total})` : ''}`;
-  $('#preparation-warnings').hidden = !data.warnings?.length;
-  $('#preparation-warnings').textContent = data.warnings?.join('\n') || '';
-}
-async function prepareFiles() {
-  // Keep this page responsive while Python copies, converts and prepares original inputs.
-  if (preparing) return;
-  preparing = true;
-  const controls = [...root.querySelectorAll('button, input')];
-  const disabled = controls.map(control => control.disabled);
-  controls.forEach(control => { control.disabled = true; });
-  showPreparation({status:'running', stage:'duplicates', percent:0, file:'Checking files'});
-  $('#source-preparation').scrollIntoView({block:'nearest'});
-  try {
-    if (!previewToken) previewToken = (await api('/api/source/preview')).token;
-    const result = await api('/api/source/start', {preview: previewToken, prepare_files:true});
-    showPreparation({status:'complete', stage:'complete', percent:100, warnings:result.warnings});
-    if (!result.warnings?.length) await navigate('/documents');
-    else showSource(await api('/api/source'));
-  } catch (error) {
-    showPreparation({status:'failed', error:error.message});
-    throw error;
-  } finally {
-    preparing = false;
-    controls.forEach((control, index) => { control.disabled = disabled[index]; });
-  }
-}
-pollVisible(async () => {
-  if (preparing) showPreparation(await api('/api/source/progress'));
-}, 400);
-$('#prepare-source').onclick = () => sourceAction(prepareFiles);
 $('#start-source').onclick = () => sourceAction(async () => {
-  if (canResume()) await navigate(appState.resumePath);
-  else await prepareFiles();
+  $('#start-source').disabled = true;
+  try {
+    if (canResume()) {
+      await navigate(appState.resumePath);
+      return;
+    }
+    await api('/api/source/start', {preview: previewToken});
+    await navigate('/documents');
+  } finally {$('#start-source').disabled = false;}
 });
 Promise.all([api('/api/session'), api('/api/source')]).then(([session, source]) => {
   token = session.token;
   showSource(source);
-  api('/api/source/progress').then(progress => {
-    if (progress.workspace === source.workspace) showPreparation(progress);
-  }).catch(error => toast(error.message));
 }).catch(error => {
   $('#source-error').textContent = error.message;
   $('#source-error').hidden = false;

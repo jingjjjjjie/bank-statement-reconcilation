@@ -2,8 +2,8 @@
 export const pageHelp = {
   Source: ['Choose your workspace', [
     'Choose a folder containing statement/ with one bank-statement PDF and documents/ with supporting files.',
-    'Resume workspace returns to your last page without restarting the review. Prepare files builds missing previews for an existing workspace.',
-    'Use Browse folders or enter the folder path, then select Proceed. Progress shows exact duplicate copying, Excel PDF preview conversion, and local preparation of PDF pages and other files. Originals stay in place; PDF previews are display-only.',
+    'Resume workspace returns to your last page without restarting the review.',
+    'Use Browse folders or enter the folder path, then select Proceed. Exact duplicates are copied to output/duplicates/; originals stay in place.',
   ]],
   Bank: ['Bank statement', [
     'Enter the year printed on the statement, then extract it. Check the transactions and balances against the original PDF.',
@@ -27,7 +27,6 @@ export const pageHelp = {
     'Use the numbered squares to choose a document; green means reviewed. Arrows move between groups of ten. Compare the fields with the original, using page and zoom controls to inspect details.',
     'Search by payee, reference or amount. Two receipts or two payees are separate pieces; purchase lines on one receipt are one piece. Use Split, Merge next, Add piece or Remove to correct boundaries. Accept & next saves your review. Accept all saves all ready results, including current edits; trash and unresolved results are skipped. Bank matches still require separate review.',
     'Not useful — discard classifies the whole document as trash and excludes it from supporting evidence. The original stays intact. Reopen its numbered square and use Restore document to undo.',
-    'Excel previews show converted PDF print pages; print areas and hidden sheets may limit what is displayed. Open file shows the complete workbook. These previews do not change extraction or matching.',
     'Reload fetches the latest saved results.',
   ]],
   Matching: ['Final review', [

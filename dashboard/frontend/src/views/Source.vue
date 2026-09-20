@@ -26,14 +26,8 @@ usePage(root, initialize);
       <details class="manual-path"><summary>Enter a folder path manually</summary><div class="manual-path-controls"><label for="source-path">Workspace folder</label><input id="source-path" type="text" autocomplete="off" spellcheck="false" placeholder="/uploads/WorkName"><button id="select-source" class="button secondary" type="button">Select workspace</button></div></details>
       <div id="source-action" class="workspace-card-footer" hidden>
         <div><span id="workspace-status" class="workspace-ready">Checking workspace</span><p id="source-preview" aria-live="polite">Checking supporting files...</p></div>
-        <button id="prepare-source" class="button secondary" type="button" hidden>Prepare files</button>
         <button id="start-source" class="button dark" type="button" disabled>Proceed</button>
       </div>
-      <section id="source-preparation" hidden aria-label="File preparation progress">
-        <strong id="preparation-stage" role="status" aria-live="polite"></strong>
-        <progress id="preparation-bar" max="100" value="0" aria-labelledby="preparation-stage"></progress>
-        <p id="preparation-detail"></p><p id="preparation-warnings" class="validation" hidden></p>
-      </section>
     </section>
 
   </main>

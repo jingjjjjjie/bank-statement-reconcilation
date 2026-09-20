@@ -6,7 +6,6 @@ import pymupdf
 from PIL import Image, ImageOps, UnidentifiedImageError
 
 from dashboard import office_preview
-from dashboard.excel_pdf import convert_excel_to_pdf
 
 
 def embedded_images(path):
@@ -19,8 +18,6 @@ def embedded_images(path):
 
 def describe(path):
     """Expose pages or sheets for every renderable source, with an explicit fallback."""
-    if path.suffix.lower() == ".xlsx":
-        return describe(convert_excel_to_pdf(path))
     suffix = path.suffix.lower()
     if suffix in {".docx", ".xlsx"}:
         info = office_preview.describe(path)
@@ -47,8 +44,6 @@ def describe(path):
 
 def image(path, page):
     """Render a PDF page or image frame without requiring a browser format plugin."""
-    if path.suffix.lower() == ".xlsx":
-        return image(convert_excel_to_pdf(path), page)
     if page < 0:
         raise ValueError("Invalid preview page")
     if path.suffix.lower() == ".pdf":

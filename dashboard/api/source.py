@@ -3,7 +3,7 @@ import secrets
 import tempfile
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends
 from fastapi.responses import Response
 from pydantic import BaseModel, Field, StrictInt
 
@@ -23,7 +23,6 @@ class PathChoice(BaseModel):
 class StartChoice(BaseModel):
     """The exact preview the user explicitly chose to proceed with."""
     preview: str = Field(min_length=1)
-    prepare_files: bool = False
 
 
 class BankYear(BaseModel):
@@ -76,46 +75,20 @@ def select_bank(body: PathChoice, state=Depends(context)):
     return {"bank": state.sources.save_bank(body.path)}
 
 
-@router.get("/source/progress")
-def preparation_progress(request: Request):
-    """Read progress without waiting for the workspace preparation lock."""
-    return getattr(request.app.state.context, "preparation_progress", {"status": "idle"})
-
-
 @router.post("/source/start")
 def start(body: StartChoice, state=Depends(context)):
-    """Prepare selected files with live progress before activating the workspace."""
-    from dashboard.workspace_preparation import prepare_workspace
-
-    def progress(stage, done, total, name):
-        """Publish a complete immutable progress snapshot for polling clients."""
-        beginning, weight = {"duplicates": (0, 25), "excel": (25, 30), "files": (55, 45)}[stage]
-        state.preparation_progress = {"status": "running", "stage": stage,
-            "done": done, "total": total, "file": name, "workspace": state.sources.selected_workspace(),
-            "percent": beginning + (weight * done / total if total else 0)}
-
+    """Resume the same review; invalidate cached views only for a different project."""
     same_source = state.review and state.sources.selected() == state.review.root
-    if state.review and content_review.execution_status(state.review)["running"] and (not same_source or body.prepare_files):
-        raise ValueError("Stop document processing before preparing or changing workspaces")
-    progress("duplicates", 0, 0, "Checking exact duplicates")
-    try:
-        manifest, data = state.sources.start(body.preview,
-            progress=lambda done, total, name: progress("duplicates", done, total, name))
-        resumed = bool(state.review and state.review.manifest_path.resolve() == manifest.resolve())
-        review = state.review if resumed else Review(manifest, data)
-        warnings = prepare_workspace(review, progress) if body.prepare_files else []
-        if not resumed:
-            state.sources.activate(manifest)
-            state.review = review
-            state.review_id = secrets.token_hex(16)
-        state.preparation_progress = {"status": "complete", "percent": 100,
-            "warnings": warnings, "stage": "complete", "file": "Preparation complete",
-            "workspace": state.sources.selected_workspace()}
-        return {"active": str(review.root), "groups": len(review.groups), "resumed": resumed,
-                "warnings": warnings}
-    except Exception as error:
-        state.preparation_progress = {**state.preparation_progress, "status": "failed", "error": str(error)}
-        raise
+    if state.review and not same_source and content_review.execution_status(state.review)["running"]:
+        raise ValueError("Stop document processing before changing workspaces")
+    manifest, data = state.sources.start(body.preview)
+    if state.review and state.review.manifest_path.resolve() == manifest.resolve():
+        return {"active": str(state.review.root), "groups": len(state.review.groups), "resumed": True}
+    review = Review(manifest, data)
+    state.sources.activate(manifest)
+    state.review = review
+    state.review_id = secrets.token_hex(16)
+    return {"active": str(review.root), "groups": len(review.groups), "resumed": False}
 
 
 @router.post("/source/bank-prepare")

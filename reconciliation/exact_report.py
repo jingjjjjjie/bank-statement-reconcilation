@@ -58,7 +58,7 @@ def restore_legacy(root, manifest_path, manifest):
             copy_verified(source, original, record["SHA256"])
 
 
-def prepare(root, manifest_path, progress=None):
+def prepare(root, manifest_path):
     """Copy every exact group into the work folder's output/duplicates directory."""
     root, manifest_path = root.resolve(), manifest_path.resolve()
     destination = root.parent / "output/duplicates"
@@ -92,15 +92,11 @@ def prepare(root, manifest_path, progress=None):
     else:
         destination.mkdir(parents=True)
         save(report_path, manifest)
-    for number, record in enumerate(records, 1):
-        if progress:
-            progress(number - 1, len(records), Path(record["OriginalPath"]).name)
+    for record in records:
         target = Path(record["OrganizedPath"])
         if target.resolve() != target.absolute():
             raise ValueError("Duplicate output contains a linked path")
         copy_verified(Path(record["OriginalPath"]), target, record["SHA256"])
-    if progress:
-        progress(len(records), len(records), "Copies verified")
     problems = check(root, manifest)
     if problems:
         raise ValueError("; ".join(problems))
