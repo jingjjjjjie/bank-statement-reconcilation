@@ -100,6 +100,14 @@ function addReceiptPiece(piece=emptyPiece()) {
   receiptField(card, 'Printed total', 'total', piece.total);
   receiptField(card, 'Amount basis', 'amount_basis', piece.amount_basis || '');
   receiptField(card, 'Currency', 'currency', piece.currency);
+  card.splitPiece = () => {
+    const pieces = readReceiptPieces(), position = [...$('#receipt-pieces').children].indexOf(card);
+    const original = pieces[position];
+    const parents = original.piece_id ? [original.piece_id] : original.parent_piece_ids || [];
+    pieces.splice(position, 1, {...original, piece_id:'', parent_piece_ids:parents, total:'', needs_review:true}, {...emptyPiece(), parent_piece_ids:parents, source_units:original.source_units, needs_review:true});
+    $('#receipt-pieces').replaceChildren(); pieces.forEach(addReceiptPiece);
+    $('#receipt-unit-status').textContent = 'Set the source locations and printed totals for both pieces, then resolve the boundary flags.';
+  };
   card.mergeNext = () => {
     /* Merge only on explicit request, preserving lineage without inventing a total. */
     const pieces = readReceiptPieces(), position = [...$('#receipt-pieces').children].indexOf(card);
