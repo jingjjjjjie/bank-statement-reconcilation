@@ -76,7 +76,7 @@ def context(review, *, include_banks=True, prepared=None):
                 evidence = revision([binding, pieces])
                 units[key] = {"key": key, "document_id": digest, "unit": number, "label": unit["label"],
                               "source_path": document["paths"][0], "source_revision": binding,
-                              "accepted": bool(accepted) and not trash, "trash": trash,
+                              "accepted": bool(accepted) and accepted.get("accepted", True) and not trash, "trash": trash,
                               "needs_refresh": "receipts" not in raw,
                               "receipts": pieces, "readable": raw.get("readable", assembled),
                               "assembled": assembled, "assembly_pending": assembled and assembly is None,
@@ -94,7 +94,7 @@ def context(review, *, include_banks=True, prepared=None):
                     receipt_id = f"{digest}:u{number}:r{position}"
                     receipts[receipt_id] = {**piece, "receipt_id": receipt_id,
                         "document_id": digest, "unit": number, "source_path": document["paths"][0],
-                        "accepted": bool(accepted), "evidence_revision": evidence}
+                        "accepted": bool(accepted) and accepted.get("accepted", True), "evidence_revision": evidence}
     if not include_banks:
         return path, saved, units, receipts, banks
     master = review.manifest_path.parent / "bank-output/master_statement.csv"
@@ -155,7 +155,7 @@ def verify_source(item):
 
 def record(path, saved, action, reviewer, before, after):
     """Audit explicit decisions; extraction approval does not require a name."""
-    if not (action in {"accept_extraction", "trash_extraction", "restore_extraction"} and reviewer is None) and (not isinstance(reviewer, str) or not reviewer.strip()):
+    if not (action in {"accept_extraction", "undo_accept_extraction", "trash_extraction", "restore_extraction"} and reviewer is None) and (not isinstance(reviewer, str) or not reviewer.strip()):
         raise ValueError("Enter your name")
     saved["history"].append({"at": datetime.now(timezone.utc).isoformat(), "reviewer": reviewer.strip() if reviewer else None,
                              "action": action, "before": before, "after": after})
@@ -175,6 +175,41 @@ def accept_extraction(review, body):
     record(path, saved, "accept_extraction", body.get("reviewer"), previous, value)
     unit.update(accepted=True, receipts=pieces)
     return snapshot_units(evidence)
+
+
+def undo_accept_extraction(review, body):
+    """Reopen reviewed pieces without losing corrections, identities or audit history."""
+    evidence = require_current(review, body["revision"])
+    path, saved, units, _, _ = evidence
+    unit = units[body["key"]]
+    verify_source(unit)
+    if not unit["accepted"]:
+        raise ValueError("This extraction is not accepted")
+    if (unit.get("regeneration") or {}).get("status") in {"queued", "running"}:
+        raise ValueError("Wait for regeneration to finish before undoing acceptance")
+    require_unallocated_document(review, saved, unit["document_id"])
+    previous = saved["extractions"][unit["key"]]
+    value = {**previous, "accepted": False}
+    saved["extractions"][unit["key"]] = value
+    record(path, saved, "undo_accept_extraction", None, previous, value)
+    unit["accepted"] = False
+    return snapshot_units(evidence)
+
+
+def require_unallocated_document(review, saved, digest):
+    """Keep approved matching evidence intact until its allocations are undone."""
+    if any(match["review_status"] == "accepted" and any(
+            item["document_id"] == digest for item in match["supporting_items"])
+            for match in saved["matches"].values()):
+        raise ValueError("Undo accepted matches for this document first")
+    if (review.manifest_path.parent / "final-review/decisions.json").exists():
+        from dashboard import matching_review
+        _, ledger, _, items, _, _ = matching_review.context(review)
+        if any(decision["status"] == "approved" and any(
+                items[allocation["item_id"]]["document"] == digest
+                for allocation in decision["allocations"])
+                for decision in ledger["decisions"].values()):
+            raise ValueError("Undo approved Final review matches for this document first")
 
 
 def validate_acceptance(unit, pieces, saved):
@@ -265,18 +300,7 @@ def classify_extraction(review, body):
     if (unit.get("regeneration") or {}).get("status") in {"queued", "running"}:
         raise ValueError("Wait for regeneration to finish before classifying this document")
     if action == "trash":
-        if any(match["review_status"] == "accepted" and any(
-                item["document_id"] == digest for item in match["supporting_items"])
-                for match in saved["matches"].values()):
-            raise ValueError("Undo accepted matches for this document before discarding it")
-        if (review.manifest_path.parent / "final-review/decisions.json").exists():
-            from dashboard import matching_review
-            _, ledger, _, items, _, _ = matching_review.context(review)
-            if any(decision["status"] == "approved" and any(
-                    items[allocation["item_id"]]["document"] == digest
-                    for allocation in decision["allocations"])
-                    for decision in ledger["decisions"].values()):
-                raise ValueError("Undo approved Final review matches before discarding this document")
+        require_unallocated_document(review, saved, digest)
     discarded = saved.setdefault("trash", {})
     previous = discarded.get(digest)
     value = {"document_id": digest, "source_path": unit["source_path"], "classification": "trash"}
@@ -291,7 +315,7 @@ def classify_extraction(review, body):
             continue
         item["trash"] = action == "trash"
         accepted = saved["extractions"].get(item["key"])
-        item["accepted"] = bool(accepted and accepted["source_revision"] == item["source_revision"]) and not item["trash"]
+        item["accepted"] = bool(accepted and accepted.get("accepted", True) and accepted["source_revision"] == item["source_revision"]) and not item["trash"]
     return snapshot_units(evidence)
 
 

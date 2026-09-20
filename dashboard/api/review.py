@@ -201,6 +201,12 @@ def accept_receipts(body: dict, state=Depends(active_context)):
     return receipt_review.accept_extraction(state.review, body)
 
 
+@router.post("/receipts/undo-accept")
+def undo_accept_receipts(body: dict, state=Depends(active_context)):
+    """Reopen an extraction while preserving its corrected receipt pieces."""
+    return receipt_review.undo_accept_extraction(state.review, body)
+
+
 @router.post("/receipts/accept-all")
 def accept_all_receipts(body: dict, state=Depends(active_context)):
     """Accept current eligible extraction results without creating matching approvals."""

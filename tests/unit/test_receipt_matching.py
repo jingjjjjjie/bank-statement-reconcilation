@@ -160,6 +160,52 @@ class ReceiptMatchingTests(unittest.TestCase):
         self.assertIsNone(saved["history"][-1]["reviewer"])
         self.assertTrue(saved["history"][-1]["at"])
 
+    def test_undo_accept_preserves_corrections_and_requires_fresh_revision(self):
+        """Reopening preserves identities and edits but removes matching eligibility."""
+        accepted = self.accept_pieces([{**self.pieces[0], "total": "42.00"}])
+        original = self.source.read_bytes()
+        body = {"revision": accepted["revision"], "key": self.key}
+        reopened = receipt_review.undo_accept_extraction(self.review, body)
+        self.assertFalse(reopened["units"][0]["accepted"])
+        self.assertFalse(reopened["receipts"][0]["accepted"])
+        self.assertEqual(reopened["units"][0]["receipts"], accepted["units"][0]["receipts"])
+        self.assertEqual(reopened, self.view())
+        self.assertEqual(self.source.read_bytes(), original)
+        with self.assertRaisesRegex(ValueError, "reload"):
+            receipt_review.undo_accept_extraction(self.review, body)
+        history = json.loads((self.work / "receipt-matches.json").read_text())["history"]
+        self.assertEqual(history[-1]["action"], "undo_accept_extraction")
+        discarded = receipt_review.classify_extraction(self.review, {
+            "revision": reopened["revision"], "key": self.key, "action": "trash"})
+        restored = receipt_review.classify_extraction(self.review, {
+            "revision": discarded["revision"], "key": self.key, "action": "restore"})
+        self.assertFalse(restored["units"][0]["accepted"])
+        self.assertEqual(restored, self.view())
+        reaccepted = self.accept_pieces(restored["units"][0]["receipts"])
+        self.assertTrue(reaccepted["units"][0]["accepted"])
+        self.assertEqual(reaccepted, self.view())
+
+    def test_undo_accept_protects_approved_matching_evidence(self):
+        """An extraction cannot reopen while approved allocations depend on it."""
+        self.accept_pieces()
+        self.change("combined", "propose", [(0, "45.00"), (1, "15.00")])
+        self.change("combined", "accept")
+        with self.assertRaisesRegex(ValueError, "Undo accepted matches"):
+            receipt_review.undo_accept_extraction(self.review, {
+                "revision": self.view()["revision"], "key": self.key})
+        self.change("combined", "undo")
+        from dashboard import matching_review
+        folder = self.base / "final-review"
+        folder.mkdir()
+        (folder / "decisions.json").write_text('{}')
+        ledger = {"decisions": {"B1": {"status": "approved", "allocations": [{"item_id": "D1"}]}}}
+        with patch.object(matching_review, "context", return_value=(
+                None, ledger, {}, {"D1": {"document": self.digest}}, {}, {})):
+            with self.assertRaisesRegex(ValueError, "Undo approved Final review"):
+                receipt_review.undo_accept_extraction(self.review, {
+                    "revision": self.view()["revision"], "key": self.key})
+        self.assertTrue(self.view()["units"][0]["accepted"])
+
     def test_accept_response_matches_reload_with_one_evidence_scan(self):
         """Reuse verified evidence while keeping revised pieces and stale matches exact."""
         self.accept_pieces()

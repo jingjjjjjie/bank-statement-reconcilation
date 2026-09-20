@@ -235,6 +235,11 @@ $('#next-document').onclick = () => {
   const index = receipts.data.units.findIndex(unit => unit.key === selectedUnit);
   changeDocument(Math.floor(index / 10) * 10 + 10);
 };
+$('#next-review-document').onclick = () => {
+  /* Browse independently of acceptance, retaining the unsaved-edit guard. */
+  const index = receipts.data.units.findIndex(unit => unit.key === selectedUnit);
+  changeDocument(index + 1);
+};
 $('#remove-piece').onclick = () => {
   /* Remove only the selected extraction piece, never the source file. */
   const card = $('#receipt-pieces').children[activePiece];

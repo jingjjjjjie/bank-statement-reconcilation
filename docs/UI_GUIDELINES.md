@@ -18,7 +18,7 @@ User preference, recorded 2026-09-18:
 - Step 2 shows the current filename without a dropdown. Use ten numbered squares
   at a time to select documents, green for reviewed and an outline for the current
   document; arrows move between groups of ten.
-- Extraction review offers Discard document and Restore document. Trash is
+- Extraction review offers Discard and Undo discard. Trash is
   an audited, reversible classification that excludes supporting evidence; it never
   deletes or moves original files. Trash squares have a distinct muted brown shade.
 
@@ -29,10 +29,10 @@ Shared help control: `dashboard/frontend/src/components/PageHelp.vue`.
 
 - Pieces represent separate receipts or payees, not purchase lines. Show editable payee, description, amount and currency together; keep source details, references and dates in the piece disclosure. Add entry and Remove are explicit edits; existing identities are preserved.
 
-- Review results uses one compact toolbar for entry count, Add entry and Remove. The highlighted row indicates selection; do not add separate heading or selection bars. Keep Accept & next in the save footer. Keep the title visible on narrow screens.
+- Review results uses one compact toolbar for entry count, Add entry and Remove. The highlighted row indicates selection; do not add separate heading or selection bars. Keep Accept / Undo accept, Discard / Undo discard and Next in the footer. Keep the title visible on narrow screens.
 
 - Review results combines title, filename, document numbers, progress and actions in one horizontal bar; scroll the bar on narrow screens. Do not show entry search.
 
-- Show review status as an accessible icon beside the filename. Acceptance belongs there, while warnings stay visible. The footer offers Accept, Save changes, Next unreviewed, or disabled Reviewed according to saved status, edits and remaining work.
+- Show review status as an accessible icon beside the filename. Acceptance belongs there, while warnings stay visible. Accept saves without navigating; accepted documents offer Undo accept or Save changes when edited. Discard is red and becomes Undo discard for trash. Next navigates independently, with unsaved-edit protection.
 
 - The original preview has no heading bar. Keep Download original as a labelled icon alongside the page and zoom controls.
