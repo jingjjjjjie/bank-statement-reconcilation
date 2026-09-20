@@ -5,6 +5,7 @@ import re
 
 from dashboard.review import write_json
 from reconciliation.pieces import canonical
+from reconciliation.currencies import normalize_currencies
 from reconciliation.receipt_matching import revision
 from reconciliation.vision_workflow import load_index
 
@@ -187,4 +188,4 @@ def model_payload(banks, items, index, facts, choices, selected, retrieval=None)
     payload = {'banks': [{**clean_banks[key], 'candidate_ids': allowed[key]} for key in selected],
         'documents': context, 'related_bank_entries': [clean_banks[key] for key in related],
         'retrieval': {key: retrieval[key] for key in selected} if retrieval else {}}
-    return payload, images, allowed
+    return normalize_currencies(payload), images, allowed

@@ -9,6 +9,7 @@ from pathlib import Path
 from dashboard.review import write_json
 from reconciliation.duplicate_workflow import fingerprint
 from reconciliation.receipt_matching import amount, revision
+from reconciliation.currencies import normalize_currency, normalize_currencies
 from reconciliation.vision_workflow import removal_plan
 
 
@@ -131,7 +132,7 @@ def evidence_reason(bank, item):
         return 'Unavailable for confirmation: the source changed or was excluded.'
     parties = names(bank.get('parties', [])), names(item.get('parties', []))
     same_party = bool(parties[0] & parties[1])
-    same_amount = (bool(item.get('currency')) and item['currency'] == bank['currency']
+    same_amount = (bool(item.get('currency')) and normalize_currency(item['currency']) == normalize_currency(bank['currency'])
                    and money(item.get('amount')) is not None
                    and money(item['amount']) == money(bank['amount']))
     if same_party and same_amount:
@@ -185,12 +186,12 @@ def snapshot(review):
             evidence_ids.update(a['item_id'] for a in decision['allocations'])
         bank['evidence_reasons'] = {item_id: evidence_reason(bank, items[item_id])
                                     for item_id in evidence_ids if item_id in items}
-    return {'binding':state['binding'],'version':state['version'],'banks':list(banks.values()),
+    return normalize_currencies({'binding':state['binding'],'version':state['version'],'banks':list(banks.values()),
             'items':list(items.values()),'workspace':review.root.parent.name,
             'source':'Reviewed pieces' if facts.get('live_pieces') else 'Saved matching results',
             'live_pieces': bool(facts.get('live_pieces')), 'assembly_incomplete':not facts.get('assembly_count'),
             'proposal_counts': {level: sum((bank['confidence']['level'] or 'none') == level for bank in banks.values())
-                                for level in ('high', 'low', 'none', 'unresolved', 'failed', 'outdated')}}
+                                for level in ('high', 'low', 'none', 'unresolved', 'failed', 'outdated')}})
 
 
 def decide(review, body):
@@ -241,7 +242,7 @@ def decide(review, body):
             capacity = money(item['amount'])
             if value:
                 value = amount(value)
-                if capacity is None or not item['currency'] or item['currency']!=bank['currency']:
+                if capacity is None or not item['currency'] or normalize_currency(item['currency']) != normalize_currency(bank['currency']):
                     raise ValueError('Unknown or different currencies/amounts can only be linked as contextual evidence with no allocation')
                 if value<=0 or value>capacity-used.get(key,Decimal(0)):
                     raise ValueError(f'{key}: allocation exceeds the available supporting amount')

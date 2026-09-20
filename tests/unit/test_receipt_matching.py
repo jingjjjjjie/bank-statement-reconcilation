@@ -287,6 +287,14 @@ class ReceiptMatchingTests(unittest.TestCase):
         self.assertEqual(view["matches"][1]["difference"], "15.00")
         self.assertEqual(view["receipts"][0]["remaining_amount"], "0.00")
 
+    def test_ringgit_alias_is_normalized_only_when_accepting(self):
+        """New edits store MYR, retain unknown currency and leave supplied evidence untouched."""
+        self.pieces[0]['currency'] = ' rm '
+        self.pieces[1]['currency'] = ''
+        view = self.accept_pieces()
+        self.assertEqual([p['currency'] for p in view['receipts']], ['MYR', ''])
+        self.assertEqual(self.pieces[0]['currency'], ' rm ')
+
     def test_missing_values_currency_and_duplicate_ids_are_not_guessed(self):
         """Unapproved, incomplete, mixed-currency, or repeated pieces cannot allocate."""
         with self.assertRaisesRegex(ValueError, "accept the receipt"):

@@ -28,9 +28,9 @@ const stages = [
 function callExample() {
   const n = Number($('#max-calls').value);
   const parallel = Number($('#max-parallel').value);
-  $('#call-example').textContent = Number.isInteger(n) && n >= 1 && n <= 500
+  $('#call-example').textContent = Number.isInteger(n) && n >= 1 && n <= 1000
     ? `Up to ${n} new request${n === 1 ? '' : 's'} in this run, with up to ${Math.min(n, parallel || 1)} at once. If more work remains, pause before request ${n + 1}. Run again to continue with up to ${n} more.`
-    : 'Enter a whole number from 1 to 500.';
+    : 'Enter a whole number from 1 to 1000.';
 }
 function updateReasoning(stage, selected = 'default') {
   const model = savedSettings.models.find(m => m.id === $(`#${stage}-model`).value);
@@ -59,6 +59,7 @@ function renderStages(data) {
 function showSettings(data) {
   savedSettings = data;
   $('#pdf-mode').value = data.config.pdf_mode;
+  $('#pdf-whole-document-max-pages').value = data.config.pdf_whole_document_max_pages;
   $('#pictures-enabled').checked = data.config.pictures_enabled;
   $('#codex-enabled').checked = data.config.codex_enabled;
   $('#max-calls').value = data.config.max_calls;
@@ -86,6 +87,7 @@ $('#use-defaults').onclick = () => {
   if (!savedSettings) return;
   const defaults = savedSettings.defaults;
   $('#pdf-mode').value = defaults.pdf_mode;
+  $('#pdf-whole-document-max-pages').value = defaults.pdf_whole_document_max_pages;
   $('#pictures-enabled').checked = defaults.pictures_enabled;
   $('#codex-enabled').checked = defaults.codex_enabled;
   $('#max-calls').value = defaults.max_calls;
@@ -101,8 +103,12 @@ $('#settings-form').onsubmit = async event => {
   $('#settings-fields').disabled = true;
   $('#save-settings').disabled = $('#discard-settings').disabled = true;
   try {
-    const choices = {...savedSettings.config.stages, ...Object.fromEntries(stages.map(([stage]) => [stage, {model: $(`#${stage}-model`).value, reasoning: $(`#${stage}-reasoning`).value}]))};
-    const config = {...savedSettings.config, pdf_mode: $('#pdf-mode').value, pictures_enabled: $('#pictures-enabled').checked, codex_enabled: $('#codex-enabled').checked, max_calls: Number($('#max-calls').value), max_parallel: Number($('#max-parallel').value), stages: choices};
+    const choices = {...savedSettings.config.stages};
+    for (const [stage] of stages) {
+      const choice = {model: $(`#${stage}-model`).value, reasoning: $(`#${stage}-reasoning`).value};
+      if (stage in choices || choice.model !== savedSettings.config.model || choice.reasoning !== savedSettings.config.reasoning) choices[stage] = choice;
+    }
+    const config = {...savedSettings.config, pdf_mode: $('#pdf-mode').value, pdf_whole_document_max_pages: Number($('#pdf-whole-document-max-pages').value), pictures_enabled: $('#pictures-enabled').checked, codex_enabled: $('#codex-enabled').checked, max_calls: Number($('#max-calls').value), max_parallel: Number($('#max-parallel').value), stages: choices};
     showSettings(await api('/api/config', {config, revision: savedSettings.revision}));
     toast('Settings saved. No review was started.');
   } catch (error) {

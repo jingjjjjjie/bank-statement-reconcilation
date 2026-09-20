@@ -4,6 +4,7 @@
 - `extraction.md`: active page/image/sheet extraction instructions.
 - `extraction.schema.json`: editable JSON output schema loaded by Python and
   supplied to Codex through `--output-schema`. It is also used to validate results.
+- `pdf_document.md`: whole-document PDF extraction and source coverage, using the assembly-shaped schema in a single extraction call.
 - `receipt_assembly.md`: instructions for combining supporting pieces across units.
 - `pdf_text.md`: additional instructions for experimental text-only extraction.
 

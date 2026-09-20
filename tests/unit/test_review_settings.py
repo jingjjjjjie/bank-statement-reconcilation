@@ -66,10 +66,19 @@ class SettingsTests(unittest.TestCase):
     def test_invalid_settings_do_not_get_saved(self):
         for change in ({"codex_enabled": "false"}, {"max_calls": True}, {"max_calls": 0}, {"max_calls": 1001},
                        {"max_parallel": True}, {"max_parallel": 0}, {"max_parallel": 9},
+                       {"pdf_whole_document_max_pages": True}, {"pdf_whole_document_max_pages": 0},
+                       {"pdf_whole_document_max_pages": 41}, {"pdf_whole_document_max_pages": 2.5},
                        {"pdf_mode": "typo"}, {"unknown": True}):
             with self.subTest(change=change), self.assertRaises(ValueError):
                 validate({**DEFAULTS, **change})
         self.assertFalse(self.path.exists())
+
+    def test_pdf_page_limit_defaults_and_preserves_prepared_inputs(self):
+        """Missing settings default to five; changing batching does not erase reviewed evidence."""
+        old = {key: value for key, value in DEFAULTS.items() if key != 'pdf_whole_document_max_pages'}
+        self.assertEqual(validate(old)['pdf_whole_document_max_pages'], 5)
+        self.path.write_text(json.dumps({**DEFAULTS, 'pdf_whole_document_max_pages': 8}))
+        self.assertEqual(active_config({'config_path': str(self.path), 'config': old})['pdf_whole_document_max_pages'], 8)
 
     def test_codex_off_stops_before_any_model_work(self):
         self.config["codex_enabled"] = False

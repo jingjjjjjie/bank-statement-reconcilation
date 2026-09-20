@@ -10,6 +10,7 @@ from reconciliation.codex_reviewer import CodexReviewer, TEXT, object_schema
 from reconciliation.duplicate_workflow import fingerprint
 from reconciliation.prompts import load_prompt
 from reconciliation.receipt_matching import amount
+from reconciliation.currencies import normalize_currency
 from reconciliation.review_settings import stage_settings
 from reconciliation.vision_workflow import active_config
 from reconciliation.matching_retrieval import retrieve
@@ -37,7 +38,7 @@ def validate_result(result, keys, allowed, banks, items):
                 number = amount(value)
                 if not items[key]['amount'] or number <= 0 or number > amount(items[key]['amount']):
                     raise ValueError('Matching allocation exceeds the stated piece amount')
-                if not items[key]['currency'] or items[key]['currency'] != banks[row['bank_id']]['currency']:
+                if not items[key]['currency'] or normalize_currency(items[key]['currency']) != normalize_currency(banks[row['bank_id']]['currency']):
                     raise ValueError('Matching allocation requires supported matching currencies')
                 total += number
         if total > amount(banks[row['bank_id']]['amount']):

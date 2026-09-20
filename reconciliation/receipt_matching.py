@@ -3,6 +3,7 @@ import hashlib
 import json
 import re
 from decimal import Decimal
+from reconciliation.currencies import normalize_currency
 
 
 def revision(value):
@@ -19,6 +20,7 @@ def amount(value):
 
 def currency(value):
     """Require an explicit three-letter currency for monetary allocation."""
+    value = normalize_currency(value)
     if not isinstance(value, str) or not re.fullmatch(r"[A-Z]{3}", value):
         raise ValueError("Enter an explicit three-letter currency, such as MYR")
     return value

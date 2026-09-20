@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 
 from reconciliation.comparison_policy import combined_total
+from reconciliation.currencies import normalize_currencies
 
 
 FIELDS = ("document_id", "source_path", "original_path", "exact_duplicate_with", "file_format", "format_status", "unit", "raw_text",
@@ -80,7 +81,7 @@ def export(path, index, state):
             for original in originals:
                 source = original if original in document["paths"] else document["paths"][0]
                 for number, unit in enumerate(document["units"] or [{}]):
-                    data = state["units"].get(f"{digest}:{number}", {})
+                    data = normalize_currencies(state["units"].get(f"{digest}:{number}", {}))
                     row = {"document_id": digest, "source_path": source,
                            "original_path": original, "file_format": Path(original).suffix.lower(),
                            "exact_duplicate_with": json.dumps([other for other in originals if other != original], ensure_ascii=False),

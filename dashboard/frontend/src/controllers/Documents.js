@@ -113,7 +113,7 @@ function renderDocumentProgress() {
     ? documentState.run_error : stopping
     ? `Stopping - waiting for ${documentState.active_processes || 0} active processes to exit.`
     : (!documentState.running && documentRequestMessage) || documentState.run_error ||
-      (documentState.running ? `${documentState.phase || 'Extracting pages and assembling receipts'} - ${documentState.active_processes || 0} active processes - ${documentState.elapsed_seconds || 0}s elapsed` :
+      (documentState.running ? `${documentState.phase || 'Extracting supporting documents'} - ${documentState.active_processes || 0} active processes - ${documentState.elapsed_seconds || 0}s elapsed` :
         'Open Review results beside a document to check its extraction.');
 }
 

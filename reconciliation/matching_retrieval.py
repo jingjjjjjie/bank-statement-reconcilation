@@ -3,6 +3,7 @@ from collections import Counter
 from datetime import datetime
 from math import log
 import re
+from reconciliation.currencies import normalize_currency
 import unicodedata
 
 from reconciliation.candidates import number, specific_name, truncated_name
@@ -80,7 +81,7 @@ def retrieve(banks, items):
         rows = {}
         for key, item in available.items():
             ref = exact_references(bank, item)
-            conflict = bool((item.get('currency') and bank.get('currency') and item['currency'] != bank['currency'])
+            conflict = bool((item.get('currency') and bank.get('currency') and normalize_currency(item['currency']) != normalize_currency(bank['currency']))
                             or (item.get('direction') and bank.get('direction') and item['direction'] != bank['direction']))
             if conflict and not ref:
                 continue

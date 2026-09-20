@@ -12,6 +12,7 @@ from reconciliation.paths import WORKSPACE
 from reconciliation import development_cache
 from reconciliation.prompts import load_prompt
 from reconciliation import pdf_routing
+from reconciliation.currencies import normalize_currencies
 from time import sleep
 
 from jsonschema.exceptions import ValidationError
@@ -24,6 +25,7 @@ from reconciliation.comparison_policy import route as comparison_route
 from reconciliation.supporting_inventory import export as export_inventory
 from reconciliation.token_usage import summary as token_summary
 from reconciliation.receipt_assembly import ASSEMBLY, current_assembly, input_revision, validate_assembly
+from reconciliation.pdf_document import whole_request, save_result
 
 DEFAULT_WORK = WORKSPACE / "review"
 ACCEPTED_SUFFIXES = {".pdf", ".png", ".jpg", ".jpeg", ".tif", ".tiff", ".webp", ".bmp", ".xlsx", ".docx"}
@@ -253,7 +255,7 @@ def run(work, index, state, reviewer, *, extraction_only=False, regeneration=Non
     documents = index["documents"]
     regeneration = regeneration or {}
     selected = {key: value for key, value in documents.items() if not regeneration or key in regeneration}
-    dispatched = set()
+    dispatched, whole_completed = set(), set()
     workers = config["max_parallel"] if hasattr(reviewer, "fork") else 1
 
     def checkpoint():
@@ -266,6 +268,8 @@ def run(work, index, state, reviewer, *, extraction_only=False, regeneration=Non
             raise ReviewPending("Development mode was switched off; stopped before the next call")
         if not current["codex_enabled"]:
             raise ReviewPending("Codex was switched off; completed work is saved")
+        if current["pdf_whole_document_max_pages"] != config["pdf_whole_document_max_pages"]:
+            raise ReviewPending("PDF page limit changed; run again to continue")
         if model_settings(current) != state["model_config"]:
             raise ReviewPending("Model settings changed during the run; stopped before the next call")
         # Worker copies isolate stage selection and share one atomic request budget.
@@ -276,7 +280,7 @@ def run(work, index, state, reviewer, *, extraction_only=False, regeneration=Non
         worker.stage = stage
         from reconciliation import pieces
         model_schema = pieces.EXTRACTION if schema is EXTRACTION else pieces.ASSEMBLY if schema is ASSEMBLY else schema
-        result = worker.ask(prompt, model_schema, images)
+        result = normalize_currencies(worker.ask(prompt, model_schema, images))
         if schema is EXTRACTION:
             result = pieces.legacy_result(result)
         elif schema is ASSEMBLY and 'pieces' in result:
@@ -297,7 +301,23 @@ def run(work, index, state, reviewer, *, extraction_only=False, regeneration=Non
         def unit_jobs():
             """Yield unread document units without queuing the entire corpus."""
             for digest, document in selected.items():
-                if document["error"] or not document.get("accepted", True):
+                if digest in dispatched or document["error"] or not document.get("accepted", True):
+                    continue
+                whole = whole_request(document, config, state, digest in regeneration)
+                if whole is not None:
+                    def whole_job(digest=digest, document=document, request=whole):
+                        """Read all PDF pages and establish piece boundaries in one model call."""
+                        if progress:
+                            progress(digest, "running")
+                        prompt, images = request
+                        if digest in regeneration:
+                            prompt += "\nRegeneration request: " + regeneration[digest]
+                        value = ask(prompt, ASSEMBLY, images, stage="pdf_document",
+                                    verify=lambda result: validate_assembly(result, len(document["units"])))
+                        return None, digest, "whole PDF", value
+
+                    dispatched.add(digest)
+                    yield whole_job
                     continue
                 for number, unit in enumerate(document["units"]):
                     if unit.get("blocked"):
@@ -334,9 +354,13 @@ def run(work, index, state, reviewer, *, extraction_only=False, regeneration=Non
         def apply_unit(result):
             """Save a completed extraction before more work is launched."""
             key, digest, label, value = result
-            state["units"][key] = value
+            if key is None:
+                save_result(documents[digest], state, value)
+                whole_completed.add(digest)
+            else:
+                state["units"][key] = value
             checkpoint()
-            if progress and len(documents[digest]["units"]) == 1:
+            if progress and (key is None or len(documents[digest]["units"]) == 1):
                 progress(digest, "completed")
             print(f"Read {digest[:10]} / {label}", flush=True)
 
@@ -354,7 +378,7 @@ def run(work, index, state, reviewer, *, extraction_only=False, regeneration=Non
         def assembly_jobs():
             """Join complete multi-unit evidence without repeating page extraction."""
             for digest, document in selected.items():
-                if (not document.get("accepted", True) or document["error"]
+                if (digest in whole_completed or not document.get("accepted", True) or document["error"]
                         or len(document["units"]) < 2 or (digest not in regeneration and current_assembly(document, state))):
                     continue
                 if any(unit.get("blocked") or f"{digest}:{n}" not in state["units"]

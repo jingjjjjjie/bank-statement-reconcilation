@@ -16,9 +16,13 @@ async function show() {
   if (!panel.value || !button.value) return;
   const anchor = button.value.getBoundingClientRect();
   const width = panel.value.offsetWidth;
+  const below = window.innerHeight - anchor.bottom - 20, above = anchor.top - 20;
+  const useBelow = below >= above;
+  const height = Math.max(80, useBelow ? below : above);
   position.value = {
+    maxHeight: `${height}px`,
     left: `${Math.max(12, Math.min(anchor.left, window.innerWidth - width - 12))}px`,
-    top: `${Math.max(12, Math.min(anchor.bottom + 8, window.innerHeight - panel.value.offsetHeight - 12))}px`,
+    top: `${useBelow ? anchor.bottom + 8 : Math.max(12, anchor.top - Math.min(panel.value.offsetHeight, height) - 8)}px`,
   };
 }
 // A short delay lets the pointer cross from the circle into the help panel.

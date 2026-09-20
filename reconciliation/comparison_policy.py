@@ -1,6 +1,7 @@
 """Choose direct comparison or model screening from extracted evidence."""
 
 import re
+from reconciliation.currencies import normalize_currency
 import unicodedata
 from collections import defaultdict
 from decimal import Decimal, InvalidOperation
@@ -26,8 +27,7 @@ def descriptions(units):
 
 def money_value(item):
     """Parse an explicit amount and currency without guessing missing values."""
-    currency = item.get("currency", "").strip().upper()
-    currency = "MYR" if currency == "RM" else currency
+    currency = normalize_currency(item.get("currency", ""))
     raw = item.get("amount", "").strip()
     if not re.fullmatch(r"-?(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d{1,2})?", raw):
         return None

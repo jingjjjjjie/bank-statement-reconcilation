@@ -7,6 +7,7 @@ from pathlib import Path
 
 from jsonschema import validate, ValidationError
 from reconciliation.codex_reviewer import RECEIPT
+from reconciliation.currencies import normalize_currencies
 from reconciliation.pdf_routing import review_warnings
 from reconciliation.pieces import identify, assign_submitted
 from reconciliation.receipt_assembly import ASSEMBLED_RECEIPT, current_assembly, validate_assembly
@@ -132,8 +133,8 @@ def snapshot_context(evidence):
         except ValueError:
             receipt["remaining_amount"] = ""
     matches = [{**match, "stale": bool(stale(match, banks, receipts))} for match in saved["matches"].values()]
-    return {"revision": revision([saved, units, banks]), "units": list(units.values()),
-            "receipts": list(receipts.values()), "transactions": list(banks.values()), "matches": matches}
+    return normalize_currencies({"revision": revision([saved, units, banks]), "units": list(units.values()),
+            "receipts": list(receipts.values()), "transactions": list(banks.values()), "matches": matches})
 
 
 def require_current(review, expected):
@@ -198,8 +199,7 @@ def validate_acceptance(unit, pieces, saved):
     for piece in pieces:
         if piece["total"]:
             amount(piece["total"])
-        if piece["currency"]:
-            currency(piece["currency"])
+    pieces = [{**piece, "currency": currency(piece["currency"]) if piece["currency"].strip() else ""} for piece in pieces]
     return assign_submitted(pieces, unit['receipts'])
 
 

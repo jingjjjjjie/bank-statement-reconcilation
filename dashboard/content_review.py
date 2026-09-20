@@ -127,7 +127,7 @@ def start(review, *, regeneration_only=False):
                                    cancel_event=review.content_cancel)
             review.content_engine = engine
             engine.stage_choices = stage_settings(config)
-            review.content_phase = "Extracting pages and assembling receipts"
+            review.content_phase = "Extracting supporting documents"
             if not regeneration_only:
                 run(work, index, state, engine, extraction_only=True)
             from dashboard import regeneration

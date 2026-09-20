@@ -7,7 +7,7 @@ from reconciliation.paths import WORKSPACE
 
 CONFIG_PATH = WORKSPACE / "config" / "review_config.json"
 DEFAULT_MODEL = "gpt-5.6-sol"
-DEFAULTS = {"pdf_mode": "vision", "pictures_enabled": True, "codex_enabled": True,
+DEFAULTS = {"pdf_whole_document_max_pages": 5, "pdf_mode": "vision", "pictures_enabled": True, "codex_enabled": True,
             "max_calls": 1000, "max_parallel": 4, "model": DEFAULT_MODEL, "reasoning": "default", "stages": {}}
 STAGES = ("pdf", "images", "excel", "word", "comparison")
 
@@ -41,6 +41,8 @@ def validate(config):
     if not isinstance(config, dict) or not required <= set(config) or set(config) - set(DEFAULTS):
         raise ValueError("Settings contain missing or unknown fields")
     config = {**DEFAULTS, **config}
+    if type(config["pdf_whole_document_max_pages"]) is not int or not 1 <= config["pdf_whole_document_max_pages"] <= 40:
+        raise ValueError("Whole-document PDF page limit must be an integer between 1 and 40")
     if config["pdf_mode"] not in ("text_only", "auto", "vision", "hybrid", "compare"):
         raise ValueError("Unknown PDF processing mode")
     if config["pdf_mode"] in ("hybrid", "compare") and not config["pictures_enabled"]:

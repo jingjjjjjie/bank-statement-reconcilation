@@ -19,6 +19,7 @@ usePage(root, initialize);
         <section class="settings-card"><div class="section-title"><div><h2>Documents</h2></div></div>
           <div class="settings-grid">
             <label class="setting-field"><strong>PDF processing</strong><select id="pdf-mode"><option value="vision">Vision: every page</option><option value="hybrid" data-development-tools hidden>Text + checked vision fallback (testing)</option><option value="compare" data-development-tools hidden>Compare text and vision (testing)</option><option value="text_only">Legacy: extractor only</option><option value="auto">Legacy: vision for sparse pages only</option></select></label>
+            <label class="setting-field"><strong>Whole-document PDF page limit</strong><input id="pdf-whole-document-max-pages" type="number" min="1" max="40" required aria-describedby="pdf-whole-document-help"><span id="pdf-whole-document-help">Up to this many pages: one extraction call. Longer PDFs: page calls plus assembly.</span></label>
             <label class="setting-switch"><span><strong>Allow picture processing</strong></span><input id="pictures-enabled" type="checkbox" role="switch"></label>
           </div>
         </section>

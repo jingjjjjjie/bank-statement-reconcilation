@@ -75,6 +75,25 @@ class PiecePipelineTests(unittest.TestCase):
         matching_review.decide(self.review, self.decision('B2', allocations=[{'item_id': ids[0], 'amount': '45'}]))
         self.assertEqual(matching_review.snapshot(self.review)['banks'][1]['support_status'], 'Supporting')
 
+    def test_historical_rm_displays_and_matches_as_myr_without_rewriting_evidence(self):
+        """Normalize read-only projections and comparisons while preserving approval bindings."""
+        self.accept()
+        path = self.fixture.work / 'receipt-matches.json'
+        saved = json.loads(path.read_text())
+        first = saved['extractions'][self.fixture.key]['receipts'][0]
+        first['currency'] = 'RM'
+        key = first['piece_id']
+        path.write_text(json.dumps(saved))
+        before = path.read_bytes()
+        piece_matching.activate(self.review)
+        matching_review.decide(self.review, self.decision('B2', allocations=[{'item_id': key, 'amount': '45'}]))
+        view = matching_review.snapshot(self.review)
+        self.assertEqual(next(item for item in view['items'] if item['id'] == key)['currency'], 'MYR')
+        bank = next(bank for bank in view['banks'] if bank['id'] == 'B2')
+        self.assertFalse(bank['stale'])
+        self.assertEqual(bank['support_status'], 'Supporting')
+        self.assertEqual(path.read_bytes(), before)
+
     def test_removed_piece_stays_visible_in_saved_approval(self):
         """Removing a piece cannot delete its saved allocation history or reservation."""
         view = self.accept()

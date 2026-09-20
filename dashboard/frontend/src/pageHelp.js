@@ -25,7 +25,7 @@ export const pageHelp = {
   ]],
   ExtractionReview: ['Review extraction', [
     'Use the numbered squares to choose a document; green means reviewed. Arrows move between groups of ten. Compare the fields with the original, using page and zoom controls to inspect details.',
-    'Search by payee, reference or amount. Two receipts or two payees are separate pieces; purchase lines on one receipt are one piece. Use Split, Merge next, Add piece or Remove to correct boundaries. Accept & next saves your review. Accept all saves all ready results, including current edits; trash and unresolved results are skipped. Bank matches still require separate review.',
+    'Search by payee, reference or amount. Two receipts or two payees are separate pieces; purchase lines on one receipt are one piece. Use Add piece for a missed receipt. Select a piece before using Merge next or Remove. Accept & next saves your review. Accept all saves all ready results, including current edits; trash and unresolved results are skipped. Bank matches still require separate review.',
     'Not useful — discard classifies the whole document as trash and excludes it from supporting evidence. The original stays intact. Reopen its numbered square and use Restore document to undo.',
     'Reload fetches the latest saved results.',
   ]],
@@ -47,6 +47,7 @@ export const pageHelp = {
   ]],
   Settings: ['Review settings', [
     'Set document processing, models, reasoning effort and request limits, then Save settings. Saving does not start processing.',
+    'Whole-document PDF page limit defaults to 5. Short PDFs use one call; longer PDFs use page calls plus assembly. Applies to new PDFs or regeneration. Partial runs, testing modes and oversized requests keep the page route.',
     'PDF vision reads every page. Testing modes require development mode and pictures. Changing processing modes requires refreshed inputs; previous results are archived.',
     'Turning pictures off leaves image-dependent documents unresolved. Turning Codex off stops new model requests; active calls may finish.',
     'The request limit is shared by extraction and receipt assembly, including failed attempts. Cache reads use no new requests. Run again to resume saved work with a fresh allowance.',

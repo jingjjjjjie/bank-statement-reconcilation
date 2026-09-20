@@ -4,6 +4,7 @@ from decimal import Decimal, InvalidOperation
 import hashlib
 import itertools
 import re
+from reconciliation.currencies import normalize_currency
 
 
 def number(value):
@@ -69,7 +70,7 @@ def build_candidates(banks, documents, grouped=True, specific=False):
             c = pool[key]
             evaluations += 1
             if (c["direction"] and c["direction"] != bank["direction"] or
-                    c["currency"] and c["currency"] != bank["currency"]):
+                    c["currency"] and normalize_currency(c["currency"]) != normalize_currency(bank["currency"])):
                 continue
             shared_refs = refs & {r.casefold() for r in c["references"]}
             reference = bool(shared_refs)
