@@ -34,3 +34,5 @@ Shared help control: `dashboard/frontend/src/components/PageHelp.vue`.
 - Review results combines title, filename, document numbers, progress and actions in one horizontal bar; scroll the bar on narrow screens. Do not show entry search.
 
 - Show review status as an accessible icon beside the filename. Acceptance belongs there, while warnings stay visible. The footer offers Accept, Save changes, Next unreviewed, or disabled Reviewed according to saved status, edits and remaining work.
+
+- The original preview has no heading bar. Keep Download original as a labelled icon alongside the page and zoom controls.

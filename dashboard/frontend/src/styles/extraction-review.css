@@ -41,7 +41,7 @@
 #original-preview { width:100%; height:100%; padding:24px; box-sizing:border-box; }
 #original-preview img { display:block; width:100%; height:100%; object-fit:contain; }
 #original-preview pre { white-space:pre-wrap; overflow-wrap:anywhere; background:white; padding:24px; }
-.viewer-footer { flex:none; display:flex; align-items:center; gap:16px; padding:10px 20px; background:#f5f7f3; border-top:1px solid #dce3dd; }
+.viewer-footer { flex:none; display:flex; flex-wrap:wrap; align-items:center; gap:16px; padding:10px 20px; background:#f5f7f3; border-top:1px solid #dce3dd; }
 .viewer-footer label { display:flex; align-items:center; gap:8px; white-space:nowrap; font-size:11px; color:#6e7c72; }
 .viewer-footer select { max-width:230px; padding:5px 8px; font-size:11px; }
 #original-status { font-size:10px; color:#748078; overflow:hidden; margin-left:auto; }
@@ -81,12 +81,13 @@
 .piece-tabs { min-width:0; flex:1 1 auto; }
 @media(max-width:650px) { .piece-bar { flex-wrap:wrap; padding:12px; } .piece-actions { flex-basis:100%; justify-content:flex-end; } }
 
-.original-link { color:#526958; font-size:12px; white-space:nowrap; margin-left:auto; text-decoration:none; }
+.original-link { flex:none; display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; color:#526958; margin-left:auto; border-radius:5px; }
+.original-link:hover { background:#e4ebe2; }
+.original-link:focus-visible { outline:2px solid #52765f; outline-offset:2px; }
 
 
 /* Keep evidence and entry editing clear beneath the single review bar. */
-.original-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:14px 20px; background:#f5f7f3; border-bottom:1px solid #dce3dd; }
-.original-heading h2,.piece-heading h2 { margin:0; font-size:14px; font-weight:650; letter-spacing:0; }
+.piece-heading h2 { margin:0; font-size:14px; font-weight:650; letter-spacing:0; }
 .piece-heading { display:flex; align-items:center; gap:10px; min-width:0; }
 .piece-bar { justify-content:space-between; padding:14px 18px; min-height:0; border-bottom:0; }
 .piece-count { white-space:nowrap; font-weight:500; }
@@ -122,7 +123,6 @@
   .review-header-actions { margin-left:auto; }
   .document-choice { flex-basis:auto; }
   .document-navigation { margin:0; order:0; }
-  .original-heading { padding:12px; }
   .extraction-original { height:44dvh; min-height:260px; }
   .piece-bar { padding:14px 12px; }
   .piece-heading { gap:8px; }

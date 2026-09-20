@@ -20,9 +20,8 @@ usePage(root, initialize);
       <div class="regeneration-controls"><span id="regeneration-status" role="status" aria-live="polite"></span></div>
       <div class="extraction-layout">
         <section class="extraction-original" aria-label="Original document">
-          <div class="original-heading"><h2>Original document</h2><a id="receipt-original" class="original-link" download>Download original</a></div>
           <div id="original-viewport"><div id="original-preview"></div></div>
-          <div class="viewer-footer"><label>Page / sheet <select id="original-page"></select></label><label>Zoom <select id="original-zoom"><option value="1">Fit page</option><option value="1.5">150%</option><option value="2">200%</option><option value="3">300%</option></select></label><span id="original-status" role="status"></span></div>
+          <div class="viewer-footer"><label>Page / sheet <select id="original-page"></select></label><label>Zoom <select id="original-zoom"><option value="1">Fit page</option><option value="1.5">150%</option><option value="2">200%</option><option value="3">300%</option></select></label><span id="original-status" role="status"></span><a id="receipt-original" class="original-link" download aria-label="Download original" title="Download original"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M5 16v4h14v-4" /></svg></a></div>
         </section>
         <section class="extraction-editor" id="receipt-review-panel" aria-label="Extracted pieces">
           <div class="entry-toolbar">
