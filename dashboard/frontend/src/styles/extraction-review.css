@@ -147,3 +147,17 @@
   .piece-row { grid-template-columns:24px minmax(0,1fr) 72px 66px; }
   .piece-heading { gap:5px; }
 }
+
+/* One toolbar leaves more room for reviewing the entries themselves. */
+.entry-toolbar { position:relative; display:flex; align-items:center; gap:8px; padding:12px 18px; border-bottom:1px solid #e7ece5; background:white; }
+.entry-toolbar .piece-count { flex:none; background:none; padding:0; font-size:12px; font-weight:600; }
+.entry-toolbar .piece-search { position:static; flex:1; min-width:90px; padding:0; }
+.entry-toolbar .piece-search input { font-size:12px; min-height:36px; }
+.entry-toolbar .button { flex:none; white-space:nowrap; }
+.entry-toolbar #piece-search-results:not(:empty) { left:12px; right:12px; width:auto; }
+@media(max-width:650px) {
+  .entry-toolbar { gap:6px; padding:10px 12px; flex-wrap:wrap; }
+  .entry-toolbar .piece-search { min-width:0; }
+  .entry-toolbar .button { padding:8px; }
+  .entry-toolbar .piece-count { font-size:11px; }
+}

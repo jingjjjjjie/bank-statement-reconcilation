@@ -86,9 +86,6 @@ function addReceiptPiece(piece=emptyPiece()) {
   const unit = receiptData?.units.find(item => item.key === $('#receipt-unit').value);
   if (unit?.assembled) {
     receiptField(card, 'Source unit numbers (one per line; see page labels above)', 'source_units', piece.source_units || [], true);
-    const label = node('label', '', ' Boundaries need review');
-    const flag = node('input'); flag.type = 'checkbox'; flag.dataset.boundaryReview = 'true';
-    flag.checked = piece.needs_review !== false; label.prepend(flag); card.append(label);
   }
   card.append(node('legend', '', 'Separate receipt / supporting piece'));
   receiptField(card, 'Location in image or page', 'location', piece.location);
@@ -100,23 +97,6 @@ function addReceiptPiece(piece=emptyPiece()) {
   receiptField(card, 'Printed total', 'total', piece.total);
   receiptField(card, 'Amount basis', 'amount_basis', piece.amount_basis || '');
   receiptField(card, 'Currency', 'currency', piece.currency);
-  card.mergeNext = () => {
-    /* Merge only on explicit request, preserving lineage without inventing a total. */
-    const pieces = readReceiptPieces(), position = [...$('#receipt-pieces').children].indexOf(card);
-    const left = pieces[position], right = pieces[position + 1];
-    if (!right) return;
-    const parents = [...new Set([left, right].flatMap(p => p.piece_id ? [p.piece_id] : p.parent_piece_ids || []))];
-    const sourceUnits = [...new Set([...(left.source_units || []), ...(right.source_units || [])])];
-    const distinct = values => [...new Map(values.map(value => [JSON.stringify(value), value])).values()];
-    pieces.splice(position, 2, {...left, piece_id:'', parent_piece_ids:parents, total:'',
-      payee:left.payee === right.payee ? left.payee : '',
-      brief_description:[left.brief_description, right.brief_description].filter(Boolean).join(' / '),
-      references:distinct([...(left.references || []), ...(right.references || [])]),
-      dates:distinct([...(left.dates || []), ...(right.dates || [])]),
-      limitations:distinct([...(left.limitations || []), ...(right.limitations || [])]),
-      location:[left.location, right.location].filter(Boolean).join(' | '), source_units:sourceUnits, needs_review:true});
-    $('#receipt-pieces').replaceChildren(); pieces.forEach(addReceiptPiece);
-  };
   $('#receipt-pieces').append(card);
 }
 
@@ -201,10 +181,10 @@ function readReceiptPieces() {
       if (key === 'source_units') { piece[key] = input.value.split(/[\s,]+/).filter(Boolean).map(Number); continue; }
       piece[key] = Array.isArray(piece[key]) ? input.value.split('\n').map(value => value.trim()).filter(Boolean) : input.value.trim();
     }
-    const flag = card.querySelector('[data-boundary-review]');
+    const assembled = receiptData?.units.find(unit => unit.key === $('#receipt-unit').value)?.assembled;
     if (piece.references) piece.invoice_numbers = piece.references.filter(r => r.type === 'invoice').map(r => r.value);
-    if (flag) piece.needs_review = flag.checked;
-    else { delete piece.source_units; delete piece.needs_review; }
+    delete piece.needs_review;
+    if (!assembled) delete piece.source_units;
     return piece;
   });
 }

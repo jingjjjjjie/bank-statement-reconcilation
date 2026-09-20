@@ -85,12 +85,9 @@ function renderPieceNavigation() {
   else if (cards.length > previousPieceCount) activePiece = cards.length - 1;
   pieceDocument = selectedUnit; previousPieceCount = cards.length;
   activePiece = Math.max(0, Math.min(activePiece, cards.length - 1));
-  $('#piece-count').textContent = `${cards.length} ${cards.length === 1 ? 'piece' : 'pieces'}`;
-  $('#selected-piece').textContent = cards.length ? `Selected: piece ${activePiece + 1}` : 'No piece selected';
-  $('#merge-piece').title = `Combine piece ${activePiece + 1} with piece ${activePiece + 2}`;
+  $('#piece-count').textContent = `${cards.length} ${cards.length === 1 ? 'entry' : 'entries'}`;
   $('#remove-piece').title = `Remove piece ${activePiece + 1} from extraction`;
   $('#piece-tabs').hidden = true;
-  $('#merge-piece').disabled = activePiece >= cards.length - 1;
   $('#remove-piece').disabled = !cards.length;
   cards.forEach((card, number) => {
     card.hidden = false;
@@ -112,9 +109,6 @@ function renderPieceNavigation() {
       for (const label of [...card.querySelectorAll(':scope > label')]) detailFields.append(label);
       details.append(detailFields);
       card.append(row, details);
-      if (card.querySelector('[data-boundary-review]:checked')) {
-        card.append(node('p', 'piece-warning', 'Boundaries need review'));
-      }
       card.addEventListener('focusin', () => {
         const index = [...$('#receipt-pieces').children].indexOf(card);
         if (index !== activePiece) { activePiece = index; renderPieceNavigation(); }
@@ -239,11 +233,6 @@ $('#previous-document').onclick = () => {
 $('#next-document').onclick = () => {
   const index = receipts.data.units.findIndex(unit => unit.key === selectedUnit);
   changeDocument(Math.floor(index / 10) * 10 + 10);
-};
-$('#merge-piece').onclick = () => {
-  /* Merge adjacent pieces only after the user explicitly selects this action. */
-  const card = $('#receipt-pieces').children[activePiece];
-  if (card) { extractionDirty = true; card.mergeNext(); }
 };
 $('#piece-query').oninput = () => {
   /* Find pieces across documents while retaining normal unsaved-edit protection. */

@@ -27,9 +27,13 @@ usePage(root, initialize);
           <div class="viewer-footer"><label>Page / sheet <select id="original-page"></select></label><label>Zoom <select id="original-zoom"><option value="1">Fit page</option><option value="1.5">150%</option><option value="2">200%</option><option value="3">300%</option></select></label><span id="original-status" role="status"></span></div>
         </section>
         <section class="extraction-editor" id="receipt-review-panel" aria-label="Extracted pieces">
-          <div class="piece-bar"><div class="piece-heading"><h2>Extracted pieces</h2><span id="piece-count" class="piece-count">0 pieces</span></div><button id="add-receipt" class="button secondary" type="button">+ Add piece</button><div id="piece-tabs" class="piece-tabs" hidden></div></div>
-          <div class="piece-search"><input id="piece-query" type="search" aria-label="Search pieces" placeholder="Search all pieces by payee, reference or amount"><div id="piece-search-results"></div></div>
-          <div class="piece-selection"><span id="selected-piece" role="status" aria-live="polite">No piece selected</span><div class="piece-actions" aria-label="Selected piece actions"><button id="merge-piece" type="button">Merge next</button><button id="remove-piece" type="button" aria-label="Remove this piece from extraction">Remove</button></div></div>
+          <div class="entry-toolbar">
+            <span id="piece-count" class="piece-count" role="status">0 entries</span>
+            <div class="piece-search"><input id="piece-query" type="search" aria-label="Search pieces" placeholder="Search entries"><div id="piece-search-results"></div></div>
+            <button id="add-receipt" class="button secondary" type="button">+ Add entry</button>
+            <button id="remove-piece" class="button secondary" type="button" aria-label="Remove this piece from extraction">Remove</button>
+            <div id="piece-tabs" hidden></div>
+          </div>
           <p id="receipt-error" class="validation" role="alert" hidden></p><p id="receipt-unit-status" role="status"></p>
           <form id="receipt-form"><div id="receipt-pieces"></div><div class="editor-footer"><button id="discard-document" class="button discard-document" type="button">Discard document</button><button id="accept-receipts" class="button dark" type="submit">Accept &amp; next &rarr;</button></div></form>
         </section>
