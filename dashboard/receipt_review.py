@@ -7,6 +7,7 @@ from pathlib import Path
 
 from jsonschema import validate, ValidationError
 from reconciliation.codex_reviewer import RECEIPT
+from reconciliation.pdf_routing import review_warnings
 from reconciliation.pieces import identify, assign_submitted
 from reconciliation.receipt_assembly import ASSEMBLED_RECEIPT, current_assembly, validate_assembly
 from reconciliation.duplicate_workflow import fingerprint
@@ -78,7 +79,9 @@ def context(review, *, include_banks=True, prepared=None):
                               "needs_refresh": "receipts" not in raw,
                               "receipts": pieces, "readable": raw.get("readable", assembled),
                               "assembled": assembled, "assembly_pending": assembled and assembly is None,
-                              "limitations": raw.get("limitations", []),
+                              "review_warnings": list(dict.fromkeys(warning
+                                  for n in range(len(document["units"]))
+                                  for warning in review_warnings(state["units"].get(f"{digest}:{n}", {})))),
                               "regeneration": job,
                               "supporting_evidence": [{"label": source["label"],
                                   "status": state["units"].get(f"{digest}:{n}", {}).get("supporting_evidence_status", "uncertain"),
@@ -213,6 +216,8 @@ def accept_all_extractions(review, body):
         if key in prepared or unit['accepted'] or unit.get('trash'):
             continue
         try:
+            if unit.get('review_warnings'):
+                raise ValueError('Review the extraction warning individually before accepting')
             if not unit['readable'] or unit['needs_refresh']:
                 raise ValueError('Extraction requires review or regeneration')
             if any(piece.get('needs_review') for piece in unit['receipts']):

@@ -8,9 +8,9 @@ from reconciliation.comparison_policy import combined_total
 
 
 FIELDS = ("document_id", "source_path", "original_path", "exact_duplicate_with", "file_format", "format_status", "unit", "raw_text",
-          "receipts", "receipt_status", "supporting_evidence_status", "supporting_evidence_reason", "document_type", "invoice_numbers", "company", "brief_description",
+          "receipts", "receipt_status", "supporting_evidence_status", "supporting_evidence_reason", "invoice_numbers", "company", "brief_description",
           "references", "parties", "dates", "amounts_and_currencies", "combined_total",
-          "details", "annotations_and_signatures", "limitations", "status",
+          "details", "annotations_and_signatures", "status",
           "duplicate_with", "comparison", "error")
 
 
@@ -84,17 +84,19 @@ def export(path, index, state):
                     row = {"document_id": digest, "source_path": source,
                            "original_path": original, "file_format": Path(original).suffix.lower(),
                            "exact_duplicate_with": json.dumps([other for other in originals if other != original], ensure_ascii=False),
-                           "receipts": json.dumps(data.get("receipts", []), ensure_ascii=False),
+                           "receipts": json.dumps([{("piece_type" if k == "document_type" else k): v
+                               for k, v in piece.items() if k != "limitations"}
+                               for piece in data.get("receipts", [])], ensure_ascii=False),
                            "format_status": "accepted" if document.get("accepted", True) else "not_accepted",
                            "unit": unit.get("label", ""), "raw_text": unit.get("text", ""),
                            "combined_total": json.dumps({currency: str(amount) for currency, amount in total.items()}) if total else "",
                            "status": status, "duplicate_with": json.dumps(related_paths, ensure_ascii=False),
                            "comparison": json.dumps(labels, ensure_ascii=False),
                            "error": error or unit.get("blocked", "")}
-                    for field in ("receipt_status", "supporting_evidence_status", "supporting_evidence_reason", "document_type", "brief_description", "details", "annotations_and_signatures"):
+                    for field in ("receipt_status", "supporting_evidence_status", "supporting_evidence_reason", "brief_description", "details", "annotations_and_signatures"):
                         row[field] = data.get(field, "")
                     for field in ("invoice_numbers", "company", "references", "parties", "dates",
-                                  "amounts_and_currencies", "limitations"):
+                                  "amounts_and_currencies"):
                         row[field] = json.dumps(data.get(field, []), ensure_ascii=False)
                     writer.writerow(row)
     temporary.replace(path)

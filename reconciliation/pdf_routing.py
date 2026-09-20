@@ -11,6 +11,13 @@ from reconciliation.paths import WORKSPACE
 from reconciliation.prompts import load_prompt
 
 MODES = {"hybrid", "compare"}
+DISAGREEMENT_WARNING = "Text and vision disagree; verify receipt boundaries and fields against the original."
+
+
+def review_warnings(result):
+    """Read system warnings, including the old storage location, without rewriting evidence."""
+    return list(dict.fromkeys([*result.get('review_warnings', []),
+        *[note for note in result.get('limitations', []) if note == DISAGREEMENT_WARNING]]))
 
 
 def inspect_page(page):
@@ -57,17 +64,19 @@ def evidence_errors(result, probe):
     """Require unambiguous receipts with source-backed critical values."""
     validate(result, EXTRACTION)
     errors, evidence = [], []
-    if not result["readable"] or result["receipt_status"] != "receipt" or result["limitations"]:
+    if not result["readable"] or any(r.get("document_type") != "receipt" for r in result["receipts"]) or result.get("limitations") or result.get("review_warnings"):
         errors.append("uncertain_text_extraction")
     if len(result["receipts"]) != 1:
         errors.append("ambiguous_receipt_boundaries")
     totals = {(m['amount'], m['currency']) for m in result['money']
               if m['role'] in ('grand_total', 'invoice_total')}
+    totals.update((t['amount'], t['currency']) for t in result.get('totals', [])
+                  if t['label'].casefold().replace(' ', '_') in {'total', 'grand_total', 'invoice_total'})
     if len(totals) > 1:
         errors.append("conflicting_totals_or_currencies")
     words = probe["words"]
     for index, receipt in enumerate(result["receipts"]):
-        if receipt["limitations"] or not receipt["total"] or not receipt["currency"]:
+        if receipt.get("limitations") or not receipt["total"] or not receipt["currency"]:
             errors.append("incomplete_receipt")
         values = {"total": receipt["total"], "currency": receipt["currency"]}
         values.update({f"invoice_{n}": v for n, v in enumerate(receipt["invoice_numbers"])})
@@ -128,10 +137,8 @@ def extract_unit(unit, ask, selected_mode, audit_path, allowlist=None):
             if audit["text_schema_valid"]:
                 audit["critical_fields_agree"] = critical_fields(result) == critical_fields(audit["text_result"])
                 if not audit["critical_fields_agree"]:
-                    warning = "Text and vision disagree; verify receipt boundaries and fields against the original."
-                    result = {**result, "limitations": [*result["limitations"],
-                              warning], "receipts": [{**r, "limitations": [*r["limitations"], warning]}
-                                                      for r in result["receipts"]]}
+                    warning = DISAGREEMENT_WARNING
+                    result = {**result, "review_warnings": [*result.get("review_warnings", []), warning]}
         else:
             audit["route"] = "text"
             result = audit["text_result"]

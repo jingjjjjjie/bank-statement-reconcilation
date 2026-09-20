@@ -52,7 +52,6 @@ def current(review):
         documents[digest] = {'document_id': digest,
             'summaries': [r.get('summary', r.get('brief_description', '')) for r in raw],
             'totals': [total for r in raw for total in r.get('totals', [])],
-            'limitations': [limitation for r in raw for limitation in r.get('limitations', [])],
             'pieces': [item for item in items.values() if item['document'] == digest]}
     return banks, items, index, {'live_pieces': True, 'documents': documents, 'assembly_count': 1}
 
@@ -174,7 +173,7 @@ def model_payload(banks, items, index, facts, choices, selected, retrieval=None)
         context[digest] = {**facts['documents'][digest], 'sources': sources,
             'pieces': [{k: v for k, v in item.items() if k in {
                 'id', 'piece_type', 'payee', 'description', 'typed_references', 'dates',
-                'amount', 'currency', 'amount_basis', 'source_locations', 'limitations',
+                'amount', 'currency', 'amount_basis', 'source_locations',
                 'boundary_unresolved', 'claim_group', 'expense_id'} and (v or k in {'amount', 'currency'})}
                 for item in facts['documents'][digest]['pieces']]}
     for bank in selected:

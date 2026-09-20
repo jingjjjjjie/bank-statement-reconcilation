@@ -150,3 +150,25 @@ No extraction or matching model runs were started to prepare this document. The 
 - [Final comparison and migration rules](FINAL_COMPARISON.md)
 
 The older [workflow snapshot](WORKFLOW.md) predates the live matching integration. Its frozen-only matching limitation is superseded by the live pipeline section of FINAL_COMPARISON.md.
+
+
+## Removed-field dependency review
+
+The extraction editor no longer offers Limitations. Its former Document type label is now Piece type: that control always described an individual payable piece, which remains part of the extraction contract.
+
+New matching model requests omit document/piece limitations. Supporting-inventory CSV exports omit the document-level document_type and limitations columns; nested receipts use piece_type and omit limitations. Consumers of those CSV columns must update their mappings. Final bank-match report columns are unchanged.
+
+Historical extraction JSON, receipt adapters and approval fingerprints retain their old fields for compatibility. Existing evidence and decisions are not rewritten merely to remove a field. Legacy duplicate-comparison assessments have their own limitations field and remain separate from extraction.
+
+The experimental PDF router previously depended on document classification and limitations. It now checks piece type, readability, source-backed values and totals. Historical uncertainty notes still trigger conservative visual fallback. Text/vision disagreements produce a Python-generated review warning, visible in extraction review and excluded from untouched bulk acceptance. This is a processing warning, not a new free-form model extraction field.
+
+Removing model limitations loses the model's written explanation of ambiguity. Missing or conflicting facts stay blank; unreadable results, assembly boundary flags and system warnings still require attention. Checking the original remains part of human review.
+
+
+### Verification after downstream cleanup
+
+- Frontend production build passed.
+- 73 focused Python and browser tests passed, covering extraction, assembly, legacy adapters, PDF routing and warnings, matching payloads, inventory exports, editing, save/reload, split/merge, mobile matching and final reports.
+- Desktop and mobile screenshots were inspected; the removed controls are absent. Screenshots are local QA artifacts under `.tools/field-removal/`.
+- Broader help/navigation checks exposed two failures: missing Bank-page help in one fixture and workspace resume blocked by a missing review configuration. Concurrent changes exist in those areas; they were not altered as part of this cleanup.
+- The browser walkthrough used isolated fixtures and the updated build. No live extraction or matching calls were started, and no real approvals were changed. The live service was not restarted because it would also load concurrent workspace changes outside this review.

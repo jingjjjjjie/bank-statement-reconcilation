@@ -67,6 +67,18 @@ class PdfRoutingTests(unittest.TestCase):
         self.assertEqual(self.calls, ['pdf_text'])
         self.assertEqual(audit['route'], 'text')
 
+    def test_new_extraction_without_document_type_can_use_text(self):
+        """Canonical piece type keeps approved text routing usable after field removal."""
+        from reconciliation.pieces import canonical, legacy_result
+        piece = canonical(self.result['receipts'][0])
+        piece.pop('limitations')
+        self.result = legacy_result({'readable': True, 'summary': 'Receipt', 'totals': [], 'pieces': [piece]})
+        while int(hashlib.sha256(self.unit['text'].encode()).hexdigest()[:8], 16) % 10 == 0:
+            self.unit['text'] += '\n'
+        _, audit = self.run_route('hybrid', approved={self.unit['pdf_probe']['layout']})
+        self.assertEqual(self.calls, ['pdf_text'])
+        self.assertEqual(audit['route'], 'text')
+
     def test_invalid_response_uses_original_image(self):
         """Malformed text output is recorded and replaced by full-page vision."""
         def ask(prompt, schema, images=(), stage=None):
@@ -107,7 +119,16 @@ class PdfRoutingTests(unittest.TestCase):
         result, audit = self.run_route('hybrid', ask, {self.unit['pdf_probe']['layout']})
         self.assertEqual(self.calls, ['pdf_text', 'pdf_vision'])
         self.assertIn('unsupported_total', audit['reasons'])
-        self.assertTrue(result['limitations'])
+        self.assertTrue(result['review_warnings'])
+        self.assertFalse(result['limitations'])
+
+    def test_old_system_disagreement_remains_visible(self):
+        """Only the known system warning survives legacy storage in the removed field."""
+        from reconciliation.pdf_routing import DISAGREEMENT_WARNING, review_warnings
+        saved = {'limitations': ['Old model prose', DISAGREEMENT_WARNING]}
+        before = copy.deepcopy(saved)
+        self.assertEqual(review_warnings(saved), [DISAGREEMENT_WARNING])
+        self.assertEqual(saved, before)
 
     def test_budget_stop_does_not_launch_fallback(self):
         """Stop signals remain unresolved rather than spending another call."""

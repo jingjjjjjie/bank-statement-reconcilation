@@ -90,6 +90,17 @@ class ReceiptMatchingTests(unittest.TestCase):
         self.assertIn('source changed', result['bulk']['skipped'][0]['reason'])
         self.assertFalse((self.work / 'receipt-matches.json').exists())
 
+    def test_system_warning_requires_individual_review(self):
+        """PDF disagreements stay visible and cannot pass an untouched bulk acceptance."""
+        warning = 'Text and vision disagree; verify the original.'
+        self.state['units'][self.key]['review_warnings'] = [warning]
+        self.save_state()
+        view = self.view()
+        self.assertEqual(view['units'][0]['review_warnings'], [warning])
+        result = receipt_review.accept_all_extractions(self.review, {'revision': view['revision']})
+        self.assertEqual(result['bulk']['accepted'], 0)
+        self.assertIn('individually', result['bulk']['skipped'][0]['reason'])
+
     def test_accept_all_rejects_invalid_draft_without_writing(self):
         """Invalid edits stay unsaved rather than being dropped during a bulk action."""
         view = self.view()

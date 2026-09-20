@@ -92,7 +92,7 @@ function addReceiptPiece(piece=emptyPiece()) {
   }
   card.append(node('legend', '', 'Separate receipt / supporting piece'));
   receiptField(card, 'Location in image or page', 'location', piece.location);
-  receiptField(card, 'Document type', 'document_type', piece.document_type);
+  receiptField(card, 'Piece type', 'document_type', piece.document_type);
   receiptField(card, 'Payee', 'payee', piece.payee || '');
   receiptField(card, 'References (type: value)', 'references', (piece.references || (piece.invoice_numbers || []).map(value => ({type:'invoice', value}))).map(r => `${r.type}: ${r.value}`), true);
   receiptField(card, 'Dates / periods (type: value)', 'dates', (piece.dates || []).map(r => `${r.type}: ${r.value}`), true);
@@ -100,7 +100,6 @@ function addReceiptPiece(piece=emptyPiece()) {
   receiptField(card, 'Printed total', 'total', piece.total);
   receiptField(card, 'Amount basis', 'amount_basis', piece.amount_basis || '');
   receiptField(card, 'Currency (for example MYR)', 'currency', piece.currency);
-  receiptField(card, 'Limitations (one per line)', 'limitations', piece.limitations, true);
   card.splitPiece = () => {
     const pieces = readReceiptPieces(), position = [...$('#receipt-pieces').children].indexOf(card);
     const original = pieces[position];
@@ -145,8 +144,8 @@ function showReceiptUnit() {
   if (unit.assembled) {
     $('#receipt-unit-status').textContent += ' ' + unit.source_units.map(source => `${source.number}: ${source.label}`).join(' | ');
     if (unit.assembly_pending) $('#receipt-unit-status').textContent = 'Waiting for document receipt assembly. Run documents to continue.';
-    else if (unit.limitations?.length) $('#receipt-unit-status').textContent += ' Limitations: ' + unit.limitations.join('; ');
   }
+  if (unit.review_warnings?.length) $('#receipt-unit-status').textContent += ' ' + unit.review_warnings.join(' ');
   $('#receipt-form').querySelector('[type=submit]').disabled = !!unit.assembly_pending;
   $('#receipt-form').querySelector('[type=submit]').hidden = !!unit.trash;
   $('#add-receipt').hidden = !!unit.trash;

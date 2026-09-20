@@ -109,6 +109,8 @@ class WorkflowTests(unittest.TestCase):
                 return list(csv.DictReader(stream))
 
         self.assertEqual(len(rows()), 2)
+        self.assertNotIn("document_type", rows()[0])
+        self.assertNotIn("limitations", rows()[0])
         self.assertTrue(any("deep\\deeper" in row["source_path"] or
                             "deep/deeper" in row["source_path"] for row in rows()))
         self.assertEqual({row["status"] for row in rows()}, {"extraction_pending"})

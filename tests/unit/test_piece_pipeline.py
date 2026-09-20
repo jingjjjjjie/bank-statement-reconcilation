@@ -105,6 +105,12 @@ class PiecePipelineTests(unittest.TestCase):
         payload, images, allowed = piece_matching.model_payload(banks, items, index, facts, {'B1': [keys[0]]}, ['B1'])
         document = payload['documents'][self.fixture.digest]
         self.assertEqual(len(document['pieces']), 2)
+        self.assertNotIn('limitations', document)
+        self.assertNotIn('document_type', document)
+        for piece in document['pieces']:
+            self.assertNotIn('limitations', piece)
+            self.assertNotIn('document_type', piece)
+            self.assertIn('piece_type', piece)
         self.assertIn('Document total 60', document['sources'][0]['text'])
         self.assertEqual(set(allowed['B1']), set(keys))
         self.assertEqual(images, [])

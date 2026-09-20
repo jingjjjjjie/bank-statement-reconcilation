@@ -25,7 +25,7 @@ recognize similar invoices with different values or wrapping.
 
 The text result must be readable, unambiguous, and contain one receipt with
 printed total and currency. Critical values must have exact native word
-evidence. Limitations, missing evidence, conflicting extracted totals, malformed
+evidence. Legacy uncertainty notes, system review warnings, missing evidence, conflicting extracted totals, malformed
 responses and failed calls trigger full-page vision. Budget exhaustion and
 cancellation stop processing; they never trigger extra fallback calls.
 

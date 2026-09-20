@@ -32,7 +32,7 @@ from reconciliation.pieces import FACTS, TOTALS
 # Old saved receipts remain valid; the model uses the lean canonical schema.
 RECEIPT['properties'].update({'payee': TEXT, 'references': FACTS, 'dates': FACTS, 'amount_basis': TEXT,
     'piece_id': TEXT, 'parent_piece_ids': TEXTS})
-EXTRACTION['properties'].update({'summary': TEXT, 'totals': TOTALS})
+EXTRACTION['properties'].update({'summary': TEXT, 'totals': TOTALS, 'review_warnings': TEXTS})
 SCREEN = object_schema({"comparisons": {"type": "array", "items": object_schema({
     "right_id": TEXT, "candidate": {"type": "boolean"}, "reason": TEXT,
 })}})

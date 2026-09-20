@@ -108,9 +108,8 @@ function renderPieceNavigation() {
       }
       for (const label of [...card.querySelectorAll(':scope > label')]) details.append(label);
       card.append(row, details);
-      const warnings = card.receiptPiece.limitations || [];
-      if (warnings.length || card.querySelector('[data-boundary-review]:checked')) {
-        card.append(node('p', 'piece-warning', [...warnings, ...(card.querySelector('[data-boundary-review]:checked') ? ['Boundaries need review'] : [])].join(' | ')));
+      if (card.querySelector('[data-boundary-review]:checked')) {
+        card.append(node('p', 'piece-warning', 'Boundaries need review'));
       }
       card.addEventListener('focusin', () => {
         const index = [...$('#receipt-pieces').children].indexOf(card);
