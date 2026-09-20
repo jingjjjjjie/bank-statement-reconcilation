@@ -104,8 +104,8 @@ function showReceiptUnit() {
   /* Show every individual piece beneath its original source reference. */
   const unit = receiptData?.units.find(item => item.key === $('#receipt-unit').value);
   $('#receipt-pieces').replaceChildren();
-  $('#receipt-form').hidden = !unit; $('#receipt-original').hidden = !unit;
-  $('#add-receipt').disabled = !unit;
+  $('#receipt-form').hidden = !unit && !$('#document-review-status'); $('#receipt-original').hidden = !unit;
+  $('#add-receipt').disabled = !unit || !!unit.trash;
   renderRegeneration();
   if ($('#supporting-evidence')) $('#supporting-evidence').replaceChildren(...(unit?.supporting_evidence || []).map(item =>
     node('p', '', `${item.label}: ${relevanceLabels[item.status] || 'Relevance uncertain'}${item.reason ? ' — ' + item.reason : ''}`)));
@@ -121,8 +121,8 @@ function showReceiptUnit() {
   }
   if (unit.review_warnings?.length) $('#receipt-unit-status').textContent += ' ' + unit.review_warnings.join(' ');
   $('#receipt-form').querySelector('[type=submit]').disabled = !!unit.assembly_pending;
-  $('#receipt-form').querySelector('[type=submit]').hidden = !!unit.trash;
-  $('#add-receipt').hidden = !!unit.trash;
+  $('#receipt-form').querySelector('[type=submit]').hidden = false;
+  $('#add-receipt').hidden = false;
   if ($('#discard-document')) {
     $('#discard-document').textContent = unit.trash ? 'Undo discard' : 'Discard';
     $('#discard-document').classList.toggle('restore-document', !!unit.trash);
@@ -155,11 +155,12 @@ function renderReviewState() {
   icon.textContent = symbols[state];
   icon.title = labels[state];
   icon.setAttribute('aria-label', labels[state]);
-  button.textContent = pending ? 'Waiting for extraction' : failed ? 'Extraction unavailable'
-    : unit?.accepted ? (dirty ? 'Save changes' : 'Undo accept') : 'Accept';
+  button.textContent = unit?.accepted ? (dirty ? 'Save changes' : 'Undo accept') : 'Accept';
+  button.title = pending ? 'Waiting for extraction' : failed ? 'Extraction unavailable'
+    : unit?.trash ? 'Undo discard before accepting' : button.textContent;
   button.classList.toggle('secondary', !!unit?.accepted && !dirty);
   button.classList.toggle('dark', !unit?.accepted || dirty);
-  button.disabled = !unit || !!pending || failed;
+  button.disabled = !unit || !!unit.trash || !!pending || failed;
 
 }
 
