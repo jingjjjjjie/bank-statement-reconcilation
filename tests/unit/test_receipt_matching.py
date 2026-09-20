@@ -233,9 +233,6 @@ class ReceiptMatchingTests(unittest.TestCase):
         self.assertTrue(discarded["matches"][0]["stale"])
         self.assertEqual(discarded, self.view())
         self.assertEqual(document_status.snapshot(self.review)["documents"][0]["status"], "Trash")
-        with self.assertRaisesRegex(ValueError, "Restore"):
-            receipt_review.accept_extraction(self.review, {
-                "revision": discarded["revision"], "key": self.key, "receipts": self.pieces})
         restored = receipt_review.classify_extraction(self.review, {
             "revision": discarded["revision"], "key": self.key, "action": "restore"})
         self.assertFalse(restored["units"][0]["trash"])
@@ -244,6 +241,28 @@ class ReceiptMatchingTests(unittest.TestCase):
         self.assertEqual(self.source.read_bytes(), original)
         history = json.loads((self.work / "receipt-matches.json").read_text())["history"]
         self.assertEqual([entry["action"] for entry in history[-2:]], ["trash_extraction", "restore_extraction"])
+
+    def test_accept_replaces_discard_atomically_and_preserves_pieces(self):
+        """Direct status changes preserve corrections, validate first and audit both states."""
+        accepted = self.accept_pieces([{**self.pieces[0], "total": "42.00"}])
+        discarded = receipt_review.classify_extraction(self.review, {
+            "revision": accepted["revision"], "key": self.key, "action": "trash"})
+        pieces = discarded["units"][0]["receipts"]
+        before = (self.work / "receipt-matches.json").read_bytes()
+        with self.assertRaises(ValueError):
+            receipt_review.accept_extraction(self.review, {
+                "revision": discarded["revision"], "key": self.key,
+                "receipts": [{**pieces[0], "total": "invalid"}]})
+        self.assertEqual((self.work / "receipt-matches.json").read_bytes(), before)
+        result = receipt_review.accept_extraction(self.review, {
+            "revision": discarded["revision"], "key": self.key, "receipts": pieces})
+        self.assertTrue(result["units"][0]["accepted"])
+        self.assertFalse(result["units"][0]["trash"])
+        self.assertEqual(result["units"][0]["receipts"], pieces)
+        self.assertEqual(result, self.view())
+        history = json.loads((self.work / "receipt-matches.json").read_text())["history"]
+        self.assertEqual([entry["action"] for entry in history[-2:]],
+                         ["restore_extraction", "accept_extraction"])
 
     def test_trash_rejects_stale_requests_and_approved_allocations(self):
         """Keep approved support intact and reject old or changed-source decisions."""

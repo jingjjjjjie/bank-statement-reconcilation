@@ -152,8 +152,8 @@ function renderReviewState() {
   icon.title = labels[state];
   icon.setAttribute('aria-label', labels[state]);
   button.title = pending ? 'Waiting for extraction' : failed ? 'Extraction unavailable'
-    : unit?.trash ? 'Undo discard before accepting' : dirty ? 'Accept current changes' : 'Accept';
-  button.disabled = !unit || !!unit.trash || !!pending || failed || (!!unit.accepted && !dirty);
+    : unit?.trash ? 'Replace Discard with Accepted' : dirty ? 'Accept current changes' : 'Accept';
+  button.disabled = !unit || !!pending || failed || (!!unit.accepted && !dirty);
   $('#undo-accept-receipts').disabled = !unit?.accepted || !!unit.trash || !!pending || dirty;
   $('#undo-accept-receipts').title = dirty ? 'Accept or reload your edits before undoing acceptance' : 'Undo accept';
 
@@ -241,7 +241,9 @@ if ($('#receipt-form')) $('#receipt-form').onsubmit = event => {
   event.preventDefault();
   receiptAction(async () => {
     const key = $('#receipt-unit').value;
-    const body = {revision:receiptData.revision, key, receipts:readReceiptPieces()};
+    const unit = receiptData.units.find(item => item.key === key);
+    // Discarded entries are hidden, so retain their saved pieces when accepting.
+    const body = {revision:receiptData.revision, key, receipts:unit.trash ? unit.receipts : readReceiptPieces()};
     const button = $('#accept-receipts') || $('#receipt-form [type=submit]');
     const data = await saveReceiptDecision('/api/receipts/accept', body, button);
     hooks.saved?.();

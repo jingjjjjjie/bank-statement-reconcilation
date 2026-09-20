@@ -168,12 +168,17 @@ def accept_extraction(review, body):
     evidence = require_current(review, body["revision"])
     path, saved, units, receipts, banks = evidence
     unit = units[body["key"]]
-    pieces = validate_acceptance(unit, body["receipts"], saved)
+    # Individual Accept may replace Discard; validate everything before changing state.
+    pieces = validate_acceptance({**unit, "trash": False}, body["receipts"], saved)
+    if unit.get("trash"):
+        discarded = saved["trash"].pop(unit["document_id"])
+        saved["history"].append({"at": datetime.now(timezone.utc).isoformat(), "reviewer": body.get("reviewer"),
+                                 "action": "restore_extraction", "before": discarded, "after": None})
     previous = saved["extractions"].get(body["key"])
     value = {"source_revision": unit["source_revision"], "receipts": pieces, "reviewer": body.get("reviewer")}
     saved["extractions"][body["key"]] = value
     record(path, saved, "accept_extraction", body.get("reviewer"), previous, value)
-    unit.update(accepted=True, receipts=pieces)
+    unit.update(accepted=True, trash=False, receipts=pieces)
     return snapshot_units(evidence)
 
 

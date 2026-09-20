@@ -38,3 +38,5 @@ Shared help control: `dashboard/frontend/src/components/PageHelp.vue`.
 - The original preview has no heading bar. Keep Download original as a labelled icon alongside the page and zoom controls.
 
 - Keep review action buttons visible and grey out unavailable actions. Footer buttons are compact, equal-width and right-aligned, including on narrow screens.
+
+- Accept and Discard switch directly between the two statuses; Undo is optional. Accepting a discarded document preserves its saved entries.
