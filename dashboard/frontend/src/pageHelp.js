@@ -25,8 +25,8 @@ export const pageHelp = {
   ]],
   ExtractionReview: ['Review extraction', [
     'Use the numbered squares to choose a document; green means reviewed. Arrows move between groups of ten. Compare the fields with the original, using page and zoom controls to inspect details.',
-    'Search by payee, reference or amount. Two receipts or two payees are separate pieces; purchase lines on one receipt are one piece. Use Split, Merge next, Add piece or Remove to correct boundaries. Accept & next saves your review. Accept all saves all ready results, including current edits; trash and unresolved results are skipped. Bank matches still require separate review.',
-    'Not useful — discard classifies the whole document as trash and excludes it from supporting evidence. The original stays intact. Reopen its numbered square and use Restore document to undo.',
+    'Search by payee, reference or amount. Two receipts or two payees are separate pieces; purchase lines on one receipt are one piece. Use Add piece for a missed receipt. Select a piece before using Merge next or Remove. Accept & next saves your review. Accept all saves all ready results, including current edits; trash and unresolved results are skipped. Bank matches still require separate review.',
+    'Discard document classifies the whole document as trash and excludes it from supporting evidence. The original stays intact. Reopen its numbered square and use Restore document to undo.',
     'Reload fetches the latest saved results.',
   ]],
   Matching: ['Final review', [

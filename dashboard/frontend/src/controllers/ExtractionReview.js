@@ -85,10 +85,13 @@ function renderPieceNavigation() {
   else if (cards.length > previousPieceCount) activePiece = cards.length - 1;
   pieceDocument = selectedUnit; previousPieceCount = cards.length;
   activePiece = Math.max(0, Math.min(activePiece, cards.length - 1));
-  $('#piece-count').textContent = `${cards.length} pieces${cards.length ? ` | Editing ${activePiece + 1}` : ''}`;
+  $('#piece-count').textContent = `${cards.length} ${cards.length === 1 ? 'piece' : 'pieces'}`;
+  $('#selected-piece').textContent = cards.length ? `Selected: piece ${activePiece + 1}` : 'No piece selected';
+  $('#merge-piece').title = `Combine piece ${activePiece + 1} with piece ${activePiece + 2}`;
+  $('#remove-piece').title = `Remove piece ${activePiece + 1} from extraction`;
   $('#piece-tabs').hidden = true;
   $('#merge-piece').disabled = activePiece >= cards.length - 1;
-  $('#split-piece').disabled = $('#remove-piece').disabled = !cards.length;
+  $('#remove-piece').disabled = !cards.length;
   cards.forEach((card, number) => {
     card.hidden = false;
     card.classList.toggle('active-piece', number === activePiece);
@@ -96,7 +99,7 @@ function renderPieceNavigation() {
     if (!card.querySelector('.piece-row')) {
       const row = node('div', 'piece-row'), select = node('button', 'piece-number');
       select.type = 'button'; row.append(select);
-      const details = node('details', 'piece-details');
+      const details = node('details', 'piece-details'), detailFields = node('div', 'piece-detail-fields');
       details.append(node('summary', '', 'Details'));
       for (const key of ['payee', 'brief_description', 'total', 'currency']) {
         const field = card.querySelector(`[data-field="${key}"]`);
@@ -106,7 +109,8 @@ function renderPieceNavigation() {
           row.append(label);
         }
       }
-      for (const label of [...card.querySelectorAll(':scope > label')]) details.append(label);
+      for (const label of [...card.querySelectorAll(':scope > label')]) detailFields.append(label);
+      details.append(detailFields);
       card.append(row, details);
       if (card.querySelector('[data-boundary-review]:checked')) {
         card.append(node('p', 'piece-warning', 'Boundaries need review'));
@@ -235,11 +239,6 @@ $('#previous-document').onclick = () => {
 $('#next-document').onclick = () => {
   const index = receipts.data.units.findIndex(unit => unit.key === selectedUnit);
   changeDocument(Math.floor(index / 10) * 10 + 10);
-};
-$('#split-piece').onclick = () => {
-  /* Apply the split to the selected piece, retaining all other edits. */
-  const card = $('#receipt-pieces').children[activePiece];
-  if (card) { extractionDirty = true; card.splitPiece(); }
 };
 $('#merge-piece').onclick = () => {
   /* Merge adjacent pieces only after the user explicitly selects this action. */

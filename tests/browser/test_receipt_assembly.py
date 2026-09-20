@@ -14,7 +14,7 @@ from tests.unit.test_receipt_assembly import piece
 
 
 class ReceiptAssemblyBrowserTests(unittest.TestCase):
-    def test_merge_split_and_accept_document(self):
+    def test_add_remove_and_accept_document(self):
         """Correct boundaries without adding repeated totals or losing page references."""
         fixture = fixtures.ReceiptMatchingTests()
         fixture.setUp()
@@ -55,11 +55,11 @@ class ReceiptAssemblyBrowserTests(unittest.TestCase):
             expect(page.locator("#receipt-pieces fieldset")).to_have_count(1)
             page.locator('.piece-details summary').click()
             page.locator('[data-field="source_units"]').fill("1\n2")
-            page.get_by_role("button", name="Split receipt", exact=True).click()
+            expect(page.get_by_role("button", name="Split receipt", exact=True)).to_have_count(0)
+            page.locator("#add-receipt").click()
             expect(page.locator("#receipt-pieces fieldset")).to_have_count(2)
             page.get_by_role("button", name="Remove this piece from extraction").click()
             page.locator('[data-field="total"]').fill("45.00")
-            page.locator('.piece-details summary').click()
             page.locator('[data-boundary-review]').uncheck()
             page.locator('#accept-receipts').click()
             expect(page.locator('#receipt-unit-status')).to_contain_text("Extraction accepted.")

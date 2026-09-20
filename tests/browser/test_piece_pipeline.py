@@ -16,7 +16,7 @@ from tests.unit import test_receipt_matching as fixtures
 
 
 class PiecePipelineBrowserTests(unittest.TestCase):
-    def test_split_merge_search_and_live_matching(self):
+    def test_add_merge_search_and_live_matching(self):
         """Piece identities survive editing and search reaches current matching evidence."""
         fixture = fixtures.ReceiptMatchingTests()
         fixture.setUp()
@@ -77,7 +77,8 @@ class PiecePipelineBrowserTests(unittest.TestCase):
             expect(page.locator('#receipt-unit-status')).to_contain_text('Extraction accepted.')
             merged = json.loads((fixture.work / 'receipt-matches.json').read_text())['extractions'][digest + ':0']['receipts'][0]
             self.assertEqual(set(merged['parent_piece_ids']), {p['piece_id'] for p in original})
-            page.locator('#split-piece').click()
+            expect(page.locator('#split-piece')).to_have_count(0)
+            page.locator('#add-receipt').click()
             expect(page.locator('#receipt-pieces fieldset')).to_have_count(2)
             page.locator('[data-field="total"]').first.fill('45.00')
             page.locator('[data-field="total"]').nth(1).fill('15.00')

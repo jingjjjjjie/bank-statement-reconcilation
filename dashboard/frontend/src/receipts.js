@@ -100,14 +100,6 @@ function addReceiptPiece(piece=emptyPiece()) {
   receiptField(card, 'Printed total', 'total', piece.total);
   receiptField(card, 'Amount basis', 'amount_basis', piece.amount_basis || '');
   receiptField(card, 'Currency', 'currency', piece.currency);
-  card.splitPiece = () => {
-    const pieces = readReceiptPieces(), position = [...$('#receipt-pieces').children].indexOf(card);
-    const original = pieces[position];
-    const parents = original.piece_id ? [original.piece_id] : original.parent_piece_ids || [];
-    pieces.splice(position, 1, {...original, piece_id:'', parent_piece_ids:parents, total:'', needs_review:true}, {...emptyPiece(), parent_piece_ids:parents, source_units:original.source_units, needs_review:true});
-    $('#receipt-pieces').replaceChildren(); pieces.forEach(addReceiptPiece);
-    $('#receipt-unit-status').textContent = 'Set the source locations and printed totals for both pieces, then resolve the boundary flags.';
-  };
   card.mergeNext = () => {
     /* Merge only on explicit request, preserving lineage without inventing a total. */
     const pieces = readReceiptPieces(), position = [...$('#receipt-pieces').children].indexOf(card);
@@ -133,11 +125,13 @@ function showReceiptUnit() {
   const unit = receiptData?.units.find(item => item.key === $('#receipt-unit').value);
   $('#receipt-pieces').replaceChildren();
   $('#receipt-form').hidden = !unit; $('#receipt-original').hidden = !unit;
+  $('#add-receipt').disabled = !unit;
   renderRegeneration();
   if ($('#supporting-evidence')) $('#supporting-evidence').replaceChildren(...(unit?.supporting_evidence || []).map(item =>
     node('p', '', `${item.label}: ${relevanceLabels[item.status] || 'Relevance uncertain'}${item.reason ? ' — ' + item.reason : ''}`)));
   if (!unit) { if (hooks.clearOriginal) hooks.clearOriginal(); $('#receipt-unit-status').textContent = 'No extracted receipt units yet. Run documents, then load the results.'; return; }
   $('#receipt-original').href = `/api/content-file?id=${encodeURIComponent(unit.document_id)}`;
+  if ($('#receipt-original').hasAttribute('download')) $('#receipt-original').download = unit.source_path.split(/[\\/]/).pop();
   $('#receipt-unit-status').textContent = unit.accepted ? 'Extraction accepted.' : unit.needs_refresh
     ? 'Older extraction has no separate receipt records. Re-extract or enter pieces after checking the original.'
     : '';
@@ -149,7 +143,7 @@ function showReceiptUnit() {
   $('#receipt-form').querySelector('[type=submit]').disabled = !!unit.assembly_pending;
   $('#receipt-form').querySelector('[type=submit]').hidden = !!unit.trash;
   $('#add-receipt').hidden = !!unit.trash;
-  if ($('#discard-document')) $('#discard-document').textContent = unit.trash ? 'Restore document' : 'Not useful — discard';
+  if ($('#discard-document')) $('#discard-document').textContent = unit.trash ? 'Restore document' : 'Discard document';
   if (unit.trash) {
     $('#receipt-unit-status').textContent = 'Trash — excluded from supporting evidence. Original file preserved.';
     $('#supporting-evidence')?.replaceChildren();

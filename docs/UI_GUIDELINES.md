@@ -18,13 +18,15 @@ User preference, recorded 2026-09-18:
 - Step 2 shows the current filename without a dropdown. Use ten numbered squares
   at a time to select documents, green for reviewed and an outline for the current
   document; arrows move between groups of ten.
-- Extraction review offers Not useful — discard and Restore document. Trash is
+- Extraction review offers Discard document and Restore document. Trash is
   an audited, reversible classification that excludes supporting evidence; it never
   deletes or moves original files. Trash squares have a distinct muted brown shade.
 
 Shared help content: `dashboard/frontend/src/pageHelp.js`.
 Shared help control: `dashboard/frontend/src/components/PageHelp.vue`.
 
-- Step 2 displays all pieces together as editable rows. Keep payee, description, amount and currency visible; put secondary fields under Details. Selecting a row targets split/merge/remove. Narrow screens wrap the fields and place save actions after the rows without overlap.
+- Step 2 displays all pieces together as editable rows. Keep payee, description, amount and currency visible; put secondary fields under Details. Selecting a row targets merge/remove; Split is not offered. Narrow screens wrap the fields and place save actions after the rows without overlap.
 
-- Pieces represent separate receipts or payees, not purchase lines. Show editable payee, description, amount and currency together; keep source details, references and dates in the piece disclosure. Search works across pieces. Add/split/merge are explicit edits with preserved lineage.
+- Pieces represent separate receipts or payees, not purchase lines. Show editable payee, description, amount and currency together; keep source details, references and dates in the piece disclosure. Search works across pieces. Add/merge are explicit edits with preserved lineage.
+
+- Review results groups Add piece with the piece list, names the selected piece beside Merge/Remove, and keeps Accept & next in the save footer. Keep the title visible on narrow screens.

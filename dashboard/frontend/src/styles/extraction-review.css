@@ -8,7 +8,7 @@
 #supporting-evidence { padding:0 20px; font-size:12px; color:#52695b; max-height:130px; overflow:auto; }
 @keyframes regeneration-spin { to { transform:rotate(360deg); } }
 @media (prefers-reduced-motion:reduce) { #regeneration-status[aria-busy="true"]::before { animation:none; } }
-.review-header { flex:none; height:68px; padding:0 24px; margin:0; display:flex; justify-content:space-between; gap:20px; border-bottom:1px solid #dce3dd; background:#fff; }
+.review-header { flex:none; height:58px; padding:0 24px; margin:0; display:flex; justify-content:space-between; gap:20px; border-bottom:1px solid #dce3dd; background:#fff; }
 .review-title,.review-header-actions { display:flex; align-items:center; gap:16px; min-width:0; }
 .review-title a { color:#64756c; font-size:13px; white-space:nowrap; text-decoration:none; }
 .review-title h1 { white-space:nowrap; font-size:17px; margin:0; font-weight:650; letter-spacing:-.5px; }
@@ -67,7 +67,7 @@
 @media(max-width:900px) { .review-progress,.header-divider { display:none; } .review-header { padding:0 14px; } .review-title { gap:10px; } .review-title h1 { font-size:16px; } .review-header-actions { gap:6px; } .extraction-layout { grid-template-columns:minmax(0,3fr) minmax(0,2fr); } }
 @media(max-width:650px) { .extraction-workspace main { height:auto; min-height:100dvh; } .review-header { flex-wrap:wrap; height:auto; padding:12px; } .extraction-layout { display:flex; flex-direction:column; } .extraction-original { height:52dvh; } .extraction-editor { border-left:0; } #receipt-pieces { overflow:visible; } .editor-footer { position:sticky; bottom:0; } .viewer-footer { gap:8px; padding:8px; } .viewer-footer select { max-width:140px; } #original-status { display:none; } }
 
-@media(max-width:1100px) { .review-title h1,.header-divider,.review-progress { display:none; } .review-header { gap:12px; } }
+@media(max-width:1100px) { .review-header { gap:12px; } }
 @media(max-width:650px) { .document-choice { flex-basis:60%; } .document-navigation { margin-left:auto; } }
 @media(max-width:650px) { .document-navigation { width:100%; justify-content:center; order:3; } #document-buttons { gap:3px; } #document-buttons button { width:24px; height:28px; } .document-navigation>button { width:26px; } }
 
@@ -84,25 +84,66 @@
 .original-link { color:#526958; font-size:12px; white-space:nowrap; margin-left:auto; text-decoration:none; }
 
 .piece-search { padding: 6px 16px; position: relative; }
-.piece-search input { width: min(100%, 420px); }
+.piece-search input { width:100%; }
 #piece-search-results:not(:empty) { position: absolute; z-index: 15; top: 100%; left: 16px; background: white; box-shadow: 0 5px 20px #0002; max-height: 300px; overflow: auto; width: min(520px, calc(100vw - 32px)); }
 #piece-search-results button { display: block; width: 100%; text-align: left; padding: 10px; }
 
+/* Separate document navigation, piece editing, and document-level decisions. */
+.document-bar { display:flex; align-items:center; gap:24px; padding:12px 24px; background:#fff; border-bottom:1px solid #dce3dd; }
+.original-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:14px 20px; background:#f5f7f3; border-bottom:1px solid #dce3dd; }
+.original-heading h2,.piece-heading h2 { margin:0; font-size:14px; font-weight:650; letter-spacing:0; }
+.piece-heading { display:flex; align-items:center; gap:10px; min-width:0; }
+.piece-bar { justify-content:space-between; padding:14px 18px; min-height:0; border-bottom:0; }
+.piece-count { white-space:nowrap; font-weight:500; }
+.piece-search { padding:0 18px 12px; background:#fff; }
+.piece-selection { display:flex; justify-content:space-between; align-items:center; gap:8px; padding:10px 18px; background:#f7f9f6; border-block:1px solid #e7ece5; }
+#selected-piece { font-size:12px; color:#526958; font-weight:600; }
+.piece-selection .piece-actions { flex-basis:auto; }
+.editor-footer { padding:14px 18px; align-items:center; }
+.editor-footer .discard-document { flex-basis:auto; }
+#accept-receipts { min-height:40px; }
 /* All pieces stay visible; infrequent fields remain editable under Details. */
 .extraction-layout{grid-template-columns:minmax(0,45fr) minmax(0,55fr)}
-#receipt-pieces{padding:10px 14px}
-#receipt-pieces fieldset{display:block;padding:10px 8px;margin-bottom:6px;border:1px solid #e1e7e2;border-radius:7px}
-#receipt-pieces fieldset.active-piece{border-color:#8ba992;background:#f8fbf8}
-.piece-row{display:grid;grid-template-columns:28px minmax(90px,1fr) minmax(110px,1.4fr) 80px 64px;gap:8px;align-items:end}
+#receipt-pieces{padding:14px 18px;background:#fbfcfa}
+#receipt-pieces fieldset{display:block;padding:12px;margin-bottom:10px;border:1px solid #e1e7e2;border-radius:8px;background:white}
+#receipt-pieces fieldset.active-piece{border-color:#6b9479;box-shadow:inset 3px 0 #365c43;background:#f8fbf8}
+.piece-row{display:grid;grid-template-columns:28px minmax(90px,1fr) minmax(110px,1.4fr) 96px 82px;gap:8px;align-items:end}
 #receipt-pieces .piece-row label{grid-column:auto;font-size:11px}
-#receipt-pieces .piece-row input{padding:7px 6px;font-size:12px;min-width:0}
+#receipt-pieces .piece-row :is(input,select){padding:8px;font-size:13px;min-width:0;width:100%;height:36px;margin-top:5px}
+#receipt-pieces [data-field=total]{text-align:right;font-variant-numeric:tabular-nums}
 .piece-number{height:32px;border:0;border-radius:5px;background:#edf2ed;color:#365c43;cursor:pointer}
 .piece-number[aria-pressed=true]{background:#365c43;color:white}
 .piece-details{font-size:11px;margin:7px 0 0 36px}.piece-details summary{cursor:pointer;color:#526958;width:fit-content}
-.piece-details[open]{display:grid;grid-template-columns:1fr 1fr;gap:10px}.piece-details summary{grid-column:1/-1}
+.piece-detail-fields{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}.piece-details summary{grid-column:1/-1}
 #receipt-pieces .piece-details label{font-size:11px;grid-column:auto}
 .piece-warning{font-size:11px;color:#8b612c;margin:6px 0 0 36px;line-height:1.4}
-@media(max-width:1000px){.piece-row{grid-template-columns:24px minmax(0,1fr) 76px 60px}.piece-row label:has([data-field=brief_description]){grid-column:2/-1!important;grid-row:2}.piece-row label:has([data-field=payee]){grid-column:2}.extraction-layout{grid-template-columns:minmax(0,40fr) minmax(0,60fr)}}
-@media(max-width:650px){#receipt-pieces{padding:8px}.piece-details[open]{grid-template-columns:1fr}.piece-bar{gap:6px}}
+@media(max-width:1200px){.piece-row{grid-template-columns:24px minmax(0,1fr) 90px 78px}.piece-row label:has([data-field=brief_description]){grid-column:2/-1!important;grid-row:2}.piece-row label:has([data-field=payee]){grid-column:2}.extraction-layout{grid-template-columns:minmax(0,40fr) minmax(0,60fr)}}
+@media(max-width:650px){#receipt-pieces{padding:8px}.piece-detail-fields{grid-template-columns:1fr}.piece-bar{gap:6px}}
 
 @media(max-width:650px){#receipt-form,#receipt-pieces{flex:none;min-height:auto}.editor-footer{position:static}#receipt-pieces{overflow:visible}}
+
+@media(max-width:650px) {
+  .review-header { gap:10px; padding:12px; align-items:center; }
+  .review-title h1 { display:block; font-size:17px; }
+  .review-header-actions { margin-left:auto; }
+  .document-bar { flex-direction:column; align-items:stretch; gap:12px; padding:12px; }
+  .document-choice { flex-basis:auto; }
+  .document-navigation { margin:0; order:0; }
+  .original-heading { padding:12px; }
+  .extraction-original { height:44dvh; min-height:260px; }
+  .piece-bar { padding:14px 12px; }
+  .piece-heading { gap:8px; }
+  .piece-heading h2 { font-size:13px; }
+  .piece-search { padding:0 12px 12px; }
+  .piece-selection { padding:10px 12px; }
+  #receipt-pieces { padding:12px; }
+  #receipt-pieces fieldset { padding:10px; }
+  .piece-row { grid-template-columns:24px minmax(0,1fr) 80px 74px; gap:6px; }
+  .editor-footer { padding:12px; gap:8px; }
+  .editor-footer .discard-document { flex-basis:auto; }
+}
+@media(max-width:380px) {
+  .review-header-actions { width:100%; justify-content:flex-end; }
+  .piece-row { grid-template-columns:24px minmax(0,1fr) 72px 66px; }
+  .piece-heading { gap:5px; }
+}
