@@ -25,7 +25,7 @@ export const pageHelp = {
   ]],
   ExtractionReview: ['Review extraction', [
     'Use the numbered squares to choose a document; green means reviewed. Arrows move between groups of ten. Compare the fields with the original, using page and zoom controls to inspect details.',
-    'Two receipts or two payees are separate pieces; purchase lines on one receipt are one piece. Use Add entry for a missed receipt. The highlighted entry is selected; Remove deletes it from the extraction. Accept & next saves your review. Accept all saves all ready results, including current edits; trash and unresolved results are skipped. Bank matches still require separate review.',
+    'Two receipts or two payees are separate pieces; purchase lines on one receipt are one piece. Use Add entry for a missed receipt. The highlighted entry is selected; Remove deletes it from the extraction. The icon beside the filename shows review status. Accept & next saves your review; after edits it becomes Save & next. Accepted documents offer Next unreviewed, or Reviewed when finished. Accept all saves all ready results, including current edits; trash and unresolved results are skipped. Bank matches still require separate review.',
     'Discard document classifies the whole document as trash and excludes it from supporting evidence. The original stays intact. Reopen its numbered square and use Restore document to undo.',
     'Reload fetches the latest saved results.',
   ]],

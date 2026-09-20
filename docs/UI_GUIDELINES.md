@@ -32,3 +32,5 @@ Shared help control: `dashboard/frontend/src/components/PageHelp.vue`.
 - Review results uses one compact toolbar for entry count, Add entry and Remove. The highlighted row indicates selection; do not add separate heading or selection bars. Keep Accept & next in the save footer. Keep the title visible on narrow screens.
 
 - Review results combines title, filename, document numbers, progress and actions in one horizontal bar; scroll the bar on narrow screens. Do not show entry search.
+
+- Show review status as an accessible icon beside the filename. Acceptance belongs there, while warnings stay visible. The footer offers Accept, Save changes, Next unreviewed, or disabled Reviewed according to saved status, edits and remaining work.

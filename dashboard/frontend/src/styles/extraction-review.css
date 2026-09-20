@@ -18,7 +18,7 @@
 .extraction-workspace input,.extraction-workspace select,.extraction-workspace textarea { border:1px solid #dce3dd; border-radius:6px; padding:9px 10px; background:#fff; color:#263a30; font:inherit; font-size:14px; box-sizing:border-box; }
 .extraction-workspace :is(input,select,textarea):focus { outline:2px solid #94b49d; outline-offset:1px; }
 .extraction-workspace .button { min-height:36px; padding:8px 13px; font-size:12px; border-radius:6px; }
-.document-choice { min-width:140px; flex:1; }
+.document-choice { display:flex; align-items:center; gap:8px; min-width:140px; flex:1; }
 .document-choice label,.pane-label { display:block; font-size:10px; font-weight:700; color:#7a8980; letter-spacing:1.4px; }
 #current-document-name { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:13px; font-weight:600; }
 .document-navigation { display:flex; align-items:center; gap:6px; flex-shrink:0; }
@@ -148,3 +148,11 @@
   .entry-toolbar .button { padding:8px; }
   .entry-toolbar .piece-count { font-size:11px; }
 }
+
+/* The filename carries review state; warnings keep their own visible text. */
+#current-document-name { min-width:0; }
+#document-review-status { flex:none; display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:50%; background:#edf1ed; color:#64766a; font-size:15px; font-weight:700; cursor:help; }
+#document-review-status[data-state=accepted] { background:#dcebdc; color:#285b35; }
+#document-review-status:is([data-state=edited],[data-state=pending]) { background:#fff1d6; color:#886018; }
+#document-review-status:is([data-state=trash],[data-state=failed]) { background:#eee6df; color:#86513d; }
+#accept-receipts:disabled { opacity:.55; cursor:default; }

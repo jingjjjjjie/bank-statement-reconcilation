@@ -112,7 +112,7 @@ function showReceiptUnit() {
   if (!unit) { if (hooks.clearOriginal) hooks.clearOriginal(); $('#receipt-unit-status').textContent = 'No extracted receipt units yet. Run documents, then load the results.'; return; }
   $('#receipt-original').href = `/api/content-file?id=${encodeURIComponent(unit.document_id)}`;
   if ($('#receipt-original').hasAttribute('download')) $('#receipt-original').download = unit.source_path.split(/[\\/]/).pop();
-  $('#receipt-unit-status').textContent = unit.accepted ? 'Extraction accepted.' : unit.needs_refresh
+  $('#receipt-unit-status').textContent = unit.accepted ? ($('#document-review-status') ? '' : 'Extraction accepted.') : unit.needs_refresh
     ? 'Older extraction has no separate receipt records. Re-extract or enter pieces after checking the original.'
     : '';
   if (unit.assembled) {
@@ -132,9 +132,36 @@ function showReceiptUnit() {
   if (hooks.showOriginal) hooks.showOriginal(unit).catch(receiptError);
 }
 
+function renderReviewState() {
+  /* Reflect saved review state, local edits and the actual next action. */
+  const icon = $('#document-review-status'), button = $('#accept-receipts');
+  if (!icon || !button || receiptBusy) return;
+  const unit = receiptData?.units.find(item => item.key === $('#receipt-unit').value);
+  const next = receiptData?.units.find(item => !item.accepted && !item.trash && item.key !== unit?.key);
+  const dirty = page.isDirty();
+  const job = regenerationJobs[unit?.document_id];
+  const pending = unit?.assembly_pending || ['queued', 'running'].includes(job?.status);
+  const failed = job?.status === 'failed';
+  const state = !unit ? 'empty' : unit.trash ? 'trash' : pending ? 'pending' : failed ? 'failed'
+    : dirty ? 'edited' : unit.accepted ? 'accepted' : 'unreviewed';
+  const labels = {empty:'No document selected', trash:'Discarded', pending:'Extraction pending',
+    failed:'Extraction failed', edited:'Unsaved changes', accepted:'Extraction accepted', unreviewed:'Not reviewed'};
+  const symbols = {empty:'—', trash:'−', pending:'…', failed:'!', edited:'✎', accepted:'✓', unreviewed:'○'};
+  icon.dataset.state = state;
+  icon.textContent = symbols[state];
+  icon.title = labels[state];
+  icon.setAttribute('aria-label', labels[state]);
+  button.textContent = pending ? 'Waiting for extraction' : failed ? 'Extraction unavailable'
+    : unit?.accepted && !dirty ? (next ? 'Next unreviewed →' : 'Reviewed ✓')
+    : unit?.accepted ? (next ? 'Save & next →' : 'Save changes')
+    : (next ? 'Accept & next →' : 'Accept');
+  button.disabled = !unit || !!pending || failed || (!!unit.accepted && !dirty && !next);
+}
+
 function renderRegeneration() {
   /* Update live progress without replacing edits or the original preview. */
   if (receiptBusy) return;
+  renderReviewState();
   if (!$('#regeneration-status')) return;
   const unit = receiptData?.units.find(item => item.key === $('#receipt-unit').value);
   const job = regenerationJobs[unit?.document_id];
@@ -146,7 +173,7 @@ function renderRegeneration() {
   const count = Object.values(regenerationJobs).filter(item => ['queued', 'running'].includes(item.status)).length;
   $('#regeneration-status').textContent = (messages[job?.status] || '') + (count ? ` ${count} document(s) queued or regenerating.` : '');
   $('#regeneration-status').setAttribute('aria-busy', String(pending));
-  if (unit) $('#receipt-form').querySelector('[type=submit]').disabled = pending || !!unit.assembly_pending || job?.status === 'failed';
+  if (unit && !$('#document-review-status')) $('#receipt-form').querySelector('[type=submit]').disabled = pending || !!unit.assembly_pending || job?.status === 'failed';
 }
 
 async function pollRegeneration() {
@@ -212,6 +239,12 @@ if ($('#receipt-form')) $('#receipt-form').onsubmit = event => {
   event.preventDefault();
   receiptAction(async () => {
     const key = $('#receipt-unit').value;
+    const unit = receiptData.units.find(item => item.key === key);
+    if (unit?.accepted && !page.isDirty() && $('#document-review-status')) {
+      const next = receiptData.units.find(item => !item.accepted && !item.trash && item.key !== key);
+      if (next) selectReceiptUnit(next.key);
+      return;
+    }
     const body = {revision:receiptData.revision, key, receipts:readReceiptPieces()};
     const button = $('#accept-receipts') || $('#receipt-form [type=submit]');
     const data = await saveReceiptDecision('/api/receipts/accept', body, button);
@@ -252,5 +285,5 @@ if ($('#stop-documents')) $('#stop-documents').onclick = async () => {
 if ($('#receipt-unit')) loadReceiptResults().catch(receiptError);
 
 return {get data() { return receiptData; }, error: receiptError, showUnit: showReceiptUnit,
-  selectUnit: selectReceiptUnit, reload: loadReceiptResults};
+  selectUnit: selectReceiptUnit, reload: loadReceiptResults, refreshReview: renderReviewState};
 }

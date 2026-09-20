@@ -170,6 +170,7 @@ async function showOriginal(unit) {
   /* Select the matching source page and ignore superseded requests. */
   const request = ++originalRequest;
   selectedUnit = unit.key; extractionDirty = false;
+  receipts.refreshReview();
   updateReviewNavigation();
   originalUnit = unit;
   originalInfo = null;
@@ -237,11 +238,11 @@ $('#next-document').onclick = () => {
 $('#remove-piece').onclick = () => {
   /* Remove only the selected extraction piece, never the source file. */
   const card = $('#receipt-pieces').children[activePiece];
-  if (card) { extractionDirty = true; card.remove(); }
+  if (card) { extractionDirty = true; card.remove(); receipts.refreshReview(); }
 };
 page.observe(new MutationObserver(renderPieceNavigation), $('#receipt-pieces'), {childList:true});
-root.addEventListener('input', event => { if (event.target.closest('#receipt-pieces')) extractionDirty = true; });
-root.addEventListener('click', event => { if (event.target.closest('#receipt-pieces button:not(.piece-number), #add-receipt')) extractionDirty = true; });
+root.addEventListener('input', event => { if (event.target.closest('#receipt-pieces')) { extractionDirty = true; receipts.refreshReview(); } });
+root.addEventListener('click', event => { if (event.target.closest('#receipt-pieces button:not(.piece-number), #add-receipt')) { extractionDirty = true; receipts.refreshReview(); } });
 root.addEventListener('change', event => {
   if (event.target.id !== 'receipt-unit' || !extractionDirty) return;
   if (!confirm('Discard unsaved extraction changes?')) {

@@ -59,7 +59,7 @@ class PieceRemovalTests(unittest.TestCase):
             expect(page.locator('#receipt-pieces fieldset')).to_have_count(1)
             page.unroute('**/api/receipts/accept')
             page.locator('#accept-receipts').click()
-            expect(page.locator('#receipt-unit-status')).to_contain_text('Extraction accepted')
+            expect(page.locator('#document-review-status')).to_have_attribute('aria-label', 'Extraction accepted')
             page.reload()
             expect(page.locator('#receipt-pieces fieldset')).to_have_count(1)
             expect(page.locator('[data-field=total]')).to_have_value('273.48')

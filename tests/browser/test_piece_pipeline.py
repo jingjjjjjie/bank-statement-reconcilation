@@ -62,7 +62,7 @@ class PiecePipelineBrowserTests(unittest.TestCase):
             page.screenshot(path=str(Path(__file__).resolve().parents[2] / '.tools/field-removal/extraction-desktop.png'), full_page=True)
             page.locator('[data-field="references"]').first.fill('receipt: 000007')
             page.locator('#accept-receipts').click()
-            expect(page.locator('#receipt-unit-status')).to_contain_text('Extraction accepted.')
+            expect(page.locator('#document-review-status')).to_have_attribute('aria-label', 'Extraction accepted')
             original = json.loads((fixture.work / 'receipt-matches.json').read_text())['extractions'][digest + ':0']['receipts']
             expect(page.locator('#merge-piece')).to_have_count(0)
             page.get_by_role('button', name='Select piece 2', exact=True).click()
@@ -75,7 +75,7 @@ class PiecePipelineBrowserTests(unittest.TestCase):
             page.locator('[data-field="total"]').nth(1).fill('15.00')
             page.locator('[data-field="brief_description"]').nth(1).fill('Delivery piece')
             page.locator('#accept-receipts').click()
-            expect(page.locator('#receipt-unit-status')).to_contain_text('Extraction accepted.')
+            expect(page.locator('#document-review-status')).to_have_attribute('aria-label', 'Extraction accepted')
             page.reload()
             expect(page.locator('#receipt-pieces fieldset')).to_have_count(2)
             page.set_viewport_size({'width': 390, 'height': 844})

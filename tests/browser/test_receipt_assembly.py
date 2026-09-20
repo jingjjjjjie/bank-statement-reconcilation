@@ -62,7 +62,7 @@ class ReceiptAssemblyBrowserTests(unittest.TestCase):
             page.locator('[data-field="total"]').fill("45.00")
             expect(page.locator('[data-boundary-review]')).to_have_count(0)
             page.locator('#accept-receipts').click()
-            expect(page.locator('#receipt-unit-status')).to_contain_text("Extraction accepted.")
+            expect(page.locator('#document-review-status')).to_have_attribute('aria-label', 'Extraction accepted')
             page.reload()
             expect(page.locator('[data-field="total"]')).to_have_value("45.00")
             expect(page.locator('[data-field="source_units"]')).to_have_value("1\n2")

@@ -13,7 +13,7 @@ usePage(root, initialize);
     <main>
       <header class="review-header">
         <div class="review-title"><div class="page-title"><h1>Review results</h1><PageHelp page="ExtractionReview" /></div></div>
-        <div class="document-choice"><span id="current-document-name"></span><input id="receipt-unit" type="hidden"></div>
+        <div class="document-choice"><span id="current-document-name"></span><span id="document-review-status" role="img" tabindex="0" aria-label="Not reviewed" title="Not reviewed"></span><input id="receipt-unit" type="hidden"></div>
         <div class="document-navigation"><button id="previous-document" type="button" aria-label="Previous 10 documents">&larr;</button><div id="document-buttons" aria-label="Choose document"></div><button id="next-document" type="button" aria-label="Next 10 documents">&rarr;</button></div>
         <div class="review-header-actions"><span id="review-progress" class="review-progress"></span><button id="accept-all-receipts" class="button secondary" type="button" title="Accept all ready extraction results">Accept all</button><button id="reload-receipts" class="button secondary" type="button" title="Load latest saved results">Reload</button></div>
       </header>
