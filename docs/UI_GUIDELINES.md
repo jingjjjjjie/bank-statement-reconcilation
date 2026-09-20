@@ -33,7 +33,7 @@ Shared help control: `dashboard/frontend/src/components/PageHelp.vue`.
 
 - Review results combines title, filename, document numbers, progress and actions in one horizontal bar; scroll the bar on narrow screens. Do not show entry search.
 
-- Show review status as an accessible icon beside the filename. Acceptance belongs there, while warnings stay visible. Accept saves without navigating; Discard, Undo discard, Accept and Undo accept are four separate buttons with fixed labels. Discard is red. Accept also saves edits; Undo accept is unavailable while edits are unsaved. Next navigates independently, with unsaved-edit protection.
+- Show review status as an accessible icon beside the filename. Acceptance belongs there, while warnings stay visible. Accept saves without navigating; Use exactly three footer buttons in order: Accept / Undo accept, Discard / Undo discard, Next. Labels toggle with the current status. Discard is red. After editing an accepted document, its button returns to Accept to save those changes. Next navigates independently, with unsaved-edit protection.
 
 - The original preview has no heading bar. Keep Download original as a labelled icon alongside the page and zoom controls.
 
