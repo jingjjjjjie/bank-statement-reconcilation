@@ -155,7 +155,7 @@ class SourceSelection:
         development_cache.capture(Path(manifest), "bank-extraction")
         return {"path": str(output), "existing": False}
 
-    def start(self, expected=None):
+    def start(self, expected=None, progress=None):
         """Initialize or reopen the selected folder's isolated duplicate review."""
         if self.selected_workspace():
             current = self.inspect_workspace(self.selected_workspace())
@@ -173,7 +173,7 @@ class SourceSelection:
         manifest = project / "duplicate-manifest.json"
         if source.name == "documents" and (source.parent / "statement").is_dir():
             from reconciliation.exact_report import prepare
-            prepare(source, manifest)
+            prepare(source, manifest, progress=progress)
         elif not manifest.exists():
             organize(source, manifest)
         else:

@@ -60,7 +60,7 @@ def inventory(root, manifest_path):
     return result
 
 
-def prepare(manifest_path, work, config_path=None, refresh=False):
+def prepare(manifest_path, work, config_path=None, refresh=False, progress=None):
     # Preparation is local and can run while pass-one admin cleanup is pending.
     if config_path is not None and not Path(config_path).is_file():
         raise ValueError(f"Review configuration is missing: {config_path}")
@@ -82,7 +82,10 @@ def prepare(manifest_path, work, config_path=None, refresh=False):
                 shutil.copy2(work / name, history / name)
     config = load_config(config_path)
     documents = {}
-    for number, (digest, paths) in enumerate(sorted(inventory(root, manifest_path).items()), 1):
+    inputs = sorted(inventory(root, manifest_path).items())
+    for number, (digest, paths) in enumerate(inputs, 1):
+        if progress:
+            progress(number - 1, len(inputs), Path(paths[0]).name)
         # Preserve original claim associations even after copies have been moved.
         originals = [r["OriginalPath"] for r in manifest["Files"] if r["SHA256"] == digest]
         item = {"id": digest, "paths": paths, "original_paths": originals,
@@ -99,6 +102,8 @@ def prepare(manifest_path, work, config_path=None, refresh=False):
                 item["error"] = f"{type(error).__name__}: {error}"
         documents[digest] = item
         print(f"Prepared {number}: {Path(paths[0]).name}", flush=True)
+    if progress:
+        progress(len(inputs), len(inputs), "Files prepared")
     index = {"root": str(root), "manifest": str(manifest_path.resolve()), "documents": documents,
              "config": config, "config_path": str(config_path.resolve()) if config_path else None}
     save(index_path, index)

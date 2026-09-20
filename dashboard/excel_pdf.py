@@ -19,7 +19,10 @@ def converter():
     executable = shutil.which("libreoffice") or shutil.which("soffice")
     if not executable:
         raise ValueError("Excel PDF preview requires LibreOffice. Open the original workbook.")
-    result = subprocess.run([executable, "--version"], capture_output=True, timeout=15, check=True)
+    try:
+        result = subprocess.run([executable, "--version"], capture_output=True, timeout=15, check=True)
+    except (OSError, subprocess.SubprocessError) as error:
+        raise ValueError("LibreOffice could not start. Open the original workbook or retry.") from error
     return executable, result.stdout
 
 
