@@ -123,10 +123,6 @@ function showReceiptUnit() {
   $('#receipt-form').querySelector('[type=submit]').disabled = !!unit.assembly_pending;
   $('#receipt-form').querySelector('[type=submit]').hidden = false;
   $('#add-receipt').hidden = false;
-  if ($('#discard-document')) {
-    $('#discard-document').textContent = unit.trash ? 'Undo discard' : 'Discard';
-    $('#discard-document').classList.toggle('restore-document', !!unit.trash);
-  }
   if (unit.trash) {
     $('#receipt-unit-status').textContent = 'Trash — excluded from supporting evidence. Original file preserved.';
     $('#supporting-evidence')?.replaceChildren();
@@ -155,12 +151,11 @@ function renderReviewState() {
   icon.textContent = symbols[state];
   icon.title = labels[state];
   icon.setAttribute('aria-label', labels[state]);
-  button.textContent = unit?.accepted ? (dirty ? 'Save changes' : 'Undo accept') : 'Accept';
   button.title = pending ? 'Waiting for extraction' : failed ? 'Extraction unavailable'
-    : unit?.trash ? 'Undo discard before accepting' : button.textContent;
-  button.classList.toggle('secondary', !!unit?.accepted && !dirty);
-  button.classList.toggle('dark', !unit?.accepted || dirty);
-  button.disabled = !unit || !!unit.trash || !!pending || failed;
+    : unit?.trash ? 'Undo discard before accepting' : dirty ? 'Accept current changes' : 'Accept';
+  button.disabled = !unit || !!unit.trash || !!pending || failed || (!!unit.accepted && !dirty);
+  $('#undo-accept-receipts').disabled = !unit?.accepted || !!unit.trash || !!pending || dirty;
+  $('#undo-accept-receipts').title = dirty ? 'Accept or reload your edits before undoing acceptance' : 'Undo accept';
 
 }
 
@@ -172,7 +167,8 @@ function renderRegeneration() {
   const unit = receiptData?.units.find(item => item.key === $('#receipt-unit').value);
   const job = regenerationJobs[unit?.document_id];
   const pending = ['queued', 'running'].includes(job?.status);
-  if ($('#discard-document')) $('#discard-document').disabled = !unit || pending;
+  if ($('#discard-document')) $('#discard-document').disabled = !unit || !!unit.trash || pending;
+  if ($('#undo-discard-document')) $('#undo-discard-document').disabled = !unit?.trash || pending;
   const messages = {queued:'Queued for background extraction. You can continue browsing.',
     running:'Regenerating in the background. You can continue browsing.',
     completed:'Regeneration complete. Review the new result.', failed:`Regeneration unresolved: ${job?.error || 'Retry to finish.'}`};
@@ -245,15 +241,6 @@ if ($('#receipt-form')) $('#receipt-form').onsubmit = event => {
   event.preventDefault();
   receiptAction(async () => {
     const key = $('#receipt-unit').value;
-    const unit = receiptData.units.find(item => item.key === key);
-    if (unit?.accepted && !page.isDirty() && $('#document-review-status')) {
-      const data = await saveReceiptDecision('/api/receipts/undo-accept',
-        {revision:receiptData.revision, key}, $('#accept-receipts'));
-      hooks.saved?.();
-      setReceiptData(data, key);
-      toast('Acceptance undone. Corrections preserved.');
-      return;
-    }
     const body = {revision:receiptData.revision, key, receipts:readReceiptPieces()};
     const button = $('#accept-receipts') || $('#receipt-form [type=submit]');
     const data = await saveReceiptDecision('/api/receipts/accept', body, button);
@@ -262,17 +249,27 @@ if ($('#receipt-form')) $('#receipt-form').onsubmit = event => {
     toast('Extraction accepted.');
   });
 };
-if ($('#discard-document')) $('#discard-document').onclick = () => receiptAction(async () => {
+if ($('#undo-accept-receipts')) $('#undo-accept-receipts').onclick = () => receiptAction(async () => {
+  /* Reopen saved acceptance separately from accepting the edited fields. */
   const key = $('#receipt-unit').value;
-  const unit = receiptData.units.find(item => item.key === key);
-  const action = unit.trash ? 'restore' : 'trash';
-  const data = await saveReceiptDecision('/api/receipts/classify', {
-    revision: receiptData.revision, key, action,
-  }, $('#discard-document'));
+  const data = await saveReceiptDecision('/api/receipts/undo-accept',
+    {revision:receiptData.revision, key}, $('#undo-accept-receipts'));
   hooks.saved?.();
   setReceiptData(data, key);
-  toast(action === 'trash' ? 'Classified as trash. Original file preserved.' : 'Document restored.');
+  toast('Acceptance undone. Corrections preserved.');
 });
+for (const [id, action] of [['discard-document', 'trash'], ['undo-discard-document', 'restore']]) {
+  /* Keep discard and its reversal as distinct, stable controls. */
+  if ($('#' + id)) $('#' + id).onclick = () => receiptAction(async () => {
+    const key = $('#receipt-unit').value;
+    const data = await saveReceiptDecision('/api/receipts/classify', {
+      revision: receiptData.revision, key, action,
+    }, $('#' + id));
+    hooks.saved?.();
+    setReceiptData(data, key);
+    toast(action === 'trash' ? 'Classified as trash. Original file preserved.' : 'Document restored.');
+  });
+}
 if ($('#run-documents')) $('#run-documents').onclick = () => receiptAction(async () => {
   hooks.setDocumentRequestMessage(hooks.getDocumentState().prepared ? 'Starting document processing...' : 'Preparing document pages...');
   try {

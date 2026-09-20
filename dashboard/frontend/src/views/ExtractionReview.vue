@@ -31,7 +31,7 @@ usePage(root, initialize);
             <div id="piece-tabs" hidden></div>
           </div>
           <p id="receipt-error" class="validation" role="alert" hidden></p><p id="receipt-unit-status" role="status"></p>
-          <form id="receipt-form"><div id="receipt-pieces"></div><div class="editor-footer"><button id="discard-document" class="button discard-document" type="button">Discard</button><button id="accept-receipts" class="button dark" type="submit">Accept</button><button id="next-review-document" class="button secondary" type="button">Next &rarr;</button></div></form>
+          <form id="receipt-form"><div id="receipt-pieces"></div><div class="editor-footer"><button id="discard-document" class="button discard-document" type="button">Discard</button><button id="undo-discard-document" class="button secondary" type="button">Undo discard</button><button id="accept-receipts" class="button dark" type="submit">Accept</button><button id="undo-accept-receipts" class="button secondary" type="button">Undo accept</button><button id="next-review-document" class="button secondary" type="button">Next &rarr;</button></div></form>
         </section>
       </div>
     </main>

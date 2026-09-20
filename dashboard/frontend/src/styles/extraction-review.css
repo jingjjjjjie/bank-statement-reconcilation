@@ -60,12 +60,11 @@
 #receipt-pieces label:has([data-field="total"]),#receipt-pieces label:has([data-field="currency"]) { grid-column:auto; }
 #receipt-pieces :is(input:not([type=checkbox]),textarea) { display:block; width:100%; margin-top:5px; }
 #receipt-pieces textarea { min-height:52px; height:52px; resize:vertical; }
-.editor-footer { flex:none; display:flex; justify-content:flex-end; gap:10px; padding:16px 22px; border-top:1px solid #dce3dd; box-shadow:0 -4px 15px #21352b05; background:white; }
-.editor-footer .button { flex:0 1 104px; width:104px; min-width:0; min-height:36px; padding:8px; white-space:nowrap; }
+.editor-footer { flex:none; display:flex; flex-wrap:wrap; justify-content:flex-end; gap:10px; padding:16px 22px; border-top:1px solid #dce3dd; box-shadow:0 -4px 15px #21352b05; background:white; }
+.editor-footer .button { flex:0 0 104px; width:104px; min-width:0; min-height:36px; padding:8px; white-space:nowrap; }
 #accept-receipts.dark { background:#274f38; color:white; }
 .discard-document { background:#b33e35; border:1px solid #b33e35; color:white; }
 .discard-document:hover { background:#942f28; }
-.discard-document.restore-document { background:white; border-color:#dce3dd; color:#526958; }
 @media(max-width:900px) { .review-header { padding:0 14px; } .review-title { gap:10px; } .review-title h1 { font-size:16px; } .review-header-actions { gap:6px; } .extraction-layout { grid-template-columns:minmax(0,3fr) minmax(0,2fr); } }
 @media(max-width:650px) { .extraction-workspace main { height:auto; min-height:100dvh; } .extraction-layout { display:flex; flex-direction:column; } .extraction-original { height:52dvh; } .extraction-editor { border-left:0; } #receipt-pieces { overflow:visible; } .editor-footer { position:sticky; bottom:0; } .viewer-footer { gap:8px; padding:8px; } .viewer-footer select { max-width:140px; } #original-status { display:none; } }
 
