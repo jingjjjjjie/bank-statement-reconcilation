@@ -45,7 +45,7 @@ onBeforeUnmount(() => {
     <button ref="button" class="page-help-button" type="button" aria-label="How to use this page"
       :aria-describedby="open ? id : undefined" :aria-expanded="open"
       @mouseenter="show" @mouseleave="leave" @focus="show" @blur="leave" @click="show">
-      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <svg viewBox="4 2 16 20" aria-hidden="true" focusable="false">
         <path d="M9.25 8.75a2.75 2.75 0 0 1 5.5 0c0 2-2.75 2.1-2.75 4.25" />
         <circle cx="12" cy="17" r="1" />
       </svg>
@@ -59,23 +59,23 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
-:global(.page-title) { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+:global(.page-title) { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
 :global(.page-title h1) { margin-bottom: 0; }
-.page-help { display: inline-flex; flex: 0 0 auto; align-self: flex-start; margin-top: -3px; font-size: 14px; font-weight: 400; letter-spacing: normal; text-transform: none; }
+.page-help { display: inline-flex; flex: 0 0 auto; align-self: flex-start; margin-top: -4px; font-size: 14px; font-weight: 400; letter-spacing: normal; text-transform: none; }
 .page-help-button {
   display: inline-flex; align-items: center; justify-content: center;
-  position: relative; width: 18px; height: 18px; min-width: 18px; padding: 0;
-  border: 1px solid #c9d3cc; border-radius: 50%;
-  background: #e9eee8; color: #526b5b; cursor: help;
-  transition: background-color 160ms ease, color 160ms ease, box-shadow 160ms ease;
+  position: relative; width: 14px; height: 14px; min-width: 14px; padding: 0;
+  border: 1px solid currentColor; border-radius: 50%;
+  background: transparent; color: #64756b; cursor: help;
+  transition: color 160ms ease;
 }
 /* Keep the visible circle tight while leaving a larger pointer target. */
-.page-help-button::after { content: ""; position: absolute; inset: -4px; border-radius: 50%; }
-.page-help-button svg { width: 16px; height: 16px; overflow: visible; }
+.page-help-button::after { content: ""; position: absolute; inset: -6px; border-radius: 50%; }
+.page-help-button svg { width: 10px; height: 12px; overflow: visible; }
 .page-help-button path { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .page-help-button circle { fill: currentColor; }
 .page-help-button:hover, .page-help-button[aria-expanded="true"] {
-  background: #294b3a; color: #fff; box-shadow: 0 2px 7px #294b3a18;
+  background: transparent; color: #294b3a; box-shadow: none;
 }
 .page-help-button:focus-visible { outline: 2px solid #52765f; outline-offset: 4px; }
 .page-help-panel { position: fixed; z-index: 10000; display: flex; flex-direction: column; gap: 10px; box-sizing: border-box; width: min(390px, calc(100vw - 24px)); max-height: calc(100dvh - 24px); overflow-y: auto; padding: 18px; border: 1px solid #e1e7df; border-radius: 16px; background: #fff; color: #263c30; box-shadow: 0 12px 36px #18352414, 0 2px 6px #18352408; font: 400 14px/1.5 system-ui, sans-serif; text-align: left; white-space: normal; }
