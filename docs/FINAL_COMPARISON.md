@@ -125,9 +125,11 @@ The default review hides detailed payment narration and source/allocation editin
 
 Final review uses equal-width candidate and original-evidence panels on desktop,
 stacked on narrow screens. The compact header and filter strip follow Review
-results: independent decision/confidence filters, search, review progress and ten
-numbered transactions per group. Green numbers mean approved; muted brown means
-rejected. Next advances through the filtered list and warns before discarding edits.
+results: independent decision/confidence filters, search and review progress. Each
+bank payment proposal has its own card in the left list, with payment facts,
+confidence, decision status and its proposed evidence. Ten cards appear per page.
+Selecting a card places the review controls inside that card and opens its evidence
+on the right. Next advances through the filtered list and warns before discarding edits.
 
 Candidate cards show payee, description, source amount, date and source location.
 View evidence previews a candidate without selecting or approving it. The original

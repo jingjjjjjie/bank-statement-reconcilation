@@ -70,8 +70,11 @@ function visibleBanks() {
     `${b.id} ${b.date} ${b.parties.join(' ')} ${b.amount} ${b.description}`.toLowerCase().includes(query));
 }
 function renderQueue() {
-  /* Show ten numbered transactions, retaining independent decision and confidence filters. */
-  const rows = visibleBanks(), list = $('#bank-list'); list.replaceChildren();
+  /* Give each payment proposal a card; move the single editor into the active card. */
+  const rows = visibleBanks(), list = $('#bank-list'), editor = $('#active-proposal');
+  const scroll = $('.decision-scroll').scrollTop;
+  $('#review-parking').append(editor);
+  list.replaceChildren();
   queuePage = Math.max(0, Math.min(queuePage, Math.ceil(rows.length / 10) - 1));
   const start = queuePage * 10;
   $('#queue-count').textContent = rows.length ? `${start + 1}–${Math.min(start + 10, rows.length)} of ${rows.length}` : '0 transactions';
@@ -79,22 +82,52 @@ function renderQueue() {
   $('#next-transactions').disabled = start + 10 >= rows.length;
   const activeIndex = rows.findIndex(b => b.id === activeId);
   $('#next-review-transaction').disabled = saving || !rows.length || activeIndex === rows.length - 1;
-  for (const [index, b] of rows.slice(start, start + 10).entries()) {
-    const row = button(String(start + index + 1), () => requestBank(b.id), `bank-row ${b.review_status} ${b.id === activeId ? 'active' : ''}`);
+  for (const b of rows.slice(start, start + 10)) {
+    const active = b.id === activeId;
+    const card = node('article', `proposal-card ${active ? 'active' : ''}`);
+    card.dataset.bankId = b.id;
+    card.setAttribute('aria-label', `Proposal ${b.id}`);
+    const row = button('', () => requestBank(b.id), `bank-row ${b.review_status} ${active ? 'active' : ''}`);
     row.setAttribute('aria-label', `${b.id} ${b.parties.join(' ')} ${formatMoney(b.amount, b.currency)}`);
-    row.setAttribute('aria-pressed', String(b.id === activeId));
-    row.title = `${b.parties.join(' / ')} · ${formatMoney(b.amount, b.currency)} · ${b.review_status === 'denied' ? 'Rejected' : b.review_status}`;
-    row.append(node('span', 'sr-only', `${confidenceLabel[b.confidence.level || 'none']} · ${b.review_status}`));
-    if (b.stale) row.append(node('span', 'sr-only', 'Evidence changed'));
-    list.append(row);
+    row.setAttribute('aria-pressed', String(active));
+    row.setAttribute('aria-expanded', String(active));
+    const meta = node('span', 'proposal-meta');
+    meta.append(node('span', '', `${b.id} · ${b.date}`), node('span', `badge ${b.review_status}`, b.review_status === 'denied' ? 'Rejected' : b.review_status));
+    const payment = node('span', 'proposal-payment');
+    payment.append(node('strong', '', b.parties.join(' / ') || 'Party unknown'), node('strong', 'proposal-amount', formatMoney(b.amount, b.currency)));
+    const status = node('span', 'proposal-status');
+    status.append(node('span', `badge confidence-${b.confidence.level || 'none'}`, confidenceLabel[b.confidence.level || 'none']), node('span', '', b.direction === 'in' ? 'Incoming' : 'Outgoing'));
+    row.append(meta, payment, status);
+    card.append(row);
+    if (active) card.append(editor);
+    else {
+      const support = node('div', 'proposal-support');
+      const allocations = b.decision ? b.decision.allocations : b.suggestion.allocations;
+      support.append(node('p', 'proposal-label', b.decision ? 'Reviewed evidence' : 'Proposed evidence'));
+      for (const allocation of allocations) {
+        const item = itemById.get(allocation.item_id);
+        const source = button('', () => requestBank(b.id), 'proposal-source');
+        source.append(node('span', '', item ? item.parties.join(' / ') || item.filename : allocation.item_id),
+          node('span', '', allocation.amount === '' ? 'Context only' : formatMoney(allocation.amount, item?.currency || b.currency)));
+        if (item) source.append(node('span', 'proposal-filename', item.filename));
+        support.append(source);
+      }
+      if (!allocations.length) support.append(node('p', 'subtle', 'No proposed supporting evidence'));
+      if (b.stale || b.suggestion.outdated) support.append(node('p', 'warning', 'Evidence changed; review required.'));
+      support.append(button('Review proposal', () => requestBank(b.id), 'proposal-open'));
+      card.append(support);
+    }
+    list.append(card);
   }
-  if (!rows.length) list.append(node('span', 'subtle', 'No matches'));
+  if (!rows.length) list.append(node('p', 'empty-state', 'No proposals match these filters.'));
+  $('.decision-scroll').scrollTop = scroll;
 }
 function requestBank(id) {
   /* Protect edited allocations when navigating between transactions. */
   if (saving || id === activeId) return;
   if (activeId && draftSnapshot() !== savedDraft && !window.confirm('Leave this transaction and discard unsaved changes?')) return;
   chooseBank(id);
+  $('.proposal-card.active')?.scrollIntoView({block:'nearest'});
 }
 function chooseBank(id, addItem) {
   /* Start a draft from this transaction's saved choice, or its cached proposal. */
@@ -113,8 +146,7 @@ function chooseBank(id, addItem) {
   $('#deny-match').disabled = false;
   $('#approve-match').textContent = b.review_status === 'approved' ? 'Save changes' : 'Confirm supporting';
   const detail = $('#transaction-detail'); detail.replaceChildren();
-  detail.append(node('span', 'payment-label', 'Bank payment'));
-  detail.append(node('span', `badge ${b.review_status}`, `${b.id} · ${b.review_status === 'denied' ? 'Rejected' : b.review_status}`), node('h2', 'transaction-title', b.parties.join(' / ')), node('div', 'bank-amount', formatMoney(b.amount, b.currency)), node('span', `badge confidence-${b.confidence.level || 'none'}`, confidenceLabel[b.confidence.level || 'none']), node('p', 'bank-meta', `${b.date} · ${b.direction === 'in' ? 'Incoming' : 'Outgoing'}`));
+  $('#display-payment').textContent = `${b.id} · ${b.parties.join(' / ')} · ${formatMoney(b.amount, b.currency)}`;
   const reason = node('details', 'transaction-notes');
   reason.append(node('summary', '', 'Payment details'), node('p', '', b.suggestion.reason),
     node('div', 'narration', b.description), node('p', 'subtle', `Saved assessment: ${confidenceLabel[b.confidence.level || 'none']}`));
