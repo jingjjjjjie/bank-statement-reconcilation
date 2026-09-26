@@ -116,24 +116,24 @@ moving it. The saved classification excludes its pieces from receipt matching an
 frozen final-review candidates. Approved allocations must be undone before discard.
 Restore reverses the classification, with both actions retained in the audit history.
 
-Final review presents one proposed evidence group per bank payment, preserving row-level allocations. Each record shows its extracted party, date, amount and source location with a conservative factual comparison. Equal amounts alone do not establish support; name differences require checking context. Alternatives appear only under Change evidence and never under the selected group. Rejection means the suggestion was rejected, not that no supporting document exists. Partial/contextual approvals retain No supporting until full monetary coverage is confirmed. No new matching or model assessment is implied by these display explanations.
+Final review presents one proposed evidence group per bank payment, preserving row-level allocations. Each record shows its extracted party, date, amount and source location with a conservative factual comparison. Equal amounts alone do not establish support; name differences require checking context. The current UI shows shortlisted alternatives alongside selected evidence as supporting candidates; only checked pieces belong to the draft allocation group. Rejection means the suggestion was rejected, not that no supporting document exists. Partial/contextual approvals retain No supporting until full monetary coverage is confirmed. No new matching or model assessment is implied by these display explanations.
 
 The default review hides detailed payment narration and source/allocation editing behind disclosures. Keep payee, amount, factual supporting explanation, evidence preview and decision actions visible. Show allocation summaries when warnings need attention; avoid repeating the ordinary fully-covered total above the footer.
 
 
 ## Final review workspace (2026-09-26)
 
-Final review uses equal-width candidate and original-evidence panels on desktop,
-stacked on narrow screens. The compact header and filter strip follow Review
-results: independent decision/confidence filters, search and review progress. Each
-bank payment proposal has its own card in the left list, with payment facts,
-confidence, decision status and its proposed evidence. Ten cards appear per page.
-Selecting a card places the review controls inside that card and opens its evidence
-on the right. Next advances through the filtered list and warns before discarding edits.
+One page reviews one bank transaction. The transaction selector, search, decision
+and confidence filters, and Previous/Next controls change that transaction.
+The desktop layout is half supporting candidates and half original evidence.
 
-Candidate cards show payee, description, source amount, date and source location.
-View evidence previews a candidate without selecting or approving it. The original
-selector switches supporting sources and the bank statement; page and zoom controls
-stay below the preview. Source/allocation edits, alternatives and notes remain
-available. These presentation changes preserve evidence binding, explicit approval,
-monetary validation and the single final-review ledger.
+Each supporting piece has its own compact card showing party and amount. Five
+candidates appear per candidate page; candidate paging never changes the bank
+transaction. Shortlisted alternatives are visible immediately. Search all pieces
+broadens the list. Selected pieces remain part of the draft across candidate pages.
+
+Expanding a candidate shows its source, explanation, dates, warnings and allocation,
+and previews its original without selecting or approving it. Use only this candidate
+replaces the draft selection; checkboxes support several separate expenses. Confirm
+supporting remains the explicit saved decision. Unsaved-edit protection, source
+binding, monetary validation and the single final-review ledger remain in force.

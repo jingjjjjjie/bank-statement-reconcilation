@@ -31,13 +31,11 @@ export const pageHelp = {
     'Export downloads saved reviews as benchmark ground truth: accepted pieces, discarded documents, and pending documents without pieces. Unsaved edits are not included.',
   ]],
   Matching: ['Final review', [
-    'Each proposed match has its own card on the left. Select a card to review its payment and supporting evidence, with the original on the right. Filter by decision or confidence; arrows show the next ten cards.',
-    'View evidence opens a candidate without selecting it. Switch originals above the preview; page and zoom controls are below.',
-    'Verify one proposed evidence group against the bank payment. Confirm supporting or reject the suggestion; rejection does not prove no other evidence exists.',
-    'Change evidence shows unselected alternatives. Each record shows its party, date and source location; equal amounts alone do not prove a match. Check allocated amounts and differences; add a note where needed. Undo decision allows changes.',
-    'Unmatched pieces lists unallocated and partially allocated evidence. Choose a bank transaction to attach it. Contextual documents have no monetary balance.',
-    'Use reviewed pieces connects current extraction edits. Generate matches reads the complete shortlisted documents; Stop cancels new work. Historical decisions remain visible and require re-review when their evidence changes.',
-    'Pairing confidence is a suggestion, not approval. Only approved evidence fully covering a payment receives Supporting in the report.',
+    'Review one bank transaction at a time. Use the transaction selector, filters or Next to move to another payment.',
+    'Compare supporting candidates on the left, five per page. Expand a card for its details and original preview on the right. Inspecting a candidate does not select or approve it.',
+    'Use only this candidate replaces the draft selection. Checkboxes let you combine separate expenses. Confirm supporting saves your decision; incomplete coverage remains No supporting.',
+    'Search all pieces broadens the shortlist. Check original parties, amounts and receipt boundaries; equal amounts alone do not establish a match. Warnings and differences must be reviewed.',
+    'Reject suggestion rejects the saved proposal; other evidence may exist. Undo decision releases its allocations. Unmatched pieces uses the same review ledger.',
   ]],
   FinalReport: ['Final report', [
     'Search or filter transactions and use View evidence to compare original bank and approved supporting documents.',

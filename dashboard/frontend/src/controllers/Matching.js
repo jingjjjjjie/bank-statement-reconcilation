@@ -7,7 +7,8 @@ const { root, $, api, toast, pollVisible, showDevelopmentMode, navigate, routeQu
 let token;
 /* Present cached evidence; Python validates and persists every human decision. */
 let reviewData, activeId, saving = false, previewSerial = 0, previewState;
-let savedDraft = '', queuePage = 0;
+let savedDraft = '', candidatePage = 0;
+const expandedCandidates = new Set();
 const selected = new Map();
 function draftSnapshot() {
   /* Track unsaved allocations and notes independently of display preferences. */
@@ -70,83 +71,50 @@ function visibleBanks() {
     `${b.id} ${b.date} ${b.parties.join(' ')} ${b.amount} ${b.description}`.toLowerCase().includes(query));
 }
 function renderQueue() {
-  /* Give each payment proposal a card; move the single editor into the active card. */
-  const rows = visibleBanks(), list = $('#bank-list'), editor = $('#active-proposal');
-  const scroll = $('.decision-scroll').scrollTop;
-  $('#review-parking').append(editor);
-  list.replaceChildren();
-  queuePage = Math.max(0, Math.min(queuePage, Math.ceil(rows.length / 10) - 1));
-  const start = queuePage * 10;
-  $('#queue-count').textContent = rows.length ? `${start + 1}–${Math.min(start + 10, rows.length)} of ${rows.length}` : '0 transactions';
-  $('#previous-transactions').disabled = queuePage === 0;
-  $('#next-transactions').disabled = start + 10 >= rows.length;
-  const activeIndex = rows.findIndex(b => b.id === activeId);
-  $('#next-review-transaction').disabled = saving || !rows.length || activeIndex === rows.length - 1;
-  for (const b of rows.slice(start, start + 10)) {
-    const active = b.id === activeId;
-    const card = node('article', `proposal-card ${active ? 'active' : ''}`);
-    card.dataset.bankId = b.id;
-    card.setAttribute('aria-label', `Proposal ${b.id}`);
-    const row = button('', () => requestBank(b.id), `bank-row ${b.review_status} ${active ? 'active' : ''}`);
-    row.setAttribute('aria-label', `${b.id} ${b.parties.join(' ')} ${formatMoney(b.amount, b.currency)}`);
-    row.setAttribute('aria-pressed', String(active));
-    row.setAttribute('aria-expanded', String(active));
-    const meta = node('span', 'proposal-meta');
-    meta.append(node('span', '', `${b.id} · ${b.date}`), node('span', `badge ${b.review_status}`, b.review_status === 'denied' ? 'Rejected' : b.review_status));
-    const payment = node('span', 'proposal-payment');
-    payment.append(node('strong', '', b.parties.join(' / ') || 'Party unknown'), node('strong', 'proposal-amount', formatMoney(b.amount, b.currency)));
-    const status = node('span', 'proposal-status');
-    status.append(node('span', `badge confidence-${b.confidence.level || 'none'}`, confidenceLabel[b.confidence.level || 'none']), node('span', '', b.direction === 'in' ? 'Incoming' : 'Outgoing'));
-    row.append(meta, payment, status);
-    card.append(row);
-    if (active) card.append(editor);
-    else {
-      const support = node('div', 'proposal-support');
-      const allocations = b.decision ? b.decision.allocations : b.suggestion.allocations;
-      support.append(node('p', 'proposal-label', b.decision ? 'Reviewed evidence' : 'Proposed evidence'));
-      for (const allocation of allocations) {
-        const item = itemById.get(allocation.item_id);
-        const source = button('', () => requestBank(b.id), 'proposal-source');
-        source.append(node('span', '', item ? item.parties.join(' / ') || item.filename : allocation.item_id),
-          node('span', '', allocation.amount === '' ? 'Context only' : formatMoney(allocation.amount, item?.currency || b.currency)));
-        if (item) source.append(node('span', 'proposal-filename', item.filename));
-        support.append(source);
-      }
-      if (!allocations.length) support.append(node('p', 'subtle', 'No proposed supporting evidence'));
-      if (b.stale || b.suggestion.outdated) support.append(node('p', 'warning', 'Evidence changed; review required.'));
-      support.append(button('Review proposal', () => requestBank(b.id), 'proposal-open'));
-      card.append(support);
-    }
-    list.append(card);
+  /* Navigate one bank transaction at a time; candidate navigation is independent. */
+  const rows = visibleBanks(), select = $('#bank-select'); select.replaceChildren();
+  for (const b of rows) {
+    const option = node('option', '', `${b.id} · ${b.parties.join(' / ')} · ${formatMoney(b.amount, b.currency)}`);
+    option.value = b.id; select.append(option);
   }
-  if (!rows.length) list.append(node('p', 'empty-state', 'No proposals match these filters.'));
-  $('.decision-scroll').scrollTop = scroll;
+  const index = rows.findIndex(b => b.id === activeId);
+  if (index < 0) {
+    const option = node('option', '', activeId ? `${activeId} · Outside current filter` : 'Choose transaction');
+    option.value = activeId || ''; select.prepend(option);
+  }
+  select.value = activeId || '';
+  $('#queue-count').textContent = index >= 0 ? `${index + 1} of ${rows.length} transactions` : `${rows.length} transactions`;
+  $('#previous-transactions').disabled = saving || index <= 0;
+  $('#next-transactions').disabled = saving || !rows.length || index === rows.length - 1;
+  $('#next-review-transaction').disabled = $('#next-transactions').disabled;
 }
 function requestBank(id) {
   /* Protect edited allocations when navigating between transactions. */
   if (saving || id === activeId) return;
   if (activeId && draftSnapshot() !== savedDraft && !window.confirm('Leave this transaction and discard unsaved changes?')) return;
   chooseBank(id);
-  $('.proposal-card.active')?.scrollIntoView({block:'nearest'});
 }
 function chooseBank(id, addItem) {
   /* Start a draft from this transaction's saved choice, or its cached proposal. */
   if (saving) return;
   activeId = id; selected.clear(); error();
-  const visibleIndex = visibleBanks().findIndex(b => b.id === id);
-  if (visibleIndex >= 0) queuePage = Math.floor(visibleIndex / 10);
+  candidatePage = 0; expandedCandidates.clear();
   const b = bank(), source = b.decision ? b.decision.allocations : b.suggestion.allocations;
   source.forEach(a => { if (itemById.has(a.item_id)) selected.set(a.item_id, a.amount); });
   if (addItem) selected.set(addItem, defaultAllocation(itemById.get(addItem)));
   $('#candidate-query').value = ''; $('#all-candidates').checked = false;
-  $('#candidate-picker').open = false; $('#note-details').open = false;
+  $('#note-details').open = false;
   $('#decision-note').value = b.decision?.note || ''; $('#acknowledge').checked = false;
   $('#save-status').textContent = b.decision ? `Saved · ${new Date(b.decision.at).toLocaleString()}` : '';
   $('#review-editor').hidden = false; $('#undo-match').hidden = !b.decision;
   $('#deny-match').disabled = false;
   $('#approve-match').textContent = b.review_status === 'approved' ? 'Save changes' : 'Confirm supporting';
   const detail = $('#transaction-detail'); detail.replaceChildren();
-  $('#display-payment').textContent = `${b.id} · ${b.parties.join(' / ')} · ${formatMoney(b.amount, b.currency)}`;
+  const header = node('div', 'transaction-header');
+  header.append(node('h2', 'transaction-title', b.parties.join(' / ') || 'Party unknown'), node('strong', 'bank-amount', formatMoney(b.amount, b.currency)));
+  const meta = node('div', 'bank-meta');
+  meta.append(node('span', '', `${b.id} · ${b.date} · ${b.direction === 'in' ? 'Incoming' : 'Outgoing'}`), node('span', `badge ${b.review_status}`, b.review_status === 'denied' ? 'Rejected' : b.review_status), node('span', `badge confidence-${b.confidence.level || 'none'}`, confidenceLabel[b.confidence.level || 'none']));
+  detail.append(header, meta);
   const reason = node('details', 'transaction-notes');
   reason.append(node('summary', '', 'Payment details'), node('p', '', b.suggestion.reason),
     node('div', 'narration', b.description), node('p', 'subtle', `Saved assessment: ${confidenceLabel[b.confidence.level || 'none']}`));
@@ -174,50 +142,71 @@ function defaultAllocation(item) {
   return (Math.max(0, Math.min(available(item), cents(bank().amount))) / 100).toFixed(2);
 }
 function renderCandidates() {
-  /* Display suggestions first, with an explicit option to search the entire corpus. */
-  const b = bank(), query = $('#candidate-query').value.toLowerCase(), list = $('#candidate-list'); list.replaceChildren();
-  const alternatives = $('#alternative-list'); alternatives.replaceChildren();
+  /* Compare shortlisted supporting pieces openly, five compact cards at a time. */
+  const b = bank(), query = $('#candidate-query').value.trim().toLowerCase(), list = $('#candidate-list');
+  list.replaceChildren();
+  const suggested = new Set(b.suggestion.allocations.map(a => a.item_id));
   const keys = new Set(b.candidates);
-  const expanded = $('#candidate-picker').open;
-  const items = reviewData.items.filter(i => (selected.has(i.id) || (!i.excluded && expanded && ($('#all-candidates').checked || keys.has(i.id)))) && (selected.has(i.id) || `${i.id} ${i.filename} ${i.amount} ${i.description} ${i.parties.join(' ')} ${(i.references || []).join(' ')} ${(i.dates || []).map(d => typeof d === 'string' ? d : d.value).join(' ')}`.toLowerCase().includes(query)));
-  items.sort((a, c) => Number(selected.has(c.id)) - Number(selected.has(a.id)) || Number(b.candidates.includes(c.id)) - Number(b.candidates.includes(a.id)));
-  for (const item of items) {
-    const card = node('div', `candidate-card ${selected.has(item.id) ? 'selected' : ''}`), top = node('label', 'candidate-top');
+  const items = reviewData.items.filter(i => (selected.has(i.id) || (!i.excluded && ($('#all-candidates').checked || keys.has(i.id)))) &&
+    (selected.has(i.id) || `${i.id} ${i.filename} ${i.amount} ${i.description} ${i.parties.join(' ')} ${(i.references || []).join(' ')}`.toLowerCase().includes(query)));
+  items.sort((a, c) => Number(suggested.has(c.id)) - Number(suggested.has(a.id)));
+  candidatePage = Math.max(0, Math.min(candidatePage, Math.ceil(items.length / 5) - 1));
+  const start = candidatePage * 5;
+  $('#candidate-count').textContent = items.length ? `${start + 1}–${Math.min(start + 5, items.length)} of ${items.length} candidates` : 'No candidates';
+  $('#candidate-prev').disabled = candidatePage === 0;
+  $('#candidate-next').disabled = start + 5 >= items.length;
+  for (const item of items.slice(start, start + 5)) {
+    const card = node('article', `candidate-card ${selected.has(item.id) ? 'selected' : ''}`);
+    card.dataset.itemId = item.id;
+    card.setAttribute('aria-label', `Candidate ${item.id}`);
+    if (previewState?.kind === 'item' && previewState.id === item.id) card.classList.add('previewing');
     const checkbox = node('input'); checkbox.type = 'checkbox'; checkbox.checked = selected.has(item.id); checkbox.disabled = item.stale;
     checkbox.setAttribute('aria-label', `Select ${item.id} ${item.filename}`);
-    checkbox.onchange = () => { if (checkbox.checked) selected.set(item.id, defaultAllocation(item)); else selected.delete(item.id); renderCandidates(); updateSummary(); };
-    top.append(checkbox, node('span', 'candidate-name', item.parties.join(' / ') || 'Party unknown')); card.append(top);
-    card.dataset.itemId = item.id;
-    if (previewState?.kind === 'item' && previewState.id === item.id) card.classList.add('previewing');
-    const sourceDetails = node('details', 'source-details');
-    sourceDetails.append(node('summary', '', 'Source and allocation'), node('p', 'candidate-info', item.filename), node('p', 'candidate-info', item.location));
+    checkbox.onchange = () => {
+      if (checkbox.checked) selected.set(item.id, defaultAllocation(item)); else selected.delete(item.id);
+      renderCandidates(); updateSummary();
+      [...root.querySelectorAll('.candidate-card')].find(c => c.dataset.itemId === item.id)?.querySelector('input').focus();
+    };
+    const details = node('details', 'candidate-details'); details.open = expandedCandidates.has(item.id);
+    const summary = node('summary', 'candidate-summary');
+    summary.setAttribute('aria-label', `Inspect ${item.id} ${item.filename}`);
+    summary.append(node('span', 'candidate-name', item.parties.join(' / ') || 'Party unknown'), node('strong', 'candidate-amount', formatMoney(item.amount, item.currency)));
+    details.append(summary);
+    details.ontoggle = () => {
+      if (details.open) {
+        const newlyOpened = !expandedCandidates.has(item.id);
+        expandedCandidates.add(item.id);
+        if (newlyOpened) showEvidence('item', item.id);
+      } else expandedCandidates.delete(item.id);
+    };
+    const body = node('div', 'candidate-body');
+    if (suggested.has(item.id)) body.append(node('span', 'badge', 'Model suggestion'));
+    body.append(node('p', 'candidate-description', item.description || 'Description unavailable'));
     const dates = item.dates?.length ? item.dates.map(d => typeof d === 'string' ? d : d.value).join(', ') : item.date || 'Date unknown';
-    if (item.description) card.append(node('p', 'candidate-description', item.description));
-    const facts = node('dl', 'candidate-facts');
-    for (const [label, value] of [['Source amount', formatMoney(item.amount, item.currency)], ['Date', dates]]) {
-      const fact = node('div'); fact.append(node('dt', '', label), node('dd', '', value)); facts.append(fact);
-    }
-    card.append(facts);
-    card.append(node('p', 'candidate-source', `${item.filename} · ${item.location || 'Original document'}`));
-    card.append(node('p', 'candidate-reason', b.evidence_reasons?.[item.id] || 'Not assessed in the saved shortlist. Verify this evidence before adding it.'));
-
-    if (item.currency === b.currency && cents(item.amount) !== null && cents(item.amount) !== cents(b.amount)) card.append(node('p', 'warning', `Bank minus source amount: ${formatMoney(((cents(b.amount) - cents(item.amount)) / 100).toFixed(2), b.currency)}`));
-    if (item.used !== '0') card.append(node('p', 'warning', `Reserved across payments: ${formatMoney(item.used, item.currency)} · Available here: ${available(item) === null ? 'unknown' : formatMoney((available(item) / 100).toFixed(2), item.currency)}`));
-    if (item.stale) card.append(node('p', 'warning', 'Source changed or unavailable — approval blocked.'));
-    if (item.boundary_unresolved) card.append(node('p', 'warning', 'Check the whole document: receipt boundaries are not assembled.'));
-    const bottom = node('div', 'candidate-bottom');
+    body.append(node('p', 'candidate-info', `${dates} · ${item.filename} · ${item.location || 'Location unknown'}`));
+    body.append(node('p', 'candidate-reason', b.evidence_reasons?.[item.id] || 'Compare the party, amount and original evidence. This candidate has not been confirmed.'));
+    if (item.currency === b.currency && cents(item.amount) !== null && cents(item.amount) !== cents(b.amount)) body.append(node('p', 'warning', `Bank minus source: ${formatMoney(((cents(b.amount) - cents(item.amount)) / 100).toFixed(2), b.currency)}`));
+    if (item.used !== '0') body.append(node('p', 'warning', `Reserved: ${formatMoney(item.used, item.currency)} · Available here: ${available(item) === null ? 'unknown' : formatMoney((available(item) / 100).toFixed(2), item.currency)}`));
+    if (item.stale) body.append(node('p', 'warning', 'Source changed or unavailable. Approval blocked.'));
+    if (item.boundary_unresolved) body.append(node('p', 'warning', 'Check receipt boundaries against the original.'));
     if (selected.has(item.id)) {
       const label = node('label', 'allocation-label', 'Allocate to this payment');
       const input = node('input'); input.type = 'text'; input.inputMode = 'decimal'; input.value = selected.get(item.id); input.placeholder = 'Evidence only';
       input.disabled = !item.currency || item.currency !== b.currency || item.amount === '';
       input.setAttribute('aria-label', `Allocation ${item.id}`);
       input.oninput = () => { selected.set(item.id, input.value.trim()); updateSummary(); };
-      label.append(input); sourceDetails.append(label);
+      label.append(input); body.append(label);
     }
-    bottom.append(button('View evidence →', () => showEvidence('item', item.id), 'candidate-preview')); card.append(bottom, sourceDetails); (selected.has(item.id) ? list : alternatives).append(card);
+    const actions = node('div', 'candidate-bottom');
+    actions.append(button('View evidence', () => showEvidence('item', item.id), 'candidate-preview'));
+    const use = button('Use only this candidate', () => {
+      selected.clear(); selected.set(item.id, defaultAllocation(item));
+      renderCandidates(); updateSummary(); showEvidence('item', item.id);
+    }, 'candidate-preview');
+    use.disabled = item.stale || item.excluded;
+    actions.append(use); body.append(actions); details.append(body); card.append(checkbox, details); list.append(card);
   }
-  if (!selected.size) list.append(node('p', 'empty-state', 'No supporting evidence selected. Use Change evidence to search; this does not mean no supporting document exists.'));
-  if (expanded && !alternatives.children.length) alternatives.append(node('p', 'empty-state', 'No alternatives in this search.'));
+  if (!items.length) list.append(node('p', 'empty-state', 'No candidates found. Search all pieces or change your search.'));
 }
 function updateSummary() {
   /* Make incomplete, excessive or invalid allocations visible before submitting. */
@@ -232,10 +221,10 @@ function updateSummary() {
   const flagged = difference !== 0 || selected.size > 1 || [...selected].some(([id, value]) => value === '' || itemById.get(id).boundary_unresolved || (cents(value) !== null && cents(value) < cents(itemById.get(id).amount)));
   summary.hidden = !flagged || !selected.size;
   const unchanged = draftSnapshot() === savedDraft;
-  $('#support-heading').textContent = b.decision && unchanged ? 'Supporting evidence' : 'Suggested support';
+  $('#support-heading').textContent = 'Supporting candidates';
   $('#support-status').textContent = b.decision && unchanged
     ? `${b.support_status}. ${b.review_status === 'denied' ? 'Suggestion rejected; other evidence may exist.' : 'Saved review decision.'}`
-    : 'Not yet confirmed';
+    : `${selected.size} selected · Not confirmed`;
   $('#approve-match').textContent = difference === 0 && values.some(v => v !== '') ? 'Confirm supporting' : 'Save partial / contextual evidence';
   $('#acknowledge-label').hidden = !flagged;
   if (flagged && selected.size) $('#note-details').open = true;
@@ -357,23 +346,27 @@ async function initialize() {
     if (initial) chooseBank(initial.id);
   } catch (e) { error(e.message); }
 }
-$('#bank-query').oninput = () => { remember('query', $('#bank-query').value); queuePage = 0; renderQueue(); };
-$('#bank-filter').onchange = () => { remember('filter', $('#bank-filter').value); queuePage = 0; renderQueue(); };
-$('#confidence-filter').onchange = () => { remember('confidence', $('#confidence-filter').value); queuePage = 0; renderQueue(); };
-$('#previous-transactions').onclick = () => { queuePage--; renderQueue(); };
-$('#next-transactions').onclick = () => { queuePage++; renderQueue(); };
-$('#next-review-transaction').onclick = () => {
+$('#bank-query').oninput = () => { remember('query', $('#bank-query').value); renderQueue(); };
+$('#bank-filter').onchange = () => { remember('filter', $('#bank-filter').value); renderQueue(); };
+$('#confidence-filter').onchange = () => { remember('confidence', $('#confidence-filter').value); renderQueue(); };
+$('#bank-select').onchange = () => { requestBank($('#bank-select').value); renderQueue(); };
+$('#previous-transactions').onclick = () => {
+  const rows = visibleBanks(), index = rows.findIndex(b => b.id === activeId);
+  if (index > 0) requestBank(rows[index - 1].id);
+};
+$('#next-transactions').onclick = $('#next-review-transaction').onclick = () => {
   const rows = visibleBanks(), index = rows.findIndex(b => b.id === activeId);
   if (rows[index + 1]) requestBank(rows[index + 1].id);
 };
+$('#candidate-prev').onclick = () => { candidatePage--; renderCandidates(); };
+$('#candidate-next').onclick = () => { candidatePage++; renderCandidates(); };
 $('#preview-source').onchange = () => {
   const id = $('#preview-source').value;
   showEvidence(id === '__bank__' ? 'bank' : 'item', id === '__bank__' ? activeId : id);
 };
 $('#preview-zoom').onchange = applyZoom;
 $('#decision-note').oninput = updateSummary;
-$('#candidate-query').oninput = renderCandidates; $('#all-candidates').onchange = renderCandidates;
-$('#candidate-picker').ontoggle = () => { if (reviewData && activeId) renderCandidates(); };
+$('#candidate-query').oninput = $('#all-candidates').onchange = () => { candidatePage = 0; renderCandidates(); };
 $('#restore-suggestion').onclick = () => { selected.clear(); bank().suggestion.allocations.forEach(a => selected.set(a.item_id, a.amount)); renderCandidates(); updateSummary(); };
 $('#approve-match').onclick = () => saveDecision('approve'); $('#deny-match').onclick = () => saveDecision('deny'); $('#undo-match').onclick = () => saveDecision('undo');
 $('#preview-bank').onclick = () => { if (activeId) showEvidence('bank', activeId); };
