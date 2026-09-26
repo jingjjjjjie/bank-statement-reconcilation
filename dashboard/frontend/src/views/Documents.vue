@@ -16,8 +16,6 @@ usePage(root, initialize);
     <section class="stats document-stats"><div><span>Documents</span><strong id="document-total">—</strong></div><div><span>Needs review</span><strong id="document-admin">—</strong></div><div><span>Complete</span><strong id="document-complete">—</strong></div></section>
     <section class="settings-card">
       <div class="document-toolbar"><div><h2>All documents</h2><p id="document-summary" role="status">Loading saved progress…</p></div><div class="document-filters"><label>Search documents<input id="document-search" type="search" placeholder="Filename or path"></label><label>Status<select id="document-filter"><option value="all">All statuses</option><option value="Queued">Queued</option><option value="Processing">Processing</option><option value="Needs review">Needs review</option><option value="Complete">Complete</option><option value="Trash">Trash</option><option value="Needs attention">Needs attention</option></select></label></div></div>
-      <label><input id="hide-duplicates" type="checkbox"> Hide approved duplicates</label>
-
       <div class="document-table-wrap"><table class="document-table"><thead><tr><th>Document</th><th>Status</th><th>Actions</th></tr></thead><tbody id="document-rows"></tbody></table></div>
       <p id="document-empty" class="document-empty" hidden></p>
     </section>
