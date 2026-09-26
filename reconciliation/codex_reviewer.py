@@ -8,6 +8,7 @@ from contextlib import contextmanager
 from copy import copy
 from uuid import uuid4
 from pathlib import Path
+from tempfile import TemporaryDirectory
 
 from jsonschema import validate
 from reconciliation.review_settings import DEFAULT_MODEL
@@ -24,6 +25,12 @@ def object_schema(properties):
 
 
 TEXT = {"type": "string"}
+DISABLED_FEATURES = (
+    "apps", "browser_use", "browser_use_external", "computer_use", "plugins",
+    "remote_plugin", "image_generation", "shell_tool", "unified_exec",
+    "multi_agent", "multi_agent_v2", "goals", "sleep_tool", "view_image",
+    "code_mode", "code_mode_host", "skill_search", "memories", "hooks",
+)
 TEXTS = {"type": "array", "items": TEXT}
 EXTRACTION = load_schema("extraction.legacy")
 MONEY = EXTRACTION["properties"]["money"]["items"]
@@ -115,7 +122,9 @@ class CodexReviewer:
         if self._cancelled.is_set():
             raise ReviewCancelled("Review stopped by user")
         prompt = load_prompt("styles") + "\n\n" + prompt
-        digest = hashlib.sha256(json.dumps([prompt, schema, self.model, self.reasoning], sort_keys=True).encode())
+        profile = ["builtin-instructions", DISABLED_FEATURES, "skip_host_skill_discovery",
+                   "web_search=disabled", "project_doc_max_bytes=0"]
+        digest = hashlib.sha256(json.dumps([prompt, schema, self.model, self.reasoning, profile], sort_keys=True).encode())
         for image in images:
             digest.update(Path(image).read_bytes())
         folder = self.cache / digest.hexdigest()
@@ -159,6 +168,10 @@ class CodexReviewer:
                    "--ephemeral", "--sandbox", "read-only", "--color", "never", "--json",
                    "--output-schema", str(schema_path.resolve()),
                    "--output-last-message", str(output_path.resolve())]
+        command += ["-c", 'web_search="disabled"', "-c", "project_doc_max_bytes=0"]
+        command += ["--enable", "skip_host_skill_discovery"]
+        for feature in DISABLED_FEATURES:
+            command += ["--disable", feature]
         if self.model:
             command += ["--model", self.model]
         if self.reasoning != "default":
@@ -181,9 +194,9 @@ class CodexReviewer:
         process_audit = {}
         status = "failed"
         try:
-            with events_path.open("w", encoding="utf-8") as events, (folder / f"exec-{attempt_id}.log").open("w", encoding="utf-8") as log:
+            with TemporaryDirectory(prefix="reconciliation-codex-") as isolated, events_path.open("w", encoding="utf-8") as events, (folder / f"exec-{attempt_id}.log").open("w", encoding="utf-8") as log:
                 process = self.processes.run(command, input=prompt, timeout=self.timeout,
-                                             stdout=events, stderr=log, cwd=folder, audit=process_audit)
+                                             stdout=events, stderr=log, cwd=isolated, audit=process_audit)
                 status = "finished" if process.returncode == 0 else "failed"
         except ReviewCancelled:
             status = "cancelled"
