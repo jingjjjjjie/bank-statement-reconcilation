@@ -7,7 +7,7 @@ const { root, $, api, toast, pollVisible, showDevelopmentMode, navigate, routeQu
 let token;
 /* Present cached evidence; Python validates and persists every human decision. */
 let reviewData, activeId, saving = false, previewSerial = 0, previewState;
-let savedDraft = '';
+let savedDraft = '', queuePage = 0;
 const selected = new Map();
 function draftSnapshot() {
   /* Track unsaved allocations and notes independently of display preferences. */
@@ -70,28 +70,38 @@ function visibleBanks() {
     `${b.id} ${b.date} ${b.parties.join(' ')} ${b.amount} ${b.description}`.toLowerCase().includes(query));
 }
 function renderQueue() {
-  /* Keep the active decision open even when saving removes it from the pending filter. */
-  const rows = visibleBanks(), list = $('#bank-list'), scroll = list.scrollTop; list.replaceChildren();
-  $('#queue-count').textContent = `${rows.length} transactions`;
-  for (const b of rows) {
-    const row = button('', () => chooseBank(b.id), `bank-row ${b.id === activeId ? 'active' : ''}`);
+  /* Show ten numbered transactions, retaining independent decision and confidence filters. */
+  const rows = visibleBanks(), list = $('#bank-list'); list.replaceChildren();
+  queuePage = Math.max(0, Math.min(queuePage, Math.ceil(rows.length / 10) - 1));
+  const start = queuePage * 10;
+  $('#queue-count').textContent = rows.length ? `${start + 1}–${Math.min(start + 10, rows.length)} of ${rows.length}` : '0 transactions';
+  $('#previous-transactions').disabled = queuePage === 0;
+  $('#next-transactions').disabled = start + 10 >= rows.length;
+  const activeIndex = rows.findIndex(b => b.id === activeId);
+  $('#next-review-transaction').disabled = saving || !rows.length || activeIndex === rows.length - 1;
+  for (const [index, b] of rows.slice(start, start + 10).entries()) {
+    const row = button(String(start + index + 1), () => requestBank(b.id), `bank-row ${b.review_status} ${b.id === activeId ? 'active' : ''}`);
     row.setAttribute('aria-label', `${b.id} ${b.parties.join(' ')} ${formatMoney(b.amount, b.currency)}`);
     row.setAttribute('aria-pressed', String(b.id === activeId));
-    row.append(node('span', 'party', b.parties.join(' / ')));
-    const meta = node('span', 'row-meta'); meta.append(node('span', '', b.date), node('span', '', b.id)); row.append(meta);
-    row.append(node('span', 'row-money', `${b.direction === 'in' ? '+ ' : ''}${formatMoney(b.amount, b.currency)}`));
-    row.append(node('span', `badge confidence-${b.confidence.level || 'none'}`, confidenceLabel[b.confidence.level || 'none']));
-    row.append(node('span', `badge ${b.review_status}`, b.review_status === 'denied' ? 'Rejected' : b.review_status));
-    if (b.stale) row.append(node('span', 'warning', 'Evidence changed'));
+    row.title = `${b.parties.join(' / ')} · ${formatMoney(b.amount, b.currency)} · ${b.review_status === 'denied' ? 'Rejected' : b.review_status}`;
+    row.append(node('span', 'sr-only', `${confidenceLabel[b.confidence.level || 'none']} · ${b.review_status}`));
+    if (b.stale) row.append(node('span', 'sr-only', 'Evidence changed'));
     list.append(row);
   }
-  if (!rows.length) list.append(node('div', 'empty-state', 'No transactions in this view. Change the filter or search.'));
-  list.scrollTop = scroll;
+  if (!rows.length) list.append(node('span', 'subtle', 'No matches'));
+}
+function requestBank(id) {
+  /* Protect edited allocations when navigating between transactions. */
+  if (saving || id === activeId) return;
+  if (activeId && draftSnapshot() !== savedDraft && !window.confirm('Leave this transaction and discard unsaved changes?')) return;
+  chooseBank(id);
 }
 function chooseBank(id, addItem) {
   /* Start a draft from this transaction's saved choice, or its cached proposal. */
   if (saving) return;
   activeId = id; selected.clear(); error();
+  const visibleIndex = visibleBanks().findIndex(b => b.id === id);
+  if (visibleIndex >= 0) queuePage = Math.floor(visibleIndex / 10);
   const b = bank(), source = b.decision ? b.decision.allocations : b.suggestion.allocations;
   source.forEach(a => { if (itemById.has(a.item_id)) selected.set(a.item_id, a.amount); });
   if (addItem) selected.set(addItem, defaultAllocation(itemById.get(addItem)));
@@ -103,7 +113,8 @@ function chooseBank(id, addItem) {
   $('#deny-match').disabled = false;
   $('#approve-match').textContent = b.review_status === 'approved' ? 'Save changes' : 'Confirm supporting';
   const detail = $('#transaction-detail'); detail.replaceChildren();
-  detail.append(node('span', `badge ${b.review_status}`, `${b.id} · ${b.review_status === 'denied' ? 'Rejected' : b.review_status}`), node('h2', 'transaction-title', b.parties.join(' / ')), node('div', 'bank-amount', formatMoney(b.amount, b.currency)), node('p', 'bank-meta', `${b.date} · ${b.direction === 'in' ? 'Incoming' : 'Outgoing'}`));
+  detail.append(node('span', 'payment-label', 'Bank payment'));
+  detail.append(node('span', `badge ${b.review_status}`, `${b.id} · ${b.review_status === 'denied' ? 'Rejected' : b.review_status}`), node('h2', 'transaction-title', b.parties.join(' / ')), node('div', 'bank-amount', formatMoney(b.amount, b.currency)), node('span', `badge confidence-${b.confidence.level || 'none'}`, confidenceLabel[b.confidence.level || 'none']), node('p', 'bank-meta', `${b.date} · ${b.direction === 'in' ? 'Incoming' : 'Outgoing'}`));
   const reason = node('details', 'transaction-notes');
   reason.append(node('summary', '', 'Payment details'), node('p', '', b.suggestion.reason),
     node('div', 'narration', b.description), node('p', 'subtle', `Saved assessment: ${confidenceLabel[b.confidence.level || 'none']}`));
@@ -144,10 +155,18 @@ function renderCandidates() {
     checkbox.setAttribute('aria-label', `Select ${item.id} ${item.filename}`);
     checkbox.onchange = () => { if (checkbox.checked) selected.set(item.id, defaultAllocation(item)); else selected.delete(item.id); renderCandidates(); updateSummary(); };
     top.append(checkbox, node('span', 'candidate-name', item.parties.join(' / ') || 'Party unknown')); card.append(top);
+    card.dataset.itemId = item.id;
+    if (previewState?.kind === 'item' && previewState.id === item.id) card.classList.add('previewing');
     const sourceDetails = node('details', 'source-details');
     sourceDetails.append(node('summary', '', 'Source and allocation'), node('p', 'candidate-info', item.filename), node('p', 'candidate-info', item.location));
-    const dates = item.dates?.length ? item.dates.join(', ') : item.date || 'Date unknown';
-    card.append(node('div', 'candidate-info', `${formatMoney(item.amount, item.currency)} | ${dates}`));
+    const dates = item.dates?.length ? item.dates.map(d => typeof d === 'string' ? d : d.value).join(', ') : item.date || 'Date unknown';
+    if (item.description) card.append(node('p', 'candidate-description', item.description));
+    const facts = node('dl', 'candidate-facts');
+    for (const [label, value] of [['Source amount', formatMoney(item.amount, item.currency)], ['Date', dates]]) {
+      const fact = node('div'); fact.append(node('dt', '', label), node('dd', '', value)); facts.append(fact);
+    }
+    card.append(facts);
+    card.append(node('p', 'candidate-source', `${item.filename} · ${item.location || 'Original document'}`));
     card.append(node('p', 'candidate-reason', b.evidence_reasons?.[item.id] || 'Not assessed in the saved shortlist. Verify this evidence before adding it.'));
 
     if (item.currency === b.currency && cents(item.amount) !== null && cents(item.amount) !== cents(b.amount)) card.append(node('p', 'warning', `Bank minus source amount: ${formatMoney(((cents(b.amount) - cents(item.amount)) / 100).toFixed(2), b.currency)}`));
@@ -163,7 +182,7 @@ function renderCandidates() {
       input.oninput = () => { selected.set(item.id, input.value.trim()); updateSummary(); };
       label.append(input); sourceDetails.append(label);
     }
-    bottom.append(button('View evidence ↗', () => showEvidence('item', item.id))); card.append(bottom, sourceDetails); (selected.has(item.id) ? list : alternatives).append(card);
+    bottom.append(button('View evidence →', () => showEvidence('item', item.id), 'candidate-preview')); card.append(bottom, sourceDetails); (selected.has(item.id) ? list : alternatives).append(card);
   }
   if (!selected.size) list.append(node('p', 'empty-state', 'No supporting evidence selected. Use Change evidence to search; this does not mean no supporting document exists.'));
   if (expanded && !alternatives.children.length) alternatives.append(node('p', 'empty-state', 'No alternatives in this search.'));
@@ -204,11 +223,25 @@ async function saveDecision(action) {
     await refresh(); saving = false; chooseBank(activeId);
     toast(action === 'undo' ? 'Decision undone. Amounts are available again.' : 'Decision saved.');
   } catch (e) { error(e.message); $('#save-status').textContent = persisted ? 'Decision saved, but refresh failed. Reload to see the latest state.' : 'Decision was not saved. Your draft is still here.'; }
-  finally { saving = false; root.querySelectorAll('.decision-actions button').forEach(b => b.disabled = false); updateSummary(); }
+  finally { saving = false; root.querySelectorAll('.decision-actions button').forEach(b => b.disabled = false); updateSummary(); renderQueue(); }
 }
 async function showEvidence(kind, id) {
   /* Ignore late responses when the reviewer switches documents quickly. */
   const serial = ++previewSerial, query = new URLSearchParams({kind,id});
+  previewState = null;
+  $('#preview-prev').disabled = true; $('#preview-next').disabled = true;
+  $('#preview-zoom').value = '1'; applyZoom();
+  const sources = $('#preview-source'); sources.replaceChildren();
+  const ids = new Set(selected.keys()); if (kind === 'item') ids.add(id);
+  for (const itemId of ids) {
+    const item = itemById.get(itemId);
+    if (!item) continue;
+    const option = node('option', '', `${item.parties.join(' / ') || item.filename} · ${item.filename}`);
+    option.value = itemId; sources.append(option);
+  }
+  const bankOption = node('option', '', 'Original bank statement'); bankOption.value = '__bank__'; sources.append(bankOption);
+  sources.value = kind === 'bank' ? '__bank__' : id;
+  root.querySelectorAll('.candidate-card').forEach(card => card.classList.toggle('previewing', kind === 'item' && card.dataset.itemId === id));
   $('#evidence-content').replaceChildren(node('div', 'empty-state', 'Loading original evidence…'));
   $('#evidence-title').textContent = kind === 'bank' ? 'Original bank statement' : itemById.get(id).filename;
   $('#evidence-original').href = `/api/matching-file?${query}`; $('#evidence-original').hidden = false;
@@ -243,8 +276,13 @@ async function renderEvidencePage(serial = ++previewSerial) {
     }
   } catch (e) { if (serial === previewSerial) target.replaceChildren(node('div', 'empty-state', e.message)); }
 }
+function applyZoom() {
+  /* Zoom the original inside its own scroll area without widening the page. */
+  $('#evidence-content').style.setProperty('--preview-scale', $('#preview-zoom').value);
+}
 function changeTab(documents) {
   /* Both views read the same ledger and remaining balances. */
+  $('#transaction-toolbar').hidden = documents;
   $('#bank-view').hidden = documents; $('#document-view').hidden = !documents;
   $('#bank-tab').classList.toggle('selected', !documents); $('#document-tab').classList.toggle('selected', documents);
   if (documents) renderUnmatched();
@@ -287,9 +325,20 @@ async function initialize() {
     if (initial) chooseBank(initial.id);
   } catch (e) { error(e.message); }
 }
-$('#bank-query').oninput = () => { remember('query', $('#bank-query').value); renderQueue(); };
-$('#bank-filter').onchange = () => { remember('filter', $('#bank-filter').value); renderQueue(); };
-$('#confidence-filter').onchange = () => { remember('confidence', $('#confidence-filter').value); renderQueue(); };
+$('#bank-query').oninput = () => { remember('query', $('#bank-query').value); queuePage = 0; renderQueue(); };
+$('#bank-filter').onchange = () => { remember('filter', $('#bank-filter').value); queuePage = 0; renderQueue(); };
+$('#confidence-filter').onchange = () => { remember('confidence', $('#confidence-filter').value); queuePage = 0; renderQueue(); };
+$('#previous-transactions').onclick = () => { queuePage--; renderQueue(); };
+$('#next-transactions').onclick = () => { queuePage++; renderQueue(); };
+$('#next-review-transaction').onclick = () => {
+  const rows = visibleBanks(), index = rows.findIndex(b => b.id === activeId);
+  if (rows[index + 1]) requestBank(rows[index + 1].id);
+};
+$('#preview-source').onchange = () => {
+  const id = $('#preview-source').value;
+  showEvidence(id === '__bank__' ? 'bank' : 'item', id === '__bank__' ? activeId : id);
+};
+$('#preview-zoom').onchange = applyZoom;
 $('#decision-note').oninput = updateSummary;
 $('#candidate-query').oninput = renderCandidates; $('#all-candidates').onchange = renderCandidates;
 $('#candidate-picker').ontoggle = () => { if (reviewData && activeId) renderCandidates(); };

@@ -31,6 +31,8 @@ export const pageHelp = {
     'Export downloads saved reviews as benchmark ground truth: accepted pieces, discarded documents, and pending documents without pieces. Unsaved edits are not included.',
   ]],
   Matching: ['Final review', [
+    'Filter by decision or confidence and use the numbered transactions, ten at a time. Review candidates on the left and their originals on the right. Next moves through the filtered list.',
+    'View evidence opens a candidate without selecting it. Switch originals above the preview; page and zoom controls are below.',
     'Verify one proposed evidence group against the bank payment. Confirm supporting or reject the suggestion; rejection does not prove no other evidence exists.',
     'Change evidence shows unselected alternatives. Each record shows its party, date and source location; equal amounts alone do not prove a match. Check allocated amounts and differences; add a note where needed. Undo decision allows changes.',
     'Unmatched pieces lists unallocated and partially allocated evidence. Choose a bank transaction to attach it. Contextual documents have no monetary balance.',

@@ -119,3 +119,19 @@ Restore reverses the classification, with both actions retained in the audit his
 Final review presents one proposed evidence group per bank payment, preserving row-level allocations. Each record shows its extracted party, date, amount and source location with a conservative factual comparison. Equal amounts alone do not establish support; name differences require checking context. Alternatives appear only under Change evidence and never under the selected group. Rejection means the suggestion was rejected, not that no supporting document exists. Partial/contextual approvals retain No supporting until full monetary coverage is confirmed. No new matching or model assessment is implied by these display explanations.
 
 The default review hides detailed payment narration and source/allocation editing behind disclosures. Keep payee, amount, factual supporting explanation, evidence preview and decision actions visible. Show allocation summaries when warnings need attention; avoid repeating the ordinary fully-covered total above the footer.
+
+
+## Final review workspace (2026-09-26)
+
+Final review uses equal-width candidate and original-evidence panels on desktop,
+stacked on narrow screens. The compact header and filter strip follow Review
+results: independent decision/confidence filters, search, review progress and ten
+numbered transactions per group. Green numbers mean approved; muted brown means
+rejected. Next advances through the filtered list and warns before discarding edits.
+
+Candidate cards show payee, description, source amount, date and source location.
+View evidence previews a candidate without selecting or approving it. The original
+selector switches supporting sources and the bank statement; page and zoom controls
+stay below the preview. Source/allocation edits, alternatives and notes remain
+available. These presentation changes preserve evidence binding, explicit approval,
+monetary validation and the single final-review ledger.
