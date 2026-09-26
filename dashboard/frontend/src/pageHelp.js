@@ -28,6 +28,7 @@ export const pageHelp = {
     'Two receipts or two payees are separate pieces; purchase lines on one receipt are one piece. Use Add entry for a missed receipt. The highlighted entry is selected; Remove deletes it from the extraction. The icon beside the filename shows review status. Accept saves your review without moving. Accept and Discard switch directly between statuses; Undo is optional. Undo accept reopens it and keeps corrections. After editing an accepted document, use Accept again. There are three buttons: Accept changes to Undo accept when accepted; Discard changes to Undo discard when discarded; Next navigates. Unavailable actions stay visible in grey. Next opens the following document separately. Accept all saves all ready results, including current edits; trash and unresolved results are skipped. Bank matches still require separate review.',
     'Discard classifies the whole document as trash and excludes it from supporting evidence. The original stays intact. Reopen its numbered square and use Undo discard to undo.',
     'Reload fetches the latest saved results.',
+    'Export downloads saved reviews as benchmark ground truth: accepted pieces, discarded documents, and pending documents without pieces. Unsaved edits are not included.',
   ]],
   Matching: ['Final review', [
     'Verify one proposed evidence group against the bank payment. Confirm supporting or reject the suggestion; rejection does not prove no other evidence exists.',

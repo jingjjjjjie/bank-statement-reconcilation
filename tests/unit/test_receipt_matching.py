@@ -151,6 +151,24 @@ class ReceiptMatchingTests(unittest.TestCase):
                 'revision': revision, 'key': self.key, 'receipts': self.pieces})
         self.assertFalse((self.work / 'receipt-matches.json').exists())
 
+    def test_ground_truth_exports_only_saved_human_reviews(self):
+        """Pending results carry no pieces; accepted edits and discards are exported."""
+        pending = receipt_review.ground_truth(self.review)
+        self.assertEqual(pending["counts"], {"accepted": 0, "discarded": 0, "pending": 1})
+        self.assertEqual(pending["documents"][0]["pieces"], [])
+        edited = [dict(self.pieces[0], total="46.00", currency="RM"), self.pieces[1]]
+        self.accept_pieces(edited)
+        accepted = receipt_review.ground_truth(self.review)["documents"][0]
+        self.assertEqual(accepted["status"], "accepted")
+        self.assertEqual([(p["amount"], p["currency"]) for p in accepted["pieces"]],
+                         [("46.00", "MYR"), ("15.00", "MYR")])
+        self.assertTrue(all(p["piece_id"] and "limitations" not in p for p in accepted["pieces"]))
+        receipt_review.classify_extraction(self.review, {"revision": self.view()["revision"],
+                                                         "key": self.key, "action": "trash"})
+        discarded = receipt_review.ground_truth(self.review)
+        self.assertEqual(discarded["documents"][0]["status"], "discarded")
+        self.assertEqual(discarded["documents"][0]["pieces"], [])
+
     def test_accept_extraction_without_reviewer_keeps_audit_history(self):
         """Removing the name field still records the explicit approval and its time."""
         receipt_review.accept_extraction(self.review, {"revision": self.view()["revision"],

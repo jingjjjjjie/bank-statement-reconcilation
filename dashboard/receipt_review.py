@@ -9,7 +9,7 @@ from jsonschema import validate, ValidationError
 from reconciliation.codex_reviewer import RECEIPT
 from reconciliation.currencies import normalize_currencies
 from reconciliation.pdf_routing import review_warnings
-from reconciliation.pieces import identify, assign_submitted
+from reconciliation.pieces import canonical, identify, assign_submitted
 from reconciliation.receipt_assembly import ASSEMBLED_RECEIPT, current_assembly, validate_assembly
 from reconciliation.duplicate_workflow import fingerprint
 from reconciliation.receipt_matching import allocated, amount, currency, proposal, revision, stale
@@ -135,6 +135,26 @@ def snapshot_context(evidence):
     matches = [{**match, "stale": bool(stale(match, banks, receipts))} for match in saved["matches"].values()]
     return normalize_currencies({"revision": revision([saved, units, banks]), "units": list(units.values()),
             "receipts": list(receipts.values()), "transactions": list(banks.values()), "matches": matches})
+
+
+def ground_truth(review):
+    """Export saved human review decisions per document as a benchmark answer key."""
+    _, _, units, _, _ = context(review, include_banks=False)
+    index, _ = load_index(work_path(review))
+    root = index.get("root", "")
+    documents = []
+    for unit in units.values():
+        status = "discarded" if unit["trash"] else "accepted" if unit["accepted"] else "pending"
+        paths = [p[len(root):].lstrip("/\\") if root and p.startswith(root) else p
+                 for p in index["documents"][unit["document_id"]]["paths"]]
+        pieces = [{"piece_id": piece["piece_id"], **{k: v for k, v in canonical(piece).items() if k != "limitations"},
+                   **({"source_units": piece["source_units"]} if "source_units" in piece else {})}
+                  for piece in unit["receipts"]] if status == "accepted" else []
+        documents.append({"document_id": unit["document_id"], "paths": paths, "status": status, "pieces": pieces})
+    documents.sort(key=lambda document: document["paths"][0])
+    counts = {status: sum(d["status"] == status for d in documents) for status in ("accepted", "discarded", "pending")}
+    return normalize_currencies({"exported_at": datetime.now(timezone.utc).isoformat(), "root": root,
+                                 "counts": counts, "documents": documents})
 
 
 def require_current(review, expected):

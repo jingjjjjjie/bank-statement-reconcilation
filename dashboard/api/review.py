@@ -1,4 +1,6 @@
 """Review state and explicit human actions; business validation stays in Python workflows."""
+import json
+
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import Response
 from pydantic import BaseModel, StrictBool
@@ -193,6 +195,14 @@ def undo_content(body: ContentDecision, state=Depends(active_context)):
 def receipts(state=Depends(context)):
     """Read receipt pieces and their revision."""
     return receipt_review.snapshot(state.review)
+
+
+@router.get("/receipts/ground-truth")
+def ground_truth(state=Depends(active_context)):
+    """Download saved extraction reviews as a benchmark answer key."""
+    body = json.dumps(receipt_review.ground_truth(state.review), ensure_ascii=False, indent=2)
+    return Response(body, media_type="application/json",
+                    headers={"Content-Disposition": 'attachment; filename="ground-truth.json"'})
 
 
 @router.post("/receipts/accept")
