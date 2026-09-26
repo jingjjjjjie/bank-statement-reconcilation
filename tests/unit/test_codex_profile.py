@@ -31,6 +31,8 @@ class CodexProfileTests(unittest.TestCase):
             self.assertFalse(any("model_instructions_file" in arg for arg in command))
             disabled = {command[i + 1] for i, arg in enumerate(command) if arg == "--disable"}
             self.assertTrue({"computer_use", "plugins", "skill_search"} <= disabled)
+            self.assertNotIn("view_image", disabled)
+            self.assertIn("tools.view_image=true", command)
             self.assertIn("skip_host_skill_discovery", command)
             self.assertIn('web_search="disabled"', command)
             self.assertEqual(command[command.index("--image") + 1], str(image.resolve()))

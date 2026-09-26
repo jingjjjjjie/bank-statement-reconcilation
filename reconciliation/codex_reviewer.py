@@ -28,7 +28,7 @@ TEXT = {"type": "string"}
 DISABLED_FEATURES = (
     "apps", "browser_use", "browser_use_external", "computer_use", "plugins",
     "remote_plugin", "image_generation", "shell_tool", "unified_exec",
-    "multi_agent", "multi_agent_v2", "goals", "sleep_tool", "view_image",
+    "multi_agent", "multi_agent_v2", "goals", "sleep_tool",
     "code_mode", "code_mode_host", "skill_search", "memories", "hooks",
 )
 TEXTS = {"type": "array", "items": TEXT}
@@ -170,6 +170,7 @@ class CodexReviewer:
                    "--output-last-message", str(output_path.resolve())]
         command += ["-c", 'web_search="disabled"', "-c", "project_doc_max_bytes=0"]
         command += ["--enable", "skip_host_skill_discovery"]
+        command += ["--enable", "view_image", "-c", "tools.view_image=true"]
         for feature in DISABLED_FEATURES:
             command += ["--disable", feature]
         if self.model:
