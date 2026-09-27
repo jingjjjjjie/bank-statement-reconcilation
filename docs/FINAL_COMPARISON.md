@@ -1,5 +1,15 @@
 # Final comparison branch — agreed context
 
+## Matching execution controls (2026-09-27)
+
+Bank statement owns Load for final matching, Generate matches, Stop and the
+extraction-style progress display. It shows processed transactions, active
+processes and server-reported elapsed seconds. Final review contains review
+controls only. Completed elapsed time and progress survive page reloads.
+Resume reuses successful saved proposals only when the bank, evidence, model
+settings and prompt revision still match; unfinished or failed lines are retried.
+Changed evidence is validated before reuse. Human decisions remain separate.
+
 ## Live piece pipeline (2026-09-19)
 
 As agreed on 2026-09-27 after the paired benchmark, Generate matches now supplies

@@ -20,7 +20,17 @@ usePage(root, initialize);
       <button id="prepare-bank" class="button dark" type="button">Extract bank statement</button>
       <p id="bank-result" role="status"></p>
     </section>
-    <div class="stage-actions"><button id="load-final-matching" class="button dark" type="button">Load for final matching</button><p id="final-matching-ready" role="status"></p></div>
+    <section class="settings-card documents-page" aria-label="Final matching">
+      <h2>Final matching</h2>
+      <div class="stage-actions"><button id="load-final-matching" class="button secondary" type="button">Load for final matching</button><button id="generate-matches" type="button" class="button dark" disabled>Generate matches</button><button id="stop-matches" type="button" class="button secondary" disabled>Stop</button></div>
+      <p id="final-matching-ready" role="status"></p>
+    <section id="matching-progress" class="document-progress" aria-label="Matching progress">
+      <div class="matching-progress-label"><strong id="matching-run-status" role="status" aria-live="polite"></strong><span id="matching-progress-count"></span></div>
+      <progress id="matching-progress-bar" max="100" value="0" aria-labelledby="matching-run-status" aria-describedby="matching-progress-count"></progress>
+      <div id="matching-progress-track" class="progress-track" aria-hidden="true"><span class="progress-fill"></span><span class="progress-activity"></span></div>
+      <p id="matching-progress-detail" role="status"></p>
+    </section>
+    </section>
     <section id="bank-content" hidden>
       <section class="stats bank-stats"><div><span>Transactions</span><strong id="bank-count"></strong><small id="bank-account"></small></div><div><span>Opening balance</span><strong id="bank-opening"></strong></div><div><span>Money in / out</span><strong id="bank-flow"></strong></div><div><span>Closing balance</span><strong id="bank-closing"></strong><small id="bank-checks"></small></div></section>
       <div class="stage-actions"><button id="check-bank" class="button secondary" type="button">Check bank extraction</button><p id="bank-step-note" role="status"></p></div>

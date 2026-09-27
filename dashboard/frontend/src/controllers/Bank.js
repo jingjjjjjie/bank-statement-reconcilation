@@ -72,13 +72,17 @@ async function exportWorkbook() {
     $('#export-error').hidden = false;
   } finally { button.disabled = false; }
 }
+let matchingReady = false, matchingStarting = false;
 async function loadMatchingReadiness() {
   /* Show whether the current bank and extracted pieces are ready for matching. */
   try {
     const data = await api('/api/matching');
-    $('#load-final-matching').disabled = !!data.live_pieces;
+    matchingReady = !!data.live_pieces;
+    $('#load-final-matching').disabled = matchingReady;
+    $('#generate-matches').disabled = !matchingReady;
+    if (matchingReady) await matchingProgress(); else renderMatchingProgress({});
     $('#final-matching-ready').textContent = data.live_pieces
-      ? 'Loaded. Generate matches on Final review.' : 'Load the current bank statement and extracted pieces for final matching.';
+      ? 'Progress is saved automatically. Review results on Final review.' : 'Load the current bank statement and extracted pieces for final matching.';
   } catch (error) {
     $('#final-matching-ready').textContent = 'Prepare the bank statement and supporting documents before loading.';
   }
@@ -96,6 +100,67 @@ $('#load-final-matching').onclick = async () => {
     $('#final-matching-ready').textContent = error.message;
   }
 };
+function renderMatchingProgress(state) {
+  /* Display real processed counts; failures and stopped work never imply successful completion. */
+  const total = state.total || 0, completed = state.completed || 0;
+  const running = !!state.running, stopping = !!state.stop_requested;
+  const percent = total ? Math.min(100, Math.floor(completed / total * 100)) : 0;
+  const panel = $('#matching-progress'), bar = $('#matching-progress-bar');
+  panel.hidden = false;
+  panel.dataset.running = String(running);
+  panel.dataset.error = String(!!state.error);
+  panel.setAttribute('aria-busy', String(running));
+  $('#generate-matches').disabled = running || !matchingReady;
+  $('#stop-matches').disabled = !running || stopping || matchingStarting;
+  $('#stop-matches').textContent = stopping && running ? 'Stopping...' : 'Stop';
+  $('#generate-matches').textContent = matchingStarting ? 'Starting...' : running ? (stopping ? 'Stopping...' : 'Matching...')
+    : total && (completed < total || state.failed || state.error || state.stop_requested) ? 'Resume matching' : 'Generate matches';
+  $('#matching-run-status').textContent = running
+    ? stopping ? 'Stopping…' : matchingStarting ? 'Starting matching…' : 'Generating matches'
+    : stopping ? 'Stopped' : state.error ? 'Finished with errors' : !total ? 'Ready to match' : completed < total ? 'Stopped' : 'Matching complete';
+  $('#matching-progress-count').textContent = total ? `${completed} / ${total} processed (${percent}%)` : '';
+  if (matchingStarting || !total) bar.removeAttribute('value');
+  else bar.value = percent;
+  const track = $('#matching-progress-track');
+  track.dataset.busy = String(matchingStarting);
+  track.dataset.running = String(running && !stopping);
+  track.querySelector('.progress-fill').style.transform = `scaleX(${percent / 100})`;
+  $('#matching-progress-detail').textContent = [
+    running ? (stopping ? 'Waiting for active processes to exit' : state.phase || 'Matching transactions') : '',
+    state.elapsed_seconds != null ? `${state.elapsed_seconds}s elapsed` : '',
+    running && state.active_processes ? `${state.active_processes} active` : '',
+    state.failed ? `${state.failed} failed` : '',
+    state.error && !state.failed ? state.error : '',
+  ].filter(Boolean).join(' · ');
+}
+async function matchingProgress() {
+  /* Keep start, stop and progress together on the Bank statement page. */
+  if (!matchingReady || matchingStarting) return;
+  const state = await api('/api/matching-run');
+  if (!matchingStarting) renderMatchingProgress(state);
+}
+$('#generate-matches').onclick = async () => {
+  if (matchingStarting || !matchingReady) return;
+  matchingStarting = true;
+  renderMatchingProgress({running:true});
+  try {
+    const state = await api('/api/matching-run', {});
+    matchingStarting = false;
+    renderMatchingProgress(state);
+    await matchingProgress();
+  } catch (e) {
+    matchingStarting = false;
+    renderMatchingProgress({error:e.message});
+    $('#final-matching-ready').textContent = e.message;
+  }
+};
+$('#stop-matches').onclick = async () => {
+  $('#stop-matches').disabled = true;
+  $('#matching-run-status').textContent = 'Stopping…';
+  try { renderMatchingProgress(await api('/api/matching-stop', {})); }
+  catch (e) { $('#stop-matches').disabled = false; $('#final-matching-ready').textContent = e.message; }
+};
+page.pollVisible(matchingProgress, 2000);
 loadMatchingReadiness();
 
 $('#bank-search').addEventListener('input', renderRows);

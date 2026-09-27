@@ -1,6 +1,7 @@
 """Batched subscription-model matching over ranked candidate pieces."""
 import json
 import threading
+import time
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
@@ -9,7 +10,7 @@ from dashboard.review import write_json
 from reconciliation.codex_reviewer import CodexReviewer, TEXT, object_schema
 from reconciliation.duplicate_workflow import fingerprint
 from reconciliation.prompts import load_prompt
-from reconciliation.receipt_matching import amount
+from reconciliation.receipt_matching import amount, revision
 from reconciliation.currencies import normalize_currency
 from reconciliation.review_settings import stage_settings
 from reconciliation.vision_workflow import active_config
@@ -74,6 +75,10 @@ def status(review):
     worker = getattr(review, 'piece_match_thread', None)
     saved = getattr(review, 'piece_match_status', {})
     if not saved:
+        status_path = review.manifest_path.parent / 'final-review/matching-status.json'
+        if status_path.exists():
+            saved = json.loads(status_path.read_text(encoding='utf-8'))
+    if not saved:
         path = review.manifest_path.parent / 'final-review/piece-suggestions.json'
         if path.exists():
             previous = json.loads(path.read_text(encoding='utf-8'))
@@ -81,8 +86,12 @@ def status(review):
                      'total': previous.get('total', len(previous.get('decisions', []))),
                      'failed': len(previous.get('errors', [])), 'error': '\n'.join(previous.get('errors', []))}
     active = getattr(getattr(review, 'piece_match_engine', None), 'active_count', 0)
-    return {**saved, 'running': bool(worker and worker.is_alive()) or bool(active), 'active_processes': active,
-            'stop_requested': bool(getattr(review, 'piece_match_stopping', False))}
+    running = bool(worker and worker.is_alive()) or bool(active)
+    started = saved.get('started_at')
+    end = time.time() if running else saved.get('finished_at', saved.get('updated_at', started))
+    elapsed = max(0, int(end - started)) if started else None
+    return {**saved, 'running': running, 'active_processes': active, 'elapsed_seconds': elapsed,
+            'stop_requested': bool(getattr(review, 'piece_match_stopping', saved.get('stop_requested', False)))}
 
 
 def start(review):
@@ -100,7 +109,8 @@ def start(review):
     config = active_config(index)
     if not config['codex_enabled']:
         raise ValueError('Enable Codex before generating matches')
-    review.piece_match_status = {'completed': 0, 'total': len(banks), 'error': ''}
+    review.piece_match_status = {'completed': 0, 'total': len(banks), 'error': '',
+                                 'started_at': time.time(), 'phase': 'Preparing matching'}
     review.piece_match_stopping = False
     review.piece_match_cancel = threading.Event()
     review.piece_match_engine = None
@@ -115,6 +125,10 @@ def run(review, binding, banks, items, index, facts, config):
         run_matching(review, binding, banks, items, index, facts, config)
     except Exception as error:
         review.piece_match_status['error'] = str(error)
+    finally:
+        review.piece_match_status.update(finished_at=time.time(),
+                                        stop_requested=bool(getattr(review, 'piece_match_stopping', False)))
+        write_json(review.manifest_path.parent / 'final-review/matching-status.json', review.piece_match_status)
 
 
 BATCH_LINES = 20
@@ -181,9 +195,19 @@ def run_matching(review, binding, banks, items, index, facts, config):
     engine.stage = 'piece_matching'
     review.piece_match_engine = engine
     instructions = load_prompt('matching/matching')
-    results = [{'bank_id': key, 'assessment': 'none', 'allocations': [],
-                'reason': 'No amount, name or filename candidate; manual piece search remains available.'}
-               for key in banks if not choices[key]]
+    request_revision = revision([binding, banks, items, index, facts, choice, instructions])
+    previous_path = directory / 'piece-suggestions.json'
+    previous = json.loads(previous_path.read_text(encoding='utf-8')) if previous_path.exists() else {}
+    results = [row for row in previous.get('decisions', [])
+               if previous.get('request_revision') == request_revision and row['bank_id'] in banks
+               and not row.get('reason', '').startswith('Matching unresolved:')]
+    completed = {row['bank_id'] for row in results}
+    # Reuse only unchanged, still-verifiable evidence; no model request is needed.
+    for keys in batches([key for key in completed if choices[key]], choices):
+        piece_matching.model_payload(banks, items, index, facts, choices, keys, retrieval, include_images=False)
+    results.extend({'bank_id': key, 'assessment': 'none', 'allocations': [],
+                    'reason': 'No amount, name or filename candidate; manual piece search remains available.'}
+                   for key in banks if not choices[key] and key not in completed)
     errors = []
 
     def requests(keys):
@@ -226,13 +250,17 @@ def run_matching(review, binding, banks, items, index, facts, config):
 
     def publish():
         """Checkpoint proposals after every batch so a stop keeps completed work."""
-        write_json(directory / 'piece-suggestions.json', {'binding': binding, 'total': len(banks), 'decisions': results, 'errors': errors})
-        review.piece_match_status = {'completed': len(results), 'total': len(banks),
+        write_json(directory / 'piece-suggestions.json', {'binding': binding, 'request_revision': request_revision,
+                                                       'total': len(banks), 'decisions': results, 'errors': errors})
+        review.piece_match_status = {**getattr(review, 'piece_match_status', {}),
+                                    'completed': len(results), 'total': len(banks), 'phase': 'Matching transactions',
+                                    'updated_at': time.time(),
                                     'failed': len(errors), 'error': '\n'.join(errors)}
+        write_json(directory / 'matching-status.json', review.piece_match_status)
 
     try:
         publish()
-        queue = iter(batches([key for key in banks if choices[key]], choices))
+        queue = iter(batches([key for key in banks if choices[key] and key not in completed], choices))
         with ThreadPoolExecutor(max_workers=config['max_parallel']) as pool:
             pending = {}
             for keys in queue:

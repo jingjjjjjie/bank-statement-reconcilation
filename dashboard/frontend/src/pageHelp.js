@@ -6,7 +6,7 @@ export const pageHelp = {
     'Use Browse folders or enter the folder path, then select Proceed. Exact duplicates are copied to output/duplicates/; originals stay in place.',
   ]],
   Bank: ['Bank statement', [
-    'Load for final matching prepares the current bank statement and extracted supporting pieces. Then use Generate matches on Final review. Loading does not start model calls.',
+    'Load for final matching prepares the current bank statement and extracted supporting pieces. Generate matches starts matching here; Stop pauses it. The progress bar shows processed transactions and failures. Review the results on Final review. Loading alone does not start model calls.',
     'Enter the year printed on the statement, then extract it. Check the transactions and balances against the original PDF.',
     'Use Check bank extraction when ready. Search filters the statement rows.',
     'Export Excel uses the saved style and company name. Bank fields are filled; PARTICULAR and accounting fields stay blank. Document matches start as PENDING.',
@@ -33,7 +33,7 @@ export const pageHelp = {
     'Export downloads saved reviews as benchmark ground truth: accepted pieces, discarded documents, and pending documents without pieces. Unsaved edits are not included.',
   ]],
   Matching: ['Final review', [
-    'Load for final matching on the Bank statement page prepares the current bank and extracted pieces. Generate matches here starts matching; Stop pauses it. Matching proposals still require your review.',
+    'Load for final matching on the Bank statement page prepares the current bank and extracted pieces. Generate matches, Stop and matching progress are also on the Bank statement page. Matching proposals still require your review.',
     'Review one bank transaction at a time. Use the transaction selector, filters or Next to move to another payment.',
     'Scroll through supporting candidates on the left. Expand a card for its details and original preview on the right. Inspecting a candidate does not select or approve it.',
     'Use only this candidate replaces the draft selection. Checkboxes let you combine separate expenses. Confirm supporting saves your decision; incomplete coverage remains No supporting.',

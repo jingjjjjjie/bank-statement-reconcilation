@@ -50,7 +50,6 @@ async function refresh() {
   reviewData = await api('/api/matching');
   error('');
   itemById.clear(); reviewData.items.forEach(i => itemById.set(i.id, i));
-  $('#generate-matches').disabled = !reviewData.live_pieces || matchingStarting || matchingWasRunning;
   $('#matching-load-note').hidden = !!reviewData.live_pieces;
   $('#matching-outdated').hidden = !reviewData.banks.some(b => b.suggestion.outdated);
   renderQueue(); renderBankPicker(); renderUnmatched();
@@ -424,65 +423,16 @@ $('#unmatched-bank-query').oninput = renderBankPicker;
 initialize();
 
 
-let matchingWasRunning = false, matchingStarting = false;
-function renderMatchingProgress(state) {
-  /* Display real processed counts; failures and stopped work never imply successful completion. */
-  const total = state.total || 0, completed = state.completed || 0;
-  const running = !!state.running, stopping = !!state.stop_requested;
-  const percent = total ? Math.min(100, Math.floor(completed / total * 100)) : 0;
-  const panel = $('#matching-progress'), bar = $('#matching-progress-bar');
-  panel.hidden = !running && !total && !state.error;
-  panel.dataset.running = String(running);
-  panel.dataset.error = String(!!state.error);
-  panel.setAttribute('aria-busy', String(running));
-  $('#generate-matches').disabled = running || !reviewData?.live_pieces;
-  $('#stop-matches').hidden = !running || matchingStarting;
-  $('#stop-matches').disabled = stopping;
-  $('#matching-run-status').textContent = running
-    ? stopping ? 'Stopping…' : matchingStarting ? 'Starting matching…' : 'Generating matches'
-    : stopping ? 'Stopped' : state.error ? 'Finished with errors' : completed < total ? 'Stopped' : 'Matching complete';
-  $('#matching-progress-count').textContent = total ? `${completed} / ${total} processed (${percent}%)` : '';
-  if (matchingStarting || !total) bar.removeAttribute('value');
-  else bar.value = percent;
-  $('#matching-progress-detail').textContent = [
-    running && state.active_processes ? `${state.active_processes} active` : '',
-    state.failed ? `${state.failed} failed` : '',
-    state.error && !state.failed ? state.error : '',
-  ].filter(Boolean).join(' · ');
-}
+let matchingWasRunning = false;
 async function matchingProgress() {
-  /* Poll model work separately so unsaved allocation edits are never overwritten. */
-  if (!reviewData?.live_pieces || matchingStarting) return;
+  /* Refresh completed proposals without displaying job controls on the review page. */
+  if (!reviewData?.live_pieces) return;
   const state = await api('/api/matching-run');
-  if (matchingStarting) return;
-  renderMatchingProgress(state);
   if (matchingWasRunning && !state.running && draftSnapshot() === savedDraft) {
     await refresh(); if (activeId) chooseBank(activeId);
   }
   matchingWasRunning = !!state.running;
 }
-$('#generate-matches').onclick = async () => {
-  if (matchingStarting || !reviewData?.live_pieces) return;
-  matchingStarting = true;
-  renderMatchingProgress({running:true});
-  try {
-    const state = await api('/api/matching-run', {});
-    matchingStarting = false;
-    renderMatchingProgress(state);
-    matchingWasRunning = true;
-    await matchingProgress();
-  } catch (e) {
-    matchingStarting = false;
-    renderMatchingProgress({error:e.message});
-    error(e.message);
-  }
-};
-$('#stop-matches').onclick = async () => {
-  $('#stop-matches').disabled = true;
-  $('#matching-run-status').textContent = 'Stopping…';
-  try { renderMatchingProgress(await api('/api/matching-stop', {})); }
-  catch (e) { $('#stop-matches').disabled = false; error(e.message); }
-};
 pollVisible(matchingProgress, 2000);
-page.onRefresh(refresh, ['/api/matching-decide', '/api/matching-pieces', '/api/receipts/', '/api/content/']);
+page.onRefresh(refresh, ['/api/matching-decide', '/api/matching-pieces', '/api/matching-run', '/api/receipts/', '/api/content/']);
 }

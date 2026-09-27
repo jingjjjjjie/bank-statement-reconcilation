@@ -14,7 +14,7 @@ usePage(root, initialize);
     <section aria-label="Review controls">
       <div class="queue-controls">
         <div class="page-title"><h1>Final review</h1><PageHelp page="Matching" /></div>
-        <button id="generate-matches" type="button" class="button dark" disabled>Generate matches</button><button id="stop-matches" type="button" class="button secondary" hidden>Stop</button>
+
         <button type="button" class="button secondary" popovertarget="matching-options" aria-label="Review options">Options</button>
         <div id="matching-options" popover>
           <div class="review-tabs"><button id="bank-tab" class="selected" type="button">Transactions</button><button id="document-tab" type="button">Unmatched pieces</button></div>
@@ -29,11 +29,6 @@ usePage(root, initialize);
       </div>
     </section>
     <p id="matching-load-note" class="warning" hidden>Load the current data for final matching on the Bank statement page first.</p>
-    <section id="matching-progress" class="matching-progress" hidden aria-label="Matching progress">
-      <div class="matching-progress-label"><strong id="matching-run-status" role="status" aria-live="polite"></strong><span id="matching-progress-count"></span></div>
-      <progress id="matching-progress-bar" max="100" value="0" aria-labelledby="matching-run-status" aria-describedby="matching-progress-count"></progress>
-      <span id="matching-progress-detail"></span>
-    </section>
     <p id="matching-outdated" class="warning" hidden>Saved proposals are outdated. Results remain visible; recheck current evidence or generate matches again.</p>
     <div id="matching-error" class="matching-error" role="alert" hidden></div>
     <p id="filtered-empty" class="empty-state" role="status" hidden>No transactions match these filters.</p>

@@ -317,9 +317,27 @@ class PiecePipelineTests(unittest.TestCase):
             finally:
                 release.set()
                 self.review.piece_match_thread.join(5)
+            elapsed = piece_match_jobs.status(self.review)['elapsed_seconds']
+            self.assertGreaterEqual(elapsed, 0)
+            piece_match_jobs.start(self.review)
+            self.review.piece_match_thread.join(5)
         self.assertFalse(piece_match_jobs.status(self.review)['running'])
         self.assertEqual(piece_match_jobs.status(self.review)['error'], '')
         self.assertEqual(len(calls), 3)
+        checkpoint = self.review.manifest_path.parent / 'final-review/piece-suggestions.json'
+        saved = json.loads(checkpoint.read_text())
+        saved['decisions'] = [row for row in saved['decisions'] if row['bank_id'] != 'B3']
+        next(row for row in saved['decisions'] if row['bank_id'] == 'B2')['reason'] = 'Matching unresolved: retry'
+        checkpoint.write_text(json.dumps(saved))
+        with patch.object(piece_match_jobs, 'CodexReviewer', Reviewer), patch.object(piece_match_jobs, 'active_config', return_value=config), patch.object(piece_match_jobs, 'BATCH_LINES', 1):
+            piece_match_jobs.start(self.review)
+            self.review.piece_match_thread.join(5)
+        self.assertEqual([call['banks'][0]['id'] for call in calls].count('B1'), 1)
+        self.assertEqual(len(calls), 5)
+        elapsed = piece_match_jobs.status(self.review)['elapsed_seconds']
+        del self.review.piece_match_status
+        with patch.object(piece_match_jobs.time, 'time', return_value=99999999999):
+            self.assertEqual(piece_match_jobs.status(self.review)['elapsed_seconds'], elapsed)
         self.assertTrue(all(len(next(iter(c['documents'].values()))['pieces']) == 2 for c in calls))
         self.assertTrue(all(not b['decision'] for b in matching_review.snapshot(self.review)['banks']))
 
