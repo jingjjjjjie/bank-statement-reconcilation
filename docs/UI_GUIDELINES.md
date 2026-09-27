@@ -33,7 +33,7 @@ Shared help control: `dashboard/frontend/src/components/PageHelp.vue`.
 
 - Review results combines title, filename, document numbers, progress and actions in one horizontal bar; scroll the bar on narrow screens. Do not show entry search.
 
-- Show review status as an accessible icon beside the filename. Acceptance belongs there, while warnings stay visible. Accept saves without navigating; Use exactly three footer buttons in order: Accept / Undo accept, Discard / Undo discard, Next. Labels toggle with the current status. Discard is red. After editing an accepted document, its button returns to Accept to save those changes. Next navigates independently, with unsaved-edit protection.
+- Show review status as an accessible icon beside the filename. Acceptance belongs there, while warnings stay visible. Accept and Discard advance to the next document after a successful save; Undo stays on the current document; the last document stays open; Use exactly three footer buttons in order: Accept / Undo accept, Discard / Undo discard, Next. Labels toggle with the current status. Discard is red. After editing an accepted document, its button returns to Accept to save those changes. Next navigates independently, with unsaved-edit protection.
 
 - The original preview has no heading bar. Keep Download original as a labelled icon alongside the page and zoom controls.
 
@@ -44,3 +44,5 @@ Shared help control: `dashboard/frontend/src/components/PageHelp.vue`.
 - Extraction entries show Pay to, Pay from, Short description, Amount, a currency selector (MYR/USD/CNY, preserving other existing values), and Document no. Date remains in Details. Document total sums the displayed entries separately by currency and marks incomplete amounts.
 
 - Review results omits the document-summary/page list and per-page relevance prose. Keep pending/error/review warnings visible; source details remain in Details and the original page selector.
+
+- Review results labels forward actions Accept & next and Discard & next when another document follows. Failed saves preserve the current document and edits.
