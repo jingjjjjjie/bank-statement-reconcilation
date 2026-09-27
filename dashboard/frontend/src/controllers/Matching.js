@@ -139,10 +139,12 @@ function chooseBank(id, addItem) {
   const meta = node('div', 'bank-meta');
   meta.title = b.id;
   const status = {pending: 'Awaiting review', approved: 'Approved', denied: 'Rejected'}[b.review_status] || b.review_status;
-  meta.append(node('span', '', b.date), node('span', `review-state ${b.review_status}`, status));
+  meta.append(node('span', 'payment-tag payment-date', `Payment date: ${b.date || 'Not provided'}`),
+    node('span', `payment-tag review-state ${b.review_status}`, status));
+  const reference = node('div', 'payment-tag payment-reference', `Reference: ${(b.references || []).join(' / ') || 'Not provided'}`);
   const narration = node('p', 'payment-description', b.description || 'Payment description unavailable');
   narration.setAttribute('aria-label', 'Payment details');
-  detail.append(header, meta, narration);
+  detail.append(header, meta, reference, narration);
   if (b.suggestion.outdated) detail.append(node('p', 'warning', 'Saved proposal is outdated. Recheck current evidence or generate matches again.'));
   if (b.suggestion.failed) detail.append(node('p', 'warning', b.suggestion.reason));
   if (b.stale) detail.append(node('p', 'warning', 'Original evidence changed. This transaction cannot be treated as supported until rechecked.'));
