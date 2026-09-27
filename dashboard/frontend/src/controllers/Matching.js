@@ -256,10 +256,8 @@ function updateSummary() {
   /* Make incomplete, excessive or invalid allocations visible before submitting. */
   const b = bank(), values = [...selected.values()], total = values.reduce((sum, v) => sum + (cents(v) || 0), 0), difference = cents(b.amount) - total;
   const summary = $('#selection-summary'); summary.replaceChildren();
-  $('#footer-summary').classList.toggle('allocation-warning', difference !== 0 && selected.size > 0);
   summary.append(node('strong', '', `${selected.size} selected · ${formatMoney((total / 100).toFixed(2), b.currency)} allocated`));
   summary.append(node('div', difference ? 'difference' : '', difference === 0 ? 'The allocation equals the bank payment.' : `Difference: ${formatMoney((difference / 100).toFixed(2), b.currency)}`));
-  $('#footer-summary').textContent = `${selected.size} selected · ${formatMoney((total / 100).toFixed(2), b.currency)} allocated${difference ? ' · Difference ' + formatMoney((difference / 100).toFixed(2), b.currency) : ''}`;
   if (values.some(v => v === '')) summary.append(node('div', 'warning', 'Blank allocations link contextual evidence only.'));
   if (values.some(v => v !== '' && cents(v) === null)) summary.append(node('div', 'warning', 'Enter valid amounts with up to two decimal places.'));
   if (selected.size > 1) summary.append(node('div', 'warning', 'Check that the documents represent separate expenses, not an invoice and its payment proof.'));
