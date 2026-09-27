@@ -98,7 +98,10 @@ function chooseBank(id, addItem) {
   const b = bank(), source = b.decision ? b.decision.allocations : b.suggestion.allocations;
   source.forEach(a => { if (itemById.has(a.item_id)) selected.set(a.item_id, a.amount); });
   if (addItem) selected.set(addItem, defaultAllocation(itemById.get(addItem)));
-  $('#candidate-query').value = ''; $('#all-candidates').checked = false;
+  $('#candidate-query').value = '';
+  $('#candidate-search').hidden = true;
+  $('#toggle-candidate-search').setAttribute('aria-expanded', 'false');
+  $('#toggle-candidate-search').textContent = 'Search';
   $('#approval-explanation').hidden = true;
   $('#acknowledge').checked = false;
   transactionPage = Math.floor(Math.max(0, visibleBanks().findIndex(row => row.id === id)) / 10);
@@ -144,7 +147,7 @@ function renderCandidates() {
   list.replaceChildren();
   const suggested = new Set(b.suggestion.allocations.map(a => a.item_id));
   const keys = new Set(b.candidates);
-  const items = reviewData.items.filter(i => (selected.has(i.id) || (!i.excluded && ($('#all-candidates').checked || keys.has(i.id)))) &&
+  const items = reviewData.items.filter(i => (selected.has(i.id) || (!i.excluded && (!$('#candidate-search').hidden || keys.has(i.id)))) &&
     (selected.has(i.id) || `${i.id} ${i.filename} ${i.amount} ${i.description} ${i.parties.join(' ')} ${(i.references || []).join(' ')}`.toLowerCase().includes(query)));
   items.sort((a, c) => Number(suggested.has(c.id)) - Number(suggested.has(a.id)));
   candidatePage = Math.max(0, Math.min(candidatePage, Math.ceil(items.length / 5) - 1));
@@ -375,7 +378,19 @@ $('#preview-source').onchange = () => {
   showEvidence(id === '__bank__' ? 'bank' : 'item', id === '__bank__' ? activeId : id);
 };
 $('#preview-zoom').onchange = applyZoom;
-$('#candidate-query').oninput = $('#all-candidates').onchange = () => { candidatePage = 0; renderCandidates(); };
+function toggleCandidateSearch() {
+  /* Expand all-piece search without changing the draft supporting selection. */
+  const panel = $('#candidate-search'), control = $('#toggle-candidate-search');
+  panel.hidden = !panel.hidden;
+  control.setAttribute('aria-expanded', String(!panel.hidden));
+  control.textContent = panel.hidden ? 'Search' : 'Close search';
+  if (panel.hidden) $('#candidate-query').value = '';
+  candidatePage = 0; renderCandidates();
+  (panel.hidden ? control : $('#candidate-query')).focus();
+}
+$('#toggle-candidate-search').onclick = toggleCandidateSearch;
+$('#candidate-query').onkeydown = event => { if (event.key === 'Escape') { event.preventDefault(); toggleCandidateSearch(); } };
+$('#candidate-query').oninput = () => { candidatePage = 0; renderCandidates(); };
 $('#restore-suggestion').onclick = () => { selected.clear(); bank().suggestion.allocations.forEach(a => selected.set(a.item_id, a.amount)); renderCandidates(); updateSummary(); };
 $('#approve-match').onclick = () => saveDecision('approve'); $('#deny-match').onclick = () => saveDecision('deny'); $('#undo-match').onclick = () => saveDecision('undo');
 $('#preview-bank').onclick = () => { if (activeId) showEvidence('bank', activeId); };

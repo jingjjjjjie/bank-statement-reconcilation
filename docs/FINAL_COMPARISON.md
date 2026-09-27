@@ -152,3 +152,5 @@ Flagged approvals still require evidence confirmation; stored notes and the ledg
 audit history remain intact.
 
 Final review shows bank payment narration immediately beneath Pay to/Pay from, amount, date and one review status. Suggested candidate cards have a static rainbow border and a Suggested label. Their expanded Why suggested section discloses model confidence and reasoning separately from bank evidence. Selection and approval remain independent of the suggestion highlight. Candidate names use two compact lines; expansion shows every party. Warnings and explicit confirmation remain visible.
+
+Candidate search is collapsed behind Search beside the section heading. Opening it searches all eligible pieces automatically and exposes Reset to suggestion. Closing it clears the query and returns to the shortlist while preserving selected pieces. Escape closes search and restores focus.
