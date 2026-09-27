@@ -1,7 +1,7 @@
 """Assemble receipt boundaries across a document while retaining source evidence."""
 from jsonschema import validate
 
-from reconciliation.codex_reviewer import RECEIPT, TEXTS, object_schema
+from reconciliation.schemas import RECEIPT, TEXTS, object_schema
 from reconciliation.receipt_matching import revision
 
 

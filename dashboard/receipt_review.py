@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from jsonschema import validate, ValidationError
-from reconciliation.codex_reviewer import RECEIPT
+from reconciliation.schemas import RECEIPT
 from reconciliation.currencies import normalize_currencies
 from reconciliation.pdf_routing import review_warnings
 from reconciliation.pieces import canonical, identify, assign_submitted

@@ -7,7 +7,8 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from dashboard import piece_matching
 from dashboard.review import write_json
-from reconciliation.codex_reviewer import CodexReviewer, TEXT, object_schema
+from reconciliation.codex_reviewer import CodexReviewer
+from reconciliation.schemas import TEXT, object_schema
 from reconciliation.duplicate_workflow import fingerprint
 from reconciliation.prompts import load_prompt
 from reconciliation.receipt_matching import amount, revision

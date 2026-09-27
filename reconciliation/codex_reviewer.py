@@ -12,47 +12,51 @@ from tempfile import TemporaryDirectory
 
 from jsonschema import validate
 from reconciliation.review_settings import DEFAULT_MODEL
-from reconciliation.prompts import load_prompt, load_schema
+from reconciliation.prompts import load_prompt
 from reconciliation.process_manager import ProcessManager, ReviewCancelled
 from reconciliation import development_cache
 from reconciliation.token_usage import FIELDS, record, reported_usage
+# Schemas live in reconciliation.schemas; re-exported for existing callers.
+from reconciliation.schemas import COMPARISON, EXTRACTION, MONEY, RECEIPT, SCREEN, TEXT, TEXTS, object_schema  # noqa: F401
 
 
-def object_schema(properties):
-    # Codex structured output requires every field and rejects extra fields.
-    return {"type": "object", "properties": properties,
-            "required": list(properties), "additionalProperties": False}
-
-
-TEXT = {"type": "string"}
 DISABLED_FEATURES = (
     "apps", "browser_use", "browser_use_external", "computer_use", "plugins",
     "remote_plugin", "image_generation", "shell_tool", "unified_exec",
     "multi_agent", "multi_agent_v2", "goals", "sleep_tool",
     "code_mode", "code_mode_host", "skill_search", "memories", "hooks",
 )
-TEXTS = {"type": "array", "items": TEXT}
 # Codex settings that change responses are part of every cache key.
 CACHE_PROFILE = ["builtin-instructions", DISABLED_FEATURES, "skip_host_skill_discovery",
                  "web_search=disabled", "project_doc_max_bytes=0"]
-EXTRACTION = load_schema("extraction/extraction.legacy")
-MONEY = EXTRACTION["properties"]["money"]["items"]
-RECEIPT = EXTRACTION["properties"]["receipts"]["items"]
-from reconciliation.pieces import FACTS, TOTALS
-# Old saved receipts remain valid; the model uses the lean canonical schema.
-RECEIPT['properties'].update({'payee': TEXT, 'references': FACTS, 'dates': FACTS, 'amount_basis': TEXT,
-    'piece_id': TEXT, 'parent_piece_ids': TEXTS, 'payer': TEXT, 'other_names': TEXTS, 'date': TEXT,
-    'document_number': TEXT, 'amount_location': TEXT, 'currency_default': {'type': 'boolean'}})
-EXTRACTION['properties'].update({'summary': TEXT, 'description': TEXT, 'totals': TOTALS, 'review_warnings': TEXTS})
-SCREEN = object_schema({"comparisons": {"type": "array", "items": object_schema({
-    "right_id": TEXT, "candidate": {"type": "boolean"}, "reason": TEXT,
-})}})
-COMPARISON = object_schema({
-    "classification": {"type": "string", "enum": ["same_document", "revised_or_conflicting",
-        "partial_overlap", "related_support", "distinct", "uncertain"]},
-    "confidence": {"type": "string", "enum": ["high", "medium", "low"]},
-    "evidence": TEXTS, "differences": TEXTS, "limitations": TEXTS,
-})
+
+
+def request_digest(prompt, schema, model, reasoning, images=()):
+    """Content-address one request by prompt, schema, model settings and image bytes."""
+    digest = hashlib.sha256(json.dumps([prompt, schema, model, reasoning, CACHE_PROFILE], sort_keys=True).encode())
+    for image in images:
+        digest.update(Path(image).read_bytes())
+    return digest.hexdigest()
+
+
+def codex_command(executable, schema_path, output_path, model=None, reasoning="default", images=()):
+    """Build an isolated, read-only codex exec command that reads its prompt from stdin."""
+    command = [executable, "exec", "--ignore-user-config", "--skip-git-repo-check",
+               "--ephemeral", "--sandbox", "read-only", "--color", "never", "--json",
+               "--output-schema", str(Path(schema_path).resolve()),
+               "--output-last-message", str(Path(output_path).resolve())]
+    command += ["-c", 'web_search="disabled"', "-c", "project_doc_max_bytes=0"]
+    command += ["--enable", "skip_host_skill_discovery"]
+    command += ["--enable", "view_image", "-c", "tools.view_image=true"]
+    for feature in DISABLED_FEATURES:
+        command += ["--disable", feature]
+    if model:
+        command += ["--model", model]
+    if reasoning != "default":
+        command += ["-c", f'model_reasoning_effort="{reasoning}"']
+    for image in images:
+        command += ["--image", str(Path(image).resolve())]
+    return command + ["-"]
 
 
 class BudgetReached(Exception):
@@ -60,6 +64,8 @@ class BudgetReached(Exception):
 
 
 class CodexReviewer:
+    """Model client backed by `codex exec` and the ChatGPT subscription login (see model_client.ModelClient)."""
+
     def __init__(self, work, executable=None, model=None, max_calls=1000, timeout=240, reasoning="default", cancel_event=None):
         # Keep response caches scoped to model, prompt, schema and image bytes.
         bundled = Path(os.environ.get("LOCALAPPDATA", "")) / "Programs/OpenAI/Codex/bin/codex.exe"
@@ -78,6 +84,7 @@ class CodexReviewer:
         self.usage_path = work / "token-usage.jsonl"
         self.run_id = uuid4().hex
         self.stage = "unknown"
+        self.last_result = self.last_shared = None
         self.cache.mkdir(parents=True, exist_ok=True)
 
     @property
@@ -122,14 +129,11 @@ class CodexReviewer:
                 record(shared / "runs" / self.run_id / "token-usage.jsonl", entry)
 
     def ask(self, prompt, schema, images=()):
-        # Content-addressed requests are resumable without repeating successful calls.
+        """Return a schema-valid answer, reusing cached results so runs resume without repeat calls."""
         if self._cancelled.is_set():
             raise ReviewCancelled("Review stopped by user")
         prompt = load_prompt("shared/styles") + "\n\n" + prompt
-        digest = hashlib.sha256(json.dumps([prompt, schema, self.model, self.reasoning, CACHE_PROFILE], sort_keys=True).encode())
-        for image in images:
-            digest.update(Path(image).read_bytes())
-        folder = self.cache / digest.hexdigest()
+        folder = self.cache / request_digest(prompt, schema, self.model, self.reasoning, images)
         folder.mkdir(exist_ok=True)
         result_path = folder / "result.json"
         self.last_result = result_path
@@ -166,22 +170,7 @@ class CodexReviewer:
         schema_path.write_text(json.dumps(schema), encoding="utf-8")
         (folder / "prompt.txt").write_text(prompt, encoding="utf-8")
         output_path.unlink(missing_ok=True)
-        command = [self.executable, "exec", "--ignore-user-config", "--skip-git-repo-check",
-                   "--ephemeral", "--sandbox", "read-only", "--color", "never", "--json",
-                   "--output-schema", str(schema_path.resolve()),
-                   "--output-last-message", str(output_path.resolve())]
-        command += ["-c", 'web_search="disabled"', "-c", "project_doc_max_bytes=0"]
-        command += ["--enable", "skip_host_skill_discovery"]
-        command += ["--enable", "view_image", "-c", "tools.view_image=true"]
-        for feature in DISABLED_FEATURES:
-            command += ["--disable", feature]
-        if self.model:
-            command += ["--model", self.model]
-        if self.reasoning != "default":
-            command += ["-c", f'model_reasoning_effort="{self.reasoning}"']
-        for image in images:
-            command += ["--image", str(Path(image).resolve())]
-        command += ["-"]
+        command = codex_command(self.executable, schema_path, output_path, self.model, self.reasoning, images)
         events_path = folder / f"events-{attempt_id}.jsonl"
         entry = {"id": attempt_id, "run_id": self.run_id, "stage": self.stage,
                  "model": self.model, "reasoning": self.reasoning, "request": folder.name,
@@ -224,7 +213,9 @@ class CodexReviewer:
         return result
 
     def invalidate(self):
+        """Discard the last cached answer after it fails workflow validation."""
         # Discard structurally valid responses that fail workflow coverage validation.
-        self.last_result.unlink(missing_ok=True)
+        if self.last_result is not None:
+            self.last_result.unlink(missing_ok=True)
         if self.last_shared is not None and development_cache.root_for(self.work) is not None:
             self.last_shared.unlink(missing_ok=True)

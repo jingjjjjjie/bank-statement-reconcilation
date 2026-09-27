@@ -12,7 +12,11 @@ from reconciliation.pdf_routing import MODES, inspect_page
 
 
 def extract(path, output, config=None):
-    """Extract ordered review units and previews without changing the source."""
+    """Return the file's ordered `records.Unit`s, writing page images into `output`; the source is untouched.
+
+    Raises:
+        ValueError: Unsupported type, encrypted PDF, unrenderable embedded object, or nothing readable.
+    """
     output.mkdir(parents=True, exist_ok=True)
     units = []
     config = validate(config if config is not None else dict(DEFAULTS))
@@ -35,19 +39,10 @@ def extract(path, output, config=None):
             units.append(item)
 
     suffix = path.suffix.lower()
-    if suffix == ".pdf":
-        _extract_pdf(path, config, add)
-    elif suffix in {".png", ".jpg", ".jpeg", ".tif", ".tiff", ".webp", ".bmp"}:
-        _extract_images(path, config, add)
-    elif suffix == ".xlsx":
-        _extract_excel(path, add)
-    elif suffix == ".docx":
-        _extract_word(path, add)
-    else:
+    if suffix not in READERS:
         raise ValueError(f"Unsupported file type: {suffix}")
-
-    if suffix in {".xlsx", ".docx"}:
-        _extract_embedded(path, config, add)
+    for reader in READERS[suffix]:
+        reader(path, config, add)
     if not units:
         raise ValueError("No readable units extracted")
     return units
@@ -86,7 +81,7 @@ def _extract_images(path, config, add):
             add(f"image {number}", image=frame.copy())
 
 
-def _extract_excel(path, add):
+def _extract_excel(path, config, add):
     """Read formulas, cached values, coordinates, and hidden sheets."""
     formulas = openpyxl.load_workbook(path, read_only=True, data_only=False)
     values = openpyxl.load_workbook(path, read_only=True, data_only=True)
@@ -110,7 +105,7 @@ def _extract_excel(path, add):
         values.close()
 
 
-def _extract_word(path, add):
+def _extract_word(path, config, add):
     """Read Office text parts in XML order without reconstructing layout."""
     with zipfile.ZipFile(path) as package:
         for name in sorted(package.namelist()):
@@ -134,3 +129,15 @@ def _extract_embedded(path, config, add):
                         add(name, image=picture)
                 else:
                     add(name, blocked="Embedded picture was not reviewed because picture processing is off")
+
+
+# File type -> readers run in order. Each reader is `reader(path, config, add)` and
+# calls `add(label, text, image, ...)` once per unit; add a row to support a new type.
+IMAGE_SUFFIXES = (".png", ".jpg", ".jpeg", ".tif", ".tiff", ".webp", ".bmp")
+READERS = {
+    ".pdf": [_extract_pdf],
+    **{suffix: [_extract_images] for suffix in IMAGE_SUFFIXES},
+    ".xlsx": [_extract_excel, _extract_embedded],
+    ".docx": [_extract_word, _extract_embedded],
+}
+SUPPORTED_SUFFIXES = frozenset(READERS)

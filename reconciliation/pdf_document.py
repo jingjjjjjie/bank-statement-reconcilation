@@ -4,6 +4,7 @@ import re
 from pathlib import Path
 
 from reconciliation import pdf_routing
+from reconciliation.model_client import MAX_IMAGES, MAX_PROMPT
 from reconciliation.pieces import canonical, legacy_result
 from reconciliation.prompts import extraction_prompt, load_prompt
 from reconciliation.receipt_assembly import input_revision
@@ -41,7 +42,7 @@ def group_request(document, numbers, *, partial=False):
                    'amounts empty and flag continuation outside this group. Do not invent document totals. '
                    'A later assembly will inspect all pages and reconcile fragments across groups.\n')
     prompt += '\n' + json.dumps(payload, ensure_ascii=False)
-    return (prompt, images) if len(images) <= 40 and len(prompt) <= 100000 else None
+    return (prompt, images) if len(images) <= MAX_IMAGES and len(prompt) <= MAX_PROMPT else None
 
 
 def chunk_requests(document, config, state, regenerate=False):

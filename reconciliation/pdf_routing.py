@@ -5,7 +5,7 @@ import subprocess
 
 from jsonschema import ValidationError, validate
 
-from reconciliation.codex_reviewer import EXTRACTION
+from reconciliation.schemas import EXTRACTION
 from reconciliation.development_cache import mode, write_json
 from reconciliation.paths import WORKSPACE
 from reconciliation.prompts import extraction_prompt, load_prompt

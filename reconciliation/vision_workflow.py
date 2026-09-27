@@ -5,39 +5,36 @@ import json
 import os
 import subprocess
 import sys
-from contextlib import nullcontext
-from concurrent.futures import FIRST_COMPLETED, ProcessPoolExecutor, ThreadPoolExecutor, wait
+from concurrent.futures import ProcessPoolExecutor
 from datetime import datetime, timezone
 from pathlib import Path
-from reconciliation.paths import WORKSPACE
-from reconciliation import development_cache
-from reconciliation.prompts import extraction_prompt, load_prompt
-from reconciliation import pdf_routing
-from reconciliation.currencies import normalize_currencies
 from time import sleep
 
 from jsonschema.exceptions import ValidationError
 
-from reconciliation.codex_reviewer import CodexReviewer, BudgetReached, EXTRACTION, SCREEN, COMPARISON
-from reconciliation.document_reader import extract
+from reconciliation import development_cache, model_client, pdf_routing, pieces
+from reconciliation.codex_reviewer import CodexReviewer, BudgetReached
+from reconciliation.currencies import normalize_currencies
+from reconciliation.document_reader import SUPPORTED_SUFFIXES, extract
 from reconciliation.duplicate_workflow import DEFAULT_MANIFEST, fingerprint, review_files, check as exact_check
-from reconciliation.review_settings import CONFIG_PATH, config_for_manifest, load_config, content_settings, model_settings, stage_settings, document_stage, revision, validate as validate_config
-from reconciliation.comparison_policy import route as comparison_route
+from reconciliation.job_runner import run_jobs  # noqa: F401  (re-exported for existing callers)
+from reconciliation.legacy_comparison import DocumentComparison, DuplicateScreening, pair_key
+from reconciliation.paths import WORKSPACE
+from reconciliation.receipt_assembly import ASSEMBLY, current_assembly
+from reconciliation.records import Index, State
+from reconciliation.review_report import render as render_report
+from reconciliation.review_settings import CONFIG_PATH, config_for_manifest, load_config, content_settings, model_settings, stage_settings, revision, validate as validate_config
+from reconciliation.schemas import EXTRACTION
 from reconciliation.supporting_inventory import export as export_inventory
 from reconciliation.token_usage import summary as token_summary
-from reconciliation.receipt_assembly import ASSEMBLY, current_assembly, input_revision, validate_assembly
-from reconciliation.pdf_document import whole_request, save_result, chunk_requests, save_chunk
+from reconciliation.workflow_stages import ReceiptAssembly, ReviewPending, RunContext, UnitExtraction, pack  # noqa: F401
 
 DEFAULT_WORK = WORKSPACE / "review"
-ACCEPTED_SUFFIXES = {".pdf", ".png", ".jpg", ".jpeg", ".tif", ".tiff", ".webp", ".bmp", ".xlsx", ".docx"}
-
-
-class ReviewPending(ValueError):
-    """A required earlier workflow step is not complete."""
+ACCEPTED_SUFFIXES = SUPPORTED_SUFFIXES
 
 
 def read(path):
-    # Read existing Windows manifests and regular UTF-8 JSON alike.
+    """Read JSON, accepting the BOM that Windows tools write into manifests."""
     return json.loads(path.read_text(encoding="utf-8-sig"))
 
 
@@ -56,7 +53,7 @@ def save(path, value):
 
 
 def inventory(root, manifest_path):
-    # Keep one model input per exact hash, but retain all source locations.
+    """Map each document hash to every path holding those bytes; one model input per hash."""
     result = {}
     for path in review_files(root, read(manifest_path), manifest_path):
         result.setdefault(fingerprint(path), []).append(str(path))
@@ -64,7 +61,17 @@ def inventory(root, manifest_path):
 
 
 def prepare(manifest_path, work, config_path=None, refresh=False):
-    # Preparation is local and can run while pass-one admin cleanup is pending.
+    """Split every supporting document into units locally and write a fresh review; no model calls.
+
+    Args:
+        manifest_path: Exact-duplicate manifest naming the supporting folder.
+        work: Review folder to create (must be outside the supporting folder).
+        config_path: Review settings file; defaults to the shared config.
+        refresh: Archive an existing review under `history/` and prepare again.
+
+    Raises:
+        ValueError: The review exists without `refresh`, or paths or settings are invalid.
+    """
     if config_path is not None and not Path(config_path).is_file():
         raise ValueError(f"Review configuration is missing: {config_path}")
     manifest = read(manifest_path)
@@ -141,7 +148,11 @@ def load(work):
 
 
 def removal_plan(state):
-    # A decision names an unchanged survivor; chains and contradictory choices block cleanup.
+    """Return `{removed hash: kept hash}` from admin decisions.
+
+    Raises:
+        ValueError: Choices conflict or chain (a survivor is also removed).
+    """
     removed = {}
     for pair, decision in state["decisions"].items():
         left, right = pair.split(":")
@@ -161,7 +172,11 @@ def removal_plan(state):
 
 
 def current_inventory(index, state):
-    # Only explicitly approved duplicate removals may change the document set.
+    """Return the current source inventory and approved removals.
+
+    Raises:
+        ValueError: Sources changed other than by approved duplicate removals.
+    """
     current = inventory(Path(index["root"]), Path(index["manifest"]))
     removed = removal_plan(state)
     unknown = set(current) - set(index["documents"])
@@ -171,89 +186,16 @@ def current_inventory(index, state):
     return current, removed
 
 
-def pair_key(left, right):
-    return ":".join(sorted((left, right)))
-
-
-def pack(document):
-    # Include every extracted unit; never silently truncate an original comparison.
-    text, images = [], []
-    for unit in document["units"]:
-        text.append({"document_id": document["id"], "location": unit["label"], "text": unit["text"],
-                     "limitation": unit.get("limitation", "")})
-        if unit["image"]:
-            images.append(unit["image"])
-            text[-1]["image_number"] = len(images)
-    return text, images
-
-
-def run_jobs(jobs, apply, workers, refill=None, acceptance=nullcontext):
-    """Run a bounded number of model jobs and checkpoint every finished result."""
-    if workers == 1 and refill is None:
-        for job in jobs:
-            with acceptance():
-                pass
-            result = job()
-            with acceptance():
-                apply(result)
-        return
-    pending, remaining, error = {}, iter(jobs), None
-    with ThreadPoolExecutor(max_workers=workers) as pool:
-        def submit_one():
-            """Keep only one queued job per available worker."""
-            nonlocal remaining
-            with acceptance():
-                pass
-            try:
-                job = next(remaining)
-            except StopIteration:
-                if refill is None:
-                    return False
-                remaining = iter(refill())
-                job = next(remaining, None)
-                if job is None:
-                    return False
-            pending[pool.submit(job)] = None
-            return True
-
-        for _ in range(workers):
-            if not submit_one():
-                break
-        while pending:
-            if error is None:
-                while len(pending) < workers and submit_one():
-                    pass
-            completed, _ = wait(pending, timeout=0.2, return_when=FIRST_COMPLETED)
-            if not completed:
-                continue
-            future = next(iter(completed))
-            del pending[future]
-            try:
-                result = future.result()
-                with acceptance():
-                    apply(result)
-            except Exception as failure:
-                if error is None:
-                    error = failure
-            if error is None:
-                submit_one()
-    if error is not None:
-        raise error
-
-
-def run(work, index, state, reviewer, *, extraction_only=False, regeneration=None, progress=None,
-        queued_regenerations=None):
-    """Extract and assemble receipts; retain explicit legacy comparison support for old tools."""
-    config = active_config(index)
+def check_run_allowed(config):
+    """Refuse to start model work when settings forbid it."""
     if config["pdf_mode"] in pdf_routing.MODES and not development_cache.mode()["enabled"]:
         raise ReviewPending("Experimental PDF modes require development mode; choose Vision in Settings")
     if not config["codex_enabled"]:
         raise ReviewPending("Codex is off in review settings; no model calls were made")
-    current_inventory(index, state)
-    manifest = read(Path(index["manifest"]))
-    problems = exact_check(Path(index["root"]), manifest, Path(index["manifest"]))
-    if problems:
-        raise ReviewPending("Pass-one cleanup is pending; run duplicate_workflow.py check first")
+
+
+def lock_stage_models(state, reviewer, config):
+    """Pin per-stage model choices in `state` so one review never mixes models."""
     choices = getattr(reviewer, "stage_choices", stage_settings(config))
     previous = state.get("stage_models")
     if previous is None and state.get("model"):
@@ -263,18 +205,19 @@ def run(work, index, state, reviewer, *, extraction_only=False, regeneration=Non
         raise ReviewPending("Model or reasoning changed; run prepare --refresh to avoid mixing reviews")
     state["stage_models"] = choices
     state["model_config"] = model_settings(config)
-    state["extraction_only"] = extraction_only
-    documents = index["documents"]
-    regeneration = regeneration or {}
-    selected = {key: value for key, value in documents.items() if not regeneration or key in regeneration}
-    dispatched, whole_completed = set(), set()
-    workers = config["max_parallel"] if hasattr(reviewer, "fork") else 1
+    return choices
 
-    def checkpoint():
-        save(work / "state.json", state)
 
+def model_gate(index, config, state, reviewer, choices, parallel):
+    """Wrap `reviewer.ask` with the checks and conversions every workflow call needs.
+
+    The returned `ask(prompt, schema, images=(), stage=..., verify=None)` rechecks
+    settings before each call, selects the stage's model, converts between the lean
+    model schemas and stored legacy records, and invalidates cached answers that
+    fail `verify`.
+    """
     def ask(prompt, schema, images=(), stage="comparison", verify=None):
-        # Re-read the switch before each call so disabling Codex stops subsequent calls.
+        # Re-read settings before each call so switching Codex off stops the next call.
         current = active_config(index)
         if current["pdf_mode"] in pdf_routing.MODES and not development_cache.mode()["enabled"]:
             raise ReviewPending("Development mode was switched off; stopped before the next call")
@@ -285,274 +228,82 @@ def run(work, index, state, reviewer, *, extraction_only=False, regeneration=Non
         if model_settings(current) != state["model_config"]:
             raise ReviewPending("Model settings changed during the run; stopped before the next call")
         # Worker copies isolate stage selection and share one atomic request budget.
-        worker = reviewer.fork() if workers > 1 else reviewer
+        worker = model_client.worker_for(reviewer, parallel)
         choice = choices["pdf" if stage.startswith("pdf_") else stage]
         worker.model = choice["model"] or None
         worker.reasoning = choice["reasoning"]
         worker.stage = stage
-        from reconciliation import pieces
-        model_schema = (pieces.model_schema('extraction') if schema is EXTRACTION else
-                        pieces.model_schema('receipt_assembly') if schema is ASSEMBLY else schema)
+        model_schema = (pieces.model_schema("extraction") if schema is EXTRACTION else
+                        pieces.model_schema("receipt_assembly") if schema is ASSEMBLY else schema)
         result = normalize_currencies(worker.ask(prompt, model_schema, images))
         if schema is EXTRACTION:
             result = pieces.legacy_result(pieces.clean_result(result))
-        elif schema is ASSEMBLY and 'pieces' in result:
+        elif schema is ASSEMBLY and "pieces" in result:
             result = pieces.clean_result(result)
-            result = {k: v for k, v in result.items() if k != 'pieces'} | {
-                'receipts': [pieces.legacy_piece(p) for p in result['pieces']],
-                'limitations': result.get('limitations', [])}
+            result = {k: v for k, v in result.items() if k != "pieces"} | {
+                "receipts": [pieces.legacy_piece(p) for p in result["pieces"]],
+                "limitations": result.get("limitations", [])}
         if verify is not None:
             try:
                 verify(result)
             except Exception:
-                if hasattr(worker, "invalidate"):
-                    worker.invalidate()
+                model_client.invalidate(worker)
                 raise
         return result
+    return ask
 
+
+def run(work, index: Index, state: State, reviewer, *, extraction_only=False, regeneration=None, progress=None,
+        queued_regenerations=None):
+    """Extract and assemble receipts; legacy runs then screen and compare duplicates.
+
+    Args:
+        work: Review folder holding `index.json`, `state.json` and model caches.
+        index: Prepared documents from `prepare`.
+        state: Checkpoint updated in place and saved after every result.
+        reviewer: Any `model_client.ModelClient`, for example `CodexReviewer`.
+        extraction_only: Skip the legacy screening and comparison stages.
+        regeneration: `{document hash: request}` to re-extract despite saved results.
+        progress: Optional `progress(document_hash, "running" | "completed")` callback.
+        queued_regenerations: Optional callable returning regenerations queued mid-run.
+
+    Raises:
+        ReviewPending: Settings, sources or earlier steps block model work.
+        BudgetReached: The shared call limit stopped the run; finished work is saved.
+    """
+    config = active_config(index)
+    check_run_allowed(config)
+    current_inventory(index, state)
+    if exact_check(Path(index["root"]), read(Path(index["manifest"])), Path(index["manifest"])):
+        raise ReviewPending("Pass-one cleanup is pending; run duplicate_workflow.py check first")
+    choices = lock_stage_models(state, reviewer, config)
+    state["extraction_only"] = extraction_only
+    regeneration = regeneration or {}
+    documents = index["documents"]
+    workers = config["max_parallel"] if model_client.supports_parallel(reviewer) else 1
+    ctx = RunContext(
+        work=work, config=config, state=state, documents=documents, regeneration=regeneration,
+        selected={key: value for key, value in documents.items() if not regeneration or key in regeneration},
+        ask=model_gate(index, config, state, reviewer, choices, parallel=workers > 1),
+        checkpoint=lambda: save(work / "state.json", state), progress=progress)
+    stages = [UnitExtraction(ctx, queued_regenerations), ReceiptAssembly(ctx)]
+    if not extraction_only:
+        stages += [DuplicateScreening(ctx), DocumentComparison(ctx)]
     try:
-        # Vision reads each page/image; structured text supplies cells and paragraphs.
-        def unit_jobs():
-            """Yield unread document units without queuing the entire corpus."""
-            for digest, document in selected.items():
-                if digest in dispatched or document["error"] or not document.get("accepted", True):
-                    continue
-                whole = whole_request(document, config, state, digest in regeneration)
-                if whole is not None:
-                    def whole_job(digest=digest, document=document, request=whole):
-                        """Read all PDF pages and establish piece boundaries in one model call."""
-                        if progress:
-                            progress(digest, "running")
-                        prompt, images = request
-                        if digest in regeneration:
-                            prompt += "\nRegeneration request: " + regeneration[digest]
-                        value = ask(prompt, ASSEMBLY, images, stage="pdf_document",
-                                    verify=lambda result: validate_assembly(result, len(document["units"])))
-                        return None, digest, "whole PDF", value
-
-                    dispatched.add(digest)
-                    yield whole_job
-                    continue
-                for numbers, prompt, images in chunk_requests(document, config, state, digest in regeneration):
-                    keys = {f'{digest}:{n - 1}' for n in numbers}
-                    if keys & dispatched:
-                        continue
-
-                    def chunk_job(digest=digest, numbers=numbers, prompt=prompt, images=images):
-                        """Extract one group while retaining original document-wide unit IDs."""
-                        if progress:
-                            progress(digest, 'running')
-                        if digest in regeneration:
-                            prompt += '\nRegeneration request: ' + regeneration[digest]
-                        value = ask(prompt, ASSEMBLY, images, stage='pdf_chunk',
-                                    verify=lambda result: validate_assembly(result, len(numbers), source_units=numbers))
-                        return numbers, digest, f'PDF units {numbers[0]}-{numbers[-1]}', value
-
-                    dispatched.update(keys)
-                    yield chunk_job
-                for number, unit in enumerate(document["units"]):
-                    if unit.get("blocked"):
-                        continue
-                    key = f"{digest}:{number}"
-                    if key in dispatched:
-                        continue
-                    if key in state["units"] and digest not in regeneration:
-                        continue
-
-                    def job(digest=digest, document=document, unit=unit, key=key):
-                        """Read one page, sheet, or image with its selected model."""
-                        if progress:
-                            progress(digest, "running")
-                        def extract_ask(prompt, schema, images=(), **kwargs):
-                            """Keep explicit regeneration requests outside previous response caches."""
-                            if digest in regeneration:
-                                prompt += "\nRegeneration request: " + regeneration[digest]
-                            return ask(prompt, schema, images, **kwargs)
-                        if document_stage(document["paths"][0]) == "pdf" and config["pdf_mode"] in pdf_routing.MODES:
-                            value = pdf_routing.extract_unit(unit, extract_ask, config["pdf_mode"],
-                                work / "pdf-routing" / (key.replace(":", "-") + ".json"))
-                            return key, digest, unit["label"], value
-                        prompt = extraction_prompt() + "\n" + json.dumps({
-                            "location": unit["label"], "text": unit["text"],
-                            "limitation": unit.get("limitation", "")}, ensure_ascii=False)
-                        return key, digest, unit["label"], extract_ask(prompt, EXTRACTION,
-                            [unit["image"]] if unit["image"] else [],
-                            stage=document_stage(document["paths"][0]))
-
-                    dispatched.add(key)
-                    yield job
-
-        def apply_unit(result):
-            """Save a completed extraction before more work is launched."""
-            key, digest, label, value = result
-            if key is None:
-                save_result(documents[digest], state, value)
-                whole_completed.add(digest)
-            elif isinstance(key, tuple):
-                save_chunk(documents[digest], state, value, key)
-            else:
-                state["units"][key] = value
-            checkpoint()
-            if progress and (key is None or len(documents[digest]["units"]) == 1):
-                progress(digest, "completed")
-            print(f"Read {digest[:10]} / {label}", flush=True)
-
-        def refill_units():
-            """Pick up newly queued documents while extraction workers are occupied."""
-            for digest, request_id in queued_regenerations().items():
-                if digest not in regeneration:
-                    regeneration[digest] = request_id
-                    selected[digest] = documents[digest]
-            return unit_jobs()
-
-        run_jobs(unit_jobs(), apply_unit, workers, refill_units if queued_regenerations else None,
-                 acceptance=getattr(reviewer, "acceptance", nullcontext))
-
-        def assembly_jobs():
-            """Join complete multi-unit evidence without repeating page extraction."""
-            for digest, document in selected.items():
-                if (digest in whole_completed or not document.get("accepted", True) or document["error"]
-                        or len(document["units"]) < 2 or (digest not in regeneration and current_assembly(document, state))):
-                    continue
-                if any(unit.get("blocked") or f"{digest}:{n}" not in state["units"]
-                       for n, unit in enumerate(document["units"])):
-                    continue
-
-                def job(digest=digest, document=document):
-                    """Inspect all source units before proposing document receipt boundaries."""
-                    evidence = document
-                    if (Path(document["paths"][0]).suffix.lower() == ".pdf" and config["pictures_enabled"]
-                            and config["pdf_mode"] not in pdf_routing.MODES):
-                        units = extract(Path(document["paths"][0]), work / "assets" / "receipt-assembly" / digest,
-                                        {**config, "pdf_mode": "vision"})
-                        evidence = {**document, "units": units}
-                    originals, images = pack(evidence)
-                    payload = [{"source_unit": n + 1, "original": original,
-                                "extraction": state["units"][f"{digest}:{n}"]}
-                               for n, original in enumerate(originals)]
-                    prompt = (extraction_prompt() + "\n\n" + load_prompt("extraction/receipt_assembly")
-                              + "\n" + json.dumps(payload, ensure_ascii=False))
-                    if digest in regeneration:
-                        prompt += "\nRegeneration request: " + regeneration[digest]
-                    if len(images) > 40 or len(prompt) > 100000:
-                        raise ReviewPending("Document too large for receipt assembly; boundaries remain unresolved")
-                    value = ask(prompt, ASSEMBLY, images, stage=document_stage(document["paths"][0]),
-                                verify=lambda result: validate_assembly(result, len(document["units"])))
-                    return digest, {**value, "input_revision": input_revision(document, state)}
-
-                yield job
-
-        def apply_assembly(result):
-            """Save each assembled document independently for safe resume."""
-            digest, value = result
-            state.setdefault("assemblies", {})[digest] = value
-            checkpoint()
-            if progress:
-                progress(digest, "completed")
-            print(f"Assembled receipts {digest[:10]}", flush=True)
-
-        run_jobs(assembly_jobs(), apply_assembly, workers, acceptance=getattr(reviewer, "acceptance", nullcontext))
-
-        if extraction_only:
-            return
-
-        # Strong local matches go straight to original comparison; screen all other pairs.
-        ready = [d for d in documents if documents[d].get("accepted", True) and not documents[d]["error"] and all(
-            state["units"].get(f"{d}:{n}", {}).get("readable")
-            for n in range(len(documents[d]["units"]))) ]
-        summaries = {d: [{"location": unit["label"], **state["units"][f"{d}:{n}"]}
-                        for n, unit in enumerate(documents[d]["units"])] for d in ready}
-        def screen_jobs():
-            """Yield summary batches while preserving direct local candidates."""
-            for position, left in enumerate(ready):
-                rights = []
-                for right in ready[position + 1:]:
-                    pair = pair_key(left, right)
-                    if pair in state["screens"]:
-                        continue
-                    route, reason = comparison_route(summaries[left], summaries[right])
-                    if route == "direct_compare":
-                        state["screens"][pair] = {"right_id": right, "candidate": True,
-                            "reason": reason}
-                    else:
-                        rights.append(right)
-                checkpoint()
-                for start in range(0, len(rights), 12):
-                    batch = rights[start:start + 12]
-
-                    def job(left=left, batch=batch):
-                        """Screen one batch and reject incomplete model coverage."""
-                        prompt = load_prompt("legacy/screening") + "\n" + json.dumps({
-                            "left": summaries[left], "right": {r: summaries[r] for r in batch}},
-                            ensure_ascii=False)
-                        if len(prompt) > 100000:
-                            rows = [{"right_id": r, "candidate": True,
-                                     "reason": "Summary too large; direct review required"} for r in batch]
-                        else:
-                            def verify(response):
-                                """Require exactly one result for each requested document."""
-                                rows = response["comparisons"]
-                                if len(rows) != len(batch) or {r["right_id"] for r in rows} != set(batch):
-                                    raise ValueError("Model omitted or repeated a comparison; coverage remains incomplete")
-
-                            rows = ask(prompt, SCREEN, verify=verify)["comparisons"]
-                        return left, rows
-
-                    yield job
-
-        def apply_screen(result):
-            """Save a complete summary batch as its model call finishes."""
-            left, rows = result
-            for row in rows:
-                state["screens"][pair_key(left, row["right_id"])] = row
-            checkpoint()
-
-        run_jobs(screen_jobs(), apply_screen, workers, acceptance=getattr(reviewer, "acceptance", nullcontext))
-
-        # Candidate verdicts inspect original text and visuals, not summaries alone.
-        def pair_jobs():
-            """Yield candidate originals for complete comparison."""
-            for pair, screen in state["screens"].items():
-                if not screen["candidate"] or pair in state["pairs"]:
-                    continue
-
-                def job(pair=pair):
-                    """Compare one pair's original text and images."""
-                    left, right = pair.split(":")
-                    left_text, left_images = pack(documents[left])
-                    right_text, right_images = pack(documents[right])
-                    for item in right_text:
-                        if "image_number" in item:
-                            item["image_number"] += len(left_images)
-                    prompt = load_prompt("legacy/comparison") + "\n" + json.dumps(
-                        {"left": left_text, "right": right_text}, ensure_ascii=False)
-                    images = left_images + right_images
-                    if len(images) > 40 or len(prompt) > 100000:
-                        result = {"classification": "uncertain", "confidence": "low", "evidence": [],
-                                  "differences": [], "limitations": ["Too large for one comparison; admin must inspect both complete originals"]}
-                    else:
-                        result = ask(prompt, COMPARISON, images)
-                    return pair, result
-
-                yield job
-
-        def apply_pair(result):
-            """Save one whole-document verdict for later admin review."""
-            pair, value = result
-            state["pairs"][pair] = value
-            checkpoint()
-            left, right = pair.split(":")
-            print(f"Compared {left[:10]} / {right[:10]}", flush=True)
-
-        run_jobs(pair_jobs(), apply_pair, workers, acceptance=getattr(reviewer, "acceptance", nullcontext))
+        for stage in stages:
+            run_jobs(stage.jobs(), stage.apply, workers, stage.refill, acceptance=model_client.acceptance(reviewer))
     finally:
         # Partial work always gets a report and remains visibly incomplete.
-        checkpoint()
+        ctx.checkpoint()
         report(work, index, state)
 
 
 def active_config(index):
-    # Results from another extraction mode cannot silently satisfy the current review.
+    """Load the review's current settings, resolving moved or legacy config paths.
+
+    Raises:
+        ReviewPending: The config is missing, or extraction settings changed since preparation.
+    """
     path = index.get("config_path", str(CONFIG_PATH))
     if path and Path(path) == CONFIG_PATH.parent.parent / "review_config.json" and not Path(path).exists():
         path = CONFIG_PATH
@@ -570,7 +321,11 @@ def active_config(index):
 
 
 def gate(index, state, *, extraction_only=None):
-    # Check both coverage and admin dispositions, including approved manual deletions.
+    """Return every outstanding check blocking completion; an empty list means complete.
+
+    Covers settings drift, exact-duplicate cleanup, unread units, pending assemblies
+    and, for legacy runs, screening, comparisons and admin verdicts.
+    """
     problems = []
     try:
         current_config = active_config(index)
@@ -624,53 +379,28 @@ def gate(index, state, *, extraction_only=None):
 
 
 def report(work, index, state):
-    # Markdown is for reading; JSON is the complete machine-readable audit trail.
-    documents = index["documents"]
-    eligible_count = sum(doc.get("accepted", True) for doc in documents.values())
+    """Write report.md, report.json and the supporting inventory; return outstanding checks."""
     try:
         problems = gate(index, state)
     except ValueError as error:
         problems = [str(error)]
-    rows = ["# Pass-two duplicate review", "", f"Status: {'PENDING' if problems else 'COMPLETE'}",
-            f"Documents: {len(documents)}; units read: {len(state['units'])}; "
-            f"pairs screened: {len(state['screens'])}/{eligible_count * (eligible_count - 1) // 2}", "",
-            "Model results are review evidence, not proof of duplicate payments. No source files are moved or deleted by pass two.", ""]
-    if state.get("extraction_only"):
-        rows = ["# Document extraction", "", f"Status: {'PENDING' if problems else 'COMPLETE'}",
-                f"Documents: {len(documents)}; units read: {len(state['units'])}", "",
-                "Extraction and receipt assembly only. Vision duplicate screening and comparison are disabled.", ""]
-    settings = index.get("config", {"pdf_mode": "vision", "pictures_enabled": True})
-    rows += [f"Prepared PDF mode: {settings['pdf_mode']}; pictures: {settings['pictures_enabled']}.",
-             f"Stage models used: {json.dumps(state.get('stage_models', {}))}.",
-             "Text-only PDF units exclude signatures, handwriting and visual differences; blocked units remain unresolved.", ""]
     usage = token_summary(work / "token-usage.jsonl")
-    rows += ["## Codex token usage", "",
-             f"Recorded attempts: {usage['attempts']}; cache hits: {usage['cache_hits']}; "
-             f"attempts with unknown usage: {usage['unknown_attempts']}.",
-             f"Reported input: {usage['totals']['input_tokens']:,}; cached input: {usage['totals']['cached_input_tokens']:,}; "
-             f"output: {usage['totals']['output_tokens']:,}; reasoning output: {usage['totals']['reasoning_output_tokens']:,}.",
-             "Totals cover recorded Codex calls only; unknown attempts are excluded.", ""]
-    for pair, result in state["pairs"].items():
-        left, right = pair.split(":")
-        rows += [f"## {pair}", "", f"Left: {documents[left]['paths'][0]}",
-                 f"Right: {documents[right]['paths'][0]}",
-                 f"Finding: {result['classification']} ({result['confidence']})", ""]
-        for field in ("evidence", "differences", "limitations"):
-            rows += [f"{field.title()}: " + "; ".join(result[field]), ""]
-        rows += ["Admin: " + json.dumps(state["decisions"].get(pair, "PENDING"), ensure_ascii=False), ""]
-    rows += ["## Outstanding checks", "", f"{len(problems)} unresolved checks.", ""]
-    rows += [f"- {p}" for p in problems[:100]]
-    if len(problems) > 100:
-        rows.append("- Full outstanding list is in report.json.")
-    (work / "report.md").write_text("\n".join(rows), encoding="utf-8")
-    save(work / "report.json", {"documents": documents, "state": state, "problems": problems, "token_usage": usage})
+    (work / "report.md").write_text(render_report(index, state, problems, usage), encoding="utf-8")
+    save(work / "report.json", {"documents": index["documents"], "state": state, "problems": problems, "token_usage": usage})
     export_inventory(work / "supporting-inventory.csv", index, state)
     development_cache.capture(Path(index["manifest"]), "content-review")
     return problems
 
 
 def decide(work, index, state, pair, verdict, reviewer, reason):
-    # Admin choices are explicit; deletions are performed by the admin outside this tool.
+    """Record an admin verdict on a completed comparison; never deletes files itself.
+
+    Args:
+        pair: Pair key of a completed comparison.
+        verdict: "keep_both", "keep_left" or "keep_right".
+        reviewer: Admin name (required).
+        reason: Why (required).
+    """
     if pair not in state["pairs"]:
         raise ValueError("Pair has no completed original-document comparison")
     if not reviewer.strip() or not reason.strip():
@@ -709,7 +439,7 @@ def undo_decision(work, index, state, pair, reviewer, reason):
 
 
 def main(argv=None):
-    # Keep each command small and explicit; model work is bounded and resumable.
+    """Run the prepare / run / check / decide command line; return the process exit code."""
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     parser = argparse.ArgumentParser(description=__doc__)

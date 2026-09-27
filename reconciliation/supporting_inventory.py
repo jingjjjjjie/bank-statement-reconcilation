@@ -6,6 +6,7 @@ from pathlib import Path
 
 from reconciliation.comparison_policy import combined_total
 from reconciliation.currencies import normalize_currencies
+from reconciliation.legacy_comparison import pair_key
 
 
 FIELDS = ("document_id", "source_path", "original_path", "exact_duplicate_with", "file_format", "format_status", "unit", "raw_text",
@@ -13,11 +14,6 @@ FIELDS = ("document_id", "source_path", "original_path", "exact_duplicate_with",
           "references", "parties", "dates", "amounts_and_currencies", "combined_total",
           "details", "annotations_and_signatures", "status",
           "duplicate_with", "comparison", "error")
-
-
-def pair_key(left, right):
-    """Use the same stable pair identifier as the review workflow."""
-    return ":".join(sorted((left, right)))
 
 
 def disposition(digest, index, state):
