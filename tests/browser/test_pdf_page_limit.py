@@ -21,7 +21,7 @@ class PdfPageLimitBrowserTests(unittest.TestCase):
         self.addCleanup(fixture.doCleanups)
         work, index, state = fixture.prepare_pdf(3)
         engine = fixtures.Reviewer(3)
-        vision_workflow.run(work, index, state, engine, extraction_only=True)
+        vision_workflow.run(work, index, state, engine)
         self.assertEqual(len(engine.calls), 1)
         review = Review(Path(index['manifest']), work.parent / 'data')
         review.config_path = Path(index['config_path'])

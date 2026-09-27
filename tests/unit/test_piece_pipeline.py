@@ -12,7 +12,7 @@ from dashboard import receipt_review, matching_review, piece_matching
 from dashboard.piece_match_jobs import validate_result
 from reconciliation import pieces
 from reconciliation.duplicate_workflow import fingerprint
-from tests.unit import test_receipt_matching as fixtures
+from tests.unit import test_receipt_review as fixtures
 
 
 
@@ -27,7 +27,7 @@ def as_model(record):
 class PiecePipelineTests(unittest.TestCase):
     def setUp(self):
         """Use isolated two-receipt evidence and three bank payments."""
-        self.fixture = fixtures.ReceiptMatchingTests()
+        self.fixture = fixtures.ReceiptReviewTests()
         self.fixture.setUp()
         self.addCleanup(self.fixture.doCleanups)
         self.review = self.fixture.review
@@ -425,11 +425,9 @@ class PiecePipelineTests(unittest.TestCase):
 
     def test_canonical_model_output_reaches_saved_review_pieces(self):
         """Actual extraction orchestration requests the new contract and retains its facts."""
-        from tests.unit import test_vision_workflow as fixtures
+        from tests.helpers import ReviewFolder
         from reconciliation import vision_workflow
-        fixture = fixtures.WorkflowTests()
-        fixture.setUp()
-        self.addCleanup(fixture.doCleanups)
+        fixture = ReviewFolder(self.addCleanup)
         index, state = fixture.prepared()
         supplied = {'readable': True, 'description': 'Two receipts',
             'totals': [], 'pieces': [as_model(p) for p in self.fixture.pieces]}
@@ -448,7 +446,7 @@ class PiecePipelineTests(unittest.TestCase):
                 calls.append(schema)
                 return copy.deepcopy(supplied)
 
-        vision_workflow.run(fixture.work, index, state, Reviewer(), extraction_only=True)
+        vision_workflow.run(fixture.work, index, state, Reviewer())
         self.assertEqual(len(calls), 2)
         for result in state['units'].values():
             self.assertEqual(result['receipts'][0]['payee'], 'Merchant A')

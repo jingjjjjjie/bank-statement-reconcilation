@@ -37,13 +37,6 @@ class Reviewer(BaseModel):
     reviewer: str
 
 
-class ContentDecision(Reviewer):
-    """Human verdict and reason for a content pair."""
-    pair: str
-    verdict: str = ""
-    reason: str
-
-
 @router.get("/workspace")
 def workspace(state=Depends(context)):
     """Describe the current project for shared navigation."""
@@ -149,12 +142,6 @@ def documents(state=Depends(context)):
     return document_status.snapshot(state.review)
 
 
-@router.get("/content-review")
-def content(state=Depends(active_context)):
-    """Read current comparison candidates."""
-    return content_review.snapshot(state.review)
-
-
 @router.post("/content/prepare")
 def prepare(state=Depends(active_context)):
     """Prepare local evidence in the request worker, outside the event loop."""
@@ -177,18 +164,6 @@ def stop(review=Depends(interrupt_context)):
 def execution(review=Depends(interrupt_context)):
     """Report process shutdown without reading document evidence."""
     return content_review.execution_status(review)
-
-
-@router.post("/content/decide")
-def decide(body: ContentDecision, state=Depends(active_context)):
-    """Record the user's verdict through existing evidence validation."""
-    return content_review.decide(state.review, body.pair, body.verdict, body.reviewer, body.reason)
-
-
-@router.post("/content/undo")
-def undo_content(body: ContentDecision, state=Depends(active_context)):
-    """Undo a verdict with the existing audit trail."""
-    return content_review.undo(state.review, body.pair, body.reviewer, body.reason)
 
 
 @router.get("/receipts")
@@ -255,12 +230,6 @@ def regeneration_status(state=Depends(active_context)):
     """Poll regeneration progress without rebuilding document previews."""
     from dashboard import regeneration
     return {"jobs": regeneration.snapshot(state.review)}
-
-
-@router.post("/receipts/match")
-def match_receipts(body: dict, state=Depends(active_context)):
-    """Apply explicitly requested receipt allocations."""
-    return receipt_review.change_match(state.review, body)
 
 
 @router.get("/matching")

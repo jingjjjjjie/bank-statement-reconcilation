@@ -15,23 +15,13 @@ def render(index, state, problems, usage):
     """
     documents = index["documents"]
     status = "PENDING" if problems else "COMPLETE"
-    if state.get("extraction_only"):
-        rows = ["# Document extraction", "", f"Status: {status}",
-                f"Documents: {len(documents)}; units read: {len(state['units'])}", "",
-                "Extraction and receipt assembly only. Vision duplicate screening and comparison are disabled.", ""]
-    else:
-        eligible = sum(doc.get("accepted", True) for doc in documents.values())
-        rows = ["# Pass-two duplicate review", "", f"Status: {status}",
-                f"Documents: {len(documents)}; units read: {len(state['units'])}; "
-                f"pairs screened: {len(state['screens'])}/{eligible * (eligible - 1) // 2}", "",
-                "Model results are review evidence, not proof of duplicate payments. No source files are moved or deleted by pass two.", ""]
+    rows = ["# Document extraction", "", f"Status: {status}",
+            f"Documents: {len(documents)}; units read: {len(state['units'])}", ""]
     settings = index.get("config", {"pdf_mode": "vision", "pictures_enabled": True})
     rows += [f"Prepared PDF mode: {settings['pdf_mode']}; pictures: {settings['pictures_enabled']}.",
              f"Stage models used: {json.dumps(state.get('stage_models', {}))}.",
              "Text-only PDF units exclude signatures, handwriting and visual differences; blocked units remain unresolved.", ""]
     rows += _usage_section(usage)
-    for pair, result in state["pairs"].items():
-        rows += _comparison_section(documents, state, pair, result)
     rows += ["## Outstanding checks", "", f"{len(problems)} unresolved checks.", ""]
     rows += [f"- {p}" for p in problems[:MAX_LISTED_PROBLEMS]]
     if len(problems) > MAX_LISTED_PROBLEMS:
@@ -48,13 +38,3 @@ def _usage_section(usage):
             f"Reported input: {totals['input_tokens']:,}; cached input: {totals['cached_input_tokens']:,}; "
             f"output: {totals['output_tokens']:,}; reasoning output: {totals['reasoning_output_tokens']:,}.",
             "Totals cover recorded Codex calls only; unknown attempts are excluded.", ""]
-
-
-def _comparison_section(documents, state, pair, result):
-    """Describe one legacy comparison and its admin decision."""
-    left, right = pair.split(":")
-    rows = [f"## {pair}", "", f"Left: {documents[left]['paths'][0]}", f"Right: {documents[right]['paths'][0]}",
-            f"Finding: {result['classification']} ({result['confidence']})", ""]
-    for field in ("evidence", "differences", "limitations"):
-        rows += [f"{field.title()}: " + "; ".join(result[field]), ""]
-    return rows + ["Admin: " + json.dumps(state["decisions"].get(pair, "PENDING"), ensure_ascii=False), ""]

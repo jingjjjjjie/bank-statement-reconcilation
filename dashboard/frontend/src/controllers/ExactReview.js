@@ -107,7 +107,7 @@ $('#validate').onclick = async () => {
 };
 function showPreset(data) {
   $('#exact-development-status').textContent = data.saved
-    ? `Saved ${data.exact} exact and ${data.content} content decisions on ${new Date(data.at).toLocaleString()}.`
+    ? `Saved ${data.exact} exact-duplicate decisions on ${new Date(data.at).toLocaleString()}.`
     : 'No saved decisions yet.';
   const cacheInfo = data.cache ? ` Shared cache: ${data.cache.model_results} model results.` : '';
   const status = root.querySelector('#exact-development-status, #development-status');
@@ -126,7 +126,7 @@ $('#exact-apply').onclick = async () => {
     showPreset(result.saved);
     state = await api('/api/state'); token = state.token; render();
     $('#validation').hidden = true;
-    toast(`Applied ${result.exact_applied} exact and ${result.content_applied} content decisions.`);
+    toast(`Applied ${result.exact_applied} exact-duplicate decisions.`);
   } catch (error) {$('#exact-development-status').textContent = error.message; toast(error.message);}
   finally {button.disabled = false;}
 };

@@ -85,13 +85,6 @@ class SourceSelection:
         files = supporting_files(source)
         return {"path": str(source), "files": len(files)}
 
-    def save(self, path):
-        """Save a validated choice without changing the active review."""
-        result = self.inspect(path)
-        self.data.mkdir(parents=True, exist_ok=True)
-        self.selection.write_text(json.dumps({"path": result["path"]}), encoding="utf-8")
-        return result
-
     def preview(self):
         """Count exact copies that creating the selected review would move."""
         source = self.selected()
@@ -120,15 +113,6 @@ class SourceSelection:
         if not source.is_file() or source.suffix.lower() != ".pdf":
             raise ValueError("Select a PDF file")
         return {"path": str(source), "bytes": source.stat().st_size}
-
-    def save_bank(self, path):
-        """Save a bank PDF choice without extracting or overwriting a master."""
-        if self.selected_workspace():
-            raise ValueError("Select a workspace to change its bank statement")
-        result = self.inspect_bank(path)
-        self.data.mkdir(parents=True, exist_ok=True)
-        self.bank_selection.write_text(json.dumps({"path": result["path"]}), encoding="utf-8")
-        return result
 
     def prepare_bank(self, manifest, year):
         """Extract the selected PDF after an explicit request and protect existing data."""

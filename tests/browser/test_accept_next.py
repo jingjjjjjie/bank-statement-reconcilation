@@ -10,13 +10,13 @@ from dashboard.routes import create_app
 from reconciliation.duplicate_workflow import fingerprint
 from tests.browser import browser_options
 from tests.http_server import TestServer
-from tests.unit import test_receipt_matching as fixtures
+from tests.unit import test_receipt_review as fixtures
 
 
 class AcceptNextTests(unittest.TestCase):
     def test_save_failure_then_next_and_numbered_groups(self):
         """Keep failed edits, prevent double saves, and open only the next preview."""
-        fixture = fixtures.ReceiptMatchingTests()
+        fixture = fixtures.ReceiptReviewTests()
         fixture.setUp()
         self.addCleanup(fixture.doCleanups)
         fixture.index['documents'] = {}

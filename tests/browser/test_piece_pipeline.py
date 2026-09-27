@@ -12,13 +12,13 @@ from dashboard.routes import create_app
 from reconciliation.duplicate_workflow import fingerprint
 from tests.browser import browser_options
 from tests.http_server import TestServer
-from tests.unit import test_receipt_matching as fixtures
+from tests.unit import test_receipt_review as fixtures
 
 
 class PiecePipelineBrowserTests(unittest.TestCase):
     def test_add_remove_search_and_live_matching(self):
         """Piece identities survive editing and search reaches current matching evidence."""
-        fixture = fixtures.ReceiptMatchingTests()
+        fixture = fixtures.ReceiptReviewTests()
         fixture.setUp()
         self.addCleanup(fixture.doCleanups)
         Image.new('RGB', (400, 500), 'white').save(fixture.source)

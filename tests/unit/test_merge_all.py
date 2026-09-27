@@ -3,7 +3,7 @@ import unittest
 
 from reconciliation.pieces import merge_all
 from dashboard import receipt_review
-from tests.unit import test_receipt_matching as fixtures
+from tests.unit import test_receipt_review as fixtures
 
 
 class MergeAllTests(unittest.TestCase):
@@ -28,7 +28,7 @@ class MergeAllTests(unittest.TestCase):
 
     def test_accepted_merge_gets_new_identity(self):
         """Preview leaves saved entries intact; acceptance records parent lineage."""
-        fixture = fixtures.ReceiptMatchingTests()
+        fixture = fixtures.ReceiptReviewTests()
         fixture.setUp()
         self.addCleanup(fixture.doCleanups)
         before = receipt_review.snapshot(fixture.review)
@@ -45,7 +45,7 @@ class MergeAllTests(unittest.TestCase):
 
     def test_reset_restores_original_after_accepted_merge(self):
         """Reset restores model entries as a draft, with fresh IDs on acceptance."""
-        fixture = fixtures.ReceiptMatchingTests()
+        fixture = fixtures.ReceiptReviewTests()
         fixture.setUp()
         self.addCleanup(fixture.doCleanups)
         before = receipt_review.snapshot(fixture.review)

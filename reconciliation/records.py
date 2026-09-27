@@ -47,11 +47,10 @@ class State(TypedDict):
     index_sha256: str       # Hash of index.json; a mismatch means the review must be recreated.
     units: dict[str, dict]  # Unit key -> extraction result (legacy receipt record).
     assemblies: NotRequired[dict[str, dict]]  # Document hash -> multi-unit receipt assembly.
-    screens: dict[str, dict]    # Pair key -> legacy screening row.
-    pairs: dict[str, dict]      # Pair key -> legacy whole-document comparison.
-    decisions: dict[str, dict]  # Pair key -> admin keep/remove verdict.
+    decisions: dict[str, dict]  # Pair key -> admin keep/remove verdict from retired duplicate comparison; read-only.
+    screens: NotRequired[dict[str, dict]]  # Retired: old duplicate screening rows, left in older files.
+    pairs: NotRequired[dict[str, dict]]    # Retired: old duplicate comparisons, left in older files.
     decision_history: NotRequired[list[dict]]
     stage_models: NotRequired[dict[str, dict]]  # Stage -> {"model", "reasoning"} pinned for this review.
     model_config: NotRequired[dict]
-    extraction_only: NotRequired[bool]
     model: str | None       # Legacy single-model field.

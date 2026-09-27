@@ -1,4 +1,4 @@
-"""Persist receipt-level extraction approvals and human bank allocations."""
+"""Receipt review: load extracted pieces per document and save human accept / edit / discard decisions."""
 from copy import deepcopy
 from concurrent.futures import ThreadPoolExecutor
 import csv
@@ -13,7 +13,7 @@ from reconciliation.pdf_routing import review_warnings
 from reconciliation.pieces import canonical, identify, assign_submitted
 from reconciliation.receipt_assembly import ASSEMBLED_RECEIPT, current_assembly, validate_assembly
 from reconciliation.duplicate_workflow import fingerprint
-from reconciliation.receipt_matching import allocated, amount, currency, proposal, revision, stale
+from reconciliation.receipt_matching import amount, currency, revision
 from reconciliation.vision_workflow import load_index, removal_plan
 from dashboard.content_review import execution_status, work_path
 from dashboard.review import write_json
@@ -118,25 +118,17 @@ def context(review, *, include_banks=True, prepared=None):
 
 
 def snapshot(review):
-    """Expose separate receipts, remaining amounts, and proposed or accepted matches."""
+    """Return every reviewable document unit and its pieces, plus the revision the browser must echo back."""
     if review is None:
-        return {"revision": "", "units": [], "receipts": [], "transactions": [], "matches": []}
+        return {"revision": "", "units": [], "receipts": [], "transactions": []}
     return snapshot_context(context(review))
 
 
 def snapshot_context(evidence):
     """Serialize one verified evidence set without rereading every source file."""
     path, saved, units, receipts, banks = evidence
-    used = allocated(saved["matches"])
-    for key, receipt in receipts.items():
-        receipt["allocated_amount"] = str(used.get(key, 0))
-        try:
-            receipt["remaining_amount"] = str(amount(receipt["total"]) - used.get(key, 0))
-        except ValueError:
-            receipt["remaining_amount"] = ""
-    matches = [{**match, "stale": bool(stale(match, banks, receipts))} for match in saved["matches"].values()]
     return normalize_currencies({"revision": revision([saved, units, banks]), "units": list(units.values()),
-            "receipts": list(receipts.values()), "transactions": list(banks.values()), "matches": matches})
+            "receipts": list(receipts.values()), "transactions": list(banks.values())})
 
 
 def ground_truth(review):
@@ -369,43 +361,3 @@ def classify_extraction(review, body):
         accepted = saved["extractions"].get(item["key"])
         item["accepted"] = bool(accepted and accepted.get("accepted", True) and accepted["source_revision"] == item["source_revision"]) and not item["trash"]
     return snapshot_units(evidence)
-
-
-def change_match(review, body):
-    """Propose, accept, reject, or undo an allocation with immutable decision history."""
-    final_state = review.manifest_path.parent / "final-review/decisions.json"
-    if final_state.exists() and body.get("action") in {"propose", "accept"}:
-        raise ValueError("Use Final review for matching; its saved decisions reserve the available evidence")
-    require_current(review, body["revision"])
-    path, saved, units, receipts, banks = context(review)
-    bank_id, action = body["bank_transaction_id"], body["action"]
-    previous = saved["matches"].get(bank_id)
-    if action == "propose":
-        if previous and previous["review_status"] == "accepted":
-            raise ValueError("Undo the accepted match before changing it")
-        value = proposal(banks[bank_id], body["supporting_items"], receipts, saved["matches"])
-    elif action == "accept":
-        if not previous or previous["review_status"] != "pending" or stale(previous, banks, receipts):
-            raise ValueError("Create a current pending proposal before accepting")
-        value = proposal(banks[bank_id], previous["supporting_items"], receipts, saved["matches"])
-        for item in value["supporting_items"]:
-            verify_source(receipts[item["receipt_id"]])
-        bank = banks[bank_id]
-        if bank.get("balance_checks") != "passed":
-            raise ValueError("Bank balance validation must pass before accepting matches")
-        if fingerprint(Path(bank["source"])) != bank["source_sha256"].upper():
-            raise ValueError("Bank source changed; refresh the bank extraction")
-        if amount(value["bank_amount"]) != amount(value["supporting_total"]) and not body.get("reason", "").strip():
-            raise ValueError("Explain the amount difference before accepting")
-        value["review_status"] = "accepted"
-    elif action in {"reject", "undo"}:
-        required = "pending" if action == "reject" else "accepted"
-        if not previous or previous["review_status"] != required:
-            raise ValueError(f"This action requires a {required} match")
-        value = {**previous, "review_status": "rejected" if action == "reject" else "undone"}
-    else:
-        raise ValueError("Unknown match action")
-    value = {**value, "reviewer": body["reviewer"], "reason": body.get("reason", "")}
-    saved["matches"][bank_id] = value
-    record(path, saved, action, body["reviewer"], previous, value)
-    return snapshot(review)

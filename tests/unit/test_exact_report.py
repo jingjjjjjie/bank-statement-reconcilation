@@ -62,7 +62,7 @@ class ExactReportTests(unittest.TestCase):
     def test_workspace_start_uses_report_and_preserves_statement(self):
         """The workspace entry point creates the automatic report on Proceed."""
         sources = SourceSelection(self.base, self.base / "data")
-        sources.save(self.root)
+        sources.save_workspace(self.work)
         manifest, _ = sources.start(sources.preview()["token"])
         self.assertEqual(json.loads(manifest.read_text())["Mode"], "exact_report")
         self.assertEqual((self.work / "statement/bank.pdf").read_bytes(), b"statement")

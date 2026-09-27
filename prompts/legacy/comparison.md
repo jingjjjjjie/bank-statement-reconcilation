@@ -1,1 +1,0 @@
-Compare these whole documents. Cite supplied document IDs and page/sheet/unit locations in evidence and differences. same_document requires equivalent complete evidence; different annotations, bank details, signatures or missing pages must be distinguished.

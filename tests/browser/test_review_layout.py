@@ -11,13 +11,13 @@ from dashboard.routes import create_app
 from reconciliation.duplicate_workflow import fingerprint
 from tests.browser import browser_options
 from tests.http_server import TestServer
-from tests.unit import test_receipt_matching as fixtures
+from tests.unit import test_receipt_review as fixtures
 
 
 class ReviewLayoutTests(unittest.TestCase):
     def test_twenty_one_pieces_and_selected_actions(self):
         """Keep every piece editable, target actions explicitly, and avoid mobile overlap."""
-        fixture = fixtures.ReceiptMatchingTests()
+        fixture = fixtures.ReceiptReviewTests()
         fixture.setUp()
         self.addCleanup(fixture.doCleanups)
         Image.new('RGB', (600, 800), '#faf8f2').save(fixture.source)

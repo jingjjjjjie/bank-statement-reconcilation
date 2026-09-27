@@ -9,9 +9,8 @@ from reconciliation import vision_workflow as workflow
 from reconciliation.receipt_assembly import ASSEMBLY, current_assembly, input_revision, validate_assembly
 from reconciliation.pieces import ASSEMBLY as PIECE_ASSEMBLY
 from reconciliation.duplicate_workflow import fingerprint
-from tests.unit import test_vision_workflow as workflow_fixtures
-from tests.unit.test_vision_workflow import FakeReviewer
-from tests.unit import test_receipt_matching as receipt_fixtures
+from tests.helpers import FakeReviewer, ReviewFixture
+from tests.unit import test_receipt_review as receipt_fixtures
 
 
 def piece(units, total="45.00"):
@@ -21,9 +20,7 @@ def piece(units, total="45.00"):
             "currency": "MYR", "limitations": [], "source_units": units}
 
 
-class AssemblyWorkflowTests(unittest.TestCase):
-    setUp = workflow_fixtures.WorkflowTests.setUp
-    prepared = workflow_fixtures.WorkflowTests.prepared
+class AssemblyWorkflowTests(ReviewFixture, unittest.TestCase):
 
     def test_duplicate_source_references_are_rejected_locally(self):
         """Keep uniqueness checks without unsupported Codex schema keywords."""
@@ -50,16 +47,14 @@ class AssemblyWorkflowTests(unittest.TestCase):
                     return {"receipts": [piece([1, 2])], "reviewed_units": [1, 2], "limitations": []}
                 return super().ask(prompt, schema, images)
 
-        workflow.run(self.work, index, state, Reviewer(), extraction_only=True)
-        workflow.run(self.work, index, state, Reviewer(), extraction_only=True)
-        self.assertEqual(state["screens"], {})
-        self.assertEqual(state["pairs"], {})
+        workflow.run(self.work, index, state, Reviewer())
+        workflow.run(self.work, index, state, Reviewer())
         self.assertEqual(workflow.gate(index, state), [])
         self.assertEqual(len(calls), 1)
         self.assertEqual(len(calls[0]), 2)
         document = next(doc for doc in index["documents"].values() if len(doc["units"]) == 2)
         progress = []
-        workflow.run(self.work, index, state, Reviewer(), extraction_only=True,
+        workflow.run(self.work, index, state, Reviewer(),
                      regeneration={document["id"]: "fresh-attempt"},
                      progress=lambda digest, status: progress.append((digest, status)))
         self.assertEqual(len(calls), 2)
@@ -85,10 +80,10 @@ class AssemblyWorkflowTests(unittest.TestCase):
 
 
 class AssemblyApprovalTests(unittest.TestCase):
-    setUp = receipt_fixtures.ReceiptMatchingTests.setUp
-    save_state = receipt_fixtures.ReceiptMatchingTests.save_state
-    view = receipt_fixtures.ReceiptMatchingTests.view
-    accept_pieces = receipt_fixtures.ReceiptMatchingTests.accept_pieces
+    setUp = receipt_fixtures.ReceiptReviewTests.setUp
+    save_state = receipt_fixtures.ReceiptReviewTests.save_state
+    view = receipt_fixtures.ReceiptReviewTests.view
+    accept_pieces = receipt_fixtures.ReceiptReviewTests.accept_pieces
 
     def test_assembled_receipts_allow_human_acceptance_with_legacy_flag(self):
         """Only document receipts become allocatable, and page refresh invalidates approval."""

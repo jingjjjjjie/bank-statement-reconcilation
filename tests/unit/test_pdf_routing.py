@@ -9,12 +9,12 @@ from unittest.mock import patch
 
 import pymupdf
 
-from reconciliation.codex_reviewer import BudgetReached, EXTRACTION
+from reconciliation.codex_reviewer import BudgetReached
+from reconciliation.schemas import EXTRACTION
 from reconciliation.document_reader import extract
 from reconciliation.pdf_routing import extract_unit, inspect_page
 from reconciliation.review_settings import DEFAULTS
-from tests.unit.test_vision_workflow import FakeReviewer
-from tests.unit import test_vision_workflow as workflow_fixtures
+from tests.helpers import FakeReviewer, ReviewFolder
 from reconciliation import vision_workflow
 from reconciliation.duplicate_workflow import organize
 
@@ -90,9 +90,7 @@ class PdfRoutingTests(unittest.TestCase):
 
     def test_workflow_runs_comparison_with_existing_budget_wrapper(self):
         """Prepared PDF units reach both routes and retain resumable workflow state."""
-        fixture = workflow_fixtures.WorkflowTests()
-        fixture.setUp()
-        self.addCleanup(fixture.doCleanups)
+        fixture = ReviewFolder(self.addCleanup)
         with pymupdf.open() as pdf:
             pdf.new_page().insert_text((30, 30), 'Invoice TEST-1 Supplier Example Corporation Total MYR 1.00')
             pdf.save(fixture.root / 'native.pdf')

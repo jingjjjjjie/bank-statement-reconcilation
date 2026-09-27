@@ -15,6 +15,14 @@ from reconciliation.source_selection import SourceSelection
 from dashboard.app import create_app
 
 
+def select_legacy_folder(sources, path, bank=None):
+    """Write the separate-folder selection an older dashboard saved (before workspaces)."""
+    sources.data.mkdir(parents=True, exist_ok=True)
+    sources.selection.write_text(json.dumps({"path": str(sources.inspect(path)["path"])}), encoding="utf-8")
+    if bank is not None:
+        sources.bank_selection.write_text(json.dumps({"path": sources.inspect_bank(bank)["path"]}), encoding="utf-8")
+
+
 class SourceSelectionTests(unittest.TestCase):
     def test_workspace_selects_both_inputs_without_moving_files(self):
         """A work folder keeps the statement out of the supporting document scan."""
@@ -47,7 +55,7 @@ class SourceSelectionTests(unittest.TestCase):
             old = base / "old"
             old.mkdir()
             sources = SourceSelection(base, base / "data")
-            sources.save(old)
+            select_legacy_folder(sources, old)
             work = base / "invalid"
             work.mkdir()
             with self.assertRaisesRegex(ValueError, "documents/ and statement/"):
@@ -112,7 +120,7 @@ class SourceSelectionTests(unittest.TestCase):
             for name in ("a.txt", "b.txt"):
                 (source / name).write_bytes(b"same")
             sources = SourceSelection(base, base / "data")
-            sources.save(source)
+            select_legacy_folder(sources, source)
             with patch("reconciliation.duplicate_workflow.move_verified", side_effect=OSError("interrupted")):
                 with self.assertRaises(OSError):
                     sources.start(sources.preview()["token"])
@@ -155,7 +163,7 @@ class SourceSelectionTests(unittest.TestCase):
             (source / "a.txt").write_text("same", encoding="utf-8")
             (source / "b.txt").write_text("same", encoding="utf-8")
             selected = SourceSelection(base, base / "dashboard-data")
-            selected.save(source)
+            select_legacy_folder(selected, source)
             preview = selected.preview()
             self.assertEqual((preview["files"], preview["groups"], preview["copies_to_move"]), (2, 1, 2))
             (source / "new.txt").write_text("new", encoding="utf-8")
@@ -193,8 +201,8 @@ class SourceSelectionTests(unittest.TestCase):
             (legacy / "two.txt").write_text("old", encoding="utf-8")
             legacy_manifest = base / "legacy-manifest.json"
             old_review = organize(legacy, legacy_manifest)
-            self.assertEqual(sources.save(documents)["files"], 2)
-            self.assertEqual(sources.save_bank(pdf)["path"], str(pdf.resolve()))
+            select_legacy_folder(sources, documents, bank=pdf)
+            self.assertEqual(sources.selected_bank(), pdf.resolve())
             self.assertTrue((documents / "a.txt").exists())
             manifest, _ = sources.start()
             self.assertTrue(manifest.is_file())
@@ -222,11 +230,11 @@ class SourceSelectionTests(unittest.TestCase):
             base = Path(folder)
             sources = SourceSelection(base, base / "dashboard-data")
             with self.assertRaises(ValueError):
-                sources.save(base)
+                sources.inspect(base)
             text_file = base / "statement.txt"
             text_file.write_text("not a PDF", encoding="utf-8")
             with self.assertRaisesRegex(ValueError, "PDF"):
-                sources.save_bank(text_file)
+                sources.inspect_bank(text_file)
 
     def test_dashboard_browses_without_an_existing_manifest(self):
         """A fresh workspace can list folders before a review exists."""

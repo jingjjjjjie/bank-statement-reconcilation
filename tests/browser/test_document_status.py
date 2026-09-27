@@ -50,7 +50,7 @@ class DocumentStatusTests(unittest.TestCase):
                     expect(page.locator("#document-rows .document-file")).to_have_count(2)
                     expect(page.locator("#document-rows .document-status").first).to_have_text("Queued")
                     index, state = load(work)
-                    run(work, index, state, FixtureReviewer(), extraction_only=True)
+                    run(work, index, state, FixtureReviewer())
                     page.reload()
                     expect(page.locator("#document-rows .document-status").first).to_have_text("Needs review")
                     page.screenshot(path=".tools/documents-desktop.png", full_page=True)

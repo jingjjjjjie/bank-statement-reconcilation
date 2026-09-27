@@ -23,7 +23,7 @@ class RegenerationBrowserTests(unittest.TestCase):
         content_review.prepare(fixture.review)
         work = fixture.manifest.parent / "review"
         index, state = load(work)
-        run(work, index, state, fixtures.FixtureReviewer(), extraction_only=True)
+        run(work, index, state, fixtures.FixtureReviewer())
         release = threading.Event()
 
         class Reviewer(fixtures.FixtureReviewer):

@@ -9,13 +9,13 @@ from PIL import Image
 from dashboard import content_review, extraction_preview, receipt_review
 from reconciliation import vision_workflow
 from reconciliation.duplicate_workflow import fingerprint
-from tests.unit import test_receipt_matching as fixtures
+from tests.unit import test_receipt_review as fixtures
 
 
 class ReviewPreviewSpeedTests(unittest.TestCase):
     def setUp(self):
         """Create a review with a source and a separately prepared page."""
-        self.fixture = fixtures.ReceiptMatchingTests()
+        self.fixture = fixtures.ReceiptReviewTests()
         self.fixture.setUp()
         self.addCleanup(self.fixture.doCleanups)
         fixture = self.fixture
@@ -37,8 +37,6 @@ class ReviewPreviewSpeedTests(unittest.TestCase):
                          [fixture.work / 'index.json'])
         self.preview.write_bytes(b'changed page')
         self.assertEqual(content_review.source(fixture.review, fixture.digest), fixture.source)
-        with self.assertRaisesRegex(ValueError, 'Prepared image changed'):
-            content_review.image(fixture.review, fixture.digest, 0)
         with self.assertRaisesRegex(ValueError, 'Prepared image changed'):
             receipt_review.accept_extraction(fixture.review, {
                 "revision": revision, "key": fixture.key, "receipts": fixture.pieces})

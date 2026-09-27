@@ -132,7 +132,7 @@ def extract_fresh(output, workers):
     status, error = 'finished', None
     with patch('reconciliation.development_cache.root_for', no_shared_cache):
         try:
-            run(work, index, state, engine, extraction_only=True)
+            run(work, index, state, engine)
         except Exception as failure:
             status, error = 'unresolved', str(failure)
     result = {'status': status, 'error': error, 'seconds': time.perf_counter() - started,

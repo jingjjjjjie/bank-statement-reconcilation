@@ -8,7 +8,7 @@ from tests.http_server import TestServer
 from playwright.sync_api import expect, sync_playwright
 from dashboard.routes import create_app
 from tests.browser import browser_options
-from tests.unit import test_receipt_matching as fixtures
+from tests.unit import test_receipt_review as fixtures
 from PIL import Image, ImageDraw
 from reconciliation.duplicate_workflow import fingerprint
 
@@ -16,7 +16,7 @@ from reconciliation.duplicate_workflow import fingerprint
 class ReceiptMatchingBrowserTests(unittest.TestCase):
     def test_extraction_review_accept_navigation_and_reload(self):
         """Use real local HTTP endpoints without sending documents to a model."""
-        fixture = fixtures.ReceiptMatchingTests()
+        fixture = fixtures.ReceiptReviewTests()
         fixture.setUp()
         fixture.review.manifest = {}
         fixture.review.workspace = lambda: {"name": "Fixture", "period": "December"}

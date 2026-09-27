@@ -63,18 +63,6 @@ def select_workspace(body: PathChoice, state=Depends(context)):
     return state.sources.save_workspace(body.path)
 
 
-@router.post("/source/select")
-def select_documents(body: PathChoice, state=Depends(context)):
-    """Retain supporting-folder selection for existing clients."""
-    return {"selected": state.sources.save(body.path)}
-
-
-@router.post("/source/bank-select")
-def select_bank(body: PathChoice, state=Depends(context)):
-    """Retain explicit selection of a statement PDF."""
-    return {"bank": state.sources.save_bank(body.path)}
-
-
 @router.post("/source/start")
 def start(body: StartChoice, state=Depends(context)):
     """Resume the same review; invalidate cached views only for a different project."""

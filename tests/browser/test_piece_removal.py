@@ -9,13 +9,13 @@ from reconciliation.duplicate_workflow import fingerprint
 from reconciliation.receipt_assembly import input_revision
 from tests.browser import browser_options
 from tests.http_server import TestServer
-from tests.unit import test_receipt_matching as fixtures
+from tests.unit import test_receipt_review as fixtures
 
 
 class PieceRemovalTests(unittest.TestCase):
     def test_remove_generated_piece_and_recover_from_plain_text_failure(self):
         """Keep the removal draft after an HTTP error and save it intact on retry."""
-        fixture = fixtures.ReceiptMatchingTests()
+        fixture = fixtures.ReceiptReviewTests()
         fixture.setUp()
         self.addCleanup(fixture.doCleanups)
         source = fixture.base / 'four-page-invoice.pdf'

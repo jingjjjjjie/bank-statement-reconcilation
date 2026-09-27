@@ -17,7 +17,7 @@ from reconciliation.process_manager import ProcessManager, ReviewCancelled
 from reconciliation import development_cache
 from reconciliation.token_usage import FIELDS, record, reported_usage
 # Schemas live in reconciliation.schemas; re-exported for existing callers.
-from reconciliation.schemas import COMPARISON, EXTRACTION, MONEY, RECEIPT, SCREEN, TEXT, TEXTS, object_schema  # noqa: F401
+from reconciliation.schemas import EXTRACTION, RECEIPT, TEXT, TEXTS, object_schema  # noqa: F401
 
 
 DISABLED_FEATURES = (

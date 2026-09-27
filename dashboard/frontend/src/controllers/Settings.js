@@ -119,7 +119,7 @@ $('#settings-form').onsubmit = async event => {
 Promise.all([api('/api/session'), api('/api/config')]).then(([session, config]) => {token = session.token; showSettings(config);}).catch(error => {$('#settings-error').hidden = false; $('#settings-error').textContent = error.message; $('#save-state').textContent = 'Unable to load settings';});
 function showDevelopment(data) {
   $('#development-status').textContent = data.saved
-    ? `Saved ${data.exact} exact and ${data.content} content decisions on ${new Date(data.at).toLocaleString()}.`
+    ? `Saved ${data.exact} exact-duplicate decisions on ${new Date(data.at).toLocaleString()}.`
     : 'No saved decisions yet.';
   const cacheInfo = data.cache ? ` Shared cache: ${data.cache.model_results} model results.` : '';
   const status = root.querySelector('#exact-development-status, #development-status');
@@ -136,7 +136,7 @@ $('#apply-decisions').onclick = async () => {
   try {
     const result = await api('/api/development/apply', {reviewer: $('#development-reviewer').value});
     showDevelopment(result.saved);
-    toast(`Applied ${result.exact_applied} exact and ${result.content_applied} content decisions.`);
+    toast(`Applied ${result.exact_applied} exact-duplicate decisions.`);
   } catch (error) {$('#development-status').textContent = error.message; toast(error.message);}
   finally {button.disabled = false;}
 };

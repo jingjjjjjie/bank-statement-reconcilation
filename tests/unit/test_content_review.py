@@ -1,4 +1,4 @@
-"""Pass-two dashboard fixtures verify gating and explicit human decisions."""
+"""Dashboard extraction runs: prepare, background start, regeneration queue and Stop."""
 
 import json
 import tempfile
@@ -14,9 +14,9 @@ from unittest.mock import patch
 from PIL import Image
 
 from reconciliation.pieces import EXTRACTION as PIECE_EXTRACTION
-from reconciliation.codex_reviewer import COMPARISON, EXTRACTION, ReviewCancelled, SCREEN
+from reconciliation.codex_reviewer import EXTRACTION, ReviewCancelled
 from dashboard.app import Review, create_app
-from dashboard import content_review, development, regeneration, receipt_review
+from dashboard import content_review, regeneration, receipt_review
 from reconciliation.duplicate_workflow import organize
 from reconciliation.vision_workflow import load, run
 
@@ -27,7 +27,7 @@ class FixtureReviewer:
     model = "fixture"
 
     def ask(self, prompt, schema, images=()):
-        """Produce matching fields and a comparison requiring admin review."""
+        """Return a fixed extraction; any other request is a test failure."""
         if schema in (EXTRACTION, PIECE_EXTRACTION):
             return {"receipts": [], "readable": True, "supporting_evidence_status": "potential_support",
                     "supporting_evidence_reason": "Visible transaction details", "document_type": "invoice", "receipt_status": "not_receipt", "invoice_numbers": ["INV-1"],
@@ -36,11 +36,6 @@ class FixtureReviewer:
                     "amounts_and_currencies": ["MYR 100"],
                     "money": [{"amount": "100", "currency": "MYR", "role": "grand_total"}],
                     "details": "Cleaning", "annotations_and_signatures": "", "limitations": []}
-        if schema == SCREEN:
-            raise AssertionError("Matching totals should skip model screening")
-        if schema == COMPARISON:
-            return {"classification": "same_document", "confidence": "high",
-                    "evidence": ["Same invoice and total"], "differences": [], "limitations": []}
         raise AssertionError("Unexpected model schema")
 
 
@@ -63,68 +58,28 @@ class ContentPageTests(unittest.TestCase):
             "codex_enabled": True, "max_calls": 20, "model": "", "reasoning": "default", "stages": {}}), encoding="utf-8")
         self.review = Review(self.manifest, base / "dashboard-data")
 
-    def test_page_prepares_and_requires_admin_verdict(self):
-        """The page lists model evidence and saves an explicit human decision."""
+    def test_prepare_endpoint_requires_token_and_prepares_locally(self):
+        """Prepare is an authenticated action and makes no model calls."""
         server = TestServer(("127.0.0.1", 0), create_app(self.review, "test-token"))
-        thread = threading.Thread(target=server.serve_forever, daemon=True)
-        thread.start()
+        threading.Thread(target=server.serve_forever, daemon=True).start()
         self.addCleanup(server.server_close)
         self.addCleanup(server.shutdown)
-        base = f"http://127.0.0.1:{server.server_port}"
-
-        def get(path):
-            """Read JSON from one local dashboard endpoint."""
-            with urllib.request.urlopen(base + path) as response:
-                return json.load(response)
-
-        def post(path, body):
-            """Send an authenticated dashboard action."""
-            request = urllib.request.Request(base + path, json.dumps(body).encode(),
-                                             {"X-Review-Token": "test-token", "Content-Type": "application/json"})
-            with urllib.request.urlopen(request) as response:
-                return json.load(response)
-
-        with urllib.request.urlopen(base + "/content-review") as response:
-            self.assertIn(b'id="app"', response.read())
-        self.assertFalse(get("/api/content-review")["prepared"])
-        post("/api/content/prepare", {})
-        prepared = get("/api/content-review")
-        self.assertTrue(prepared["prepared"])
-        self.assertEqual(prepared["documents_read"], 0)
-        self.assertGreater(prepared["units_total"], 0)
-        work = self.manifest.parent / "review"
-        index, state = load(work)
-        run(work, index, state, FixtureReviewer())
-        extracted = get("/api/content-review")
-        self.assertEqual(extracted["documents_read"], extracted["documents"])
-        self.assertEqual(extracted["units_read"], extracted["units_total"])
-        candidate = get("/api/content-review")["pairs"][0]
-        self.assertIsNone(candidate["decision"])
+        url = f"http://127.0.0.1:{server.server_port}/api/content/prepare"
         with self.assertRaises(urllib.error.HTTPError) as error:
-            urllib.request.urlopen(urllib.request.Request(base + "/api/content/decide", b"{}"))
+            urllib.request.urlopen(urllib.request.Request(url, b"{}"))
         self.assertEqual(error.exception.code, 403)
-        post("/api/content/decide", {"pair": candidate["pair"], "verdict": "keep_left",
-             "reviewer": "Admin", "reason": "Same complete document"})
-        decided = get("/api/content-review")["pairs"][0]
-        self.assertEqual(decided["decision"]["reviewer"], "Admin")
-        self.assertEqual(post("/api/development/remember", {})["content"], 1)
-        post("/api/content/undo", {"pair": candidate["pair"], "reviewer": "Admin",
-             "reason": "Need to inspect the source again"})
-        self.assertIsNone(get("/api/content-review")["pairs"][0]["decision"])
-        _, reverted = load(work)
-        self.assertIsNone(reverted["decision_history"][-1]["verdict"])
-        self.assertTrue(reverted["decision_history"][-1]["previous"])
-        replayed = post("/api/development/apply", {"reviewer": "Tester"})
-        self.assertEqual(replayed["content_applied"], 1)
-        self.assertEqual(get("/api/content-review")["pairs"][0]["decision"]["reviewer"], "Tester")
-        self.assertTrue(all(Path(path).is_file() for document in index["documents"].values()
-                            for path in document["paths"]))
+        request = urllib.request.Request(url, b"{}", {"X-Review-Token": "test-token", "Content-Type": "application/json"})
+        with urllib.request.urlopen(request) as response:
+            self.assertTrue(json.load(response)["prepared"])
+        index, state = load(self.manifest.parent / "review")
+        self.assertEqual(len(index["documents"]), 2)
+        self.assertEqual(state["units"], {})
 
     def test_pass_one_blocks_content_prepare(self):
         """A pending exact-copy group cannot start content review."""
         root = Path(self.review.root)
         (root / "copy.png").write_bytes((root / "first.png").read_bytes())
-        self.assertFalse(content_review.snapshot(self.review)["exact_ready"])
+        self.assertTrue(content_review.exact_problems(self.review))
         with self.assertRaisesRegex(ValueError, "Finish exact"):
             content_review.prepare(self.review)
 
@@ -136,12 +91,8 @@ class ContentPageTests(unittest.TestCase):
             self.review.content_thread.join(timeout=5)
         self.assertFalse(self.review.content_thread.is_alive())
         self.assertEqual(self.review.content_error, "")
-        snapshot = content_review.snapshot(self.review)
-        self.assertEqual(snapshot["pairs"], [])
-        self.assertEqual(snapshot["units_read"], snapshot["units_total"])
-        state = load(self.manifest.parent / "review")[1]
-        self.assertEqual(state["screens"], {})
-        self.assertTrue(state["extraction_only"])
+        index, state = load(self.manifest.parent / "review")
+        self.assertEqual(len(state["units"]), sum(len(doc["units"]) for doc in index["documents"].values()))
         self.assertTrue(self.review.workflow_checks()[1])
 
     def test_regeneration_joins_shared_parallel_worker(self):
@@ -199,7 +150,7 @@ class ContentPageTests(unittest.TestCase):
         content_review.prepare(self.review)
         work = self.manifest.parent / "review"
         index, state = load(work)
-        run(work, index, state, FixtureReviewer(), extraction_only=True)
+        run(work, index, state, FixtureReviewer())
         digest = next(iter(index["documents"]))
         before = load(work)[1]["units"]
 
@@ -227,7 +178,7 @@ class ContentPageTests(unittest.TestCase):
         content_review.prepare(self.review)
         work = self.manifest.parent / "review"
         index, state = load(work)
-        run(work, index, state, FixtureReviewer(), extraction_only=True)
+        run(work, index, state, FixtureReviewer())
         first, second, release = threading.Event(), threading.Event(), threading.Event()
         calls, lock = [], threading.Lock()
 
@@ -263,7 +214,7 @@ class ContentPageTests(unittest.TestCase):
         content_review.prepare(self.review)
         work = self.manifest.parent / "review"
         index, state = load(work)
-        run(work, index, state, FixtureReviewer(), extraction_only=True)
+        run(work, index, state, FixtureReviewer())
         digest = next(iter(index["documents"]))
         data = receipt_review.snapshot(self.review)
         receipt_review.accept_extraction(self.review, {"revision": data["revision"], "key": digest + ":0", "receipts": []})
@@ -287,7 +238,7 @@ class ContentPageTests(unittest.TestCase):
         content_review.prepare(self.review)
         work = self.manifest.parent / "review"
         index, state = load(work)
-        run(work, index, state, FixtureReviewer(), extraction_only=True)
+        run(work, index, state, FixtureReviewer())
         before = load(work)[1]["units"]
         started, cancelled = threading.Event(), threading.Event()
 
@@ -333,7 +284,7 @@ class ContentPageTests(unittest.TestCase):
             self.review.content_thread.join(timeout=5)
         self.assertFalse(self.review.content_thread.is_alive())
         self.assertEqual(load(self.manifest.parent / "review")[1]["units"], {})
-        self.assertIn("stopped", content_review.snapshot(self.review)["run_error"])
+        self.assertIn("stopped", content_review.execution_status(self.review)["run_error"])
 
     def test_stopped_requires_worker_finalization_and_verified_exit(self):
         """Keep Stop pending until the worker finishes its final checkpoint writes."""

@@ -84,7 +84,7 @@ class PdfDocumentTests(unittest.TestCase):
             with self.subTest(pages=pages, limit=limit):
                 work, index, state = self.prepare_pdf(pages, limit)
                 reviewer = Reviewer(pages)
-                workflow.run(work, index, state, reviewer, extraction_only=True)
+                workflow.run(work, index, state, reviewer)
                 self.assertEqual(len(reviewer.calls), expected)
                 if pages > 1 and expected == 1:
                     self.assertEqual(reviewer.calls[0]['stage'], 'pdf_document')
@@ -102,16 +102,16 @@ class PdfDocumentTests(unittest.TestCase):
                         rows = list(csv.DictReader(stream))
                     self.assertEqual(sum(len(json.loads(row['receipts'])) for row in rows), 1)
                 self.assertEqual(workflow.gate(index, state), [])
-                workflow.run(work, index, state, reviewer, extraction_only=True)
+                workflow.run(work, index, state, reviewer)
                 self.assertEqual(len(reviewer.calls), expected)
 
     def test_regeneration_is_one_call_even_with_worker_refill(self):
         """Queued regeneration does not dispatch extra page or assembly calls after whole-PDF completion."""
         work, index, state = self.prepare_pdf(3)
         reviewer = Reviewer(3)
-        workflow.run(work, index, state, reviewer, extraction_only=True)
+        workflow.run(work, index, state, reviewer)
         digest = next(iter(index['documents']))
-        workflow.run(work, index, state, reviewer, extraction_only=True,
+        workflow.run(work, index, state, reviewer,
                      regeneration={digest: 'fresh'}, queued_regenerations=lambda: {digest: 'fresh'})
         self.assertEqual(len(reviewer.calls), 2)
         self.assertIn('Regeneration request: fresh', reviewer.calls[-1]['prompt'])
@@ -124,12 +124,12 @@ class PdfDocumentTests(unittest.TestCase):
                 reviewer = Reviewer(3)
                 reviewer.fail, reviewer.invalid = fail, not fail
                 with self.assertRaises(ValueError):
-                    workflow.run(work, index, state, reviewer, extraction_only=True)
+                    workflow.run(work, index, state, reviewer)
                 self.assertEqual(state['units'], {})
                 self.assertFalse(state.get('assemblies'))
                 self.assertEqual(workflow.load(work)[1]['units'], {})
                 reviewer.fail = reviewer.invalid = False
-                workflow.run(work, index, state, reviewer, extraction_only=True)
+                workflow.run(work, index, state, reviewer)
                 self.assertEqual(len(reviewer.calls), 2)
 
     def test_partial_page_run_resumes_without_reextracting_completed_page(self):
@@ -141,7 +141,7 @@ class PdfDocumentTests(unittest.TestCase):
         state['units'][digest + ':0'] = pieces.legacy_result(reviewer.ask('', pieces.EXTRACTION))
         before = copy.deepcopy(state['units'][digest + ':0'])
         reviewer.calls.clear()
-        workflow.run(work, index, state, reviewer, extraction_only=True)
+        workflow.run(work, index, state, reviewer)
         self.assertEqual(len(reviewer.calls), 3)
         self.assertEqual(state['units'][digest + ':0'], before)
         self.assertNotIn('pdf_document', [call['stage'] for call in reviewer.calls])
@@ -172,7 +172,7 @@ class PdfDocumentTests(unittest.TestCase):
         """Retain global page IDs and revisit all originals for cross-group continuations."""
         work, index, state = self.prepare_pdf(13)
         reviewer = Reviewer(13)
-        workflow.run(work, index, state, reviewer, extraction_only=True)
+        workflow.run(work, index, state, reviewer)
         self.assertEqual([len(call['images']) for call in reviewer.calls], [5, 5, 3, 13])
         self.assertEqual([call['stage'] for call in reviewer.calls], ['pdf_chunk'] * 3 + ['pdf'])
         payloads = [json.loads(call['prompt'].splitlines()[-1]) for call in reviewer.calls]
@@ -185,9 +185,9 @@ class PdfDocumentTests(unittest.TestCase):
         self.assertEqual(assembly['receipts'][0]['source_units'], list(range(1, 14)))
         self.assertEqual(len(state['units']), 13)
         self.assertEqual(workflow.gate(index, state), [])
-        workflow.run(work, index, state, reviewer, extraction_only=True)
+        workflow.run(work, index, state, reviewer)
         self.assertEqual(len(reviewer.calls), 4)
-        workflow.run(work, index, state, reviewer, extraction_only=True,
+        workflow.run(work, index, state, reviewer,
                      regeneration={document['id']: 'fresh'}, queued_regenerations=lambda: {document['id']: 'fresh'})
         self.assertEqual(len(reviewer.calls), 8)
 
@@ -197,13 +197,13 @@ class PdfDocumentTests(unittest.TestCase):
         reviewer = Reviewer(13)
         reviewer.fail_at = 2
         with self.assertRaisesRegex(ValueError, 'Model request failed'):
-            workflow.run(work, index, state, reviewer, extraction_only=True)
+            workflow.run(work, index, state, reviewer)
         self.assertEqual(len(state['units']), 5)
         self.assertFalse(state.get('assemblies'))
         saved = copy.deepcopy(state['units'])
         index, state = workflow.load(work)
         reviewer.fail_at = None
-        workflow.run(work, index, state, reviewer, extraction_only=True)
+        workflow.run(work, index, state, reviewer)
         self.assertEqual([len(call['images']) for call in reviewer.calls], [5, 5, 5, 3, 13])
         self.assertTrue(all(state['units'][key] == value for key, value in saved.items()))
 
@@ -213,7 +213,7 @@ class PdfDocumentTests(unittest.TestCase):
         reviewer = Reviewer(6)
         reviewer.renumber = True
         with self.assertRaisesRegex(ValueError, 'did not review every source unit'):
-            workflow.run(work, index, state, reviewer, extraction_only=True)
+            workflow.run(work, index, state, reviewer)
         self.assertEqual(len(state['units']), 5)
         self.assertFalse(state.get('assemblies'))
 
@@ -231,12 +231,12 @@ class PdfDocumentTests(unittest.TestCase):
 
         reviewer.fork = fork
         with self.assertRaisesRegex(ValueError, 'Model request failed'):
-            workflow.run(work, index, state, reviewer, extraction_only=True)
+            workflow.run(work, index, state, reviewer)
         self.assertEqual(len(state['units']), 13)
         self.assertFalse(state.get('assemblies'))
         self.assertEqual(reviewer.calls[-1]['stage'], 'pdf')
         del reviewer.fork
-        workflow.run(work, index, state, reviewer, extraction_only=True)
+        workflow.run(work, index, state, reviewer)
         self.assertEqual(len(reviewer.calls), 5)
         self.assertEqual(len(reviewer.calls[-1]['images']), 13)
 

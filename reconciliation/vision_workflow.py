@@ -1,6 +1,5 @@
-"""Prepare and run extraction/receipt assembly; retain legacy comparison decisions."""
+"""Prepare, run, check and report a supporting-document extraction review."""
 import argparse
-import itertools
 import json
 import os
 import subprocess
@@ -18,16 +17,16 @@ from reconciliation.currencies import normalize_currencies
 from reconciliation.document_reader import SUPPORTED_SUFFIXES, extract
 from reconciliation.duplicate_workflow import DEFAULT_MANIFEST, fingerprint, review_files, check as exact_check
 from reconciliation.job_runner import run_jobs  # noqa: F401  (re-exported for existing callers)
-from reconciliation.legacy_comparison import DocumentComparison, DuplicateScreening, pair_key
 from reconciliation.paths import WORKSPACE
 from reconciliation.receipt_assembly import ASSEMBLY, current_assembly
 from reconciliation.records import Index, State
 from reconciliation.review_report import render as render_report
-from reconciliation.review_settings import CONFIG_PATH, config_for_manifest, load_config, content_settings, model_settings, stage_settings, revision, validate as validate_config
+from reconciliation.review_settings import (CONFIG_PATH, config_for_manifest, content_settings, load_config, model_settings,
+                                             revision, stage_settings, validate as validate_config)
 from reconciliation.schemas import EXTRACTION
 from reconciliation.supporting_inventory import export as export_inventory
 from reconciliation.token_usage import summary as token_summary
-from reconciliation.workflow_stages import ReceiptAssembly, ReviewPending, RunContext, UnitExtraction, pack  # noqa: F401
+from reconciliation.workflow_stages import ReceiptAssembly, ReviewPending, RunContext, UnitExtraction
 
 DEFAULT_WORK = WORKSPACE / "review"
 ACCEPTED_SUFFIXES = SUPPORTED_SUFFIXES
@@ -104,8 +103,7 @@ def prepare(manifest_path, work, config_path=None, refresh=False):
     index = {"root": str(root), "manifest": str(manifest_path.resolve()), "documents": documents,
              "config": config, "config_path": str(config_path.resolve()) if config_path else None}
     save(index_path, index)
-    save(work / "state.json", {"index_sha256": fingerprint(index_path), "units": {},
-                              "screens": {}, "pairs": {}, "decisions": {}, "model": None})
+    save(work / "state.json", {"index_sha256": fingerprint(index_path), "units": {}, "decisions": {}, "model": None})
     report(work, index, read(work / "state.json"))
     print(f"Prepared {len(documents)} unique documents locally; no model calls made.")
 
@@ -253,16 +251,14 @@ def model_gate(index, config, state, reviewer, choices, parallel):
     return ask
 
 
-def run(work, index: Index, state: State, reviewer, *, extraction_only=False, regeneration=None, progress=None,
-        queued_regenerations=None):
-    """Extract and assemble receipts; legacy runs then screen and compare duplicates.
+def run(work, index: Index, state: State, reviewer, *, regeneration=None, progress=None, queued_regenerations=None):
+    """Extract every document unit, then assemble multi-unit documents into receipts.
 
     Args:
         work: Review folder holding `index.json`, `state.json` and model caches.
         index: Prepared documents from `prepare`.
         state: Checkpoint updated in place and saved after every result.
         reviewer: Any `model_client.ModelClient`, for example `CodexReviewer`.
-        extraction_only: Skip the legacy screening and comparison stages.
         regeneration: `{document hash: request}` to re-extract despite saved results.
         progress: Optional `progress(document_hash, "running" | "completed")` callback.
         queued_regenerations: Optional callable returning regenerations queued mid-run.
@@ -277,7 +273,6 @@ def run(work, index: Index, state: State, reviewer, *, extraction_only=False, re
     if exact_check(Path(index["root"]), read(Path(index["manifest"])), Path(index["manifest"])):
         raise ReviewPending("Pass-one cleanup is pending; run duplicate_workflow.py check first")
     choices = lock_stage_models(state, reviewer, config)
-    state["extraction_only"] = extraction_only
     regeneration = regeneration or {}
     documents = index["documents"]
     workers = config["max_parallel"] if model_client.supports_parallel(reviewer) else 1
@@ -287,8 +282,6 @@ def run(work, index: Index, state: State, reviewer, *, extraction_only=False, re
         ask=model_gate(index, config, state, reviewer, choices, parallel=workers > 1),
         checkpoint=lambda: save(work / "state.json", state), progress=progress)
     stages = [UnitExtraction(ctx, queued_regenerations), ReceiptAssembly(ctx)]
-    if not extraction_only:
-        stages += [DuplicateScreening(ctx), DocumentComparison(ctx)]
     try:
         for stage in stages:
             run_jobs(stage.jobs(), stage.apply, workers, stage.refill, acceptance=model_client.acceptance(reviewer))
@@ -320,11 +313,11 @@ def active_config(index):
     return config
 
 
-def gate(index, state, *, extraction_only=None):
+def gate(index, state):
     """Return every outstanding check blocking completion; an empty list means complete.
 
     Covers settings drift, exact-duplicate cleanup, unread units, pending assemblies
-    and, for legacy runs, screening, comparisons and admin verdicts.
+    and admin-approved duplicate removals that are not yet carried out.
     """
     problems = []
     try:
@@ -334,47 +327,37 @@ def gate(index, state, *, extraction_only=None):
     except ReviewPending as error:
         problems.append(str(error))
     current, removed = current_inventory(index, state)
-    manifest = read(Path(index["manifest"]))
-    manifest["Files"] = [r for r in manifest["Files"] if r["SHA256"] not in removed]
-    # Removed exact groups may remain as empty directories after admin cleanup.
-    original_groups = {r["Group"] for r in read(Path(index["manifest"]))["Files"]}
-    active_groups = {r["Group"] for r in manifest["Files"]}
-    exact = exact_check(Path(index["root"]), manifest, Path(index["manifest"]))
-    approved_empty = {f"Unexpected group: {name}" for name in original_groups - active_groups}
-    problems.extend(p for p in exact if p not in approved_empty)
+    problems += exact_problems(index, removed)
     for digest, document in index["documents"].items():
-        if not document.get("accepted", True):
-            continue
-        if document["error"]:
-            problems.append(f"{digest[:10]}: extraction failed: {document['error']}")
-        for n in range(len(document["units"])):
-            if document["units"][n].get("blocked"):
-                problems.append(f"{digest[:10]} unit {n + 1}: {document['units'][n]['blocked']}")
-            if not state["units"].get(f"{digest}:{n}", {}).get("readable"):
-                problems.append(f"{digest[:10]} unit {n + 1}: unread or unreadable")
-    if extraction_only is None:
-        extraction_only = state.get("extraction_only", False)
-    if extraction_only:
-        for digest, document in index["documents"].items():
-            if document.get("accepted", True) and len(document["units"]) > 1 and not current_assembly(document, state):
-                problems.append(f"{digest[:10]}: receipt assembly pending")
-        return problems
-    eligible = [digest for digest, doc in index["documents"].items() if doc.get("accepted", True)]
-    for left, right in itertools.combinations(eligible, 2):
-        pair = pair_key(left, right)
-        screen = state["screens"].get(pair)
-        if screen is None:
-            problems.append(f"{left[:8]} / {right[:8]}: not screened")
-        elif screen["candidate"]:
-            if pair not in state["pairs"]:
-                problems.append(f"{left[:8]} / {right[:8]}: original comparison pending")
-            elif pair not in state["decisions"]:
-                problems.append(f"{left[:8]} / {right[:8]}: admin verdict pending")
+        if document.get("accepted", True):
+            problems += document_problems(digest, document, state)
     for loser, keeper in removed.items():
         if loser in current:
             problems.append(f"{loser[:10]}: admin duplicate cleanup pending; retain {keeper[:10]}")
         if keeper not in current:
             problems.append(f"{keeper[:10]}: selected survivor is missing")
+    return problems
+
+
+def exact_problems(index, removed):
+    """Run the exact-duplicate check, ignoring groups emptied by approved removals."""
+    original = read(Path(index["manifest"]))
+    manifest = {**original, "Files": [r for r in original["Files"] if r["SHA256"] not in removed]}
+    emptied = {r["Group"] for r in original["Files"]} - {r["Group"] for r in manifest["Files"]}
+    approved_empty = {f"Unexpected group: {name}" for name in emptied}
+    return [p for p in exact_check(Path(index["root"]), manifest, Path(index["manifest"])) if p not in approved_empty]
+
+
+def document_problems(digest, document, state):
+    """List why one accepted document is not fully extracted and assembled."""
+    problems = [f"{digest[:10]}: extraction failed: {document['error']}"] if document["error"] else []
+    for n, unit in enumerate(document["units"]):
+        if unit.get("blocked"):
+            problems.append(f"{digest[:10]} unit {n + 1}: {unit['blocked']}")
+        if not state["units"].get(f"{digest}:{n}", {}).get("readable"):
+            problems.append(f"{digest[:10]} unit {n + 1}: unread or unreadable")
+    if len(document["units"]) > 1 and not current_assembly(document, state):
+        problems.append(f"{digest[:10]}: receipt assembly pending")
     return problems
 
 
@@ -387,63 +370,21 @@ def report(work, index, state):
     usage = token_summary(work / "token-usage.jsonl")
     (work / "report.md").write_text(render_report(index, state, problems, usage), encoding="utf-8")
     save(work / "report.json", {"documents": index["documents"], "state": state, "problems": problems, "token_usage": usage})
-    export_inventory(work / "supporting-inventory.csv", index, state)
+    try:
+        removed = removal_plan(state)
+    except ValueError:
+        removed = {}  # Conflicting decisions are already listed in `problems`.
+    export_inventory(work / "supporting-inventory.csv", index, state, removed)
     development_cache.capture(Path(index["manifest"]), "content-review")
     return problems
 
 
-def decide(work, index, state, pair, verdict, reviewer, reason):
-    """Record an admin verdict on a completed comparison; never deletes files itself.
-
-    Args:
-        pair: Pair key of a completed comparison.
-        verdict: "keep_both", "keep_left" or "keep_right".
-        reviewer: Admin name (required).
-        reason: Why (required).
-    """
-    if pair not in state["pairs"]:
-        raise ValueError("Pair has no completed original-document comparison")
-    if not reviewer.strip() or not reason.strip():
-        raise ValueError("Admin name and reason are required")
-    result = state["pairs"][pair]
-    if verdict != "keep_both" and result["classification"] != "same_document":
-        raise ValueError("Only same_document candidates can be approved for duplicate cleanup")
-    decision = {"verdict": verdict, "reviewer": reviewer, "reason": reason,
-                "at": datetime.now(timezone.utc).isoformat()}
-    previous = state["decisions"].get(pair)
-    state["decisions"][pair] = decision
-    removal_plan(state)
-    state.setdefault("decision_history", []).append({"pair": pair, "previous": previous, **decision})
-    save(work / "state.json", state)
-    report(work, index, state)
-
-
-def undo_decision(work, index, state, pair, reviewer, reason):
-    """Return an admin decision to pending while preserving its audit history."""
-    if pair not in state["decisions"]:
-        raise ValueError("There is no decision to undo")
-    if not reviewer.strip() or not reason.strip():
-        raise ValueError("Admin name and reason are required")
-    previous = state["decisions"].pop(pair)
-    try:
-        current_inventory(index, state)
-    except ValueError:
-        state["decisions"][pair] = previous
-        raise
-    state.setdefault("decision_history", []).append(
-        {"pair": pair, "previous": previous, "verdict": None,
-         "reviewer": reviewer.strip(), "reason": reason.strip(),
-         "at": datetime.now(timezone.utc).isoformat()})
-    save(work / "state.json", state)
-    report(work, index, state)
-
-
 def main(argv=None):
-    """Run the prepare / run / check / decide command line; return the process exit code."""
+    """Run the prepare / run / check command line; return the process exit code."""
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("action", choices=("prepare", "run", "check", "decide"))
+    parser.add_argument("action", choices=("prepare", "run", "check"))
     parser.add_argument("--manifest", type=Path, default=DEFAULT_MANIFEST)
     parser.add_argument("--work", type=Path, default=DEFAULT_WORK)
     parser.add_argument("--codex")
@@ -453,10 +394,6 @@ def main(argv=None):
     parser.add_argument("--config", type=Path, default=CONFIG_PATH)
     parser.add_argument("--refresh", action="store_true", help="Archive existing review metadata and re-extract using saved settings")
     parser.add_argument("--timeout", type=int, default=240)
-    parser.add_argument("--pair")
-    parser.add_argument("--verdict", choices=("keep_both", "keep_left", "keep_right"))
-    parser.add_argument("--reviewer", default="")
-    parser.add_argument("--reason", default="")
     args = parser.parse_args(argv)
     try:
         if args.action == "prepare":
@@ -478,13 +415,9 @@ def main(argv=None):
                                    max_calls, args.timeout, config["reasoning"])
             engine.stage_choices = choices
             try:
-                run(args.work, index, state, engine, extraction_only=True)
+                run(args.work, index, state, engine)
             except BudgetReached as error:
                 print(error)
-        elif args.action == "decide":
-            if not args.pair or not args.verdict:
-                raise ValueError("decide requires --pair and --verdict")
-            decide(args.work, index, state, args.pair, args.verdict, args.reviewer, args.reason)
         problems = report(args.work, index, state)
         print(f"{'PENDING' if problems else 'COMPLETE'}: {len(problems)} outstanding checks. See {args.work / 'report.md'}")
         return 2 if problems else 0

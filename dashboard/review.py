@@ -107,7 +107,7 @@ class Review:
         work = self.manifest_path.parent / "review"
         if (work / "index.json").exists():
             try:
-                content_done = not gate(*load(work), extraction_only=True)
+                content_done = not gate(*load(work))
             except (OSError, ValueError, KeyError):
                 pass
         exact_done = exact_done or content_done
@@ -152,7 +152,7 @@ class Review:
         content = False
         if exact and (work / "index.json").is_file():
             try:
-                content = not gate(*load(work), extraction_only=True)
+                content = not gate(*load(work))
             except (OSError, ValueError, KeyError):
                 pass
         master = self.manifest_path.parent / "bank-output" / "master_statement.csv"

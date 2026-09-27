@@ -108,7 +108,7 @@ def drain(review, work, engine):
                 review.content_accepting = False
                 return
         index, state = load(work)
-        run(work, index, state, engine, extraction_only=True, regeneration=batch,
+        run(work, index, state, engine, regeneration=batch,
             progress=lambda digest, status: update(review, digest, status), queued_regenerations=queued)
         for digest in batch:
             with review.lock:
