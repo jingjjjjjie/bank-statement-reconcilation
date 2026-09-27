@@ -41,6 +41,9 @@ class MatchingReviewBrowserTests(unittest.TestCase):
                                 and (decision == 'all' or bank['review_status'] == decision)]
                     expect(page.locator('#queue-count')).to_have_text(f'{len(expected)} transactions')
                     if expected:
+                        for number, bank in enumerate(expected, 1):
+                            expect(page.locator(f'[data-bank-id="{bank["id"]}"]')).to_have_attribute(
+                                'aria-label', f'Transaction {number}, {bank["review_status"]}')
                         current = page.locator('.transaction-number[aria-current]').get_attribute('data-bank-id')
                         self.assertIn(current, [bank['id'] for bank in expected])
                         expect(page.locator('#bank-view')).to_be_visible()

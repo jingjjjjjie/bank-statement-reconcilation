@@ -133,7 +133,7 @@ The default review hides detailed payment narration and source/allocation editin
 
 One page reviews one bank transaction. Numbered transaction buttons show ten at a time; arrows page through those numbers.
 Reviewed transactions show a green tick; the current transaction has an outline.
-Search and filters retain original transaction numbers. The footer Next opens the next transaction.
+Filtered results are numbered consecutively from 1; each button retains its original transaction identity. The footer Next opens the next transaction.
 The desktop layout is half supporting candidates and half original evidence.
 
 Each supporting piece has its own compact card showing party and amount. Five
