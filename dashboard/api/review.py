@@ -205,6 +205,14 @@ def ground_truth(state=Depends(active_context)):
                     headers={"Content-Disposition": 'attachment; filename="ground-truth.json"'})
 
 
+@router.post("/receipts/merge-all")
+def merge_receipts(body: dict, state=Depends(active_context)):
+    """Preview a merged draft; persistence still requires explicit acceptance."""
+    from reconciliation.pieces import merge_all
+    receipt_review.require_current(state.review, body['revision'])
+    return {'receipt': merge_all(body['receipts'])}
+
+
 @router.post("/receipts/accept")
 def accept_receipts(body: dict, state=Depends(active_context)):
     """Validate receipt fields and stale revisions in the existing workflow."""

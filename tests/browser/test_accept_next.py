@@ -127,6 +127,7 @@ class AcceptNextTests(unittest.TestCase):
             expect(page.locator('#document-buttons button')).to_have_count(10)
             expect(page.locator('[data-field="total"]').first).to_have_value('42.00')
             page.locator('[data-field="total"]').first.fill('41.00')
+            page.get_by_role('button', name='Review results options', exact=True).click()
             page.locator('#accept-all-receipts').click()
             expect(page.locator('#review-progress')).to_have_text('12 of 12 reviewed')
             expect(page.locator('[data-field="total"]').first).to_have_value('41.00')

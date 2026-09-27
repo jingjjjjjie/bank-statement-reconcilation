@@ -25,7 +25,7 @@ User preference, recorded 2026-09-18:
 Shared help content: `dashboard/frontend/src/pageHelp.js`.
 Shared help control: `dashboard/frontend/src/components/PageHelp.vue`.
 
-- Step 2 displays all pieces together as editable rows. Keep payee, payer, amount, currency, date and document number visible; put type, other names, references and Amount at (with Show, which jumps the preview to that page or sheet rows) under Details. Fields from older extractions appear only when they hold a value. Selecting a row targets Remove; Split and Merge are not offered. Narrow screens wrap the fields and place save actions after the rows without overlap.
+- Step 2 displays all pieces together as editable rows. Keep payee, payer, amount, currency, date and document number visible; put type, other names, references and Amount at (with Show, which jumps the preview to that page or sheet rows) under Details. Fields from older extractions appear only when they hold a value. Selecting a row targets Remove; Merge all combines every entry in the current document into one editable draft; Split is not offered. Narrow screens wrap the fields and place save actions after the rows without overlap.
 
 - Pieces represent separate receipts or payees, not purchase lines. Show editable payee, payer, amount, currency, date and document number together; keep type, other names, references and amount location in the piece disclosure. Add entry and Remove are explicit edits; existing identities are preserved.
 
@@ -46,3 +46,5 @@ Shared help control: `dashboard/frontend/src/components/PageHelp.vue`.
 - Review results omits the document-summary/page list and per-page relevance prose. Keep pending/error/review warnings visible; source details remain in Details and the original page selector.
 
 - Review results labels forward actions Accept & next and Discard & next when another document follows. Failed saves preserve the current document and edits.
+
+- Review results uses a compact header with secondary actions (Reload results, Export reviews, Accept all) in Options. Entry cards use readable 14px values, a clear selection marker, more width for the short description and a shorter document-number field. Keep document total, Add entry and Remove together in one compact toolbar; wrap fields on narrow screens.

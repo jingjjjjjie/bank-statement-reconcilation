@@ -139,3 +139,40 @@ def assign_submitted(pieces, existing):
         seen.add(key)
         result.append({**piece, 'piece_id': key})
     return result
+
+
+def merge_all(pieces):
+    """Combine a document's edited entries without approving or guessing missing amounts."""
+    if not isinstance(pieces, list) or len(pieces) < 2:
+        raise ValueError('At least two entries are needed to merge')
+    facts = [canonical(piece) for piece in pieces]
+    currencies = {('MYR' if p['currency'].upper() == 'RM' else p['currency'].upper()) for p in facts}
+    if len(currencies) != 1 or '' in currencies:
+        raise ValueError('Set the same currency on every entry before merging')
+
+    def unique(values):
+        """Preserve source order and structured values while removing exact duplicates."""
+        result = []
+        for value in values:
+            if value not in ('', None) and value not in result:
+                result.append(value)
+        return result
+
+    merged = dict(facts[0])
+    for field in ('payee', 'payer', 'document_number', 'description', 'amount_location', 'amount_basis'):
+        merged[field] = ' / '.join(unique(p[field] for p in facts))
+    for field in ('references', 'dates', 'other_names', 'source_locations', 'limitations'):
+        merged[field] = unique(value for p in facts for value in p[field])
+    for field in ('date', 'piece_type'):
+        values = unique(p[field] for p in facts)
+        merged[field] = values[0] if len(values) == 1 else ''
+    merged['currency'] = next(iter(currencies))
+    merged['currency_default'] = any(p['currency_default'] for p in facts)
+    complete = all(re.fullmatch(r'\d+(?:\.\d{1,2})?', p['amount']) for p in facts)
+    merged['amount'] = format(sum((Decimal(p['amount']) for p in facts), Decimal(0)), '.2f') if complete else ''
+    merged['parent_piece_ids'] = unique(value for p in pieces
+                                      for value in ([p['piece_id']] if p.get('piece_id') else p.get('parent_piece_ids', [])))
+    sources = unique(value for p in pieces for value in p.get('source_units', []))
+    if sources:
+        merged['source_units'] = sources
+    return legacy_piece(merged)

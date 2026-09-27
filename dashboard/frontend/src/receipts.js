@@ -237,6 +237,16 @@ function readReceiptPieces() {
 if ($('#receipt-unit')) $('#receipt-unit').onchange = showReceiptUnit;
 if ($('#add-receipt')) $('#add-receipt').onclick = () => addReceiptPiece();
 if ($('#reload-receipts')) $('#reload-receipts').onclick = () => receiptAction(loadReceiptResults);
+if ($('#merge-all-pieces')) $('#merge-all-pieces').onclick = () => receiptAction(async () => {
+  /* Replace only the draft; ordinary acceptance saves the new piece with its lineage. */
+  const result = await saveReceiptDecision('/api/receipts/merge-all',
+    {revision: receiptData.revision, receipts: readReceiptPieces()}, $('#merge-all-pieces'));
+  $('#receipt-pieces').replaceChildren();
+  addReceiptPiece(result.receipt);
+  hooks.changed?.();
+  renderReviewState();
+  toast(result.receipt.total ? 'Entries merged. Check the total before accepting.' : 'Entries merged. Enter the missing total before accepting.');
+});
 if ($('#accept-all-receipts')) $('#accept-all-receipts').onclick = () => receiptAction(async () => {
   /* Accept the loaded batch, carrying unsaved edits through the same validated write. */
   if (!receiptData) return;

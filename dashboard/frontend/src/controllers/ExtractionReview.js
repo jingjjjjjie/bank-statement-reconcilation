@@ -105,6 +105,7 @@ function renderPieceNavigation() {
   $('#remove-piece').title = `Remove piece ${activePiece + 1} from extraction`;
   $('#piece-tabs').hidden = true;
   $('#remove-piece').disabled = !cards.length;
+  $('#merge-all-pieces').disabled = cards.length < 2;
   cards.forEach((card, number) => {
     card.hidden = false;
     card.classList.toggle('active-piece', number === activePiece);
@@ -288,6 +289,10 @@ $('#remove-piece').onclick = () => {
   if (card) { extractionDirty = true; card.remove(); receipts.refreshReview(); }
 };
 page.observe(new MutationObserver(renderPieceNavigation), $('#receipt-pieces'), {childList:true});
+// Close secondary actions after use; native popover also supports Escape and outside clicks.
+$('#extraction-options').onclick = event => {
+  if (event.target.closest('button, a')) $('#extraction-options').hidePopover();
+};
 root.addEventListener('input', event => { if (event.target.closest('#receipt-pieces')) { extractionDirty = true; renderDocumentTotal(); receipts.refreshReview(); } });
 root.addEventListener('click', event => { if (event.target.closest('#receipt-pieces button:not(.piece-number), #add-receipt')) { extractionDirty = true; receipts.refreshReview(); } });
 root.addEventListener('change', event => {
@@ -300,7 +305,7 @@ root.addEventListener('click', event => {
   if (event.target.id === 'reload-receipts' && extractionDirty && !confirm('Discard unsaved extraction changes?')) event.stopImmediatePropagation();
 }, true);
 
-const receipts = installReceipts(page, {showOriginal, clearOriginal, saved: () => {extractionDirty = false;}});
+const receipts = installReceipts(page, {showOriginal, clearOriginal, changed: () => {extractionDirty = true;}, saved: () => {extractionDirty = false;}});
 page.dirty(() => extractionDirty);
 page.onRefresh(() => receipts.reload(), ['/api/receipts/', '/api/content/']);
 page.onQuery(() => {
