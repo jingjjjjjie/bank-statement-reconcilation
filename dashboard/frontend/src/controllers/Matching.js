@@ -208,7 +208,7 @@ function renderCandidates() {
     const summary = node('summary', 'candidate-summary');
     summary.setAttribute('aria-label', `Inspect ${item.id} ${item.filename}`);
     summary.append(node('span', 'candidate-name', item.parties.join(' / ') || 'Party unknown'), node('strong', 'candidate-amount', formatMoney(item.amount, item.currency)));
-    if (suggested.has(item.id)) summary.querySelector('.candidate-name').prepend(node('span', 'suggested-label', 'Suggested: '));
+
     details.append(summary);
     details.ontoggle = () => {
       if (details.open) {
@@ -218,39 +218,32 @@ function renderCandidates() {
       } else expandedCandidates.delete(item.id);
     };
     const body = node('div', 'candidate-body');
+    const source = node('details', 'source-details candidate-source');
+    const meta = node('div', 'candidate-meta');
     if (suggested.has(item.id)) {
-      const reason = node('section', 'suggestion-explanation');
-      reason.setAttribute('aria-label', 'Why suggested');
-      reason.append(node('strong', '', confidenceLabel[b.confidence.level || 'none']),
-        node('p', '', b.suggestion.reason || 'No saved explanation available.'));
-      body.append(reason);
+      meta.append(node('span', 'candidate-confidence', confidenceLabel[b.confidence.level || 'none']));
+      if (b.suggestion.reason) source.append(node('p', 'candidate-reason', b.suggestion.reason));
     }
-    const dates = item.dates?.length ? item.dates.map(d => typeof d === 'string' ? d : d.value).join(', ') : item.date || 'Date unknown';
-    const source = node('details', 'source-details');
-    source.append(node('summary', '', 'Source details'));
-    source.append(node('p', 'candidate-description', item.description || 'Description unavailable'));
-    source.append(node('p', 'candidate-info', `${dates} · ${item.filename} · ${item.location || 'Location unknown'}`));
-    const retrievalReason = b.evidence_reasons?.[item.id] || '';
-    source.append(node('p', 'candidate-reason', retrievalReason));
-    if (retrievalReason.includes('no exact extracted party-name match')) {
-      body.append(node('p', 'warning', 'Name differs from extracted text; verify the original.'));
-    } else if (retrievalReason && !suggested.has(item.id)) {
-      body.append(node('p', 'candidate-reason', retrievalReason));
-    }
-    body.append(source);
+    source.prepend(node('summary', '', 'Details'));
+    if (item.description) source.append(node('p', 'candidate-description', item.description));
+    const dates = item.dates?.length ? item.dates.map(d => typeof d === 'string' ? d : d.value).join(', ') : item.date;
+    source.append(node('p', 'candidate-info', [dates, item.filename, item.location].filter(Boolean).join(' / ')));
+    const retrievalReason = b.evidence_reasons?.[item.id];
+    if (retrievalReason) source.append(node('p', 'candidate-reason', retrievalReason));
+    meta.append(source); body.append(meta);
     if (item.currency === b.currency && cents(item.amount) !== null && cents(item.amount) !== cents(b.amount)) body.append(node('p', 'warning', `Bank minus source: ${formatMoney(((cents(b.amount) - cents(item.amount)) / 100).toFixed(2), b.currency)}`));
     if (item.used !== '0') body.append(node('p', 'warning', `Reserved: ${formatMoney(item.used, item.currency)} · Available here: ${available(item) === null ? 'unknown' : formatMoney((available(item) / 100).toFixed(2), item.currency)}`));
     if (item.stale) body.append(node('p', 'warning', 'Source changed or unavailable. Approval blocked.'));
     if (item.boundary_unresolved) body.append(node('p', 'warning', 'Check receipt boundaries against the original.'));
+    const actions = node('div', 'candidate-bottom candidate-actions');
     if (selected.has(item.id)) {
       const label = node('label', 'allocation-label', `Allocation (${b.currency || 'currency unknown'})`);
       const input = node('input'); input.type = 'text'; input.inputMode = 'decimal'; input.value = selected.get(item.id); input.placeholder = 'Evidence only';
       input.disabled = !item.currency || item.currency !== b.currency || item.amount === '';
       input.setAttribute('aria-label', `Allocation ${item.id}`);
       input.oninput = () => { selected.set(item.id, input.value.trim()); updateSummary(); };
-      label.append(input); body.append(label);
+      label.append(input); actions.append(label);
     }
-    const actions = node('div', 'candidate-bottom');
     actions.append(button('View evidence', () => showEvidence('item', item.id), 'candidate-preview'));
     const use = button('Use only this', () => {
       selected.clear(); selected.set(item.id, defaultAllocation(item));

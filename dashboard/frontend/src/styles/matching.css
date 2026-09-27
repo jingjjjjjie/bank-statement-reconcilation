@@ -95,3 +95,12 @@
 #selected-candidates,#candidate-list{overflow-y:auto;min-height:0;overscroll-behavior:contain;scrollbar-gutter:stable}
 #candidate-list{flex:1}.selection-summary{flex:none;margin:8px 0 0;padding:8px;font-size:11px;line-height:1.5}
 @media(max-width:700px){.decision-panel{height:80dvh;min-height:560px}.decision-scroll{overflow:hidden;padding:10px 12px}.bank-amount{font-size:15px}}
+
+/* Show one identity and keep supporting explanations behind a single disclosure. */
+.candidate-meta{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin:0 0 6px}
+.candidate-confidence{font-size:10px;font-weight:600;color:#52695b}
+.candidate-source{font-size:11px;min-width:0}.candidate-source[open]{flex-basis:100%}
+.candidate-source summary{font-size:11px}.candidate-source p{margin:6px 0}
+.candidate-actions{align-items:flex-end;justify-content:space-between;margin-top:6px}
+.candidate-actions .allocation-label{margin:0;gap:3px;font-size:10px}
+.candidate-actions .allocation-label input{width:112px;padding:6px 8px}
