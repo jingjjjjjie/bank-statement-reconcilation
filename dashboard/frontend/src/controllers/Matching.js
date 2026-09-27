@@ -169,7 +169,7 @@ function renderCandidates() {
     const summary = node('summary', 'candidate-summary');
     summary.setAttribute('aria-label', `Inspect ${item.id} ${item.filename}`);
     summary.append(node('span', 'candidate-name', item.parties.join(' / ') || 'Party unknown'), node('strong', 'candidate-amount', formatMoney(item.amount, item.currency)));
-    if (suggested.has(item.id)) summary.querySelector('.candidate-name').prepend(node('span', 'suggested-label', 'Suggested '));
+    if (suggested.has(item.id)) summary.querySelector('.candidate-name').prepend(node('span', 'suggested-label', 'Suggested: '));
     details.append(summary);
     details.ontoggle = () => {
       if (details.open) {
@@ -182,22 +182,29 @@ function renderCandidates() {
     if (suggested.has(item.id)) {
       const reason = node('section', 'suggestion-explanation');
       reason.setAttribute('aria-label', 'Why suggested');
-      reason.append(node('strong', '', 'Why suggested'),
-        node('span', 'suggestion-confidence', confidenceLabel[b.confidence.level || 'none']),
+      reason.append(node('strong', '', confidenceLabel[b.confidence.level || 'none']),
         node('p', '', b.suggestion.reason || 'No saved explanation available.'));
       body.append(reason);
     }
-    body.append(node('p', 'candidate-parties', item.parties.join(' / ') || 'Party unknown'));
-    body.append(node('p', 'candidate-description', item.description || 'Description unavailable'));
     const dates = item.dates?.length ? item.dates.map(d => typeof d === 'string' ? d : d.value).join(', ') : item.date || 'Date unknown';
-    body.append(node('p', 'candidate-info', `${dates} · ${item.filename} · ${item.location || 'Location unknown'}`));
-    body.append(node('p', 'candidate-reason', b.evidence_reasons?.[item.id] || 'Compare the party, amount and original evidence. This candidate has not been confirmed.'));
+    const source = node('details', 'source-details');
+    source.append(node('summary', '', 'Source details'));
+    source.append(node('p', 'candidate-description', item.description || 'Description unavailable'));
+    source.append(node('p', 'candidate-info', `${dates} · ${item.filename} · ${item.location || 'Location unknown'}`));
+    const retrievalReason = b.evidence_reasons?.[item.id] || '';
+    source.append(node('p', 'candidate-reason', retrievalReason));
+    if (retrievalReason.includes('no exact extracted party-name match')) {
+      body.append(node('p', 'warning', 'Name differs from extracted text; verify the original.'));
+    } else if (retrievalReason && !suggested.has(item.id)) {
+      body.append(node('p', 'candidate-reason', retrievalReason));
+    }
+    body.append(source);
     if (item.currency === b.currency && cents(item.amount) !== null && cents(item.amount) !== cents(b.amount)) body.append(node('p', 'warning', `Bank minus source: ${formatMoney(((cents(b.amount) - cents(item.amount)) / 100).toFixed(2), b.currency)}`));
     if (item.used !== '0') body.append(node('p', 'warning', `Reserved: ${formatMoney(item.used, item.currency)} · Available here: ${available(item) === null ? 'unknown' : formatMoney((available(item) / 100).toFixed(2), item.currency)}`));
     if (item.stale) body.append(node('p', 'warning', 'Source changed or unavailable. Approval blocked.'));
     if (item.boundary_unresolved) body.append(node('p', 'warning', 'Check receipt boundaries against the original.'));
     if (selected.has(item.id)) {
-      const label = node('label', 'allocation-label', 'Allocate to this payment');
+      const label = node('label', 'allocation-label', `Allocation (${b.currency || 'currency unknown'})`);
       const input = node('input'); input.type = 'text'; input.inputMode = 'decimal'; input.value = selected.get(item.id); input.placeholder = 'Evidence only';
       input.disabled = !item.currency || item.currency !== b.currency || item.amount === '';
       input.setAttribute('aria-label', `Allocation ${item.id}`);
@@ -206,12 +213,13 @@ function renderCandidates() {
     }
     const actions = node('div', 'candidate-bottom');
     actions.append(button('View evidence', () => showEvidence('item', item.id), 'candidate-preview'));
-    const use = button('Use only this candidate', () => {
+    const use = button('Use only this', () => {
       selected.clear(); selected.set(item.id, defaultAllocation(item));
       renderCandidates(); updateSummary(); showEvidence('item', item.id);
     }, 'candidate-preview');
     use.disabled = item.stale || item.excluded;
-    actions.append(use); body.append(actions); details.append(body); card.append(checkbox, details); list.append(card);
+    if (selected.size !== 1 || !selected.has(item.id)) actions.append(use);
+    body.append(actions); details.append(body); card.append(checkbox, details); list.append(card);
   }
   if (!items.length) list.append(node('p', 'empty-state', 'No candidates found. Search all pieces or change your search.'));
 }
