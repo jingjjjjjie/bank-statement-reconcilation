@@ -69,3 +69,9 @@
 .confidence-controls{display:flex;align-items:center;gap:12px;flex:1}.confidence-controls #queue-count{margin-left:auto}
 #matching-options{border:1px solid var(--line);border-radius:8px;padding:16px;box-shadow:0 8px 30px #20383126;max-width:calc(100vw - 32px)}
 #matching-options .review-tabs{margin-bottom:12px}
+
+/* Move a painted layer so the rainbow does not animate layout or text. */
+.candidate-card.suggested{overflow:hidden;isolation:isolate}
+.candidate-card.suggested::before{content:"";position:absolute;inset:0 -50%;z-index:-1;pointer-events:none;background:linear-gradient(110deg,#ffe1e8,#fff0d5,#e7f4d9,#dff3f8,#e8e0fa,#f5dff2,#ffe1e8);animation:suggested-flow 3s ease-in-out infinite alternate}
+@keyframes suggested-flow{from{transform:translate3d(-20%,0,0)}to{transform:translate3d(20%,0,0)}}
+@media(prefers-reduced-motion:reduce){.candidate-card.suggested::before{animation:none}}
