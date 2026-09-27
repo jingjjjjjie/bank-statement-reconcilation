@@ -35,7 +35,7 @@ class DocumentReaderTests(unittest.TestCase):
         units = extract(source, self.output)
         self.assertEqual([len(unit["text"]) for unit in units], [12000, 1, 0])
         self.assertEqual("".join(unit["text"] for unit in units), text)
-        self.assertEqual(Path(units[2]["image"]).name, "unit-0003.png")
+        self.assertEqual(Path(units[2]["image"]).name, "unit-0003.jpg")
         with Image.open(units[2]["image"]) as preview:
             self.assertEqual(preview.size, (8, 6))
         self.assertEqual(source.read_bytes(), original)

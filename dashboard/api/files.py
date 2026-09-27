@@ -95,7 +95,9 @@ def content_file(id: str, state=Depends(active_context)):
 @router.get("/content-image")
 def content_image(id: str, unit: int = Query(ge=0), state=Depends(active_context)):
     """Return a validated prepared page image."""
-    return file_response(content_review.image(state.review, id, unit), "image/png")
+    path = content_review.image(state.review, id, unit)
+    # New reviews prepare JPEG pages; older prepared reviews still hold PNG.
+    return file_response(path, "image/jpeg" if path.suffix.lower() in {".jpg", ".jpeg"} else "image/png")
 
 
 @router.get("/bank-workbook")

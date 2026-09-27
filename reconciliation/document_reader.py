@@ -26,10 +26,11 @@ def extract(path, output, config=None):
             if pdf_probe is not None:
                 item["pdf_probe"] = pdf_probe
             if image is not None and (part == 1 or pdf_probe is not None):
-                target = output / f"unit-{len(units) + 1:04d}.png"
+                # JPEG keeps rendered pages about half the size of PNG and faster to write.
+                target = output / f"unit-{len(units) + 1:04d}.jpg"
                 picture = ImageOps.exif_transpose(image).convert("RGB")
                 picture.thumbnail((2400, 2400))
-                picture.save(target)
+                picture.save(target, quality=90)
                 item["image"] = str(target.resolve())
             units.append(item)
 

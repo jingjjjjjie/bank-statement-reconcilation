@@ -2,10 +2,11 @@
 import argparse
 import itertools
 import json
+import os
 import subprocess
 import sys
 from contextlib import nullcontext
-from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
+from concurrent.futures import FIRST_COMPLETED, ProcessPoolExecutor, ThreadPoolExecutor, wait
 from datetime import datetime, timezone
 from pathlib import Path
 from reconciliation.paths import WORKSPACE
@@ -83,24 +84,16 @@ def prepare(manifest_path, work, config_path=None, refresh=False):
             if (work / name).exists():
                 shutil.copy2(work / name, history / name)
     config = load_config(config_path)
+    assets = work / "assets" / revision(content_settings(config))[:12]
+    jobs = [(digest, paths, [r["OriginalPath"] for r in manifest["Files"] if r["SHA256"] == digest], assets, config)
+            for digest, paths in sorted(inventory(root, manifest_path).items())]
+    # Rendering is CPU-bound, so separate processes read several documents at once.
+    workers = min(8, os.cpu_count() or 1, len(jobs)) or 1
     documents = {}
-    for number, (digest, paths) in enumerate(sorted(inventory(root, manifest_path).items()), 1):
-        # Preserve original claim associations even after copies have been moved.
-        originals = [r["OriginalPath"] for r in manifest["Files"] if r["SHA256"] == digest]
-        item = {"id": digest, "paths": paths, "original_paths": originals,
-                "units": [], "error": None, "accepted": Path(paths[0]).suffix.lower() in ACCEPTED_SUFFIXES}
-        if item["accepted"]:
-            try:
-                item["units"] = extract(Path(paths[0]), work / "assets" / revision(content_settings(config))[:12] / digest, config)
-                for unit in item["units"]:
-                    if unit["image"]:
-                        unit["image_sha256"] = fingerprint(Path(unit["image"]))
-                if fingerprint(Path(paths[0])) != digest:
-                    raise ValueError("Source changed during extraction")
-            except Exception as error:
-                item["error"] = f"{type(error).__name__}: {error}"
-        documents[digest] = item
-        print(f"Prepared {number}: {Path(paths[0]).name}", flush=True)
+    with ProcessPoolExecutor(workers) as pool:
+        for number, item in enumerate(pool.map(prepare_document, jobs), 1):
+            documents[item["id"]] = item
+            print(f"Prepared {number}: {Path(item['paths'][0]).name}", flush=True)
     index = {"root": str(root), "manifest": str(manifest_path.resolve()), "documents": documents,
              "config": config, "config_path": str(config_path.resolve()) if config_path else None}
     save(index_path, index)
@@ -108,6 +101,25 @@ def prepare(manifest_path, work, config_path=None, refresh=False):
                               "screens": {}, "pairs": {}, "decisions": {}, "model": None})
     report(work, index, read(work / "state.json"))
     print(f"Prepared {len(documents)} unique documents locally; no model calls made.")
+
+
+def prepare_document(job):
+    """Read one document into units and fingerprint its images; errors stay on the item."""
+    digest, paths, originals, assets, config = job
+    # Preserve original claim associations even after copies have been moved.
+    item = {"id": digest, "paths": paths, "original_paths": originals,
+            "units": [], "error": None, "accepted": Path(paths[0]).suffix.lower() in ACCEPTED_SUFFIXES}
+    if item["accepted"]:
+        try:
+            item["units"] = extract(Path(paths[0]), assets / digest, config)
+            for unit in item["units"]:
+                if unit["image"]:
+                    unit["image_sha256"] = fingerprint(Path(unit["image"]))
+            if fingerprint(Path(paths[0])) != digest:
+                raise ValueError("Source changed during extraction")
+        except Exception as error:
+            item["error"] = f"{type(error).__name__}: {error}"
+    return item
 
 
 def load_index(work):
