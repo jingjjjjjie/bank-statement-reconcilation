@@ -1,4 +1,4 @@
-"""Shared offline fixtures for workflow regression tests."""
+"""Fixture: offline model fakes, mocked codex processes and a prepared two-image review folder."""
 from contextlib import contextmanager
 from unittest.mock import patch
 

@@ -62,7 +62,7 @@ Build the frontend first, or run tests inside the Docker image where it is alrea
 
 ```console
 python -m unittest discover -s tests/unit -t .
-python -m unittest tests.unit.test_app tests.unit.test_content_review
+python -m unittest tests.unit.dashboard.test_app tests.unit.dashboard.test_extraction_runs
 ```
 
 ## Final review, report and individual receipts

@@ -13,8 +13,8 @@ from dashboard.app import Review, create_app
 from reconciliation.extraction.workflow import load, prepare
 from reconciliation.intake.duplicates import organize
 from reconciliation.model.codex import ReviewCancelled
+from tests.fixtures.extraction_runs import FixtureReviewer
 from tests.http_server import TestServer
-from tests.unit.test_content_review import FixtureReviewer
 
 
 class StopBrowserTests(unittest.TestCase):

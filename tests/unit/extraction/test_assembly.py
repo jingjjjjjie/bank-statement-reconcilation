@@ -9,15 +9,9 @@ from reconciliation.extraction import workflow
 from reconciliation.extraction.assembly import ASSEMBLY, current_assembly, input_revision, validate_assembly
 from reconciliation.extraction.pieces import ASSEMBLY as PIECE_ASSEMBLY
 from reconciliation.intake.duplicates import fingerprint
-from tests.helpers import FakeReviewer, ReviewFixture
-from tests.unit import test_receipt_review as receipt_fixtures
-
-
-def piece(units, total="45.00"):
-    """Build a receipt spanning named source units with one printed total."""
-    return {"location": "pages " + ", ".join(map(str, units)), "document_type": "receipt",
-            "invoice_numbers": ["INV-1"], "brief_description": "Supplies", "total": total,
-            "currency": "MYR", "limitations": [], "source_units": units}
+from tests.fixtures.assembly import piece
+from tests.fixtures.receipt_review import ReceiptReviewFixture
+from tests.fixtures.workflow import FakeReviewer, ReviewFixture
 
 
 class AssemblyWorkflowTests(ReviewFixture, unittest.TestCase):
@@ -79,11 +73,7 @@ class AssemblyWorkflowTests(ReviewFixture, unittest.TestCase):
         validate_assembly(value, 2)
 
 
-class AssemblyApprovalTests(unittest.TestCase):
-    setUp = receipt_fixtures.ReceiptReviewTests.setUp
-    save_state = receipt_fixtures.ReceiptReviewTests.save_state
-    view = receipt_fixtures.ReceiptReviewTests.view
-    accept_pieces = receipt_fixtures.ReceiptReviewTests.accept_pieces
+class AssemblyApprovalTests(ReceiptReviewFixture):
 
     def test_assembled_receipts_allow_human_acceptance_with_legacy_flag(self):
         """Only document receipts become allocatable, and page refresh invalidates approval."""

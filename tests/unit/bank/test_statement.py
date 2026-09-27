@@ -66,7 +66,7 @@ class BankStatementTests(unittest.TestCase):
 class MasterIntegrityTests(unittest.TestCase):
     # Synthetic source results isolate CSV tampering checks from PDF extraction.
     def setUp(self):
-        temporary_root = Path(__file__).resolve().parents[2] / ".tools" / "bank-tests"
+        temporary_root = Path(__file__).resolve().parents[3] / ".tools" / "bank-tests"
         temporary_root.mkdir(parents=True, exist_ok=True)
         self.directory = tempfile.TemporaryDirectory(dir=temporary_root)
         self.addCleanup(self.directory.cleanup)

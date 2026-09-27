@@ -12,37 +12,11 @@ from dashboard.services import final_review, piece_matching, receipt_review
 from dashboard.services.piece_match_jobs import validate_result
 from reconciliation.extraction import pieces
 from reconciliation.intake.duplicates import fingerprint
-from tests.unit import test_receipt_review as fixtures
+from tests.fixtures.piece_pipeline import PiecePipelineFixture, as_model
 
 
-def as_model(record):
-    """Project an old stored piece onto the current model output schema."""
-    facts = pieces.canonical(record)
-    return {'piece_type': 'Receipt or invoice', 'payer': facts['payer'], 'payee': facts['payee'], 'other_names': [],
-            'amount': facts['amount'], 'amount_location': facts['amount_location'], 'currency': facts['currency'],
-            'date': facts['date'], 'document_number': facts['document_number'], 'description': facts['description'],
-            'references': [r for r in facts['references'] if r['type'] in ('contract', 'project', 'bank_account', 'other')]}
+class PiecePipelineTests(PiecePipelineFixture):
 
-class PiecePipelineTests(unittest.TestCase):
-    def setUp(self):
-        """Use isolated two-receipt evidence and three bank payments."""
-        self.fixture = fixtures.ReceiptReviewTests()
-        self.fixture.setUp()
-        self.addCleanup(self.fixture.doCleanups)
-        self.review = self.fixture.review
-        self.review.root = self.fixture.base
-
-    def accept(self, values=None):
-        """Submit exactly the current editable piece records."""
-        view = receipt_review.snapshot(self.review)
-        return receipt_review.accept_extraction(self.review, {'revision': view['revision'],
-            'key': self.fixture.key, 'receipts': values if values is not None else view['units'][0]['receipts']})
-
-    def decision(self, bank='B1', action='approve', allocations=None):
-        """Prepare a current final-review request with an explicit human decision."""
-        view = final_review.snapshot(self.review)
-        return {'binding': view['binding'], 'version': view['version'], 'bank_id': bank, 'action': action,
-            'allocations': allocations or [], 'reviewer': 'Test', 'note': 'Checked separate receipts', 'acknowledged': True}
 
     def test_live_save_delta_matches_full_snapshot(self):
         """Live approvals, rejections and undo return authoritative status and balances."""
@@ -425,7 +399,7 @@ class PiecePipelineTests(unittest.TestCase):
     def test_canonical_model_output_reaches_saved_review_pieces(self):
         """Actual extraction orchestration requests the new contract and retains its facts."""
         from reconciliation.extraction import workflow
-        from tests.helpers import ReviewFolder
+        from tests.fixtures.workflow import ReviewFolder
         fixture = ReviewFolder(self.addCleanup)
         index, state = fixture.prepared()
         supplied = {'readable': True, 'description': 'Two receipts',

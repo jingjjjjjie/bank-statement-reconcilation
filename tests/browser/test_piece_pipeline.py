@@ -11,14 +11,14 @@ from playwright.sync_api import expect, sync_playwright
 from dashboard.routes import create_app
 from reconciliation.intake.duplicates import fingerprint
 from tests.browser import browser_options
+from tests.fixtures import receipt_review as receipt_review_fixture
 from tests.http_server import TestServer
-from tests.unit import test_receipt_review as fixtures
 
 
 class PiecePipelineBrowserTests(unittest.TestCase):
     def test_add_remove_search_and_live_matching(self):
         """Piece identities survive editing and search reaches current matching evidence."""
-        fixture = fixtures.ReceiptReviewTests()
+        fixture = receipt_review_fixture.ReceiptReviewFixture()
         fixture.setUp()
         self.addCleanup(fixture.doCleanups)
         Image.new('RGB', (400, 500), 'white').save(fixture.source)

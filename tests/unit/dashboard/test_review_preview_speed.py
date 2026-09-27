@@ -10,13 +10,13 @@ from dashboard.previews import extraction as extraction_preview
 from dashboard.services import extraction_runs, receipt_review
 from reconciliation.extraction import workflow
 from reconciliation.intake.duplicates import fingerprint
-from tests.unit import test_receipt_review as fixtures
+from tests.fixtures import receipt_review as receipt_review_fixture
 
 
 class ReviewPreviewSpeedTests(unittest.TestCase):
     def setUp(self):
         """Create a review with a source and a separately prepared page."""
-        self.fixture = fixtures.ReceiptReviewTests()
+        self.fixture = receipt_review_fixture.ReceiptReviewFixture()
         self.fixture.setUp()
         self.addCleanup(self.fixture.doCleanups)
         fixture = self.fixture

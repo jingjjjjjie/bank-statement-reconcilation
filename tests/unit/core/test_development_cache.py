@@ -16,7 +16,7 @@ from dashboard.services.review import Review
 from reconciliation.core import development_cache as cache
 from reconciliation.intake.duplicates import organize
 from reconciliation.model.codex import CodexReviewer, object_schema
-from tests.helpers import mock_codex
+from tests.fixtures.workflow import mock_codex
 from tests.http_server import TestServer
 
 

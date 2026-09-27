@@ -17,7 +17,7 @@ from reconciliation.core.prompts import load_prompt
 from reconciliation.core.settings import DEFAULTS, STAGES
 from reconciliation.extraction.schemas import EXTRACTION
 from reconciliation.model.codex import CACHE_PROFILE, BudgetReached, CodexReviewer
-from tests.helpers import FakeReviewer, ReviewFixture
+from tests.fixtures.workflow import FakeReviewer, ReviewFixture
 
 
 def is_extraction(schema):

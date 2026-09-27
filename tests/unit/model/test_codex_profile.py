@@ -5,7 +5,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 from reconciliation.model.codex import CodexReviewer, object_schema
-from tests.helpers import mock_codex
+from tests.fixtures.workflow import mock_codex
 
 
 class CodexProfileTests(unittest.TestCase):

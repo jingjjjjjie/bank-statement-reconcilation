@@ -75,7 +75,7 @@ python -m scripts.benchmark_matching <new-output-directory>
 python -m scripts.benchmark_matching <new-output-directory> --specific --shuffle 17 --variants 20:5:0:0,10:adaptive:1:1,20:adaptive:1:1
 python -m scripts.benchmark_matching <new-output-directory> --specific --shuffle 17 --variants 40:adaptive:1:1
 python -m scripts.benchmark_matching <new-output-directory> --specific --shuffle 29 --hybrid --variants 20:adaptive:1:1
-python -m unittest tests.unit.test_matching_benchmark tests.unit.test_receipt_matching
+python -m unittest tests.unit.scripts.test_matching_benchmark tests.unit.dashboard.test_receipt_review
 ```
 
 Exact original request JSON and the effective prompts in the saved model cache are authoritative for replay: the experiment harness was refined between runs. The current harness includes richer competitor context than the earliest exploratory run. Live execution uses the existing ChatGPT login and records every attempt; it does not require an API key.

@@ -10,14 +10,14 @@ from dashboard.routes import create_app
 from reconciliation.extraction.assembly import input_revision
 from reconciliation.intake.duplicates import fingerprint
 from tests.browser import browser_options
+from tests.fixtures import receipt_review as receipt_review_fixture
 from tests.http_server import TestServer
-from tests.unit import test_receipt_review as fixtures
 
 
 class PieceRemovalTests(unittest.TestCase):
     def test_remove_generated_piece_and_recover_from_plain_text_failure(self):
         """Keep the removal draft after an HTTP error and save it intact on retry."""
-        fixture = fixtures.ReceiptReviewTests()
+        fixture = receipt_review_fixture.ReceiptReviewFixture()
         fixture.setUp()
         self.addCleanup(fixture.doCleanups)
         source = fixture.base / 'four-page-invoice.pdf'

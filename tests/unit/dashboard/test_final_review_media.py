@@ -10,14 +10,14 @@ from unittest.mock import patch
 
 from dashboard.routes import create_app
 from dashboard.services import final_review
+from tests.fixtures import final_review as final_review_fixture
 from tests.http_server import TestServer
-from tests.unit import test_matching_review as fixtures
 
 
 class MatchingMediaSpeedTests(unittest.TestCase):
     def setUp(self):
         """Serve isolated evidence and ledger fixtures without touching real decisions."""
-        self.fixture = fixtures.MatchingReviewTests()
+        self.fixture = final_review_fixture.FinalReviewFixture()
         self.fixture.setUp()
         self.addCleanup(self.fixture.doCleanups)
         self.app = create_app(self.fixture.review, 'token', SimpleNamespace())

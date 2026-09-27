@@ -8,14 +8,14 @@ from playwright.sync_api import expect, sync_playwright
 
 from dashboard.routes import create_app
 from tests.browser import browser_options
+from tests.fixtures import final_review as final_review_fixture
 from tests.http_server import TestServer
-from tests.unit import test_matching_review as fixtures
 
 
 class MatchingProgressTests(unittest.TestCase):
     def test_start_progress_stop_and_failed_completion(self):
         """The bar reflects real counts and preserves failures at one hundred percent."""
-        fixture = fixtures.MatchingReviewTests()
+        fixture = final_review_fixture.FinalReviewFixture()
         fixture.setUp()
         self.addCleanup(fixture.doCleanups)
         fixture.review.manifest = {}

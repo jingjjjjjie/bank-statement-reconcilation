@@ -10,7 +10,7 @@ from types import SimpleNamespace
 
 from reconciliation.model.codex import BudgetReached, CodexReviewer, object_schema
 from reconciliation.model.token_usage import record, summary
-from tests.helpers import mock_codex
+from tests.fixtures.workflow import mock_codex
 
 
 class TokenUsageTests(unittest.TestCase):

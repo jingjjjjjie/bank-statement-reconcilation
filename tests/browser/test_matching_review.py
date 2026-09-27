@@ -8,15 +8,16 @@ from playwright.sync_api import expect, sync_playwright
 
 from dashboard.routes import create_app
 from dashboard.services import final_review
+from reconciliation.intake.duplicates import fingerprint
 from tests.browser import browser_options
+from tests.fixtures import final_review as final_review_fixture
 from tests.http_server import TestServer
-from tests.unit import test_matching_review as fixtures
 
 
 class MatchingReviewBrowserTests(unittest.TestCase):
     def test_filters_change_open_payment_and_empty_state(self):
         """Keep the displayed payment, queue and reload inside both filters."""
-        fixture = fixtures.MatchingReviewTests()
+        fixture = final_review_fixture.FinalReviewFixture()
         fixture.setUp()
         self.addCleanup(fixture.doCleanups)
         fixture.review.manifest = {}
@@ -58,7 +59,7 @@ class MatchingReviewBrowserTests(unittest.TestCase):
 
     def test_show_jumps_to_spreadsheet_cells_and_pdf_page(self):
         """Cited cells select their sheet page; PDF citations select the original page."""
-        fixture = fixtures.MatchingReviewTests()
+        fixture = final_review_fixture.FinalReviewFixture()
         fixture.setUp()
         self.addCleanup(fixture.doCleanups)
         fixture.review.manifest = {}
@@ -99,7 +100,7 @@ class MatchingReviewBrowserTests(unittest.TestCase):
 
     def test_compare_candidates_then_save_transaction(self):
         """Candidate scrolling and preview never change the bank or approve evidence."""
-        fixture = fixtures.MatchingReviewTests()
+        fixture = final_review_fixture.FinalReviewFixture()
         fixture.setUp()
         self.addCleanup(fixture.doCleanups)
         fixture.review.manifest = {}
@@ -110,7 +111,7 @@ class MatchingReviewBrowserTests(unittest.TestCase):
         with master.open('a', encoding='utf-8', newline='') as stream:
             for number in range(4, 14):
                 stream.write(f'{number},{fixture.root / "statement.txt"},1,passed\n')
-        facts['bank_hash'] = fixtures.fingerprint(master)
+        facts['bank_hash'] = fingerprint(master)
         facts['banks'].extend(dict(facts['banks'][2], id=f'B{i}') for i in range(4, 14))
         facts['items'].extend(dict(facts['items'][1], id=f'D{i}', parties=[f'Candidate {i}']) for i in range(3, 9))
         fixture.write(fixture.cache / 'facts.json', facts)

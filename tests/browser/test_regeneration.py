@@ -10,23 +10,23 @@ from dashboard.routes import create_app
 from dashboard.services import extraction_runs, regeneration
 from reconciliation.extraction.workflow import load, run
 from tests.browser import browser_options
+from tests.fixtures import extraction_runs as extraction_runs_fixture
 from tests.http_server import TestServer
-from tests.unit import test_content_review as fixtures
 
 
 class RegenerationBrowserTests(unittest.TestCase):
     def test_background_indicator_and_automatic_refresh(self):
         """Keep the page usable while a queued model call replaces old results."""
-        fixture = fixtures.ContentPageTests()
+        fixture = extraction_runs_fixture.ExtractionRunsFixture()
         fixture.setUp()
         self.addCleanup(fixture.doCleanups)
         extraction_runs.prepare(fixture.review)
         work = fixture.manifest.parent / "review"
         index, state = load(work)
-        run(work, index, state, fixtures.FixtureReviewer())
+        run(work, index, state, extraction_runs_fixture.FixtureReviewer())
         release = threading.Event()
 
-        class Reviewer(fixtures.FixtureReviewer):
+        class Reviewer(extraction_runs_fixture.FixtureReviewer):
             def ask(self, prompt, schema, images=()):
                 """Return changed relevance only after the UI has shown progress."""
                 if not release.wait(timeout=20):

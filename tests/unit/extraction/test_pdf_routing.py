@@ -16,7 +16,7 @@ from reconciliation.extraction.reader import extract
 from reconciliation.extraction.schemas import EXTRACTION
 from reconciliation.intake.duplicates import organize
 from reconciliation.model.codex import BudgetReached
-from tests.helpers import FakeReviewer, ReviewFolder
+from tests.fixtures.workflow import FakeReviewer, ReviewFolder
 
 
 class PdfRoutingTests(unittest.TestCase):

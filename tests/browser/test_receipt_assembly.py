@@ -9,15 +9,15 @@ from dashboard.routes import create_app
 from reconciliation.extraction.assembly import input_revision
 from reconciliation.intake.duplicates import fingerprint
 from tests.browser import browser_options
+from tests.fixtures import receipt_review as receipt_review_fixture
+from tests.fixtures.assembly import piece
 from tests.http_server import TestServer
-from tests.unit import test_receipt_review as fixtures
-from tests.unit.test_receipt_assembly import piece
 
 
 class ReceiptAssemblyBrowserTests(unittest.TestCase):
     def test_add_remove_and_accept_document(self):
         """Correct boundaries without adding repeated totals or losing page references."""
-        fixture = fixtures.ReceiptReviewTests()
+        fixture = receipt_review_fixture.ReceiptReviewFixture()
         fixture.setUp()
         fixture.review.manifest = {}
         fixture.review.workspace = lambda: {"name": "Fixture", "period": "December"}

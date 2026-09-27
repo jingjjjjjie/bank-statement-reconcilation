@@ -43,7 +43,7 @@ confirm the exact time remote model computation ends or undo consumed tokens.
 Run the offline process tests on both Windows and Linux:
 
 ```console
-python -m unittest tests.unit.test_process_manager tests.unit.test_codex_cancellation
+python -m unittest tests.unit.model.test_process_manager tests.unit.model.test_codex_cancellation
 ```
 
 They launch real synthetic process trees, including four simultaneous calls,

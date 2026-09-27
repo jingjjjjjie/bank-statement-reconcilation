@@ -10,17 +10,17 @@ from dashboard.services.review import Review
 from reconciliation.core.settings import load_config
 from reconciliation.extraction import workflow
 from tests.browser import browser_options
+from tests.fixtures import pdf_groups as pdf_groups_fixture
 from tests.http_server import TestServer
-from tests.unit import test_pdf_document as fixtures
 
 
 class PdfPageLimitBrowserTests(unittest.TestCase):
     def test_save_reload_and_review_whole_pdf(self):
         """Save the limit without erasing results and accept one cross-page piece on desktop/mobile."""
-        fixture = fixtures.PdfDocumentTests()
+        fixture = pdf_groups_fixture.PdfGroupsFixture()
         self.addCleanup(fixture.doCleanups)
         work, index, state = fixture.prepare_pdf(3)
-        engine = fixtures.Reviewer(3)
+        engine = pdf_groups_fixture.Reviewer(3)
         workflow.run(work, index, state, engine)
         self.assertEqual(len(engine.calls), 1)
         review = Review(Path(index['manifest']), work.parent / 'data')

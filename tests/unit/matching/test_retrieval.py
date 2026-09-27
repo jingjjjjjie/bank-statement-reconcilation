@@ -102,8 +102,8 @@ class RetrievalTests(unittest.TestCase):
     def test_live_payload_keeps_context_but_bounds_allocatable_ids(self):
         """Full parent evidence cannot silently enlarge the selected allocation shortlist."""
         from dashboard.services import piece_matching
-        from tests.unit.test_piece_pipeline import PiecePipelineTests
-        fixture = PiecePipelineTests()
+        from tests.fixtures.piece_pipeline import PiecePipelineFixture
+        fixture = PiecePipelineFixture()
         fixture.setUp()
         self.addCleanup(fixture.doCleanups)
         fixture.accept()
@@ -123,8 +123,8 @@ class RetrievalTests(unittest.TestCase):
 
         from dashboard.services import piece_match_jobs, piece_matching
         from reconciliation.core.settings import DEFAULTS
-        from tests.unit.test_piece_pipeline import PiecePipelineTests
-        fixture = PiecePipelineTests()
+        from tests.fixtures.piece_pipeline import PiecePipelineFixture
+        fixture = PiecePipelineFixture()
         fixture.setUp()
         self.addCleanup(fixture.doCleanups)
         fixture.accept()

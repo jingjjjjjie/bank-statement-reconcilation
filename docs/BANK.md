@@ -5,7 +5,7 @@ Install the root `requirements.txt` into Python and run commands from the reposi
 ```powershell
 python -m reconciliation.bank.statement "statement.pdf" --year 2025
 python -m reconciliation.bank.excel bank-output/master_statement.csv --company "Example Company Sdn. Bhd."
-python -m unittest tests.unit.test_bank_statement
+python -m unittest tests.unit.bank.test_statement
 ```
 
 Default outputs:
@@ -27,7 +27,7 @@ It checks each running balance, opening/closing balances, and printed debit/cred
 totals using Decimal. Excel export checks the PDF fingerprint and re-extracts the
 source to verify the master rows, dates, text, IDs, account, currency and totals.
 This catches later CSV changes but cannot independently detect a mistake repeated
-by the same extractor. The automated bank checks are in `tests/unit/test_bank_statement.py`; they are not independent visual verification of a new statement.
+by the same extractor. The automated bank checks are in `tests/unit/bank/test_statement.py`; they are not independent visual verification of a new statement.
 The year is supplied explicitly because the PDF date header
 contains overlapping text. Formatting is loaded from `prompts/excel/bank_statement.xml` and documented in
 [workbook style](style.md). Use `--style path/to/style.xml` to select another compatible style;

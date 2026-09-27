@@ -11,14 +11,14 @@ from playwright.sync_api import expect, sync_playwright
 from dashboard.routes import create_app
 from reconciliation.intake.duplicates import fingerprint
 from tests.browser import browser_options
+from tests.fixtures import receipt_review as receipt_review_fixture
 from tests.http_server import TestServer
-from tests.unit import test_receipt_review as fixtures
 
 
 class ExcelHighlightTests(unittest.TestCase):
     def test_show_source_rows_without_editing(self):
         """Jump across worksheet chunks, highlight exact rows and clear stale markers."""
-        fixture = fixtures.ReceiptReviewTests()
+        fixture = receipt_review_fixture.ReceiptReviewFixture()
         fixture.setUp()
         self.addCleanup(fixture.doCleanups)
         source = fixture.base / 'payments.xlsx'

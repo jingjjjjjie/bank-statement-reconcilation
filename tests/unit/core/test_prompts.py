@@ -9,7 +9,7 @@ from jsonschema import ValidationError, validate
 
 from reconciliation.core.prompts import load_prompt
 from reconciliation.model.codex import EXTRACTION, CodexReviewer, object_schema
-from tests.helpers import mock_codex
+from tests.fixtures.workflow import mock_codex
 
 
 class PromptTests(unittest.TestCase):

@@ -14,8 +14,8 @@ from dashboard.routes import create_app
 from dashboard.services import final_review as matching
 from reconciliation.intake.duplicates import fingerprint
 from tests.browser import browser_options
+from tests.fixtures import final_review as final_review_fixture
 from tests.http_server import TestServer
-from tests.unit import test_matching_review as fixtures
 
 
 def fake_pdf(path, title, lines, pages=1):
@@ -62,7 +62,7 @@ class FinalReportBrowserTests(unittest.TestCase):
 
     def setUp(self):
         """Use a temporary cache and saved decisions; never touch live review data."""
-        fixture = fixtures.MatchingReviewTests()
+        fixture = final_review_fixture.FinalReviewFixture()
         fixture.setUp()
         self.addCleanup(fixture.doCleanups)
         self.fixture = fixture
