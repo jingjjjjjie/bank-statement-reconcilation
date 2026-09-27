@@ -151,7 +151,7 @@ def snapshot(review):
     bank_hashes = {source: source_hash(source) for source in {bank['source'] for bank in banks.values()}}
     if facts.get('live_pieces'):
         from dashboard.piece_matching import suggestions
-        choices, suggestions = suggestions(review, banks, items)
+        choices, suggestions = suggestions(review, banks, items, facts, index)
     else:
         choices = {}
         for stage in ('matching', 'contextual'):

@@ -1,4 +1,4 @@
-"""Bounded subscription-model matching over complete documents and persistent pieces."""
+"""Batched subscription-model matching over ranked candidate pieces."""
 import json
 import threading
 from pathlib import Path
@@ -13,7 +13,7 @@ from reconciliation.receipt_matching import amount
 from reconciliation.currencies import normalize_currency
 from reconciliation.review_settings import stage_settings
 from reconciliation.vision_workflow import active_config
-from reconciliation.matching_retrieval import retrieve
+from reconciliation.match_ranking import rank
 
 SCHEMA = object_schema({'decisions': {'type': 'array', 'items': object_schema({
     'bank_id': TEXT, 'assessment': {'type': 'string', 'enum': ['strong', 'tentative', 'none']},
@@ -96,67 +96,142 @@ def run(review, binding, banks, items, index, facts, config):
         review.piece_match_status['error'] = str(error)
 
 
+BATCH_LINES = 20
+PROMPT_LIMIT = 180000
+
+
+def batches(keys, choices, size=None):
+    """Pack lines that share candidate pieces into the same batch, at most `size` lines each."""
+    size = size or BATCH_LINES
+    parent = {key: key for key in keys}
+
+    def root(key):
+        while parent[key] != key:
+            parent[key] = parent[parent[key]]
+            key = parent[key]
+        return key
+    owner = {}
+    for key in keys:
+        for item_id in choices[key]:
+            if item_id in owner:
+                parent[root(key)] = root(owner[item_id])
+            owner.setdefault(item_id, key)
+    groups = {}
+    for key in keys:
+        groups.setdefault(root(key), []).append(key)
+    packed, current = [], []
+    # Largest competing groups first; oversized groups are split into consecutive batches.
+    for group in sorted(groups.values(), key=len, reverse=True):
+        for start in range(0, len(group), size):
+            part = group[start:start + size]
+            if current and len(current) + len(part) > size:
+                packed.append(current)
+                current = []
+            current = current + part
+    if current:
+        packed.append(current)
+    return packed
+
+
+def over_allocated(rows, items):
+    """Downgrade proposals whose combined allocations exceed a piece's stated amount."""
+    used = {}
+    for row in rows:
+        for allocation in row.get('allocations', []):
+            if allocation['amount']:
+                used[allocation['item_id']] = used.get(allocation['item_id'], amount('0')) + amount(allocation['amount'])
+    over = {key for key, total in used.items() if items[key]['amount'] and total > amount(items[key]['amount'])}
+    for row in rows:
+        if over & {a['item_id'] for a in row.get('allocations', [])} and 'Competes with another' not in row['reason']:
+            row['assessment'] = 'tentative'
+            row['reason'] += ' Competes with another bank line for the same evidence; decide in review.'
+    return rows
+
+
 def run_matching(review, binding, banks, items, index, facts, config):
-    """Checkpoint each response with token accounting; approvals remain exclusively human."""
+    """Rank candidates in Python, then ask the model about batches of lines; approvals stay human."""
     directory = review.manifest_path.parent / 'final-review'
     (directory / 'piece-matching').mkdir(parents=True, exist_ok=True)
-    choices, retrieval = retrieve(list(banks.values()), list(items.values()))
+    choices, retrieval = rank(list(banks.values()), items, facts['documents'], index.get('root', ''))
     write_json(directory / 'piece-matching' / 'retrieval.json', retrieval)
     choice = stage_settings(config)['comparison']
     engine = CodexReviewer(directory / 'piece-matching', model=choice['model'], reasoning=choice['reasoning'],
                            timeout=600, cancel_event=review.piece_match_cancel, max_calls=config['max_calls'])
     engine.stage = 'piece_matching'
     review.piece_match_engine = engine
-    results, errors = [], []
+    instructions = load_prompt('matching/matching_policy') + '\n\n' + load_prompt('matching/piece_matching')
+    results = [{'bank_id': key, 'assessment': 'none', 'allocations': [],
+                'reason': 'No amount, name or filename candidate; manual piece search remains available.'}
+               for key in banks if not choices[key]]
+    errors = []
 
-    def job(key):
-        """Provide all shortlisted document facts and native text without image attachments."""
-        if not choices[key]:
-            return {'bank_id': key, 'assessment': 'none', 'allocations': [], 'reason': 'No indexed candidate; manual piece search remains available.'}
+    def requests(keys):
+        """Build prompts for a batch, halving it until each fits the text limit."""
         supplied, images, allowed = piece_matching.model_payload(
-            banks, items, index, facts, choices, [key], retrieval, include_images=False)
-        prompt = load_prompt('matching/matching_policy') + '\n\n' + load_prompt('matching/piece_matching') + '\n' + json.dumps(supplied, ensure_ascii=False, separators=(',', ':'))
-        if len(prompt) > 180000:
-            raise ValueError('Complete document context exceeds the matching limit; review manually')
-        if not active_config(index)['codex_enabled']:
-            raise ValueError('Codex disabled during matching')
-        write_json(directory / 'piece-matching' / f'input-{key}.json', supplied)
-        worker = engine.fork()
-        result = worker.ask(prompt, SCHEMA, images)
-        try:
-            row = validate_result(result, [key], allowed, banks, items)[0]
-            if retrieval[key]['search_incomplete']:
-                row['reason'] += f" Search limited: {retrieval[key]['omitted']} eligible pieces were not shortlisted."
-                if row['assessment'] == 'none' or retrieval[key]['reference_overflow']:
-                    row['assessment'] = 'tentative'
-            return row
-        except Exception:
-            worker.invalidate()
-            raise
+            banks, items, index, facts, choices, keys, retrieval, include_images=False)
+        prompt = instructions + '\n' + json.dumps(supplied, ensure_ascii=False, separators=(',', ':'))
+        if len(prompt) <= PROMPT_LIMIT:
+            return [(keys, supplied, prompt, allowed)]
+        if len(keys) == 1:
+            raise ValueError('Candidate document text exceeds the matching limit; review manually')
+        middle = len(keys) // 2
+        return requests(keys[:middle]) + requests(keys[middle:])
+
+    def job(keys):
+        """Ask about one batch and validate every returned line against its own candidates."""
+        rows = []
+        for part, supplied, prompt, allowed in requests(keys):
+            if not active_config(index)['codex_enabled']:
+                raise ValueError('Codex disabled during matching')
+            write_json(directory / 'piece-matching' / f'input-{part[0]}-{len(part)}.json', supplied)
+            worker = engine.fork()
+            result = worker.ask(prompt, SCHEMA, [])
+            try:
+                for row in validate_result(result, part, allowed, banks, items):
+                    reasons = retrieval[row['bank_id']].get('reasons', {})
+                    # A folder or file name can find evidence but never makes a match strong on its own.
+                    if row['assessment'] == 'strong' and row['allocations'] and all(
+                            reasons.get(a['item_id'], {}).get('route') == 'found by filename' for a in row['allocations']):
+                        row['assessment'] = 'tentative'
+                        row['reason'] += ' Linked only through a folder or file name; confirm from the documents.'
+                    if retrieval[row['bank_id']]['search_incomplete'] and row['assessment'] == 'none':
+                        row['assessment'] = 'tentative'
+                        row['reason'] += f" {retrieval[row['bank_id']]['omitted']} further candidates were not shown."
+                    rows.append(row)
+            except Exception:
+                worker.invalidate()
+                raise
+        return rows
+
+    def publish():
+        """Checkpoint proposals after every batch so a stop keeps completed work."""
+        write_json(directory / 'piece-suggestions.json', {'binding': binding, 'total': len(banks), 'decisions': results, 'errors': errors})
+        review.piece_match_status = {'completed': len(results), 'total': len(banks),
+                                    'failed': len(errors), 'error': '\n'.join(errors)}
 
     try:
-        keys = iter(banks)
-        # Keep the pending work bounded, refilling immediately when one bank finishes.
+        publish()
+        queue = iter(batches([key for key in banks if choices[key]], choices))
         with ThreadPoolExecutor(max_workers=config['max_parallel']) as pool:
             pending = {}
-            for _ in range(config['max_parallel']):
-                key = next(keys, None)
-                if key is not None:
-                    pending[pool.submit(job, key)] = key
+            for keys in queue:
+                pending[pool.submit(job, keys)] = keys
+                if len(pending) >= config['max_parallel']:
+                    break
             while pending:
                 future = next(as_completed(pending))
-                key = pending.pop(future)
+                keys = pending.pop(future)
                 try:
-                    results.append(future.result())
+                    results.extend(future.result())
                 except Exception as error:
-                    errors.append(f'{key}: {error}')
-                    results.append({'bank_id': key, 'assessment': 'tentative', 'allocations': [], 'reason': f'Matching unresolved: {error}'})
-                write_json(directory / 'piece-suggestions.json', {'binding': binding, 'total': len(banks), 'decisions': results, 'errors': errors})
-                review.piece_match_status = {'completed': len(results), 'total': len(banks),
-                                            'failed': len(errors), 'error': '\n'.join(errors)}
-                key = None if getattr(review, 'piece_match_stopping', False) else next(keys, None)
-                if key is not None:
-                    pending[pool.submit(job, key)] = key
+                    errors.append(f'{keys[0]} (+{len(keys) - 1} lines): {error}')
+                    results.extend({'bank_id': key, 'assessment': 'tentative', 'allocations': [],
+                                    'reason': f'Matching unresolved: {error}'} for key in keys)
+                over_allocated(results, items)
+                publish()
+                keys = None if getattr(review, 'piece_match_stopping', False) else next(queue, None)
+                if keys is not None:
+                    pending[pool.submit(job, keys)] = keys
     except Exception as error:
         review.piece_match_status['error'] = str(error)
 

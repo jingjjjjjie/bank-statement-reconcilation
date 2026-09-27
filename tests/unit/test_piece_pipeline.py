@@ -309,7 +309,8 @@ class PiecePipelineTests(unittest.TestCase):
                 return {'decisions': [{'bank_id': key, 'assessment': 'tentative', 'allocations': [], 'reason': 'Fixture'}]}
 
         config = {**DEFAULTS, 'codex_enabled': True, 'max_parallel': 2}
-        with patch.object(piece_match_jobs, 'CodexReviewer', Reviewer), patch.object(piece_match_jobs, 'active_config', return_value=config):
+        # One line per batch keeps this a check that a free worker takes the next batch.
+        with patch.object(piece_match_jobs, 'CodexReviewer', Reviewer), patch.object(piece_match_jobs, 'active_config', return_value=config),                 patch.object(piece_match_jobs, 'BATCH_LINES', 1):
             piece_match_jobs.start(self.review)
             try:
                 self.assertTrue(third.wait(5), 'Free worker did not start the third bank request')
@@ -348,8 +349,8 @@ class PiecePipelineTests(unittest.TestCase):
                 """Capture the actual production request without invoking Codex."""
                 payload = json.loads(prompt.rsplit('\n', 1)[1])
                 calls.append((payload, images))
-                return {'decisions': [{'bank_id': payload['banks'][0]['id'], 'assessment': 'tentative',
-                                       'allocations': [], 'reason': 'Review source evidence'}]}
+                return {'decisions': [{'bank_id': bank['id'], 'assessment': 'tentative',
+                                       'allocations': [], 'reason': 'Review source evidence'} for bank in payload['banks']]}
 
         config = {**DEFAULTS, 'codex_enabled': True, 'max_parallel': 1}
         self.review.piece_match_cancel = threading.Event()

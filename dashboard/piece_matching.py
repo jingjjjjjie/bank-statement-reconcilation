@@ -136,16 +136,16 @@ def activate(review):
     return {'activated': True, 'preserved_decisions': len(old['decisions'])}
 
 
-def candidates(banks, items):
-    """Shortlist pieces by factual fields without treating amount agreement as approval."""
-    from reconciliation.matching_retrieval import retrieve
-    return retrieve(list(banks.values()), list(items.values()))[0]
+def candidates(banks, items, facts=None, index=None):
+    """Rank pieces by amount, then name, then filename, exactly as Generate matches does."""
+    from reconciliation.match_ranking import rank
+    return rank(list(banks.values()), items, (facts or {}).get('documents', {}), (index or {}).get('root', ''))[0]
 
 
-def suggestions(review, banks, items):
+def suggestions(review, banks, items, facts=None, index=None):
     """Use only model suggestions bound to the current bank and complete piece evidence."""
     from dashboard.matching_review import read
-    choices = candidates(banks, items)
+    choices = candidates(banks, items, facts, index)
     path = review.manifest_path.parent / 'final-review/piece-suggestions.json'
     saved = read(path) if path.exists() else {}
     valid = saved.get('binding') == revision([banks, items])

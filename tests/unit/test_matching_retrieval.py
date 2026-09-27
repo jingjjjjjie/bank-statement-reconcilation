@@ -145,17 +145,17 @@ class RetrievalTests(unittest.TestCase):
             def ask(self, prompt, schema, images):
                 """Return a no-match assessment to exercise the deterministic guard."""
                 supplied = json.loads(prompt.rsplit('\n', 1)[1])
-                return {'decisions': [{'bank_id': supplied['banks'][0]['id'], 'assessment': 'none',
-                                       'allocations': [], 'reason': 'No match in supplied evidence.'}]}
+                return {'decisions': [{'bank_id': bank['id'], 'assessment': 'none',
+                                       'allocations': [], 'reason': 'No match in supplied evidence.'} for bank in supplied['banks']]}
 
         config = {**DEFAULTS, 'codex_enabled': True, 'max_parallel': 2}
         with patch.object(piece_match_jobs, 'CodexReviewer', Reviewer), \
-                patch.object(piece_match_jobs, 'retrieve', return_value=(choices, audit)), \
+                patch.object(piece_match_jobs, 'rank', return_value=(choices, audit)), \
                 patch.object(piece_match_jobs, 'active_config', return_value=config):
             piece_match_jobs.start(fixture.review)
             fixture.review.piece_match_thread.join(5)
         self.assertFalse(piece_match_jobs.status(fixture.review)['running'])
         self.assertEqual(piece_match_jobs.status(fixture.review)['error'], '')
         result = json.loads((fixture.review.manifest_path.parent / 'final-review/piece-suggestions.json').read_text())
-        self.assertTrue(all(row['assessment'] == 'tentative' and '5 eligible pieces' in row['reason']
+        self.assertTrue(all(row['assessment'] == 'tentative' and '5 further candidates' in row['reason']
                             for row in result['decisions']))
