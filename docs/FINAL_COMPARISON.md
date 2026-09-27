@@ -50,7 +50,7 @@ Actual bank statement and receipt/document content is the evidence. Filenames an
 - Missing or conflicting support does not block export; export with clear flags and notes. Approval must not hide an unresolved amount difference.
 - Skip accounting categories and classification rules for now. Do not infer travel/supplies/etc. or fill classification columns automatically.
 - Keep bank-only PARTICULAR blank. At final comparison, particulars may be populated from approved supporting evidence; accounting categories remain out of scope.
-- Default model is GPT-5.6 Sol through `codex exec` and the existing ChatGPT login. Python handles deterministic extraction, candidate checks, arithmetic, allocations and state. Follow AGENTS.md for structured responses, unresolved failures and per-attempt usage tracking. Sol is not guaranteed error-free.
+- Default model is GPT-6 Sol through `codex exec` and the existing ChatGPT login (changed by the user on 2026-09-27). Python handles deterministic extraction, candidate checks, arithmetic, allocations and state. Follow AGENTS.md for structured responses, unresolved failures and per-attempt usage tracking. Sol is not guaranteed error-free.
 
 ## Final report after review
 

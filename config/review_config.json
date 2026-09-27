@@ -4,27 +4,27 @@
   "codex_enabled": true,
   "max_calls": 1000,
   "max_parallel": 6,
-  "model": "gpt-5.6-sol",
+  "model": "gpt-6-sol",
   "reasoning": "default",
   "stages": {
     "pdf": {
-      "model": "gpt-5.6-sol",
+      "model": "gpt-6-sol",
       "reasoning": "default"
     },
     "images": {
-      "model": "gpt-5.6-sol",
+      "model": "gpt-6-sol",
       "reasoning": "default"
     },
     "excel": {
-      "model": "gpt-5.6-sol",
+      "model": "gpt-6-sol",
       "reasoning": "default"
     },
     "word": {
-      "model": "gpt-5.6-sol",
+      "model": "gpt-6-sol",
       "reasoning": "default"
     },
     "comparison": {
-      "model": "gpt-5.6-sol",
+      "model": "gpt-6-sol",
       "reasoning": "default"
     }
   }

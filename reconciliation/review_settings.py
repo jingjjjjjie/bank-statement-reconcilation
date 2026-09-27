@@ -6,7 +6,7 @@ from pathlib import Path
 from reconciliation.paths import WORKSPACE
 
 CONFIG_PATH = WORKSPACE / "config" / "review_config.json"
-DEFAULT_MODEL = "gpt-5.6-sol"
+DEFAULT_MODEL = "gpt-6-sol"
 DEFAULTS = {"pdf_whole_document_max_pages": 5, "pdf_mode": "vision", "pictures_enabled": True, "codex_enabled": True,
             "max_calls": 1000, "max_parallel": 4, "model": DEFAULT_MODEL, "reasoning": "default", "stages": {}}
 STAGES = ("pdf", "images", "excel", "word", "comparison")
