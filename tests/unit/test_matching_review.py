@@ -141,7 +141,7 @@ class MatchingReviewTests(unittest.TestCase):
         """A human approval cannot hide missing or partially allocated monetary evidence."""
         with self.assertRaisesRegex(ValueError,'confirm'):
             matching.decide(self.review,self.request(allocations=[{'item_id':'D1','amount':'5'}],acknowledged=False))
-        matching.decide(self.review,self.request(allocations=[{'item_id':'D1','amount':'5'}]))
+        matching.decide(self.review,self.request(allocations=[{'item_id':'D1','amount':'5'}], note=''))
         data = matching.snapshot(self.review)
         self.assertEqual(data['banks'][0]['decision']['difference'],'5')
         self.assertEqual(data['banks'][0]['support_status'],'No supporting')

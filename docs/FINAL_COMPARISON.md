@@ -123,8 +123,9 @@ The default review hides detailed payment narration and source/allocation editin
 
 ## Final review workspace (2026-09-26)
 
-One page reviews one bank transaction. The transaction selector, search, decision
-and confidence filters, and Previous/Next controls change that transaction.
+One page reviews one bank transaction. Numbered transaction buttons show ten at a time; arrows page through those numbers.
+Reviewed transactions show a green tick; the current transaction has an outline.
+Search and filters retain original transaction numbers. The footer Next opens the next transaction.
 The desktop layout is half supporting candidates and half original evidence.
 
 Each supporting piece has its own compact card showing party and amount. Five
@@ -138,6 +139,6 @@ replaces the draft selection; checkboxes support several separate expenses. Conf
 supporting remains the explicit saved decision. Unsaved-edit protection, source
 binding, monetary validation and the single final-review ledger remain in force.
 
-Final review omits optional Add a note and Decision history controls. An explanation
-field appears only for flagged allocations that require it; stored notes and the
-ledger audit history remain intact.
+Final review omits optional Add a note and Decision history controls. Comments are not required, including for flagged approvals.
+Flagged approvals still require evidence confirmation; stored notes and the ledger
+audit history remain intact.

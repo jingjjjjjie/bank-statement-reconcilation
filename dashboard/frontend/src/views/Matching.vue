@@ -24,7 +24,7 @@ usePage(root, initialize);
         <label class="sr-only" for="bank-filter">Decision</label><select id="bank-filter"><option value="all">All decisions</option><option value="pending">Pending</option><option value="approved">Approved</option><option value="denied">Rejected</option></select>
         <label class="sr-only" for="confidence-filter">Pairing confidence</label><select id="confidence-filter"><option value="all">All confidence levels</option><option value="high">High confidence</option><option value="low">Low confidence</option><option value="none">No match</option><option value="unresolved">Unresolved</option><option value="failed">Failed</option><option value="outdated">Outdated</option></select>
         <span id="queue-count" class="subtle" role="status"></span>
-        <div class="transaction-navigation"><button id="previous-transactions" type="button" aria-label="Previous transaction">&larr;</button><select id="bank-select" aria-label="Bank transaction"></select><button id="next-transactions" type="button" aria-label="Next transaction">&rarr;</button></div>
+        <div class="transaction-navigation"><button id="previous-transactions" type="button" aria-label="Previous ten transactions">&larr;</button><div id="transaction-pages" role="group" aria-label="Transaction pages"></div><button id="next-transactions" type="button" aria-label="Next ten transactions">&rarr;</button></div>
       </div>
     </section>
     <section id="matching-progress" class="matching-progress" hidden aria-label="Matching progress">
@@ -43,7 +43,7 @@ usePage(root, initialize);
           <div id="candidate-list"></div>
         </section>
         <div class="selection-summary" id="selection-summary" aria-live="polite"></div>
-        <div id="approval-explanation" class="review-note" hidden><label for="decision-note">Required explanation</label><textarea id="decision-note" rows="3" placeholder="Explain the difference or how you verified this evidence."></textarea><label id="acknowledge-label" class="check-label"><input id="acknowledge" type="checkbox"> I checked the original evidence, any differences, and that these are separate expenses.</label></div>
+        <div id="approval-explanation" class="review-note" hidden><label id="acknowledge-label" class="check-label"><input id="acknowledge" type="checkbox"> I checked the original evidence, any differences, and that these are separate expenses.</label></div>
       </div></div><div class="decision-footer"><div id="footer-summary" class="subtle"></div><div class="decision-actions"><button id="approve-match" class="button dark" type="button" disabled>Confirm supporting</button><button id="deny-match" class="button secondary" type="button" disabled>Reject suggestion</button><button id="undo-match" class="text-button" type="button" hidden>Undo decision</button><button id="next-review-transaction" class="button secondary" type="button" disabled>Next &rarr;</button></div><p id="save-status" class="subtle" role="status"></p></div></section>
       <section class="evidence-panel" aria-label="Original evidence">
         <div class="evidence-heading"><label class="sr-only" for="preview-source">Displayed evidence</label><select id="preview-source" aria-label="Displayed evidence"></select><span id="evidence-title" class="sr-only">Select a document</span><button id="preview-bank" class="button secondary" type="button">Bank statement</button></div>

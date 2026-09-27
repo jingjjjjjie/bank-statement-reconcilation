@@ -15,7 +15,7 @@
 .subtle{font-size:12px;color:var(--muted);line-height:1.5}
 .queue-controls{position:relative;display:flex;align-items:center;gap:10px;padding:10px 24px;background:white;border-bottom:1px solid var(--line);overflow-x:auto}
 .queue-controls>*{flex:none}.queue-controls input{width:210px}.queue-controls #queue-count{margin-left:auto;white-space:nowrap}
-.transaction-navigation{display:flex;align-items:center;gap:6px}.transaction-navigation>button{border:1px solid #dce3dd;border-radius:5px;width:28px;height:28px;background:white;color:#52665a;font-size:11px;padding:0}#bank-select{max-width:340px}
+.transaction-navigation{display:flex;align-items:center;gap:6px}.transaction-navigation>button{border:1px solid #dce3dd;border-radius:5px;width:28px;height:28px;background:white;color:#52665a;font-size:11px;padding:0}#transaction-pages{display:flex;gap:5px}.transaction-number{position:relative;min-width:30px;height:30px;padding:0 5px;border:1px solid #dce3dd;border-radius:5px;background:white;color:#52665a;font-size:12px}.transaction-number.finished{background:#e5f1e9;color:#245b40}.transaction-number[aria-current]{outline:2px solid #527c5f;outline-offset:1px}.completion-tick{font-size:9px;margin-left:2px}
 #matching-result-summary{font-size:11px;color:#6d7d72;margin:0;padding:7px 24px;border-bottom:1px solid var(--line)}#matching-result-summary:empty{display:none}
 .matching-error{padding:12px 24px;background:#fff0ed;color:#a43724;font-size:13px}.warning{font-size:12px;color:#946026;line-height:1.6;overflow-wrap:anywhere}#matching-outdated{margin:0;padding:8px 24px;background:#fff6e8}
 .matching-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);flex:1;min-height:0;background:white}

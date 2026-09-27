@@ -7,12 +7,12 @@ const { root, $, api, toast, pollVisible, showDevelopmentMode, navigate, routeQu
 let token;
 /* Present cached evidence; Python validates and persists every human decision. */
 let reviewData, activeId, saving = false, previewSerial = 0, previewState;
-let savedDraft = '', candidatePage = 0;
+let savedDraft = '', candidatePage = 0, transactionPage = 0;
 const expandedCandidates = new Set();
 const selected = new Map();
 function draftSnapshot() {
-  /* Track unsaved allocations and notes independently of display preferences. */
-  return JSON.stringify({allocations: [...selected], note: $('#decision-note').value});
+  /* Track unsaved allocations independently of display preferences. */
+  return JSON.stringify({allocations: [...selected]});
 }
 page.dirty(() => !!activeId && draftSnapshot() !== savedDraft);
 const itemById = new Map();
@@ -72,21 +72,25 @@ function visibleBanks() {
 }
 function renderQueue() {
   /* Navigate one bank transaction at a time; candidate navigation is independent. */
-  const rows = visibleBanks(), select = $('#bank-select'); select.replaceChildren();
-  for (const b of rows) {
-    const option = node('option', '', `${b.id} · ${b.parties.join(' / ')} · ${formatMoney(b.amount, b.currency)}`);
-    option.value = b.id; select.append(option);
-  }
+  const rows = visibleBanks(), pages = $('#transaction-pages'); pages.replaceChildren();
+  transactionPage = Math.min(transactionPage, Math.max(0, Math.ceil(rows.length / 10) - 1));
   const index = rows.findIndex(b => b.id === activeId);
-  if (index < 0) {
-    const option = node('option', '', activeId ? `${activeId} · Outside current filter` : 'Choose transaction');
-    option.value = activeId || ''; select.prepend(option);
+  for (const b of rows.slice(transactionPage * 10, transactionPage * 10 + 10)) {
+    const number = reviewData.banks.indexOf(b) + 1;
+    const finished = ['approved', 'denied'].includes(b.review_status);
+    const control = button(String(number), () => requestBank(b.id), `transaction-number ${finished ? 'finished' : ''}`);
+    control.dataset.bankId = b.id;
+    control.setAttribute('aria-label', `Transaction ${number}, ${b.review_status === 'denied' ? 'rejected' : b.review_status}`);
+    control.title = `${b.parties.join(' / ')} \u00b7 ${formatMoney(b.amount, b.currency)}`;
+    if (b.id === activeId) control.setAttribute('aria-current', 'page');
+    if (finished) { const tick = node('span', 'completion-tick', '\u2713'); tick.setAttribute('aria-hidden', 'true'); control.append(tick); }
+    control.disabled = saving;
+    pages.append(control);
   }
-  select.value = activeId || '';
-  $('#queue-count').textContent = index >= 0 ? `${index + 1} of ${rows.length} transactions` : `${rows.length} transactions`;
-  $('#previous-transactions').disabled = saving || index <= 0;
-  $('#next-transactions').disabled = saving || !rows.length || index === rows.length - 1;
-  $('#next-review-transaction').disabled = $('#next-transactions').disabled;
+  $('#queue-count').textContent = `${rows.length} transactions`;
+  $('#previous-transactions').disabled = saving || transactionPage === 0;
+  $('#next-transactions').disabled = saving || (transactionPage + 1) * 10 >= rows.length;
+  $('#next-review-transaction').disabled = saving || !rows.length || index === rows.length - 1;
 }
 function requestBank(id) {
   /* Protect edited allocations when navigating between transactions. */
@@ -104,7 +108,8 @@ function chooseBank(id, addItem) {
   if (addItem) selected.set(addItem, defaultAllocation(itemById.get(addItem)));
   $('#candidate-query').value = ''; $('#all-candidates').checked = false;
   $('#approval-explanation').hidden = true;
-  $('#decision-note').value = b.decision?.note || ''; $('#acknowledge').checked = false;
+  $('#acknowledge').checked = false;
+  transactionPage = Math.floor(Math.max(0, visibleBanks().findIndex(row => row.id === id)) / 10);
   $('#save-status').textContent = b.decision ? `Saved · ${new Date(b.decision.at).toLocaleString()}` : '';
   $('#review-editor').hidden = false; $('#undo-match').hidden = !b.decision;
   $('#deny-match').disabled = false;
@@ -234,7 +239,7 @@ async function saveDecision(action) {
   let persisted = false;
   root.querySelectorAll('.decision-actions button').forEach(b => b.disabled = true);
   try {
-    await api('/api/matching-decide', {bank_id:activeId,action,note:$('#decision-note').value.trim(),
+    await api('/api/matching-decide', {bank_id:activeId,action,note:bank().decision?.note || '',
       binding:reviewData.binding,version:reviewData.version,acknowledged:$('#acknowledge').checked,
       allocations:[...selected].map(([item_id, amount]) => ({item_id,amount}))});
     persisted = true;
@@ -343,15 +348,12 @@ async function initialize() {
     if (initial) chooseBank(initial.id);
   } catch (e) { error(e.message); }
 }
-$('#bank-query').oninput = () => { remember('query', $('#bank-query').value); renderQueue(); };
-$('#bank-filter').onchange = () => { remember('filter', $('#bank-filter').value); renderQueue(); };
-$('#confidence-filter').onchange = () => { remember('confidence', $('#confidence-filter').value); renderQueue(); };
-$('#bank-select').onchange = () => { requestBank($('#bank-select').value); renderQueue(); };
-$('#previous-transactions').onclick = () => {
-  const rows = visibleBanks(), index = rows.findIndex(b => b.id === activeId);
-  if (index > 0) requestBank(rows[index - 1].id);
-};
-$('#next-transactions').onclick = $('#next-review-transaction').onclick = () => {
+$('#bank-query').oninput = () => { remember('query', $('#bank-query').value); transactionPage = 0; renderQueue(); };
+$('#bank-filter').onchange = () => { remember('filter', $('#bank-filter').value); transactionPage = 0; renderQueue(); };
+$('#confidence-filter').onchange = () => { remember('confidence', $('#confidence-filter').value); transactionPage = 0; renderQueue(); };
+$('#previous-transactions').onclick = () => { transactionPage--; renderQueue(); };
+$('#next-transactions').onclick = () => { transactionPage++; renderQueue(); };
+$('#next-review-transaction').onclick = () => {
   const rows = visibleBanks(), index = rows.findIndex(b => b.id === activeId);
   if (rows[index + 1]) requestBank(rows[index + 1].id);
 };
@@ -362,7 +364,6 @@ $('#preview-source').onchange = () => {
   showEvidence(id === '__bank__' ? 'bank' : 'item', id === '__bank__' ? activeId : id);
 };
 $('#preview-zoom').onchange = applyZoom;
-$('#decision-note').oninput = updateSummary;
 $('#candidate-query').oninput = $('#all-candidates').onchange = () => { candidatePage = 0; renderCandidates(); };
 $('#restore-suggestion').onclick = () => { selected.clear(); bank().suggestion.allocations.forEach(a => selected.set(a.item_id, a.amount)); renderCandidates(); updateSummary(); };
 $('#approve-match').onclick = () => saveDecision('approve'); $('#deny-match').onclick = () => saveDecision('deny'); $('#undo-match').onclick = () => saveDecision('undo');
