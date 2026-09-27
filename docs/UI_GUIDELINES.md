@@ -42,3 +42,5 @@ Shared help control: `dashboard/frontend/src/components/PageHelp.vue`.
 - Accept and Discard switch directly between the two statuses; Undo is optional. Accepting a discarded document preserves its saved entries.
 
 - Extraction entries show Pay to, Pay from, Short description, Amount, a currency selector (MYR/USD/CNY, preserving other existing values), and Document no. Date remains in Details. Document total sums the displayed entries separately by currency and marks incomplete amounts.
+
+- Review results omits the document-summary/page list and per-page relevance prose. Keep pending/error/review warnings visible; source details remain in Details and the original page selector.

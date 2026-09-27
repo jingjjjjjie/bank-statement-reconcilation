@@ -162,3 +162,5 @@
 .editor-footer .button:disabled, #accept-receipts:disabled { background:#edf0ed; border:1px solid #dce3dd; color:#8b948e; opacity:1; cursor:default; box-shadow:none; }
 
 #document-total{font-size:12px;font-weight:600;margin-left:auto;overflow-wrap:anywhere}.entry-toolbar{flex-wrap:wrap}
+
+#receipt-unit-status:empty{display:none}

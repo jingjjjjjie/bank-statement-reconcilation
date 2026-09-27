@@ -7,11 +7,6 @@ let token;
 /* Keep receipt pieces separate until a reviewer explicitly allocates them. */
 let receiptData = null, receiptBusy = false;
 let regenerationJobs = {};
-const relevanceLabels = {potential_support:'Potential supporting document', not_supporting:'Clearly unrelated', uncertain:'Relevance uncertain'};
-if ($('#regeneration-status')) {
-  const evidence = node('div'); evidence.id = 'supporting-evidence';
-  $('#receipt-unit-status').after(evidence);
-}
 const emptyPiece = () => ({location:'', document_type:'', invoice_numbers:[], payee:'', payer:'', other_names:[], references:[], dates:[],
   date:'', document_number:'', amount_location:'', amount_basis:'', brief_description:'', total:'', currency:'', limitations:[]});
 
@@ -119,26 +114,19 @@ function showReceiptUnit() {
   $('#receipt-form').hidden = !unit && !$('#document-review-status'); $('#receipt-original').hidden = !unit;
   $('#add-receipt').disabled = !unit || !!unit.trash;
   renderRegeneration();
-  if ($('#supporting-evidence')) $('#supporting-evidence').replaceChildren(...(unit?.supporting_evidence || []).map(item =>
-    node('p', '', `${item.label}: ${relevanceLabels[item.status] || 'Relevance uncertain'}${item.reason ? ' — ' + item.reason : ''}`)));
   if (!unit) { if (hooks.clearOriginal) hooks.clearOriginal(); $('#receipt-unit-status').textContent = 'No extracted receipt units yet. Run documents, then load the results.'; return; }
   $('#receipt-original').href = `/api/content-file?id=${encodeURIComponent(unit.document_id)}`;
   if ($('#receipt-original').hasAttribute('download')) $('#receipt-original').download = unit.source_path.split(/[\\/]/).pop();
   const status = unit.accepted ? ($('#document-review-status') ? '' : 'Extraction accepted.') : unit.needs_refresh
     ? 'Older extraction has no separate receipt records. Re-extract or enter pieces after checking the original.'
     : '';
-  $('#receipt-unit-status').textContent = [unit.description, status].filter(Boolean).join(' · ');
-  if (unit.assembled) {
-    $('#receipt-unit-status').textContent += ' ' + unit.source_units.map(source => `${source.number}: ${source.label}`).join(' | ');
-    if (unit.assembly_pending) $('#receipt-unit-status').textContent = 'Waiting for document receipt assembly. Run documents to continue.';
-  }
+  $('#receipt-unit-status').textContent = unit.assembly_pending ? 'Waiting for document receipt assembly. Run documents to continue.' : status;
   if (unit.review_warnings?.length) $('#receipt-unit-status').textContent += ' ' + unit.review_warnings.join(' ');
   $('#receipt-form').querySelector('[type=submit]').disabled = !!unit.assembly_pending;
   $('#receipt-form').querySelector('[type=submit]').hidden = false;
   $('#add-receipt').hidden = false;
   if (unit.trash) {
     $('#receipt-unit-status').textContent = 'Trash — excluded from supporting evidence. Original file preserved.';
-    $('#supporting-evidence')?.replaceChildren();
   } else for (const piece of unit.receipts) addReceiptPiece(piece);
   renderRegeneration();
   if (hooks.showOriginal) hooks.showOriginal(unit).catch(receiptError);
