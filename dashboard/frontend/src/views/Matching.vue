@@ -34,6 +34,7 @@ usePage(root, initialize);
     </section>
     <p id="matching-outdated" class="warning" hidden>Saved proposals are outdated. Results remain visible; recheck current evidence or generate matches again.</p>
     <div id="matching-error" class="matching-error" role="alert" hidden></div>
+    <p id="filtered-empty" class="empty-state" role="status" hidden>No transactions match these filters.</p>
     <section class="matching-layout" id="bank-view">
       <section class="decision-panel" aria-label="Candidate review"><div class="decision-scroll"><div id="transaction-detail"></div><div id="review-editor" hidden>
         <section id="support-group" aria-labelledby="support-heading">

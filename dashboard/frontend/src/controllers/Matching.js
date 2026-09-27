@@ -82,8 +82,31 @@ function renderQueue() {
   $('#queue-count').textContent = `${rows.length} transactions`;
   $('#previous-transactions').disabled = saving || transactionPage === 0;
   $('#next-transactions').disabled = saving || (transactionPage + 1) * 10 >= rows.length;
-  $('#next-review-transaction').disabled = saving || !rows.length || index === rows.length - 1;
+  $('#next-review-transaction').disabled = saving || !rows.length || index < 0 || index === rows.length - 1;
 }
+function applyFilters(control, key) {
+  /* Keep the open payment inside the filtered queue without losing unsaved edits. */
+  if (control && (saving || (activeId && draftSnapshot() !== savedDraft &&
+      !window.confirm('Change filters and discard unsaved allocation changes?')))) {
+    control.value = preference(key, 'all');
+    return;
+  }
+  if (control) remember(key, control.value);
+  const rows = visibleBanks();
+  transactionPage = 0;
+  $('#filtered-empty').hidden = !!rows.length;
+  $('#bank-view').hidden = !rows.length;
+  if (!rows.length) {
+    activeId = null; selected.clear(); savedDraft = draftSnapshot();
+    previewSerial++; previewState = null;
+    $('#transaction-detail').replaceChildren();
+    $('#review-editor').hidden = true;
+    renderQueue();
+  } else {
+    chooseBank(rows.find(row => row.id === activeId)?.id || rows[0].id);
+  }
+}
+
 function requestBank(id) {
   /* Protect edited allocations when navigating between transactions. */
   if (saving || id === activeId) return;
@@ -323,7 +346,8 @@ function changeTab(documents) {
   /* Both views read the same ledger and remaining balances. */
   $('#matching-options').hidePopover();
   $('#transaction-toolbar').hidden = documents;
-  $('#bank-view').hidden = documents; $('#document-view').hidden = !documents;
+  $('#bank-view').hidden = documents || !visibleBanks().length; $('#document-view').hidden = !documents;
+  $('#filtered-empty').hidden = documents || !!visibleBanks().length;
   $('#bank-tab').classList.toggle('selected', !documents); $('#document-tab').classList.toggle('selected', documents);
   if (documents) renderUnmatched();
 }
@@ -359,12 +383,12 @@ async function initialize() {
   try {
     token = (await api('/api/session')).token; await refresh();
     const rows = visibleBanks(), remembered = preference('active', '');
-    const initial = rows.find(b => b.id === remembered) || rows[0] || reviewData.banks[0];
-    if (initial) chooseBank(initial.id);
+    const initial = rows.find(b => b.id === remembered) || rows[0];
+    if (initial) chooseBank(initial.id); else applyFilters();
   } catch (e) { error(e.message); }
 }
-$('#bank-filter').onchange = () => { remember('filter', $('#bank-filter').value); transactionPage = 0; renderQueue(); };
-$('#confidence-filter').onchange = () => { remember('confidence', $('#confidence-filter').value); transactionPage = 0; renderQueue(); };
+$('#bank-filter').onchange = event => applyFilters(event.target, 'filter');
+$('#confidence-filter').onchange = event => applyFilters(event.target, 'confidence');
 $('#previous-transactions').onclick = () => { transactionPage--; renderQueue(); };
 $('#next-transactions').onclick = () => { transactionPage++; renderQueue(); };
 $('#next-review-transaction').onclick = () => {

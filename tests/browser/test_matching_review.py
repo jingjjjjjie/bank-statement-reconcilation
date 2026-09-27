@@ -13,6 +13,45 @@ from tests.unit import test_matching_review as fixtures
 
 
 class MatchingReviewBrowserTests(unittest.TestCase):
+    def test_filters_change_open_payment_and_empty_state(self):
+        """Keep the displayed payment, queue and reload inside both filters."""
+        fixture = fixtures.MatchingReviewTests()
+        fixture.setUp()
+        self.addCleanup(fixture.doCleanups)
+        fixture.review.manifest = {}
+        fixture.review.workspace = lambda: {'name': 'Fixture', 'period': 'December'}
+        fixture.review.workflow_checks = lambda: (False, False, False)
+        server = TestServer(('127.0.0.1', 0), create_app(fixture.review, 'test-token', SimpleNamespace()))
+        threading.Thread(target=server.serve_forever, daemon=True).start()
+        self.addCleanup(server.server_close)
+        self.addCleanup(server.shutdown)
+        with sync_playwright() as playwright:
+            browser = playwright.chromium.launch(**browser_options())
+            page = browser.new_page()
+            base = f'http://127.0.0.1:{server.server_port}'
+            page.goto(base + '/matching')
+            expect(page.locator('.transaction-number[aria-current]')).to_be_visible(timeout=30000)
+            banks = page.request.get(base + '/api/matching').json()['banks']
+            for confidence in ['high', 'low', 'none', 'all']:
+                for decision in ['all', 'pending', 'approved', 'denied']:
+                    page.locator('#confidence-filter').select_option(confidence)
+                    page.locator('#bank-filter').select_option(decision)
+                    expected = [bank for bank in banks
+                                if (confidence == 'all' or (bank['confidence'].get('level') or 'none') == confidence)
+                                and (decision == 'all' or bank['review_status'] == decision)]
+                    expect(page.locator('#queue-count')).to_have_text(f'{len(expected)} transactions')
+                    if expected:
+                        current = page.locator('.transaction-number[aria-current]').get_attribute('data-bank-id')
+                        self.assertIn(current, [bank['id'] for bank in expected])
+                        expect(page.locator('#bank-view')).to_be_visible()
+                    else:
+                        expect(page.locator('#bank-view')).to_be_hidden()
+                        expect(page.locator('#filtered-empty')).to_be_visible()
+                        expect(page.locator('.transaction-title')).to_have_count(0)
+            page.reload()
+            expect(page.locator('#filtered-empty')).to_be_visible(timeout=30000)
+            browser.close()
+
     def test_compare_candidates_then_save_transaction(self):
         """Candidate paging and preview never change the bank or approve evidence."""
         fixture = fixtures.MatchingReviewTests()
