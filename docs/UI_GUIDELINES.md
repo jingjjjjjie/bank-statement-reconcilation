@@ -40,3 +40,5 @@ Shared help control: `dashboard/frontend/src/components/PageHelp.vue`.
 - Keep review action buttons visible and grey out unavailable actions. Footer buttons are compact, equal-width and right-aligned, including on narrow screens.
 
 - Accept and Discard switch directly between the two statuses; Undo is optional. Accepting a discarded document preserves its saved entries.
+
+- Extraction entries show Pay to, Pay from, Short description, Amount, a currency selector (MYR/USD/CNY, preserving other existing values), and Document no. Date remains in Details. Document total sums the displayed entries separately by currency and marks incomplete amounts.

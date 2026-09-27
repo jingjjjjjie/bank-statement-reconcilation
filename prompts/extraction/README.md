@@ -14,7 +14,7 @@ whole PDF; and multi-unit assembly). `../shared/styles.md` is prepended to every
 | `extraction.legacy.schema.json` | Validates stored records, including older extractions; not sent to the model. |
 | `samples/` | A synthetic payout sheet: the exact prompt sent and the model's real output. |
 
-Pieces carry type, payer, payee, other names, amount, amount location, currency, date, document number and
+Pieces carry type, payer, payee, other names, short description, amount, amount location, currency, date, document number and
 references; documents carry readable, description (at most 20 characters) and labelled totals. After each
 response Python rounds amounts to positive cents, turns a month into its last day, maps RM to MYR, fills an
 empty currency with MYR (flagged as the default) and skips zero amounts with a review warning.

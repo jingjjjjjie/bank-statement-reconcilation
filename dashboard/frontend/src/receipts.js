@@ -75,7 +75,12 @@ function selectReceiptUnit(key, force = true) {
 function receiptField(card, label, key, value, multiline=false) {
   /* Render an editable factual field without filling missing values. */
   const wrapper = node('label', 'setting-field', label);
-  const input = node(multiline ? 'textarea' : 'input');
+  const input = node(key === 'currency' ? 'select' : multiline ? 'textarea' : 'input');
+  if (key === 'currency') {
+    for (const code of [...new Set(['', 'MYR', 'USD', 'CNY', value || ''])]) {
+      const option = node('option', '', code || 'Unknown'); option.value = code; input.append(option);
+    }
+  }
   input.dataset.field = key; input.value = Array.isArray(value) ? value.join('\n') : value;
   wrapper.append(input); card.append(wrapper);
 }
@@ -89,8 +94,8 @@ function addReceiptPiece(piece=emptyPiece()) {
     receiptField(card, 'Source unit numbers (one per line; see page labels above)', 'source_units', piece.source_units || [], true);
   }
   card.append(node('legend', '', 'Separate receipt / supporting piece'));
-  receiptField(card, 'Payee', 'payee', piece.payee || '');
-  receiptField(card, 'Payer', 'payer', piece.payer || '');
+  receiptField(card, 'Pay to', 'payee', piece.payee || '');
+  receiptField(card, 'Pay from', 'payer', piece.payer || '');
   receiptField(card, 'Amount', 'total', piece.total);
   receiptField(card, piece.currency_default ? 'Currency (default)' : 'Currency', 'currency', piece.currency);
   receiptField(card, 'Date', 'date', piece.date || '');
@@ -100,8 +105,8 @@ function addReceiptPiece(piece=emptyPiece()) {
   receiptField(card, 'Other names (one per line)', 'other_names', piece.other_names || [], true);
   receiptField(card, 'References (type: value)', 'references', (piece.references || (piece.invoice_numbers || []).map(value => ({type:'invoice', value}))).map(r => `${r.type}: ${r.value}`), true);
   receiptField(card, 'Amount at', 'amount_location', piece.amount_location || piece.location || '');
-  // Older extractions keep their fields editable only where they hold something.
-  if (piece.brief_description) receiptField(card, 'Description (older extraction)', 'brief_description', piece.brief_description);
+  receiptField(card, 'Short description', 'brief_description', piece.brief_description || '');
+  // Older extractions keep their secondary fields editable where they hold something.
   if (piece.amount_basis) receiptField(card, 'Amount basis (older extraction)', 'amount_basis', piece.amount_basis);
   if (!piece.date && piece.dates?.length) receiptField(card, 'Dates (older extraction, type: value)', 'dates', piece.dates.map(r => `${r.type}: ${r.value}`), true);
   $('#receipt-pieces').append(card);

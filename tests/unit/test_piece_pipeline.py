@@ -21,7 +21,7 @@ def as_model(record):
     facts = pieces.canonical(record)
     return {'piece_type': 'Receipt or invoice', 'payer': facts['payer'], 'payee': facts['payee'], 'other_names': [],
             'amount': facts['amount'], 'amount_location': facts['amount_location'], 'currency': facts['currency'],
-            'date': facts['date'], 'document_number': facts['document_number'],
+            'date': facts['date'], 'document_number': facts['document_number'], 'description': facts['description'],
             'references': [r for r in facts['references'] if r['type'] in ('contract', 'project', 'bank_account', 'other')]}
 
 class PiecePipelineTests(unittest.TestCase):
@@ -164,7 +164,7 @@ class PiecePipelineTests(unittest.TestCase):
     def test_canonical_schema_and_legacy_adapter(self):
         """The model emits only document context and pieces, preserving typed facts."""
         base = {'piece_type': 'Receipt or invoice', 'payer': '', 'other_names': [], 'amount_location': 'image 1',
-                'date': '2025-11', 'references': []}
+                'date': '2025-11', 'references': [], 'description': 'Supplies'}
         result = {'readable': True, 'description': 'Two receipts', 'totals': [], 'pieces': [
             {**base, 'payee': 'Merchant', 'amount': '-45', 'currency': 'RM', 'document_number': '000123',
              'references': [{'type': 'other', 'value': 'REF-9'}]},

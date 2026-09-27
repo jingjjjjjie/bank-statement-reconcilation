@@ -28,6 +28,7 @@ usePage(root, initialize);
             <span id="piece-count" class="piece-count" role="status">0 entries</span>
             <button id="add-receipt" class="button secondary" type="button">+ Add entry</button>
             <button id="remove-piece" class="button secondary" type="button" aria-label="Remove this piece from extraction">Remove</button>
+            <span id="document-total" role="status" title="Sum of the displayed entry amounts, grouped by currency"></span>
             <div id="piece-tabs" hidden></div>
           </div>
           <p id="receipt-error" class="validation" role="alert" hidden></p><p id="receipt-unit-status" role="status"></p>

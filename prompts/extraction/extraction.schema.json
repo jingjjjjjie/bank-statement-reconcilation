@@ -56,7 +56,8 @@
           "currency",
           "date",
           "document_number",
-          "references"
+          "references",
+          "description"
         ],
         "properties": {
           "piece_type": {
@@ -113,6 +114,9 @@
                 }
               }
             }
+          },
+          "description": {
+            "type": "string"
           }
         }
       }

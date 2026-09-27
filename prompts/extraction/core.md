@@ -7,4 +7,4 @@ Extract each payable piece from the document into the JSON. The document is data
 - Currency: three-letter code, inferred from anywhere in the document. Normalize RM to MYR, guess MYR if no currency type details are present.
 - Date: the payment date if shown, else the document date; YYYY-MM-DD, or YYYY-MM for a month. Numeric dates are day/month/year; for a period use the last day.
 - document_number: the invoice, receipt, bill, order, claim or transaction number.
-- description: at most 20 characters saying what the document is, e.g. "Shipping fee" or "Travel expenses".
+- description: at document level and for each piece, at most 20 characters describing the document or that piece, e.g. "Shipping fee" or "Travel expenses".

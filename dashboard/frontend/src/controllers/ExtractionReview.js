@@ -78,6 +78,21 @@ mediaViewport.addEventListener('lostpointercapture', () => {
 mediaViewport.addEventListener('dblclick', resetMedia);
 page.observe(new ResizeObserver(layoutMedia), mediaViewport);
 
+function renderDocumentTotal() {
+  /* Sum editable entries in exact cents, keeping currencies and incomplete values separate. */
+  const totals = new Map(); let incomplete = false;
+  for (const card of $('#receipt-pieces').children) {
+    const value = card.querySelector('[data-field="total"]').value.trim().replaceAll(',', '');
+    const currency = card.querySelector('[data-field="currency"]').value || 'Unknown currency';
+    if (!/^\d+(\.\d{1,2})?$/.test(value)) { incomplete = true; continue; }
+    const [whole, fraction = ''] = value.split('.');
+    const cents = BigInt(whole) * 100n + BigInt(fraction.padEnd(2, '0'));
+    totals.set(currency, (totals.get(currency) || 0n) + cents);
+  }
+  const values = [...totals].map(([currency, cents]) => `${currency} ${cents / 100n}.${String(cents % 100n).padStart(2, '0')}`);
+  $('#document-total').textContent = `Document total: ${values.join(' / ') || 'Unavailable'}${incomplete ? ' (incomplete)' : ''}`;
+}
+
 function renderPieceNavigation() {
   /* Show every piece as one editable row; retain secondary fields in its disclosure. */
   const cards = [...$('#receipt-pieces').children];
@@ -85,6 +100,7 @@ function renderPieceNavigation() {
   else if (cards.length > previousPieceCount) activePiece = cards.length - 1;
   pieceDocument = selectedUnit; previousPieceCount = cards.length;
   activePiece = Math.max(0, Math.min(activePiece, cards.length - 1));
+  renderDocumentTotal();
   $('#piece-count').textContent = `${cards.length} ${cards.length === 1 ? 'entry' : 'entries'}`;
   $('#remove-piece').title = `Remove piece ${activePiece + 1} from extraction`;
   $('#piece-tabs').hidden = true;
@@ -98,7 +114,7 @@ function renderPieceNavigation() {
       select.type = 'button'; row.append(select);
       const details = node('details', 'piece-details'), detailFields = node('div', 'piece-detail-fields');
       details.append(node('summary', '', 'Details'));
-      for (const key of ['payee', 'payer', 'total', 'currency', 'date', 'document_number']) {
+      for (const key of ['payee', 'payer', 'brief_description', 'total', 'currency', 'document_number']) {
         const field = card.querySelector(`[data-field="${key}"]`);
         if (field) row.append(field.closest('label'));
       }
@@ -272,7 +288,7 @@ $('#remove-piece').onclick = () => {
   if (card) { extractionDirty = true; card.remove(); receipts.refreshReview(); }
 };
 page.observe(new MutationObserver(renderPieceNavigation), $('#receipt-pieces'), {childList:true});
-root.addEventListener('input', event => { if (event.target.closest('#receipt-pieces')) { extractionDirty = true; receipts.refreshReview(); } });
+root.addEventListener('input', event => { if (event.target.closest('#receipt-pieces')) { extractionDirty = true; renderDocumentTotal(); receipts.refreshReview(); } });
 root.addEventListener('click', event => { if (event.target.closest('#receipt-pieces button:not(.piece-number), #add-receipt')) { extractionDirty = true; receipts.refreshReview(); } });
 root.addEventListener('change', event => {
   if (event.target.id !== 'receipt-unit' || !extractionDirty) return;

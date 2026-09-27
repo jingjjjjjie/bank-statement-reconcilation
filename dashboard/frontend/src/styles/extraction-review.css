@@ -102,11 +102,11 @@
 #receipt-pieces fieldset{display:block;padding:12px;margin-bottom:10px;border:1px solid #e1e7e2;border-radius:8px;background:white}
 #receipt-pieces fieldset.active-piece{border-color:#6b9479;box-shadow:inset 3px 0 #365c43;background:#f8fbf8}
 .piece-row{display:grid;grid-template-columns:28px minmax(90px,1.3fr) minmax(90px,1fr) 96px 82px;gap:8px;align-items:end}
-/* Two lines: payee, payer, amount, currency; then date and document number. */
+/* Two lines: payee, payer, amount, currency; then short description and document number. */
 #receipt-pieces .piece-row .piece-number{grid-column:1;grid-row:1}
 #receipt-pieces .piece-row label:has([data-field=payee]){grid-column:2;grid-row:1}#receipt-pieces .piece-row label:has([data-field=payer]){grid-column:3;grid-row:1}
 #receipt-pieces .piece-row label:has([data-field=total]){grid-column:4;grid-row:1}#receipt-pieces .piece-row label:has([data-field=currency]){grid-column:5;grid-row:1}
-#receipt-pieces .piece-row label:has([data-field=date]){grid-column:2;grid-row:2}#receipt-pieces .piece-row label:has([data-field=document_number]){grid-column:3/-1;grid-row:2}
+#receipt-pieces .piece-row label:has([data-field=brief_description]){grid-column:2;grid-row:2}#receipt-pieces .piece-row label:has([data-field=document_number]){grid-column:3/-1;grid-row:2}
 .location-field{display:flex;gap:6px;align-items:center}.location-field input{flex:1;min-width:0}.location-field button{height:36px;padding:0 12px;font-size:12px;margin-top:5px}
 #receipt-pieces .piece-row label{grid-column:auto;font-size:11px}
 #receipt-pieces .piece-row :is(input,select){padding:8px;font-size:13px;min-width:0;width:100%;height:36px;margin-top:5px}
@@ -117,7 +117,7 @@
 .piece-detail-fields{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}.piece-details summary{grid-column:1/-1}
 #receipt-pieces .piece-details label{font-size:11px;grid-column:auto}
 .piece-warning{font-size:11px;color:#8b612c;margin:6px 0 0 36px;line-height:1.4}
-@media(max-width:1200px){.piece-row{grid-template-columns:24px minmax(0,1fr) 90px 78px}#receipt-pieces .piece-row label:has([data-field=payee]){grid-column:2;grid-row:1}#receipt-pieces .piece-row label:has([data-field=total]){grid-column:3;grid-row:1}#receipt-pieces .piece-row label:has([data-field=currency]){grid-column:4;grid-row:1}#receipt-pieces .piece-row label:has([data-field=payer]){grid-column:2/-1;grid-row:2}#receipt-pieces .piece-row label:has([data-field=date]){grid-column:2;grid-row:3}#receipt-pieces .piece-row label:has([data-field=document_number]){grid-column:3/-1;grid-row:3}.extraction-layout{grid-template-columns:minmax(0,40fr) minmax(0,60fr)}}
+@media(max-width:1200px){.piece-row{grid-template-columns:24px minmax(0,1fr) 90px 78px}#receipt-pieces .piece-row label:has([data-field=payee]){grid-column:2;grid-row:1}#receipt-pieces .piece-row label:has([data-field=total]){grid-column:3;grid-row:1}#receipt-pieces .piece-row label:has([data-field=currency]){grid-column:4;grid-row:1}#receipt-pieces .piece-row label:has([data-field=payer]){grid-column:2/-1;grid-row:2}#receipt-pieces .piece-row label:has([data-field=brief_description]){grid-column:2;grid-row:3}#receipt-pieces .piece-row label:has([data-field=document_number]){grid-column:3/-1;grid-row:3}.extraction-layout{grid-template-columns:minmax(0,40fr) minmax(0,60fr)}}
 @media(max-width:650px){#receipt-pieces{padding:8px}.piece-detail-fields{grid-template-columns:1fr}.piece-bar{gap:6px}}
 
 @media(max-width:650px){#receipt-form,#receipt-pieces{flex:none;min-height:auto}.editor-footer{position:static}#receipt-pieces{overflow:visible}}
@@ -160,3 +160,5 @@
 #document-review-status:is([data-state=edited],[data-state=pending]) { background:#fff1d6; color:#886018; }
 #document-review-status:is([data-state=trash],[data-state=failed]) { background:#eee6df; color:#86513d; }
 .editor-footer .button:disabled, #accept-receipts:disabled { background:#edf0ed; border:1px solid #dce3dd; color:#8b948e; opacity:1; cursor:default; box-shadow:none; }
+
+#document-total{font-size:12px;font-weight:600;margin-left:auto;overflow-wrap:anywhere}.entry-toolbar{flex-wrap:wrap}

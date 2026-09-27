@@ -31,7 +31,7 @@ class Reviewer:
             raise ValueError('Model request failed')
         piece = {'piece_type': 'Receipt or invoice', 'payer': '', 'payee': 'Supplier', 'other_names': [],
             'amount': '45.00', 'amount_location': 'page ' + str(self.pages), 'currency': 'RM', 'date': '',
-            'document_number': 'INV-001', 'references': []}
+            'document_number': 'INV-001', 'references': [], 'description': 'Supplies'}
         result = {'readable': True, 'description': 'Invoice', 'totals': [
             {'label': 'Invoice total', 'amount': '45.00', 'currency': 'RM', 'location': 'last page'}],
             'pieces': [piece]}
