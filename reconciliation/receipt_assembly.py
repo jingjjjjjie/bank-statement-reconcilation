@@ -26,13 +26,13 @@ def input_revision(document, state):
                                for n in range(len(document["units"]))]])
 
 
-def validate_assembly(value, count):
+def validate_assembly(value, count, *, source_units=None):
     """Reject omitted pages and references outside the original document."""
     validate(value, ASSEMBLY)
     # Codex structured output does not support uniqueItems; enforce it locally.
     if len(value["reviewed_units"]) != len(set(value["reviewed_units"])):
         raise ValueError("Receipt assembly repeats a reviewed source unit")
-    expected = set(range(1, count + 1))
+    expected = set(source_units) if source_units is not None else set(range(1, count + 1))
     if set(value["reviewed_units"]) != expected:
         raise ValueError("Receipt assembly did not review every source unit")
     for receipt in value["receipts"]:

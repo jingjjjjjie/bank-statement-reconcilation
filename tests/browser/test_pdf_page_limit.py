@@ -38,7 +38,7 @@ class PdfPageLimitBrowserTests(unittest.TestCase):
             page.on('pageerror', lambda error: errors.append(str(error)))
             base = f'http://127.0.0.1:{server.server_port}'
             page.goto(base + '/settings')
-            limit = page.get_by_label('Whole-document PDF page limit', exact=False)
+            limit = page.get_by_label('PDF pages per call', exact=False)
             expect(limit).to_have_value('5')
             expect(page.locator('#call-example')).to_contain_text('pause before request 1001')
             limit.fill('6')

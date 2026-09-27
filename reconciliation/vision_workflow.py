@@ -26,7 +26,7 @@ from reconciliation.comparison_policy import route as comparison_route
 from reconciliation.supporting_inventory import export as export_inventory
 from reconciliation.token_usage import summary as token_summary
 from reconciliation.receipt_assembly import ASSEMBLY, current_assembly, input_revision, validate_assembly
-from reconciliation.pdf_document import whole_request, save_result
+from reconciliation.pdf_document import whole_request, save_result, chunk_requests, save_chunk
 
 DEFAULT_WORK = WORKSPACE / "review"
 ACCEPTED_SUFFIXES = {".pdf", ".png", ".jpg", ".jpeg", ".tif", ".tiff", ".webp", ".bmp", ".xlsx", ".docx"}
@@ -333,6 +333,23 @@ def run(work, index, state, reviewer, *, extraction_only=False, regeneration=Non
                     dispatched.add(digest)
                     yield whole_job
                     continue
+                for numbers, prompt, images in chunk_requests(document, config, state, digest in regeneration):
+                    keys = {f'{digest}:{n - 1}' for n in numbers}
+                    if keys & dispatched:
+                        continue
+
+                    def chunk_job(digest=digest, numbers=numbers, prompt=prompt, images=images):
+                        """Extract one group while retaining original document-wide unit IDs."""
+                        if progress:
+                            progress(digest, 'running')
+                        if digest in regeneration:
+                            prompt += '\nRegeneration request: ' + regeneration[digest]
+                        value = ask(prompt, ASSEMBLY, images, stage='pdf_chunk',
+                                    verify=lambda result: validate_assembly(result, len(numbers), source_units=numbers))
+                        return numbers, digest, f'PDF units {numbers[0]}-{numbers[-1]}', value
+
+                    dispatched.update(keys)
+                    yield chunk_job
                 for number, unit in enumerate(document["units"]):
                     if unit.get("blocked"):
                         continue
@@ -371,6 +388,8 @@ def run(work, index, state, reviewer, *, extraction_only=False, regeneration=Non
             if key is None:
                 save_result(documents[digest], state, value)
                 whole_completed.add(digest)
+            elif isinstance(key, tuple):
+                save_chunk(documents[digest], state, value, key)
             else:
                 state["units"][key] = value
             checkpoint()

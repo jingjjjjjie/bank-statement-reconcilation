@@ -49,7 +49,7 @@ export const pageHelp = {
   ]],
   Settings: ['Review settings', [
     'Set document processing, models, reasoning effort and request limits, then Save settings. Saving does not start processing.',
-    'Whole-document PDF page limit defaults to 5. Short PDFs use one call; longer PDFs use page calls plus assembly. Applies to new PDFs or regeneration. Partial runs, testing modes and oversized requests keep the page route.',
+    'PDF pages per call defaults to 5. Short PDFs use one call; longer PDFs use groups up to that limit, then whole-document assembly. Saved pages are preserved on resume. Testing modes and oversized groups keep the page route.',
     'PDF vision reads every page. Testing modes require development mode and pictures. Changing processing modes requires refreshed inputs; previous results are archived.',
     'Turning pictures off leaves image-dependent documents unresolved. Turning Codex off stops new model requests; active calls may finish.',
     'The request limit is shared by extraction and receipt assembly, including failed attempts. Cache reads use no new requests. Run again to resume saved work with a fresh allowance.',

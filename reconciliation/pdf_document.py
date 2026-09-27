@@ -1,4 +1,4 @@
-"""Read small PDFs together while retaining the existing review and source-unit ledger."""
+"""Read bounded PDF groups while retaining the original source-unit ledger."""
 import json
 import re
 from pathlib import Path
@@ -20,16 +20,63 @@ def whole_request(document, config, state, regenerate=False):
         return None
     if not regenerate and any(f'{digest}:{n}' in state['units'] for n in range(len(units))):
         return None
+    return group_request(document, list(range(1, len(units) + 1)))
+
+
+def group_request(document, numbers, *, partial=False):
+    """Build a bounded request with original unit numbers and page labels."""
     payload, images = [], []
-    for number, unit in enumerate(units, 1):
+    for number in numbers:
+        unit = document['units'][number - 1]
         source = {'source_unit': number, 'location': unit['label'], 'text': unit['text'],
                   'limitation': unit.get('limitation', '')}
         if unit.get('image'):
             images.append(unit['image'])
             source['image_number'] = len(images)
         payload.append(source)
-    prompt = extraction_prompt() + '\n\n' + load_prompt('extraction/pdf_document') + '\n' + json.dumps(payload, ensure_ascii=False)
+    prompt = extraction_prompt() + '\n\n' + load_prompt('extraction/pdf_document')
+    if partial:
+        prompt += ('\nThese are only part of a longer PDF. Preserve the supplied original source_unit numbers '
+                   'and page labels; do not renumber them. Keep identifiable incomplete pieces with unknown '
+                   'amounts empty and flag continuation outside this group. Do not invent document totals. '
+                   'A later assembly will inspect all pages and reconcile fragments across groups.\n')
+    prompt += '\n' + json.dumps(payload, ensure_ascii=False)
     return (prompt, images) if len(images) <= 40 and len(prompt) <= 100000 else None
+
+
+def chunk_requests(document, config, state, regenerate=False):
+    """Group long PDFs by physical pages, preserving completed units on resume."""
+    if Path(document['paths'][0]).suffix.lower() != '.pdf' or config['pdf_mode'] in pdf_routing.MODES:
+        return
+    pages = [re.fullmatch(r'page (\d+)(?: / part \d+)?', unit['label']) for unit in document['units']]
+    if not all(pages):
+        return
+    page_ids = list(dict.fromkeys(int(page[1]) for page in pages))
+    limit = config['pdf_whole_document_max_pages']
+    if limit < 2 or len(page_ids) <= limit:
+        return
+    for start in range(0, len(page_ids), limit):
+        group = set(page_ids[start:start + limit])
+        numbers = [n for n, page in enumerate(pages, 1) if int(page[1]) in group
+                   and (regenerate or f"{document['id']}:{n - 1}" not in state['units'])]
+        if not numbers or any(document['units'][n - 1].get('blocked') for n in numbers):
+            continue
+        request = group_request(document, numbers, partial=True)
+        if request:
+            yield tuple(numbers), *request
+
+
+def save_chunk(document, state, result, numbers):
+    """Checkpoint all group units together; final document assembly remains pending."""
+    for number in numbers:
+        receipts = [{**canonical(piece), 'source_units': piece['source_units']}
+                    for piece in result['receipts'] if min(piece['source_units']) == number]
+        state['units'][f"{document['id']}:{number - 1}"] = legacy_result({
+            'readable': result.get('readable', True), 'pdf_chunk_units': list(numbers),
+            'description': result.get('description', result.get('summary', '')) if number == numbers[0] else '',
+            'totals': result.get('totals', []) if number == numbers[0] else [],
+            'review_warnings': result.get('review_warnings', []) if number == numbers[0] else [],
+            'pieces': receipts})
 
 
 def save_result(document, state, result):

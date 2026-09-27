@@ -2,7 +2,7 @@
 
 Date: 20 September 2026
 
-Whole-document PDF extraction is implemented with a configurable page limit, defaulting to 5. Longer PDFs retain page extraction plus assembly. The diagrams below describe the implemented flow.
+Updated 27 September 2026: PDF extraction uses a configurable page limit, defaulting to 5. Short PDFs use one call. Longer PDFs use groups of up to that many pages, followed by whole-document assembly. The diagrams below describe the implemented flow.
 
 ## 1. Current full flow
 
@@ -14,7 +14,7 @@ flowchart TD
     D --> W{"Eligible PDF within page limit?"}
     W -->|Yes| X["One LLM call: read all pages and extract payable pieces"]
     X --> H["Save extracted pieces"]
-    W -->|No| E["LLM: extract each unit into structured facts and payable pieces"]
+    W -->|No| E["LLM: extract PDF page groups, or individual units for other/fallback routes"]
     E --> F{"Document has multiple units?"}
     F -->|No| H["Save extracted pieces"]
     F -->|Yes| G["LLM: assemble pieces across units using results and source evidence"]
@@ -43,11 +43,12 @@ Accepting extraction means the document facts were reviewed. Approving a match i
 | Stage | Input | Output | When |
 | --- | --- | --- | --- |
 | Whole-PDF extraction | All PDF units and their prepared images/text | Document context, pieces and complete source coverage | Eligible new or regenerated PDFs up to the configured limit |
-| Per-unit extraction | Page/image evidence or prepared worksheet/text | Document context and payable pieces | Longer PDFs, fallback routes and other document units |
-| Receipt assembly | All unit results plus source evidence from the same document | Pieces with source-unit coverage | Multi-unit documents using per-unit extraction |
+| PDF group extraction | Up to the configured number of pages with original unit numbers | Provisional pieces with source-unit coverage | Longer PDFs |
+| Per-unit extraction | Page/image evidence or prepared worksheet/text | Document context and payable pieces | Fallback routes and other document units |
+| Receipt assembly | All unit/group results plus source evidence from the same document | Pieces with source-unit coverage | Multi-unit documents using grouped or per-unit extraction |
 | Matching | Bank transactions, shortlisted pieces and their complete parent-document evidence | Proposed allocations and reasons | When Generate matches runs |
 
-The default workflow model is `gpt-5.6-sol`, through `codex exec` using the existing ChatGPT subscription login. Model output is structured and validated. Images accompany vision requests.
+The default workflow model is `gpt-6-sol`, through `codex exec` using the existing ChatGPT subscription login. Model output is structured and validated. Images accompany vision requests.
 
 Python handles hashing, exact duplicates, file preparation, bank extraction, candidate retrieval, arithmetic, validation, identities, saved state and usage records. It does not grant human approval.
 
@@ -100,15 +101,15 @@ When extraction reads individual units, assembly determines how their results be
 
 Single-unit documents and eligible whole-document PDFs skip the separate assembly call. Assembly is an LLM judgment and can be wrong; Python validates coverage and source references, while human review resolves uncertain boundaries.
 
-The current assembly path leaves oversized requests unresolved when they exceed its image or prompt limit. Grouping long PDFs into intermediate multi-page batches remains future work.
+Final assembly receives all original pages and the grouped extraction results to reconcile continuations across group boundaries. Its image and prompt limits still apply; oversized final assemblies remain unresolved.
 
 ## 5. Configurable whole-document PDF extraction
 
-Settings > Documents > **Whole-document PDF page limit** controls `pdf_whole_document_max_pages`.
+Settings > Documents > **PDF pages per call** controls `pdf_whole_document_max_pages`.
 
 - Default: **5 pages**. Allowed values: **1-40**.
 - At or below the limit: one extraction call with all prepared page evidence and complete source coverage.
-- Above the limit: one call per prepared unit, then one assembly call.
+- Above the limit: consecutive page groups up to the limit, then one whole-document assembly call.
 - Set 1 to keep multi-page PDFs on the page-by-page route.
 - The count uses actual page labels, not the number of text chunks.
 - Experimental hybrid/compare modes remain page-based to preserve their individual-page audits.
@@ -120,16 +121,19 @@ Settings > Documents > **Whole-document PDF page limit** controls `pdf_whole_doc
 | One-page PDF | 1 | No |
 | Three-page PDF | 1 | No |
 | Five-page PDF | 1 | No |
-| Six-page PDF | 6 for ordinary one-unit pages | Yes |
+| Six-page PDF | 2 (5 + 1 pages) | Yes |
+| Thirteen-page PDF | 3 (5 + 5 + 3 pages) | Yes |
 | Six-page PDF with limit changed to 6 | 1 | No |
 
 ## 6. Resume, review and usage
 
-Changing the limit does not clear existing results or invalidate approvals. It applies to unread PDFs and explicit regeneration. Partially extracted PDFs finish their existing per-unit route, preserving successful calls. A threshold change during processing stops subsequent requests; run again to resume.
+Changing the limit does not clear existing results or invalidate approvals. It applies to unread PDFs and explicit regeneration. Long-PDF groups skip already saved units on resume; short PDFs with existing partial reads finish through the per-unit route. A threshold change during processing stops subsequent requests; run again to resume.
 
 Whole-document results use the existing document review record, including source units, without a second model call. Compatibility page records assign each piece to its first supporting unit and retain document context once, avoiding duplicate amounts in inventory exports. Review and matching use the complete document result.
 
 Successful whole-document results are checkpointed together. Invalid coverage or failed model calls publish no new partial document result; failures remain unresolved. Whole-document attempts use the `pdf_document` usage stage and the configured PDF model through the existing Codex runner, including cache and token accounting.
+
+Each successful long-PDF group checkpoints its units together and records `pdf_chunk` usage. Original source-unit IDs remain global across groups, even when several text parts belong to one page. Pieces retain their supporting unit IDs and are projected onto their first supporting unit only. A group is not a completed document: final assembly must finish before review can accept its pieces. Failed groups resume without repeating successful groups; regeneration intentionally rereads every group.
 
 Request-count and integration checks use simulated structured responses, with no live model calls. They verify orchestration, source coverage, resume, regeneration and nonduplication; they do not establish extraction accuracy on real customer PDFs. Token cost and accuracy still need real-data measurement.
 

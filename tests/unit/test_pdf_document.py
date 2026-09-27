@@ -11,7 +11,7 @@ from jsonschema import validate
 
 from reconciliation import pieces, vision_workflow as workflow
 from reconciliation.duplicate_workflow import organize
-from reconciliation.pdf_document import whole_request
+from reconciliation.pdf_document import whole_request, chunk_requests
 from reconciliation.receipt_assembly import current_assembly
 from reconciliation.review_settings import DEFAULTS
 
@@ -23,11 +23,12 @@ class Reviewer:
     def __init__(self, pages):
         """Describe one invoice spanning every supplied page."""
         self.pages, self.calls, self.invalid, self.fail = pages, [], False, False
+        self.fail_at, self.renumber = None, False
 
     def ask(self, prompt, schema, images=()):
         """Capture stage and evidence and simulate canonical model output."""
         self.calls.append({'stage': self.stage, 'prompt': prompt, 'images': list(images)})
-        if self.fail:
+        if self.fail or len(self.calls) == self.fail_at:
             raise ValueError('Model request failed')
         piece = {'piece_type': 'Receipt or invoice', 'payer': '', 'payee': 'Supplier', 'other_names': [],
             'amount': '45.00', 'amount_location': 'page ' + str(self.pages), 'currency': 'RM', 'date': '',
@@ -36,8 +37,13 @@ class Reviewer:
             {'label': 'Invoice total', 'amount': '45.00', 'currency': 'RM', 'location': 'last page'}],
             'pieces': [piece]}
         if schema == pieces.ASSEMBLY:
-            result['reviewed_units'] = list(range(1, self.pages + 1))
-            piece.update(source_units=list(range(1, self.pages + 1)))
+            payload = next(json.loads(line) for line in reversed(prompt.splitlines())
+                           if line.startswith('[{"source_unit":'))
+            numbers = [unit['source_unit'] for unit in payload]
+            if self.renumber:
+                numbers = list(range(1, len(numbers) + 1))
+            result['reviewed_units'] = numbers
+            piece.update(source_units=numbers)
             if self.invalid:
                 result['reviewed_units'].pop()
         validate(result, schema)
@@ -73,8 +79,8 @@ class PdfDocumentTests(unittest.TestCase):
                     validate(value, currency_schema)
 
     def test_threshold_and_override_count_calls(self):
-        """Five pages use one call, six use seven, and the configured limit changes routing."""
-        for pages, limit, expected in ((1, 5, 1), (5, 5, 1), (6, 5, 7), (6, 6, 1), (2, 1, 3)):
+        """Short PDFs use one call; longer PDFs use bounded groups plus final assembly."""
+        for pages, limit, expected in ((1, 5, 1), (5, 5, 1), (6, 5, 3), (6, 6, 1), (2, 1, 3)):
             with self.subTest(pages=pages, limit=limit):
                 work, index, state = self.prepare_pdf(pages, limit)
                 reviewer = Reviewer(pages)
@@ -161,3 +167,87 @@ class PdfDocumentTests(unittest.TestCase):
         request = whole_request(document, {**DEFAULTS, 'pdf_whole_document_max_pages': 2}, state)
         self.assertIsNotNone(request)
         self.assertIn('"source_unit": 3', request[0])
+
+    def test_thirteen_pages_use_three_groups_and_one_complete_assembly(self):
+        """Retain global page IDs and revisit all originals for cross-group continuations."""
+        work, index, state = self.prepare_pdf(13)
+        reviewer = Reviewer(13)
+        workflow.run(work, index, state, reviewer, extraction_only=True)
+        self.assertEqual([len(call['images']) for call in reviewer.calls], [5, 5, 3, 13])
+        self.assertEqual([call['stage'] for call in reviewer.calls], ['pdf_chunk'] * 3 + ['pdf'])
+        payloads = [json.loads(call['prompt'].splitlines()[-1]) for call in reviewer.calls]
+        self.assertEqual([[u['source_unit'] for u in payload] for payload in payloads[:3]],
+                         [list(range(1, 6)), list(range(6, 11)), list(range(11, 14))])
+        self.assertEqual(payloads[3][5]['extraction']['receipts'][0]['source_units'], list(range(6, 11)))
+        document = next(iter(index['documents'].values()))
+        assembly = current_assembly(document, state)
+        self.assertEqual(len(assembly['receipts']), 1)
+        self.assertEqual(assembly['receipts'][0]['source_units'], list(range(1, 14)))
+        self.assertEqual(len(state['units']), 13)
+        self.assertEqual(workflow.gate(index, state), [])
+        workflow.run(work, index, state, reviewer, extraction_only=True)
+        self.assertEqual(len(reviewer.calls), 4)
+        workflow.run(work, index, state, reviewer, extraction_only=True,
+                     regeneration={document['id']: 'fresh'}, queued_regenerations=lambda: {document['id']: 'fresh'})
+        self.assertEqual(len(reviewer.calls), 8)
+
+    def test_failed_group_resumes_without_repeating_saved_pages(self):
+        """Publish no partial group on failure and preserve the first successful group."""
+        work, index, state = self.prepare_pdf(13)
+        reviewer = Reviewer(13)
+        reviewer.fail_at = 2
+        with self.assertRaisesRegex(ValueError, 'Model request failed'):
+            workflow.run(work, index, state, reviewer, extraction_only=True)
+        self.assertEqual(len(state['units']), 5)
+        self.assertFalse(state.get('assemblies'))
+        saved = copy.deepcopy(state['units'])
+        index, state = workflow.load(work)
+        reviewer.fail_at = None
+        workflow.run(work, index, state, reviewer, extraction_only=True)
+        self.assertEqual([len(call['images']) for call in reviewer.calls], [5, 5, 5, 3, 13])
+        self.assertTrue(all(state['units'][key] == value for key, value in saved.items()))
+
+    def test_group_cannot_renumber_original_pages(self):
+        """Pages six through ten cannot be returned as pages one through five."""
+        work, index, state = self.prepare_pdf(6)
+        reviewer = Reviewer(6)
+        reviewer.renumber = True
+        with self.assertRaisesRegex(ValueError, 'did not review every source unit'):
+            workflow.run(work, index, state, reviewer, extraction_only=True)
+        self.assertEqual(len(state['units']), 5)
+        self.assertFalse(state.get('assemblies'))
+
+    def test_parallel_groups_finish_before_assembly_and_resume_assembly_failure(self):
+        """Parallel results retain page identity; a final failure retries only assembly."""
+        work, index, state = self.prepare_pdf(13)
+        reviewer = Reviewer(13)
+
+        def fork():
+            """Share captured calls but isolate the stage on each simulated worker."""
+            child = Reviewer(13)
+            child.calls = reviewer.calls
+            child.fail_at = 4
+            return child
+
+        reviewer.fork = fork
+        with self.assertRaisesRegex(ValueError, 'Model request failed'):
+            workflow.run(work, index, state, reviewer, extraction_only=True)
+        self.assertEqual(len(state['units']), 13)
+        self.assertFalse(state.get('assemblies'))
+        self.assertEqual(reviewer.calls[-1]['stage'], 'pdf')
+        del reviewer.fork
+        workflow.run(work, index, state, reviewer, extraction_only=True)
+        self.assertEqual(len(reviewer.calls), 5)
+        self.assertEqual(len(reviewer.calls[-1]['images']), 13)
+
+    def test_chunk_routing_respects_limits_and_saved_parts(self):
+        """Group physical pages without skipping size checks or overwriting partial reads."""
+        _, index, state = self.prepare_pdf(6)
+        document = next(iter(index['documents'].values()))
+        document['units'].insert(1, {**document['units'][0], 'label': 'page 1 / part 2', 'image': None})
+        state['units'][document['id'] + ':0'] = {'saved': True}
+        groups = list(chunk_requests(document, DEFAULTS, state))
+        self.assertEqual([group[0] for group in groups], [(2, 3, 4, 5, 6), (7,)])
+        self.assertEqual(list(chunk_requests(document, {**DEFAULTS, 'pdf_mode': 'compare'}, state)), [])
+        document['units'][1]['text'] = 'x' * 100001
+        self.assertEqual([group[0] for group in chunk_requests(document, DEFAULTS, state)], [(7,)])
