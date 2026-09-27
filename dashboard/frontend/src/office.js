@@ -1,7 +1,7 @@
 import { node } from './dom.js';
 
 /* Build safe visual Office previews from structured local document data. */
-export function renderOfficePreview(target, data) {
+export function renderOfficePreview(target, data, highlight = null) {
   target.replaceChildren();
   if (data.kind === 'word') {
     const page = node('div', 'word-page');
@@ -35,7 +35,15 @@ export function renderOfficePreview(target, data) {
   const scroll = node('div', 'sheet-scroll'), table = node('table', 'office-table sheet-table');
   for (let rowIndex = 0; rowIndex < data.rows.length; rowIndex++) {
     const tr = node('tr');
-    tr.append(node('th', 'row-number', String(data.start + rowIndex)));
+    const rowNumber = data.start + rowIndex;
+    tr.dataset.sourceRow = String(rowNumber);
+    const marker = node('th', 'row-number', String(rowNumber));
+    marker.scope = 'row';
+    if (highlight && rowNumber >= highlight.start && rowNumber <= highlight.end) {
+      tr.classList.add('source-highlight');
+      marker.setAttribute('aria-label', `Row ${rowNumber}, selected evidence`);
+    }
+    tr.append(marker);
     for (const cell of data.rows[rowIndex]) {
       const td = node('td', '', cell.text);
       if (cell.bold) td.style.fontWeight = '700';

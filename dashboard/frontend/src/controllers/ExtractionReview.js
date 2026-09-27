@@ -125,7 +125,8 @@ function renderPieceNavigation() {
       showPiece.onclick = () => {
         const location = card.querySelector('[data-field="amount_location"]')?.value;
         const source = card.querySelector('[data-field="source_units"]')?.value.trim().split(/\s+/)[0];
-        showLocation(originalInfo?.labels.length === 1 ? 'page 1' : location || (source ? `page ${source}` : ''));
+        showLocation(originalInfo?.kind === 'spreadsheet' && location ? location :
+          originalInfo?.labels.length === 1 ? 'page 1' : location || (source ? `page ${source}` : ''));
         $('#original-viewport').scrollIntoView({block:'nearest'});
       };
       const remove = node('button', 'remove-entry', 'Remove');
@@ -241,25 +242,32 @@ async function showOriginal(unit) {
 function showLocation(text) {
   /* Jump the preview to where an amount was read: "page 3", "Sheet1!H7" or "image 1". */
   if (!originalInfo) return;
+  for (const row of $('#original-preview').querySelectorAll('.source-highlight')) {
+    row.classList.remove('source-highlight'); row.querySelector('th')?.removeAttribute('aria-label');
+  }
   const labels = originalInfo.labels, value = (text || '').trim();
-  let page = -1;
-  const cell = /^(.+)!\$?[A-Z]+\$?(\d+)$/i.exec(value);
+  let page = -1, highlight = null;
+  const cell = /^(.+)!\$?[A-Z]+\$?(\d+)(?::\$?[A-Z]+\$?(\d+))?$/i.exec(value);
   const number = /(?:page|image)\s*(\d+)/i.exec(value);
   if (cell) {
     const row = Number(cell[2]);
+    const sheet = cell[1].replace(/^'(.*)'$/, '$1').replaceAll("''", "'");
+    const end = Number(cell[3] || cell[2]);
+    if (row < 1 || end < row) { $('#original-status').textContent = 'Invalid source row range'; return; }
+    highlight = {start:row, end};
     page = labels.findIndex(label => {
-      const range = new RegExp(`^${cell[1].replace(/[.*+?^${}()|[\]\\]/g, '\\$&')} · rows (\\d+)–(\\d+)$`).exec(label);
-      return range && row >= Number(range[1]) && row <= Number(range[2]);
+      const range = /^(.*) · rows (\d+)[–-](\d+)$/.exec(label);
+      return range && range[1].toLowerCase() === sheet.toLowerCase() && row >= Number(range[2]) && row <= Number(range[3]);
     });
   } else if (number) {
     page = Math.min(Number(number[1]) - 1, labels.length - 1);
   }
   if (page < 0) { $('#original-status').textContent = `Location not found: ${value || 'none recorded'}`; return; }
   $('#original-page').value = String(page);
-  renderOriginal().catch(receipts.error);
+  renderOriginal(highlight).catch(receipts.error);
 }
 
-async function renderOriginal() {
+async function renderOriginal(highlight = null) {
   /* Render Office structure, original images, or explicit fallback text safely. */
   if (!originalInfo || !originalUnit) return;
   const request = ++originalRequest, info = originalInfo, unit = originalUnit;
@@ -271,9 +279,16 @@ async function renderOriginal() {
   if (office && page < info.office_pages) {
     const data = await api(`/api/extraction-office?id=${encodeURIComponent(unit.document_id)}&page=${page}`);
     if (request !== originalRequest) return;
-    renderOfficePreview(target, data);
+    renderOfficePreview(target, data, highlight);
     layoutMedia();
     $('#original-status').textContent = 'Structured document preview. Open the original for exact print formatting.';
+    const sourceRow = target.querySelector('.source-highlight');
+    if (sourceRow) {
+      sourceRow.scrollIntoView({block:'center', inline:'nearest'});
+      const last = target.querySelectorAll('.source-highlight');
+      const end = last[last.length - 1].dataset.sourceRow;
+      $('#original-status').textContent = `${data.sheet} · ${end === String(highlight.start) ? `Row ${end}` : `Rows ${highlight.start}–${end}`} highlighted`;
+    }
   } else if (office || ['image', 'pdf'].includes(info.kind)) {
     const picture = node('img');
     picture.alt = `${unit.source_path.split(/[\\/]/).pop()}, ${info.labels[page]}`;

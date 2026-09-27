@@ -164,6 +164,8 @@
 #document-total{font-size:12px;font-weight:600;margin-left:auto;overflow-wrap:anywhere}.entry-toolbar{flex-wrap:wrap}
 
 #receipt-unit-status:empty{display:none}
+.extraction-original .sheet-table .source-highlight > :is(td,th){background:#fff0ae !important;border-top:2px solid #b98112;border-bottom:2px solid #b98112;color:#3e310a}
+.extraction-original .sheet-table .source-highlight > .row-number{background:#e9bf52 !important;font-weight:700;border-left:4px solid #956308}
 
 /* Compact chrome and readable entry cards keep attention on the extracted facts. */
 .review-header{height:50px;gap:14px;padding:0 18px}
