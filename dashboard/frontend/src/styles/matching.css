@@ -95,7 +95,7 @@
 #selected-candidates,#candidate-list{overflow-y:auto;min-height:0;overscroll-behavior:contain;scrollbar-gutter:stable}
 #candidate-list{flex:1}.selection-summary{flex:none;margin:8px 0 0;padding:8px;font-size:11px;line-height:1.5}
 @media(max-width:700px){.decision-panel{height:80dvh;min-height:560px}.decision-scroll{overflow:hidden;padding:10px 12px}.bank-amount{font-size:15px}}
-.payment-tag{display:inline-block;border-radius:4px;padding:2px 6px;font-size:10px;line-height:1.4;overflow-wrap:anywhere}.payment-date{background:#eaf2ff;color:#274f87}.payment-reference{max-width:100%;background:#f1eafa;color:#654182}.payment-tag.review-state{background:#fff2d5;color:#775315}.payment-tag.review-state.approved{background:#e4f3e9;color:#245b40}.payment-tag.review-state.denied{background:#fbe8e3;color:#a04631}
+.payment-tag{display:inline-block;border-radius:4px;padding:2px 6px;font-size:10px;line-height:1.4;overflow-wrap:anywhere}.payment-tag.review-state{background:#fff2d5;color:#775315}.payment-tag.review-state.approved{background:#e4f3e9;color:#245b40}.payment-tag.review-state.denied{background:#fbe8e3;color:#a04631}
 
 /* Show one identity and keep supporting explanations behind a single disclosure. */
 .candidate-meta{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin:0 0 6px}
