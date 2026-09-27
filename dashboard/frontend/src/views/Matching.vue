@@ -42,9 +42,8 @@ usePage(root, initialize);
           <div id="selected-candidates"></div>
         </section>
         <section id="support-group" class="candidate-tray" aria-labelledby="support-heading">
-          <div class="section-heading"><h2 id="support-heading">Available candidates</h2><button id="toggle-candidate-search" class="text-button" type="button" aria-expanded="false" aria-controls="candidate-search">Search</button><span id="support-status" class="sr-only" aria-live="polite"></span></div>
+          <div class="section-heading"><div class="candidate-heading"><h2 id="support-heading">Available candidates</h2><span id="candidate-count" class="subtle" role="status"></span></div><button id="toggle-candidate-search" class="text-button" type="button" aria-expanded="false" aria-controls="candidate-search">Search</button><span id="support-status" class="sr-only" aria-live="polite"></span></div>
           <div id="candidate-search" class="candidate-controls" hidden><label class="sr-only" for="candidate-query">Search all supporting pieces</label><input id="candidate-query" type="search" placeholder="Search all pieces"><button id="restore-suggestion" class="text-button" type="button">Reset to suggestion</button></div>
-          <div class="candidate-paging"><span id="candidate-count" class="subtle" role="status"></span></div>
           <div id="candidate-list" tabindex="0" role="region" aria-label="Supporting candidate results"></div>
         </section>
         <div class="selection-summary" id="selection-summary" aria-live="polite"></div>

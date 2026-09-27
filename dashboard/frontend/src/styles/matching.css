@@ -105,3 +105,5 @@
 .candidate-actions{align-items:flex-end;justify-content:space-between;margin-top:6px}
 .candidate-actions .allocation-label{margin:0;gap:3px;font-size:10px}
 .candidate-actions .allocation-label input{width:112px;padding:6px 8px}
+
+.candidate-heading{display:flex;align-items:baseline;gap:8px;min-width:0}.candidate-heading #candidate-count{font-size:10px;white-space:nowrap}
