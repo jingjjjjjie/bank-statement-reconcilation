@@ -44,8 +44,13 @@ export function renderOfficePreview(target, data, highlight = null) {
       marker.setAttribute('aria-label', `Row ${rowNumber}, selected evidence`);
     }
     tr.append(marker);
-    for (const cell of data.rows[rowIndex]) {
+    for (const [columnIndex, cell] of data.rows[rowIndex].entries()) {
       const td = node('td', '', cell.text);
+      if (highlight?.cells?.some(range => rowNumber >= range.start && rowNumber <= range.end &&
+          columnIndex + 1 >= range.left && columnIndex + 1 <= range.right)) {
+        td.classList.add('source-cell-highlight');
+        td.setAttribute('aria-label', `${cell.text}, selected evidence`);
+      }
       if (cell.bold) td.style.fontWeight = '700';
       if (cell.fill) td.style.backgroundColor = cell.fill;
       tr.append(td);

@@ -1,5 +1,6 @@
 import { node } from '../dom.js';
 import { renderOfficePreview } from '../office.js';
+import { evidenceLocation } from '../evidenceLocation.js';
 
 // Scope screen state and handlers to this cached Vue view.
 export default function initialize(page) {
@@ -128,7 +129,7 @@ function chooseBank(id, addItem, preservePreview = false) {
   $('#save-status').textContent = b.decision ? `Saved · ${new Date(b.decision.at).toLocaleString()}` : '';
   $('#review-editor').hidden = false; $('#undo-match').hidden = !b.decision;
   $('#deny-match').disabled = false;
-  $('#approve-match').textContent = b.review_status === 'approved' ? 'Save changes' : 'Confirm supporting';
+  $('#approve-match').textContent = b.review_status === 'approved' ? 'Save & next' : 'Confirm & next';
   const detail = $('#transaction-detail'); detail.replaceChildren();
   const header = node('div', 'transaction-header');
   const party = node('div', 'transaction-party');
@@ -241,7 +242,7 @@ function renderCandidates() {
       input.oninput = () => { selected.set(item.id, input.value.trim()); updateSummary(); };
       label.append(input); actions.append(label);
     }
-    actions.append(button('View evidence', () => showEvidence('item', item.id), 'candidate-preview'));
+    actions.append(button('Show', () => showEvidence('item', item.id), 'candidate-preview show-evidence'));
     const use = button('Use only this', () => {
       selected.clear(); selected.set(item.id, defaultAllocation(item));
       renderCandidates(); updateSummary(); showEvidence('item', item.id);
@@ -275,6 +276,8 @@ async function saveDecision(action) {
   /* Send explicit user intent, then reload the authoritative ledger and balances. */
   if (saving) return;
   saving = true; error(); $('#save-status').textContent = 'Saving your decision…';
+  const queue = visibleBanks(), position = queue.findIndex(row => row.id === activeId);
+  const nextId = action === 'approve' ? queue[position + 1]?.id : null;
   let persisted = false;
   root.querySelectorAll('.decision-actions button').forEach(b => b.disabled = true);
   try {
@@ -285,7 +288,7 @@ async function saveDecision(action) {
     reviewData.version = result.version; reviewData.binding = result.binding;
     Object.assign(bank(), result.bank);
     result.items.forEach(item => Object.assign(itemById.get(item.id), item));
-    saving = false; chooseBank(activeId, undefined, true);
+    saving = false; chooseBank(nextId || activeId, undefined, !nextId);
     renderBankPicker(); renderUnmatched();
     toast(action === 'undo' ? 'Decision undone. Amounts are available again.' : 'Decision saved.');
   } catch (e) { error(e.message); $('#save-status').textContent = persisted ? 'Decision saved, but refresh failed. Reload to see the latest state.' : 'Decision was not saved. Your draft is still here.'; }
@@ -313,10 +316,11 @@ async function showEvidence(kind, id) {
   $('#evidence-original').href = `/api/matching-file?${query}`; $('#evidence-original').hidden = false;
   try {
     const info = await api(`/api/matching-preview?${query}`); if (serial !== previewSerial) return;
-    previewState = {kind,id,info};
+    const location = kind === 'item' ? evidenceLocation(itemById.get(id), info) : {page: bank().page};
+    previewState = {kind,id,info,location};
     const select = $('#preview-page'); select.replaceChildren();
     info.labels.forEach((label, n) => { const option = node('option', '', label); option.value = n; select.append(option); });
-    const preferred = kind === 'bank' ? bank().page : Math.max(0, itemById.get(id).unit);
+    const preferred = location.page;
     select.value = String(Math.min(Math.max(0, info.pages - 1), preferred));
     await renderEvidencePage(serial);
   } catch (e) { if (serial === previewSerial) $('#evidence-content').replaceChildren(node('div', 'empty-state', e.message)); }
@@ -333,7 +337,8 @@ async function renderEvidencePage(serial = ++previewSerial) {
     else if (info.kind === 'unsupported') target.replaceChildren(node('div', 'empty-state', info.message));
     else if (['word', 'spreadsheet'].includes(info.kind) && n < info.office_pages) {
       const data = await api(`/api/matching-office?${query}`); if (serial !== previewSerial) return;
-      renderOfficePreview(target, data);
+      renderOfficePreview(target, data, n === previewState.location.page ? previewState.location.highlight : null);
+      target.querySelector('.source-cell-highlight')?.scrollIntoView({block:'center', inline:'center'});
     } else {
       const image = node('img'); image.alt = `${$('#evidence-title').textContent} · ${info.labels[n]}`;
       image.onload = () => { if (serial === previewSerial) target.replaceChildren(image); };

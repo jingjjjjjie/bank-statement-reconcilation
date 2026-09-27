@@ -109,3 +109,9 @@
 .candidate-actions .allocation-label input{width:112px;padding:6px 8px}
 
 .candidate-heading{display:flex;align-items:baseline;gap:8px;min-width:0}.candidate-heading #candidate-count{font-size:10px;white-space:nowrap}
+
+/* Jump to the cited original without selecting or approving the candidate. */
+.show-evidence{background:#2563eb;color:white;border-color:#2563eb;cursor:pointer}
+.show-evidence:hover{background:#1d4ed8;border-color:#1d4ed8}
+.show-evidence:focus-visible{outline:2px solid #2563eb;outline-offset:3px}
+#evidence-content .source-cell-highlight{background:#dbeafe!important;outline:2px solid #2563eb;outline-offset:-2px;color:#172554}

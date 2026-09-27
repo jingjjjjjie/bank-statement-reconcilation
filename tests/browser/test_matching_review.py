@@ -55,6 +55,47 @@ class MatchingReviewBrowserTests(unittest.TestCase):
             expect(page.locator('#filtered-empty')).to_be_visible(timeout=30000)
             browser.close()
 
+    def test_show_jumps_to_spreadsheet_cells_and_pdf_page(self):
+        """Cited cells select their sheet page; PDF citations select the original page."""
+        fixture = fixtures.MatchingReviewTests()
+        fixture.setUp()
+        self.addCleanup(fixture.doCleanups)
+        fixture.review.manifest = {}
+        fixture.review.workspace = lambda: {'name': 'Fixture', 'period': 'December'}
+        fixture.review.workflow_checks = lambda: (False, False, False)
+        server = TestServer(('127.0.0.1', 0), create_app(fixture.review, 'test-token', SimpleNamespace()))
+        threading.Thread(target=server.serve_forever, daemon=True).start()
+        self.addCleanup(server.server_close)
+        self.addCleanup(server.shutdown)
+        with sync_playwright() as playwright:
+            browser = playwright.chromium.launch(**browser_options())
+            page = browser.new_page()
+            data = matching_review.snapshot(fixture.review)
+            data['items'][0]['amount_location'] = 'Sheet1!B45:D45'
+            page.route('**/api/matching', lambda route: route.fulfill(json=data))
+            page.route('**/api/matching-preview?*', lambda route: route.fulfill(json={
+                'kind': 'spreadsheet', 'pages': 2, 'office_pages': 2,
+                'labels': ['Sheet1 \u00b7 rows 1\u201340', 'Sheet1 \u00b7 rows 41\u201380']}))
+            page.route('**/api/matching-office?*', lambda route: route.fulfill(json={
+                'kind': 'spreadsheet', 'sheet': 'Sheet1', 'start': 41,
+                'rows': [[{'text': str(c)} for c in range(5)] for _ in range(10)]}))
+            page.goto(f'http://127.0.0.1:{server.server_port}/matching')
+            card = page.locator('#selected-candidates .candidate-card').first
+            card.locator('summary').first.click()
+            card.get_by_role('button', name='Show', exact=True).click()
+            expect(page.locator('#preview-page')).to_have_value('1')
+            expect(page.locator('[data-source-row="45"] .source-cell-highlight')).to_have_count(3)
+            data['items'][0]['amount_location'] = 'page 3'
+            page.unroute('**/api/matching-preview?*')
+            page.route('**/api/matching-preview?*', lambda route: route.fulfill(json={
+                'kind': 'pdf', 'pages': 4, 'labels': ['Page 1', 'Page 2', 'Page 3', 'Page 4']}))
+            page.route('**/api/matching-image?*', lambda route: route.fulfill(status=404))
+            page.reload()
+            page.locator('#selected-candidates summary').first.click()
+            page.locator('#selected-candidates').get_by_role('button', name='Show', exact=True).click()
+            expect(page.locator('#preview-page')).to_have_value('2')
+            browser.close()
+
     def test_compare_candidates_then_save_transaction(self):
         """Candidate scrolling and preview never change the bank or approve evidence."""
         fixture = fixtures.MatchingReviewTests()
@@ -176,10 +217,10 @@ class MatchingReviewBrowserTests(unittest.TestCase):
             save_requests = []
             page.on('request', lambda request: save_requests.append(request.url))
             page.locator('#approve-match').click()
-            expect(page.locator('#save-status')).to_contain_text('Saved')
+            expect(page.locator('.transaction-number[aria-current]')).to_have_attribute('data-bank-id', 'B2')
             page.wait_for_load_state('networkidle')
-            self.assertEqual([url.split('/api/', 1)[1] for url in save_requests if '/api/' in url],
-                             ['matching-decide'])
+            self.assertNotIn(f'http://127.0.0.1:{server.server_port}/api/matching', save_requests)
+            page.locator('[data-bank-id="B1"]').click()
             expect(page.locator('#evidence-content')).to_contain_text('Original receipt 2')
             saved = matching_review.snapshot(fixture.review)['banks'][0]
             self.assertEqual(saved['decision']['allocations'][0]['item_id'], 'D2')
@@ -209,6 +250,8 @@ class MatchingReviewBrowserTests(unittest.TestCase):
                 card.locator('.candidate-summary').click()
                 card.get_by_role('textbox', name=f'Allocation {item}', exact=True).fill(value)
             page.locator('#approve-match').click()
+            expect(page.locator('.transaction-number[aria-current]')).to_have_attribute('data-bank-id', 'B2')
+            page.locator('[data-bank-id="B1"]').click()
             expect(page.locator('#save-status')).to_contain_text('Saved')
             page.locator('[data-bank-id="B3"]').click()
             expect(page.locator('#approve-match')).to_be_disabled()
@@ -218,6 +261,8 @@ class MatchingReviewBrowserTests(unittest.TestCase):
             expect(page.locator('.candidate-card')).to_have_count(1)
             page.get_by_role('checkbox', name='Select E1 receipt-2.txt', exact=True).click()
             page.locator('#approve-match').click()
+            expect(page.locator('.transaction-number[aria-current]')).to_have_attribute('data-bank-id', 'B4')
+            page.locator('[data-bank-id="B3"]').click()
             expect(page.locator('#save-status')).to_contain_text('Saved')
             self.assertEqual(matching_review.snapshot(fixture.review)['banks'][2]['support_status'], 'No supporting')
             page.locator('#undo-match').click()
