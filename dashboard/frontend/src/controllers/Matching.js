@@ -116,13 +116,20 @@ function chooseBank(id, addItem) {
   $('#approve-match').textContent = b.review_status === 'approved' ? 'Save changes' : 'Confirm supporting';
   const detail = $('#transaction-detail'); detail.replaceChildren();
   const header = node('div', 'transaction-header');
-  header.append(node('h2', 'transaction-title', b.parties.join(' / ') || 'Party unknown'), node('strong', 'bank-amount', formatMoney(b.amount, b.currency)));
+  const party = node('div', 'transaction-party');
+  party.append(node('span', 'transaction-direction', b.direction === 'in' ? 'Pay from' : 'Pay to'),
+    node('h2', 'transaction-title', b.parties.join(' / ') || 'Party unknown'));
+  header.append(party, node('strong', 'bank-amount', formatMoney(b.amount, b.currency)));
   const meta = node('div', 'bank-meta');
-  meta.append(node('span', '', `${b.id} · ${b.date} · ${b.direction === 'in' ? 'Incoming' : 'Outgoing'}`), node('span', `badge ${b.review_status}`, b.review_status === 'denied' ? 'Rejected' : b.review_status), node('span', `badge confidence-${b.confidence.level || 'none'}`, confidenceLabel[b.confidence.level || 'none']));
-  detail.append(header, meta);
+  meta.title = b.id;
+  const status = {pending: 'Awaiting review', approved: 'Approved', denied: 'Rejected'}[b.review_status] || b.review_status;
+  meta.append(node('span', '', b.date), node('span', `review-state ${b.review_status}`, status));
+  const narration = node('p', 'payment-description', b.description || 'Payment description unavailable');
+  narration.setAttribute('aria-label', 'Payment details');
+  detail.append(header, meta, narration);
   const reason = node('details', 'transaction-notes');
-  reason.append(node('summary', '', 'Payment details'), node('p', '', b.suggestion.reason),
-    node('div', 'narration', b.description), node('p', 'subtle', `Saved assessment: ${confidenceLabel[b.confidence.level || 'none']}`));
+  reason.append(node('summary', '', 'Why suggested'),
+    node('p', 'subtle', confidenceLabel[b.confidence.level || 'none']), node('p', '', b.suggestion.reason));
   detail.append(reason);
   if (b.suggestion.outdated) detail.append(node('p', 'warning', 'Saved proposal is outdated. Recheck current evidence or generate matches again.'));
   if (b.suggestion.failed) detail.append(node('p', 'warning', b.suggestion.reason));
@@ -183,6 +190,7 @@ function renderCandidates() {
     };
     const body = node('div', 'candidate-body');
     if (suggested.has(item.id)) body.append(node('span', 'badge', 'Model suggestion'));
+    body.append(node('p', 'candidate-parties', item.parties.join(' / ') || 'Party unknown'));
     body.append(node('p', 'candidate-description', item.description || 'Description unavailable'));
     const dates = item.dates?.length ? item.dates.map(d => typeof d === 'string' ? d : d.value).join(', ') : item.date || 'Date unknown';
     body.append(node('p', 'candidate-info', `${dates} · ${item.filename} · ${item.location || 'Location unknown'}`));

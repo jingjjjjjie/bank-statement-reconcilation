@@ -52,3 +52,11 @@
 .matching-progress[data-running="false"]{display:flex;align-items:center;flex-wrap:wrap;gap:8px 16px;padding:8px 16px;margin:0;border-radius:0}
 .matching-progress[data-running="false"] progress{display:none}
 .matching-progress[data-running="false"] .matching-progress-label{gap:16px}
+
+.transaction-direction{display:block;font-size:11px;color:#62756a;margin-bottom:3px}
+.transaction-party{min-width:0}.transaction-header .bank-amount{padding-top:16px}
+.bank-meta{justify-content:space-between;margin:6px 0 8px}.review-state{color:#52665a}.review-state.approved{color:#245b40}.review-state.denied{color:#a04631}
+.payment-description{font-size:12px;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere;margin:0 0 8px;color:#40594b}
+.transaction-notes{margin:0;font-size:12px}.transaction-notes summary{font-size:11px}
+.candidate-name{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.candidate-parties{font-size:12px;line-height:1.5;overflow-wrap:anywhere;margin:8px 0;font-weight:600}

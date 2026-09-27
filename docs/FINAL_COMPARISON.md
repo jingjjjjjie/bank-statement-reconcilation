@@ -150,3 +150,5 @@ binding, monetary validation and the single final-review ledger remain in force.
 Final review omits optional Add a note and Decision history controls. Comments are not required, including for flagged approvals.
 Flagged approvals still require evidence confirmation; stored notes and the ledger
 audit history remain intact.
+
+Final review shows bank payment narration immediately beneath Pay to/Pay from, amount, date and one review status. Why suggested discloses model confidence and reasoning separately from bank evidence. Candidate names use two compact lines; expansion shows every party. Warnings and explicit confirmation remain visible.
