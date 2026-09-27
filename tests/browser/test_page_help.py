@@ -6,9 +6,9 @@ from pathlib import Path
 
 from playwright.sync_api import expect, sync_playwright
 
-from dashboard.review import Review
 from dashboard.routes import create_app
-from reconciliation.duplicate_workflow import organize
+from dashboard.services.review import Review
+from reconciliation.intake.duplicates import organize
 from tests.browser import browser_options
 from tests.http_server import TestServer
 

@@ -2,14 +2,14 @@
 import tempfile
 import threading
 import unittest
-from tests.http_server import TestServer
-from tests.browser import browser_options
 from pathlib import Path
 
-from playwright.sync_api import sync_playwright, expect
+from playwright.sync_api import expect, sync_playwright
 
 from dashboard.app import Review, create_app
-from reconciliation.duplicate_workflow import organize
+from reconciliation.intake.duplicates import organize
+from tests.browser import browser_options
+from tests.http_server import TestServer
 
 
 class BankBrowserTests(unittest.TestCase):

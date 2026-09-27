@@ -1,15 +1,15 @@
 """Exercise source previews without depending on browser document plugins."""
-import tempfile
 import io
+import tempfile
 import unittest
 from pathlib import Path
-
-import pymupdf
-from PIL import Image
-from openpyxl import Workbook
 from zipfile import ZipFile
 
-from dashboard.extraction_preview import describe, image
+import pymupdf
+from openpyxl import Workbook
+from PIL import Image
+
+from dashboard.previews.extraction import describe, image
 
 
 class ExtractionPreviewTests(unittest.TestCase):

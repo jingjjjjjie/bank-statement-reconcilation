@@ -7,10 +7,10 @@ import unittest
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from types import SimpleNamespace
-from tests.helpers import mock_codex
 
-from reconciliation.codex_reviewer import BudgetReached, CodexReviewer, object_schema
-from reconciliation.token_usage import record, summary
+from reconciliation.model.codex import BudgetReached, CodexReviewer, object_schema
+from reconciliation.model.token_usage import record, summary
+from tests.helpers import mock_codex
 
 
 class TokenUsageTests(unittest.TestCase):

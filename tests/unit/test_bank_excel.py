@@ -7,7 +7,7 @@ from xml.etree import ElementTree as ET
 
 from openpyxl import load_workbook
 
-from reconciliation.bank_excel import STYLE_PATH, export
+from reconciliation.bank.excel import STYLE_PATH, export
 
 
 class BankExcelTests(unittest.TestCase):
@@ -26,7 +26,7 @@ class BankExcelTests(unittest.TestCase):
         data = {"account": "123", "currency": "MYR", "source": "statement.pdf",
                 "opening_balance": "100", "total_money_in": "0", "total_money_out": "20",
                 "transactions": [row]}
-        mock = patch("reconciliation.bank_excel.read_master", return_value=data)
+        mock = patch("reconciliation.bank.excel.read_master", return_value=data)
         mock.start()
         self.addCleanup(mock.stop)
 

@@ -1,12 +1,12 @@
 """Checks use temporary fixtures only, never customer documents."""
-import tempfile
-import unittest
 import errno
 import json
+import tempfile
+import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from reconciliation import duplicate_workflow as workflow
+from reconciliation.intake import duplicates as workflow
 
 
 class WorkflowTests(unittest.TestCase):
@@ -33,7 +33,7 @@ class WorkflowTests(unittest.TestCase):
         target = self.base / "copy.txt"
         expected = workflow.fingerprint(source)
         with patch.object(Path, "rename", side_effect=OSError(errno.EXDEV, "cross mount")), \
-                patch("reconciliation.duplicate_workflow.shutil.copyfileobj", side_effect=lambda _reader, writer, _size: writer.write(b"bad")):
+                patch("reconciliation.intake.duplicates.shutil.copyfileobj", side_effect=lambda _reader, writer, _size: writer.write(b"bad")):
             with self.assertRaisesRegex(ValueError, "changed during transfer"):
                 workflow.move_verified(source, target, expected)
         self.assertEqual(source.read_bytes(), b"original")
@@ -54,7 +54,7 @@ class WorkflowTests(unittest.TestCase):
                 raise PermissionError("fixture interruption")
             original(source, target, expected)
 
-        with patch("reconciliation.duplicate_workflow.move_verified", fail_second):
+        with patch("reconciliation.intake.duplicates.move_verified", fail_second):
             with self.assertRaises(PermissionError):
                 self.organize_pair()
         manifest = json.loads(self.manifest_path.read_text())

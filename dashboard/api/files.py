@@ -7,9 +7,10 @@ from urllib.parse import quote
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import Response
 
+from dashboard.previews import extraction as extraction_preview, office as office_preview
 from dashboard.routes import active_context
-from dashboard import content_review, extraction_preview, matching_review, office_preview
-from reconciliation.duplicate_workflow import fingerprint
+from dashboard.services import extraction_runs, final_review
+from reconciliation.intake.duplicates import fingerprint
 
 router = APIRouter(prefix="/api")
 
@@ -24,7 +25,7 @@ def matching_source(kind: str, id: str, request: Request):
     review = request.app.state.context.review
     if review is None:
         raise HTTPException(409, "Select a workspace before viewing evidence")
-    return matching_review.evidence(review, kind, id)
+    return final_review.evidence(review, kind, id)
 
 
 @router.get("/matching-preview")
@@ -48,7 +49,7 @@ def matching_office(page: int = Query(0, ge=0), path=Depends(matching_source)):
 @router.get("/matching-file")
 def matching_file(kind: str, id: str, state=Depends(active_context)):
     """Return original matching evidence with a conservative content type."""
-    path = matching_review.evidence(state.review, kind, id)
+    path = final_review.evidence(state.review, kind, id)
     safe = {".pdf", ".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp", ".txt", ".csv", ".xlsx", ".docx"}
     response = file_response(path, None if path.suffix.lower() in safe else "application/octet-stream")
     response.headers['Content-Disposition'] = "inline; filename*=UTF-8''" + quote(path.name, safe='')
@@ -60,7 +61,7 @@ def extraction_source(id: str, request: Request):
     review = request.app.state.context.review
     if review is None:
         raise HTTPException(409, "Select a workspace before viewing evidence")
-    return content_review.source(review, id)
+    return extraction_runs.source(review, id)
 
 
 @router.get("/extraction-preview")
@@ -89,7 +90,7 @@ def extraction_office(page: int = Query(0, ge=0), path=Depends(extraction_source
 @router.get("/content-file")
 def content_file(id: str, state=Depends(active_context)):
     """Return only an unchanged file named in the prepared review."""
-    return file_response(content_review.source(state.review, id))
+    return file_response(extraction_runs.source(state.review, id))
 
 
 @router.get("/bank-workbook")
@@ -102,7 +103,7 @@ def bank_workbook(state=Depends(active_context)):
 def document(id: str | None = None, content_id: str | None = None, state=Depends(active_context)):
     """Describe either an exact-copy source or prepared content source."""
     if content_id is not None:
-        return office_preview.describe(content_review.source(state.review, content_id))
+        return office_preview.describe(extraction_runs.source(state.review, content_id))
     if id is None:
         raise HTTPException(422, "A document ID is required")
     return state.review.document(id)
@@ -114,7 +115,7 @@ def office(id: str | None = None, content_id: str | None = None,
     """Render structured Office data from an authorized source."""
     if content_id is None and id is None:
         raise HTTPException(422, "A document ID is required")
-    path = content_review.source(state.review, content_id) if content_id else state.review.file_path(id)
+    path = extraction_runs.source(state.review, content_id) if content_id else state.review.file_path(id)
     return office_preview.page(path, page)
 
 

@@ -51,10 +51,10 @@ The local server defaults to loopback; Compose binds it to `0.0.0.0` inside the 
 - `regeneration.py`: durable per-document regeneration queue.
 - `matching_review.py`: frozen-snapshot checks, human allocations, confidence labels and CSV export.
 - `office_preview.py` and `document_status.py`: document previews and review status.
-- `../reconciliation/document_reader.py`: extraction entry point; `READERS` maps each file type to its PDF, image, Excel, Word, and embedded-image readers.
-- `../reconciliation/vision_workflow.py`: prepare, run, gate and report a review. `run` executes pluggable stages from `workflow_stages.py` (unit extraction, receipt assembly) and `legacy_comparison.py` on `job_runner.py`.
-- `../reconciliation/model_client.py`: the `ask(prompt, schema, images)` interface any model backend implements; `codex_reviewer.py` is the `codex exec` backend.
-- `../reconciliation/schemas.py` and `records.py`: model output schemas and the shapes of saved `index.json` / `state.json` records.
+- `../reconciliation/extraction/reader.py`: extraction entry point; `READERS` maps each file type to its PDF, image, Excel, Word, and embedded-image readers.
+- `../reconciliation/extraction/workflow.py`: prepare, run, gate and report a review. `run` executes pluggable stages from `reconciliation/extraction/stages.py` (unit extraction, receipt assembly) and `legacy_comparison.py` on `reconciliation/extraction/job_runner.py`.
+- `../reconciliation/model/client.py`: the `ask(prompt, schema, images)` interface any model backend implements; `reconciliation/model/codex.py` is the `codex exec` backend.
+- `../reconciliation/extraction/schemas.py` and `reconciliation/extraction/records.py`: model output schemas and the shapes of saved `index.json` / `state.json` records.
 
 Tests (from the repository root, using Python with the project dependencies installed):
 

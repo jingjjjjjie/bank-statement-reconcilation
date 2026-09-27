@@ -2,13 +2,13 @@
 import argparse
 import copy
 import csv
-from datetime import datetime
 import hashlib
 import json
-from pathlib import Path
 import time
+from datetime import datetime
+from pathlib import Path
 
-from reconciliation.token_usage import FIELDS, record
+from reconciliation.model.token_usage import FIELDS, record
 from scripts.benchmark_matching import number, save
 from scripts.test_statement_matching import match_all, report, verify_strong
 

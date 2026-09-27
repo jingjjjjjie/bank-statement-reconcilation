@@ -10,8 +10,7 @@ from pathlib import Path
 from time import monotonic, sleep
 from unittest.mock import patch
 
-from reconciliation.process_manager import ProcessManager, ProcessStopError, ReviewCancelled, spawn
-
+from reconciliation.model.processes import ProcessManager, ProcessStopError, ReviewCancelled, spawn
 
 CHILD = "import time; time.sleep(60)"
 TREE = """import pathlib, subprocess, sys, time
@@ -24,7 +23,7 @@ time.sleep(60)
 def alive(pid):
     """Check actual process exit using an OS handle or Linux process state."""
     if os.name == "nt":
-        from reconciliation.windows_process import api, close_handle, wait, W
+        from reconciliation.model.windows_process import W, api, close_handle, wait
         open_process = api("OpenProcess", W.HANDLE, W.DWORD, W.BOOL, W.DWORD)
         handle = open_process(0x100000, False, pid)
         if not handle:
@@ -127,7 +126,7 @@ class ProcessManagerTests(unittest.TestCase):
             release.wait(timeout=3)
             return process
 
-        with patch("reconciliation.process_manager.spawn", paused_spawn), ThreadPoolExecutor(2) as pool:
+        with patch("reconciliation.model.processes.spawn", paused_spawn), ThreadPoolExecutor(2) as pool:
             future = pool.submit(self.manager.run, [sys.executable, "-c", CHILD], audit=audit)
             self.assertTrue(launched.wait(timeout=3))
             stop = pool.submit(self.manager.cancel)
@@ -153,7 +152,7 @@ class ProcessManagerTests(unittest.TestCase):
                 raise PermissionError("fixture denial")
 
         audit = {}
-        with patch("reconciliation.process_manager.spawn", return_value=RefusesToStop()):
+        with patch("reconciliation.model.processes.spawn", return_value=RefusesToStop()):
             with self.assertRaises(ProcessStopError):
                 self.manager.run(["fixture"], timeout=0, audit=audit)
         self.assertEqual(self.manager.active_count, 1)

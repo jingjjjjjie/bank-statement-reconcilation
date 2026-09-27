@@ -2,12 +2,12 @@
 import json
 import tempfile
 import unittest
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from unittest.mock import patch
-from concurrent.futures import ThreadPoolExecutor
 
-from reconciliation.token_usage import record
-from reconciliation.workspace_usage import workspace_summary
+from reconciliation.model.token_usage import record
+from reconciliation.model.workspace_usage import workspace_summary
 
 
 class WorkspaceUsageTests(unittest.TestCase):
@@ -44,7 +44,7 @@ class WorkspaceUsageTests(unittest.TestCase):
                 record(root / str(number) / 'token-usage.jsonl', {
                     'id': str(number), 'status': 'finished', 'stage': 'pdf',
                     'usage': dict(input_tokens=10, cached_input_tokens=0, output_tokens=2, reasoning_output_tokens=0)})
-            with patch('reconciliation.workspace_usage.WORKSPACE', root):
+            with patch('reconciliation.model.workspace_usage.WORKSPACE', root):
                 with ThreadPoolExecutor(max_workers=4) as pool:
                     list(pool.map(write, range(12)))
             result = workspace_summary(root)

@@ -12,17 +12,17 @@ from zipfile import ZipFile
 import pymupdf
 from openpyxl import Workbook
 
-import reconciliation.vision_workflow as workflow
-from reconciliation.codex_reviewer import CACHE_PROFILE, BudgetReached, CodexReviewer
-from reconciliation.prompts import load_prompt
-from reconciliation.review_settings import DEFAULTS, STAGES
-from reconciliation.schemas import EXTRACTION
+import reconciliation.extraction.workflow as workflow
+from reconciliation.core.prompts import load_prompt
+from reconciliation.core.settings import DEFAULTS, STAGES
+from reconciliation.extraction.schemas import EXTRACTION
+from reconciliation.model.codex import CACHE_PROFILE, BudgetReached, CodexReviewer
 from tests.helpers import FakeReviewer, ReviewFixture
 
 
 def is_extraction(schema):
     """True for the stored or the model-facing extraction schema."""
-    from reconciliation.pieces import EXTRACTION as MODEL_EXTRACTION
+    from reconciliation.extraction.pieces import EXTRACTION as MODEL_EXTRACTION
     return schema in (EXTRACTION, MODEL_EXTRACTION)
 
 
@@ -43,7 +43,7 @@ class WorkflowTests(ReviewFixture, unittest.TestCase):
                 raise PermissionError("file is in use")
             return original(source, target)
 
-        with patch.object(Path, "replace", briefly_locked), patch("reconciliation.vision_workflow.sleep"):
+        with patch.object(Path, "replace", briefly_locked), patch("reconciliation.extraction.workflow.sleep"):
             workflow.save(path, {"units": 1})
         self.assertEqual(workflow.read(path), {"units": 1})
         self.assertEqual(attempts[0], 2)
@@ -146,7 +146,7 @@ class WorkflowTests(ReviewFixture, unittest.TestCase):
                     barrier.wait(timeout=5)
                 return super().ask(prompt, schema, images)
 
-        with patch("reconciliation.vision_workflow.active_config", return_value={**DEFAULTS, "max_parallel": 2}):
+        with patch("reconciliation.extraction.workflow.active_config", return_value={**DEFAULTS, "max_parallel": 2}):
             workflow.run(self.work, index, state, ParallelReviewer())
         self.assertEqual(len(workflow.load(self.work)[1]["units"]), 2)
 
@@ -198,13 +198,13 @@ class WorkflowTests(ReviewFixture, unittest.TestCase):
                 calls.append((self.model, self.reasoning, bool(images)))
                 return super().ask(prompt, schema, images)
 
-        with patch("reconciliation.vision_workflow.active_config", return_value=config):
+        with patch("reconciliation.extraction.workflow.active_config", return_value=config):
             workflow.run(self.work, index, state, RecordingReviewer())
             self.assertEqual({model for model, _, _ in calls}, {"images", "pdf", "excel", "word"})
             self.assertTrue(all(reasoning == "high" for _, reasoning, _ in calls))
             self.assertTrue(all(has_images for model, _, has_images in calls if model == "images"))
             changed = {**config, "stages": {**choices, "pdf": {"model": "different", "reasoning": "low"}}}
-            with patch("reconciliation.vision_workflow.active_config", return_value=changed):
+            with patch("reconciliation.extraction.workflow.active_config", return_value=changed):
                 with self.assertRaisesRegex(workflow.ReviewPending, "Model or reasoning changed"):
                     workflow.run(self.work, index, state, RecordingReviewer())
 

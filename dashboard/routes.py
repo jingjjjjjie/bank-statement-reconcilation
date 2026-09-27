@@ -4,13 +4,13 @@ import hashlib
 import os
 import secrets
 from pathlib import Path
-from jsonschema.exceptions import ValidationError as SchemaValidationError
 
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, JSONResponse, Response
+from jsonschema.exceptions import ValidationError as SchemaValidationError
 
-from reconciliation.source_selection import SourceSelection
+from reconciliation.intake.workspace import SourceSelection
 
 FRONTEND = Path(os.environ.get("DASHBOARD_FRONTEND", Path(__file__).parent / "frontend/dist"))
 PAGES = {"", "source", "review", "exact-report", "content-review", "documents", "bank",

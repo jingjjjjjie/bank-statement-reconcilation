@@ -1,21 +1,21 @@
 """Compare fresh native-text and vision calls without changing customer review state."""
 import argparse
+import hashlib
 import json
 import time
-import hashlib
 from collections import Counter
 from pathlib import Path
 from unittest.mock import patch
 
 import pymupdf
 
-from reconciliation.codex_reviewer import CodexReviewer
-from reconciliation.development_cache import write_json
-from reconciliation.document_reader import extract
-from reconciliation.duplicate_workflow import fingerprint
-from reconciliation.pdf_routing import extract_unit, inspect_page
-from reconciliation.review_settings import DEFAULTS
-from reconciliation.token_usage import summary
+from reconciliation.core.development_cache import write_json
+from reconciliation.core.settings import DEFAULTS
+from reconciliation.extraction.pdf_routing import extract_unit, inspect_page
+from reconciliation.extraction.reader import extract
+from reconciliation.intake.duplicates import fingerprint
+from reconciliation.model.codex import CodexReviewer
+from reconciliation.model.token_usage import summary
 
 
 def main():
@@ -53,8 +53,8 @@ def main():
         'scope': 'Page extraction only. No assembly, matching, acceptance or source modifications.'})
     engine = CodexReviewer(args.output, model='gpt-5.6-sol', max_calls=2 * len(selected), timeout=240)
     rows = []
-    with patch('reconciliation.development_cache.root_for', return_value=None), \
-         patch('reconciliation.pdf_routing.mode', return_value={'enabled': True}):
+    with patch('reconciliation.core.development_cache.root_for', return_value=None), \
+         patch('reconciliation.extraction.pdf_routing.mode', return_value={'enabled': True}):
         for i, (path, number, digest) in enumerate(selected):
             start = time.perf_counter()
             # Extract the original PDF normally; choose precisely the sampled page.

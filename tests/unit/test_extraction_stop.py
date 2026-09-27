@@ -14,9 +14,9 @@ from unittest.mock import patch
 from fastapi import Depends
 
 from dashboard.routes import context, create_app
-from reconciliation.codex_reviewer import CodexReviewer, object_schema
-from reconciliation.process_manager import ReviewCancelled
-from reconciliation.vision_workflow import run_jobs
+from reconciliation.extraction.workflow import run_jobs
+from reconciliation.model.codex import CodexReviewer, object_schema
+from reconciliation.model.processes import ReviewCancelled
 from tests.http_server import TestServer
 
 
@@ -94,7 +94,7 @@ class ExtractionStopTests(unittest.TestCase):
                 return SimpleNamespace(returncode=0)
 
             with patch.object(reviewer.processes, "run", completed), \
-                    patch("reconciliation.codex_reviewer.validate", side_effect=lambda *args: reviewer.cancel()):
+                    patch("reconciliation.model.codex.validate", side_effect=lambda *args: reviewer.cancel()):
                 with self.assertRaises(ReviewCancelled):
                     reviewer.ask("test", object_schema({"ok": {"type": "boolean"}}))
             self.assertFalse(list(reviewer.cache.glob("*/result.json")))

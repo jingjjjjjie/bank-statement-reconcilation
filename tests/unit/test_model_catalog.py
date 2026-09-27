@@ -6,8 +6,8 @@ from unittest.mock import patch
 
 from PIL import Image
 
-from reconciliation.document_reader import extract
-from reconciliation.review_settings import DEFAULT_MODEL, DEFAULTS, load_config, revision, save_config, validate
+from reconciliation.core.settings import DEFAULT_MODEL, DEFAULTS, load_config, revision, save_config, validate
+from reconciliation.extraction.reader import extract
 
 
 class ModelCatalogTests(unittest.TestCase):
@@ -30,7 +30,7 @@ class ModelCatalogTests(unittest.TestCase):
 
     def test_missing_catalog_rejects_unverified_overrides(self):
         """The fallback permits neither invented models nor reasoning overrides."""
-        with patch("reconciliation.review_settings.model_catalog", return_value=[]):
+        with patch("reconciliation.core.settings.model_catalog", return_value=[]):
             for choice in ({"model": "unknown"}, {"reasoning": "high"},
                            {"stages": {"images": {"model": "unknown", "reasoning": "default"}}}):
                 with self.subTest(choice=choice), self.assertRaises(ValueError):
@@ -39,7 +39,7 @@ class ModelCatalogTests(unittest.TestCase):
     def test_available_catalog_remains_authoritative(self):
         """Known capability restrictions also apply to the project default."""
         models = [{"id": DEFAULT_MODEL, "reasoning": ["low"], "vision": False}]
-        with patch("reconciliation.review_settings.model_catalog", return_value=models):
+        with patch("reconciliation.core.settings.model_catalog", return_value=models):
             with self.assertRaisesRegex(ValueError, "pictures"):
                 validate(dict(DEFAULTS))
             with self.assertRaisesRegex(ValueError, "reasoning"):

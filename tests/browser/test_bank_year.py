@@ -1,7 +1,9 @@
 """Check statement year validation before sending extraction requests."""
 import threading
 import unittest
-from playwright.sync_api import sync_playwright, expect
+
+from playwright.sync_api import expect, sync_playwright
+
 from dashboard.routes import create_app
 from tests.browser import browser_options
 from tests.http_server import TestServer

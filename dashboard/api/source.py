@@ -7,10 +7,10 @@ from fastapi import APIRouter, Depends
 from fastapi.responses import Response
 from pydantic import BaseModel, Field, StrictInt
 
-from dashboard.routes import context, active_context
-from dashboard.review import Review
-from dashboard import content_review
-from reconciliation import development_cache
+from dashboard.routes import active_context, context
+from dashboard.services import extraction_runs
+from dashboard.services.review import Review
+from reconciliation.core import development_cache
 
 router = APIRouter(prefix="/api")
 
@@ -67,7 +67,7 @@ def select_workspace(body: PathChoice, state=Depends(context)):
 def start(body: StartChoice, state=Depends(context)):
     """Resume the same review; invalidate cached views only for a different project."""
     same_source = state.review and state.sources.selected() == state.review.root
-    if state.review and not same_source and content_review.execution_status(state.review)["running"]:
+    if state.review and not same_source and extraction_runs.execution_status(state.review)["running"]:
         raise ValueError("Stop document processing before changing workspaces")
     manifest, data = state.sources.start(body.preview)
     if state.review and state.review.manifest_path.resolve() == manifest.resolve():
@@ -103,7 +103,7 @@ def export_defaults(state=Depends(active_context)):
 @router.post("/bank-export")
 def export_bank(body: ExportChoice, state=Depends(active_context)):
     """Generate the bank-only workbook without changing the master."""
-    from reconciliation.bank_excel import export
+    from reconciliation.bank.excel import export
     with tempfile.TemporaryDirectory() as temporary:
         output = export(state.review.manifest_path.parent / "bank-output/master_statement.csv",
                         body.company, Path(temporary) / "answer_statement_bank_only.xlsx")

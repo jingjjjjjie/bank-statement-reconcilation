@@ -6,9 +6,9 @@ from unittest.mock import patch
 
 from playwright.sync_api import expect, sync_playwright
 
-from dashboard import content_review, regeneration
 from dashboard.routes import create_app
-from reconciliation.vision_workflow import load, run
+from dashboard.services import extraction_runs, regeneration
+from reconciliation.extraction.workflow import load, run
 from tests.browser import browser_options
 from tests.http_server import TestServer
 from tests.unit import test_content_review as fixtures
@@ -20,7 +20,7 @@ class RegenerationBrowserTests(unittest.TestCase):
         fixture = fixtures.ContentPageTests()
         fixture.setUp()
         self.addCleanup(fixture.doCleanups)
-        content_review.prepare(fixture.review)
+        extraction_runs.prepare(fixture.review)
         work = fixture.manifest.parent / "review"
         index, state = load(work)
         run(work, index, state, fixtures.FixtureReviewer())
@@ -39,7 +39,7 @@ class RegenerationBrowserTests(unittest.TestCase):
         threading.Thread(target=server.serve_forever, daemon=True).start()
         self.addCleanup(server.server_close)
         self.addCleanup(server.shutdown)
-        with patch("dashboard.content_review.CodexReviewer", side_effect=lambda *args, **kwargs: Reviewer()), sync_playwright() as playwright:
+        with patch("dashboard.services.extraction_runs.CodexReviewer", side_effect=lambda *args, **kwargs: Reviewer()), sync_playwright() as playwright:
             browser = playwright.chromium.launch(**browser_options())
             try:
                 page = browser.new_page(viewport={"width": 1440, "height": 900})

@@ -1,16 +1,17 @@
 """Browser smoke test for settings and keep/undo using temporary fixtures."""
 import tempfile
 import threading
-from tests.http_server import TestServer
 from pathlib import Path
 from unittest.mock import patch
 
 from PIL import Image, ImageDraw
-from playwright.sync_api import sync_playwright, expect
+from playwright.sync_api import expect, sync_playwright
+
 from dashboard.app import Review, create_app
-from reconciliation.duplicate_workflow import organize
-from reconciliation.review_settings import DEFAULTS
-from reconciliation import development_cache
+from reconciliation.core import development_cache
+from reconciliation.core.settings import DEFAULTS
+from reconciliation.intake.duplicates import organize
+from tests.http_server import TestServer
 
 
 def main():

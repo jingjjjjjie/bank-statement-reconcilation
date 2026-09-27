@@ -2,15 +2,16 @@
 import argparse
 import secrets
 import sys
-import uvicorn
 from pathlib import Path
+
+import uvicorn
 
 WORKSPACE = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(WORKSPACE))
 
-from reconciliation.source_selection import SourceSelection
 from dashboard.routes import create_app
-from dashboard.review import Review, workflow_guide, write_json
+from dashboard.services.review import Review, workflow_guide, write_json
+from reconciliation.intake.workspace import SourceSelection
 
 
 def main():

@@ -6,7 +6,7 @@ from decimal import Decimal
 from pathlib import Path
 from statistics import median
 
-from reconciliation.token_usage import summarize
+from reconciliation.model.token_usage import summarize
 from scripts.benchmark_matching_images import read, save
 
 

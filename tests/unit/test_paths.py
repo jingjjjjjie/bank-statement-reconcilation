@@ -2,10 +2,10 @@
 import unittest
 from pathlib import Path
 
-from reconciliation.duplicate_workflow import DEFAULT_MANIFEST
-from reconciliation.paths import WORKSPACE
-from reconciliation.review_settings import CONFIG_PATH
-from reconciliation.vision_workflow import DEFAULT_WORK
+from reconciliation.core.paths import WORKSPACE
+from reconciliation.core.settings import CONFIG_PATH
+from reconciliation.extraction.workflow import DEFAULT_WORK
+from reconciliation.intake.duplicates import DEFAULT_MANIFEST
 
 
 class WorkspacePathTests(unittest.TestCase):

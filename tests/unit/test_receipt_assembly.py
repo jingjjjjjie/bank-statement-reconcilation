@@ -5,10 +5,10 @@ import unittest
 
 import pymupdf
 
-from reconciliation import vision_workflow as workflow
-from reconciliation.receipt_assembly import ASSEMBLY, current_assembly, input_revision, validate_assembly
-from reconciliation.pieces import ASSEMBLY as PIECE_ASSEMBLY
-from reconciliation.duplicate_workflow import fingerprint
+from reconciliation.extraction import workflow
+from reconciliation.extraction.assembly import ASSEMBLY, current_assembly, input_revision, validate_assembly
+from reconciliation.extraction.pieces import ASSEMBLY as PIECE_ASSEMBLY
+from reconciliation.intake.duplicates import fingerprint
 from tests.helpers import FakeReviewer, ReviewFixture
 from tests.unit import test_receipt_review as receipt_fixtures
 

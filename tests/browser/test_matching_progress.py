@@ -3,7 +3,9 @@ import json
 import threading
 import unittest
 from types import SimpleNamespace
-from playwright.sync_api import sync_playwright, expect
+
+from playwright.sync_api import expect, sync_playwright
+
 from dashboard.routes import create_app
 from tests.browser import browser_options
 from tests.http_server import TestServer

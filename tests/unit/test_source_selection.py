@@ -1,18 +1,18 @@
 """Verify source choices stay read-only until an explicit workflow action."""
+import json
+import os
 import tempfile
 import threading
 import unittest
 import urllib.request
-from urllib.parse import urlencode
-import json
-import os
-from tests.http_server import TestServer
 from pathlib import Path
 from unittest.mock import patch
+from urllib.parse import urlencode
 
-from reconciliation.duplicate_workflow import check, fingerprint, organize
-from reconciliation.source_selection import SourceSelection
 from dashboard.app import create_app
+from reconciliation.intake.duplicates import check, fingerprint, organize
+from reconciliation.intake.workspace import SourceSelection
+from tests.http_server import TestServer
 
 
 def select_legacy_folder(sources, path, bank=None):
@@ -121,7 +121,7 @@ class SourceSelectionTests(unittest.TestCase):
                 (source / name).write_bytes(b"same")
             sources = SourceSelection(base, base / "data")
             select_legacy_folder(sources, source)
-            with patch("reconciliation.duplicate_workflow.move_verified", side_effect=OSError("interrupted")):
+            with patch("reconciliation.intake.duplicates.move_verified", side_effect=OSError("interrupted")):
                 with self.assertRaises(OSError):
                     sources.start(sources.preview()["token"])
             path = next((base / "duplicated/projects").glob("*/duplicate-manifest.json"))
@@ -218,7 +218,7 @@ class SourceSelectionTests(unittest.TestCase):
                 """Write a small master with the selected source identity."""
                 path.write_text(f"source_sha256,year_supplied\n{digest},2025\n", encoding="utf-8")
 
-            with patch("reconciliation.bank_statement.extract", return_value={}), patch("reconciliation.bank_statement.write_master", side_effect=write_fixture):
+            with patch("reconciliation.bank.statement.extract", return_value={}), patch("reconciliation.bank.statement.write_master", side_effect=write_fixture):
                 self.assertFalse(sources.prepare_bank(manifest, 2025)["existing"])
                 self.assertTrue(sources.prepare_bank(manifest, 2025)["existing"])
                 with self.assertRaisesRegex(ValueError, "not replaced"):

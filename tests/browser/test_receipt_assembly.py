@@ -2,13 +2,14 @@
 import json
 import threading
 import unittest
-from tests.http_server import TestServer
 
 from playwright.sync_api import expect, sync_playwright
+
 from dashboard.routes import create_app
+from reconciliation.extraction.assembly import input_revision
+from reconciliation.intake.duplicates import fingerprint
 from tests.browser import browser_options
-from reconciliation.duplicate_workflow import fingerprint
-from reconciliation.receipt_assembly import input_revision
+from tests.http_server import TestServer
 from tests.unit import test_receipt_review as fixtures
 from tests.unit.test_receipt_assembly import piece
 

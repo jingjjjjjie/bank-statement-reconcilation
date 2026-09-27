@@ -1,14 +1,14 @@
 """Exercise the final human ledger without model calls or real customer decisions."""
 import csv
 import json
-from pathlib import Path
 import tempfile
-from types import SimpleNamespace
 import unittest
+from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 
-from dashboard import matching_review as matching
-from reconciliation.duplicate_workflow import fingerprint
+from dashboard.services import final_review as matching
+from reconciliation.intake.duplicates import fingerprint
 
 
 class MatchingReviewTests(unittest.TestCase):

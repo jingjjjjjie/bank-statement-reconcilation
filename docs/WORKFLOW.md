@@ -213,11 +213,11 @@ The report is read-only and makes no model calls. Pending/rejected suggestions d
 | Project `final-review/decisions.json` | Human decisions bound to the frozen matching evidence. |
 | `dashboard/frontend/src/router.js` | User-visible routes; retired `/content-review` redirects to `/documents`. |
 | `dashboard/api/`, `dashboard/routes.py` | HTTP endpoints, local access protections, session token and workspace guards. |
-| `reconciliation/source_selection.py`, `exact_report.py` | Input selection, SHA preview, exact-copy output. |
-| `dashboard/content_review.py`, `reconciliation/vision_workflow.py` | Background extraction/assembly, cancellation, cache, and resume. Historical comparison helpers remain for compatibility. |
-| `dashboard/regeneration.py` | Durable regeneration queue on the shared extraction worker. |
+| `reconciliation/intake/workspace.py`, `reconciliation/intake/exact_report.py` | Input selection, SHA preview, exact-copy output. |
+| `dashboard/services/extraction_runs.py`, `reconciliation/extraction/workflow.py` | Background extraction/assembly, cancellation, cache, and resume. Historical comparison helpers remain for compatibility. |
+| `dashboard/services/regeneration.py` | Durable regeneration queue on the shared extraction worker. |
 | `dashboard/frontend/src/views/FinalReport.vue`, `components/ReportEvidence.vue` | Read-only report, modal evidence navigation and original downloads. |
-| `dashboard/document_status.py`, `receipt_review.py` | Five list statuses, current receipt results, and acceptance validation. |
-| `dashboard/matching_review.py` | Frozen-snapshot evidence checks, allocation ledger, remaining balances, and CSV export. |
+| `dashboard/services/document_status.py`, `receipt_review.py` | Five list statuses, current receipt results, and acceptance validation. |
+| `dashboard/services/final_review.py` | Frozen-snapshot evidence checks, allocation ledger, remaining balances, and CSV export. |
 
 The Completion page currently checks extraction readiness and the bank master's matching flags. It is not automatically synchronized with the separate frozen-snapshot matching ledger; treat that as a current integration limitation, not evidence that a new workspace can finish end to end.

@@ -5,11 +5,11 @@ import tempfile
 import threading
 import unittest
 import urllib.request
-from tests.http_server import TestServer
 from pathlib import Path
 from unittest.mock import patch
 
-from reconciliation.duplicate_workflow import organize, supporting_files, fingerprint
+from reconciliation.intake.duplicates import fingerprint, organize, supporting_files
+from tests.http_server import TestServer
 
 
 class DashboardLoadingTests(unittest.TestCase):
@@ -63,7 +63,7 @@ class DashboardLoadingTests(unittest.TestCase):
     def test_static_assets_and_session_do_not_wait_for_review_scan(self):
         """A blocked review read cannot stall page assets or session loading."""
         from dashboard.routes import create_app
-        from dashboard.review import Review
+        from dashboard.services.review import Review
         manifest = self.base / "manifest.json"
         organize(self.source, manifest)
         review = Review(manifest, self.base / "data")

@@ -6,13 +6,13 @@ import unittest
 import urllib.error
 import urllib.request
 from pathlib import Path
-from tests.http_server import TestServer
 from unittest.mock import patch
 
 from dashboard.app import Review, create_app, workflow_guide
-from dashboard import development
-from reconciliation.duplicate_workflow import organize, check
-from reconciliation.token_usage import record
+from dashboard.services import development
+from reconciliation.intake.duplicates import check, organize
+from reconciliation.model.token_usage import record
+from tests.http_server import TestServer
 
 
 class DashboardTests(unittest.TestCase):
@@ -105,7 +105,7 @@ class DashboardTests(unittest.TestCase):
         record(work / "token-usage.jsonl", {"id": "one", "status": "finished", "stage": "pdf",
                "model": "test", "usage": {"input_tokens": 100, "cached_input_tokens": 20,
                                           "output_tokens": 25, "reasoning_output_tokens": 5}})
-        with patch("reconciliation.vision_workflow.load", return_value=({}, {})), patch("reconciliation.vision_workflow.gate", return_value=[]):
+        with patch("reconciliation.extraction.workflow.load", return_value=({}, {})), patch("reconciliation.extraction.workflow.gate", return_value=[]):
             self.assertFalse(self.review.completion()["complete"])
             bank = self.base / "bank-output"
             bank.mkdir()

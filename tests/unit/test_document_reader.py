@@ -5,11 +5,11 @@ import unittest
 import zipfile
 from pathlib import Path
 
-from PIL import Image
 import openpyxl
+from PIL import Image
 
-from reconciliation.document_reader import extract
-from reconciliation.review_settings import DEFAULTS
+from reconciliation.core.settings import DEFAULTS
+from reconciliation.extraction.reader import extract
 
 
 class DocumentReaderTests(unittest.TestCase):

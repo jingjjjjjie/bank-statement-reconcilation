@@ -25,17 +25,17 @@ does not need to send them to the model.
 
 ## What runs today
 
-- `reconciliation/matching_retrieval.py:70`: scans every available bank/piece pair;
+- `reconciliation/matching/retrieval.py:70`: scans every available bank/piece pair;
   reserves exact references, merges up to 20 name and 20 amount candidates, caps at
   40, and uses BM25 description hits only to top up a shortlist below ten.
-- `dashboard/piece_match_jobs.py:99`: makes one model request per bank with
+- `dashboard/services/piece_match_jobs.py:99`: makes one model request per bank with
   candidates. It has no deterministic proposal route for clear matches.
-- `dashboard/piece_matching.py:155`: supplies all pieces, original text and page
+- `dashboard/services/piece_matching.py:155`: supplies all pieces, original text and page
   images of every shortlisted parent document, plus related bank entries. Forty
   candidate IDs do not bound this context to forty pieces or forty pages.
-- `dashboard/piece_match_jobs.py:23`: validates IDs, per-piece monetary bounds,
+- `dashboard/services/piece_match_jobs.py:23`: validates IDs, per-piece monetary bounds,
   currency, and bank coverage. Other evidence requirements largely live in prompts.
-- `dashboard/matching_review.py:197`: human approval applies additional source,
+- `dashboard/services/final_review.py:197`: human approval applies additional source,
   extraction-acceptance, currency, capacity and discrepancy safeguards through the
   single final-review ledger.
 

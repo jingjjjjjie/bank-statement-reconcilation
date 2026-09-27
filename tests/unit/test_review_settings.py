@@ -3,16 +3,19 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import patch
-from tests.helpers import mock_codex
 from types import SimpleNamespace
+from unittest.mock import patch
 
 import pymupdf
 from PIL import Image
-from reconciliation.document_reader import extract
-from reconciliation.review_settings import DEFAULTS, config_for_manifest, load_config, save_config, revision, validate, stage_settings
-from reconciliation.vision_workflow import active_config, ReviewPending, run
-from reconciliation.codex_reviewer import CodexReviewer, object_schema
+
+from reconciliation.core.settings import (
+    DEFAULTS, config_for_manifest, load_config, revision, save_config, stage_settings, validate
+)
+from reconciliation.extraction.reader import extract
+from reconciliation.extraction.workflow import ReviewPending, active_config, run
+from reconciliation.model.codex import CodexReviewer, object_schema
+from tests.helpers import mock_codex
 
 
 class SettingsTests(unittest.TestCase):
@@ -99,7 +102,7 @@ class SettingsTests(unittest.TestCase):
 
     def test_model_reasoning_and_vision_capabilities_are_validated(self):
         models = [{"id": "test-model", "reasoning": ["low", "high"], "vision": True}]
-        with patch("reconciliation.review_settings.model_catalog", return_value=models):
+        with patch("reconciliation.core.settings.model_catalog", return_value=models):
             self.assertEqual(validate({**DEFAULTS, "model": "test-model", "reasoning": "high"})["reasoning"], "high")
             for choice in ({"model": "unknown"}, {"model": "test-model", "reasoning": "ultra"}, {"reasoning": "high"}):
                 with self.assertRaises(ValueError):
@@ -129,7 +132,7 @@ class SettingsTests(unittest.TestCase):
     def test_stage_validation_and_legacy_fallback(self):
         models = [{"id": "text", "reasoning": ["low"], "vision": False},
                   {"id": "vision", "reasoning": ["high"], "vision": True}]
-        with patch("reconciliation.review_settings.model_catalog", return_value=models):
+        with patch("reconciliation.core.settings.model_catalog", return_value=models):
             legacy = validate({**DEFAULTS, "model": "vision", "reasoning": "high"})
             self.assertTrue(all(c["model"] == "vision" for c in stage_settings(legacy).values()))
             config = {**DEFAULTS, "pdf_mode": "text_only", "model": "vision", "stages": {"pdf": {"model": "text", "reasoning": "low"}}}
@@ -141,7 +144,7 @@ class SettingsTests(unittest.TestCase):
                     validate({**config, **change})
 
     def test_switching_models_shares_budget_and_preserves_cache(self):
-        from reconciliation.codex_reviewer import BudgetReached
+        from reconciliation.model.codex import BudgetReached
         def fake_run(command, **kwargs):
             if command[1:3] == ["login", "status"]:
                 return SimpleNamespace(returncode=0, stdout="ChatGPT", stderr="")
@@ -170,7 +173,7 @@ if __name__ == "__main__":
         shared.write_text(json.dumps(config))
         manifest = self.base / "duplicated/projects/project/duplicate-manifest.json"
         legacy = manifest.with_name("review_config.json")
-        with patch("reconciliation.review_settings.CONFIG_PATH", shared):
+        with patch("reconciliation.core.settings.CONFIG_PATH", shared):
             self.assertEqual(config_for_manifest(manifest), shared)
             index = {"manifest": str(manifest), "config_path": str(legacy), "config": config}
             self.assertEqual(active_config(index), config)
@@ -183,7 +186,7 @@ if __name__ == "__main__":
 
     def test_missing_explicit_config_fails_before_preparation(self):
         """Do not prepare default evidence linked to a nonexistent settings file."""
-        from reconciliation.vision_workflow import prepare
+        from reconciliation.extraction.workflow import prepare
         with self.assertRaisesRegex(ValueError, "configuration is missing"):
             prepare(self.base / "manifest.json", self.base / "review", self.base / "missing.json")
         self.assertFalse((self.base / "review").exists())

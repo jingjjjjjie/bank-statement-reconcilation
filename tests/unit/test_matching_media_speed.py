@@ -8,8 +8,8 @@ import urllib.request
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from dashboard import matching_review
 from dashboard.routes import create_app
+from dashboard.services import final_review
 from tests.http_server import TestServer
 from tests.unit import test_matching_review as fixtures
 
@@ -72,15 +72,16 @@ class MatchingMediaSpeedTests(unittest.TestCase):
 
     def test_bank_statement_hashed_once_per_snapshot(self):
         """Repeated transaction references do not rehash the same statement."""
-        with patch.object(matching_review, 'source_hash', wraps=matching_review.source_hash) as hashes:
-            matching_review.snapshot(self.fixture.review)
+        with patch.object(final_review, 'source_hash', wraps=final_review.source_hash) as hashes:
+            final_review.snapshot(self.fixture.review)
         statement = str(self.fixture.root / 'statement.txt')
         self.assertEqual(sum(call.args[0] == statement for call in hashes.call_args_list), 1)
 
     def test_step2_native_image_is_fast_and_still_validated(self):
         """Step 2 sends original JPEG bytes despite a busy workflow, rejecting later edits."""
         from PIL import Image
-        from reconciliation.duplicate_workflow import fingerprint
+
+        from reconciliation.intake.duplicates import fingerprint
         source = self.fixture.root / 'large-original.jpg'
         Image.new('RGB', (1600, 1200), 'white').save(source)
         digest = fingerprint(source)
@@ -94,7 +95,7 @@ class MatchingMediaSpeedTests(unittest.TestCase):
             release.wait(8)
             return {'steps': []}
 
-        with patch('dashboard.content_review.load_index', return_value=(index, 'fixture')), \
+        with patch('dashboard.services.extraction_runs.load_index', return_value=(index, 'fixture')), \
              patch('dashboard.api.review.workflow_guide', slow_workflow), \
              concurrent.futures.ThreadPoolExecutor() as pool:
             check = pool.submit(self.get, '/api/workflow-checks')
@@ -127,7 +128,7 @@ class MatchingMediaSpeedTests(unittest.TestCase):
             return {'steps': []}
 
         with patch('dashboard.api.review.workflow_guide', slow_workflow), \
-             patch('dashboard.receipt_review.accept_extraction', return_value={'saved': True}), \
+             patch('dashboard.services.receipt_review.accept_extraction', return_value={'saved': True}), \
              concurrent.futures.ThreadPoolExecutor() as pool:
             check = pool.submit(self.get, '/api/workflow-checks')
             try:

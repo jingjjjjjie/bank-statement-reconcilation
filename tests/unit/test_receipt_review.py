@@ -3,12 +3,12 @@ import csv
 import json
 import tempfile
 import unittest
-from unittest.mock import patch
 from pathlib import Path
 from types import SimpleNamespace
+from unittest.mock import patch
 
-from dashboard import receipt_review
-from reconciliation.duplicate_workflow import fingerprint
+from dashboard.services import receipt_review
+from reconciliation.intake.duplicates import fingerprint
 
 
 class ReceiptReviewTests(unittest.TestCase):
@@ -126,7 +126,7 @@ class ReceiptReviewTests(unittest.TestCase):
 
     def test_remove_assembled_piece_preserves_extended_fields(self):
         """Removing a generated piece from four pages accepts the remaining editor fields."""
-        from reconciliation.receipt_assembly import input_revision
+        from reconciliation.extraction.assembly import input_revision
         document = self.index['documents'][self.digest]
         document['id'] = self.digest
         document['units'] = [{'label': f'page {n}', 'image': None} for n in range(1, 5)]
@@ -224,12 +224,12 @@ class ReceiptReviewTests(unittest.TestCase):
             receipt_review.undo_accept_extraction(self.review, {
                 "revision": self.view()["revision"], "key": self.key})
         self.clear_allocations()
-        from dashboard import matching_review
+        from dashboard.services import final_review
         folder = self.base / "final-review"
         folder.mkdir()
         (folder / "decisions.json").write_text('{}')
         ledger = {"decisions": {"B1": {"status": "approved", "allocations": [{"item_id": "D1"}]}}}
-        with patch.object(matching_review, "context", return_value=(
+        with patch.object(final_review, "context", return_value=(
                 None, ledger, {}, {"D1": {"document": self.digest}}, {}, {})):
             with self.assertRaisesRegex(ValueError, "Undo approved Final review"):
                 receipt_review.undo_accept_extraction(self.review, {
@@ -249,7 +249,7 @@ class ReceiptReviewTests(unittest.TestCase):
 
     def test_trash_is_audited_reversible_and_excluded_from_receipts(self):
         """Discarding preserves original bytes and makes pending evidence unusable."""
-        from dashboard import document_status
+        from dashboard.services import document_status
         self.accept_pieces()
         original = self.source.read_bytes()
         discarded = receipt_review.classify_extraction(self.review, {
@@ -309,14 +309,14 @@ class ReceiptReviewTests(unittest.TestCase):
 
     def test_trash_requires_undo_of_final_review_approval(self):
         """A discard cannot silently remove evidence reserved by the final ledger."""
-        from dashboard import matching_review
+        from dashboard.services import final_review
         folder = self.base / "final-review"
         folder.mkdir()
         (folder / "decisions.json").write_text('{}')
         ledger = {"decisions": {"B1": {"status": "approved", "allocations": [{"item_id": "D1"}]}}}
         final_context = (None, ledger, {}, {"D1": {"document": self.digest}}, {}, {})
         expected = self.view()["revision"]
-        with patch.object(matching_review, "context", return_value=final_context):
+        with patch.object(final_review, "context", return_value=final_context):
             with self.assertRaisesRegex(ValueError, "Undo approved Final review"):
                 receipt_review.classify_extraction(self.review, {
                     "revision": expected, "key": self.key, "action": "trash"})

@@ -1,16 +1,15 @@
 """Build a private, static evidence viewer from a frozen matching experiment."""
 import argparse
 import csv
-from html import escape
 import json
-from pathlib import Path
 import re
 import shutil
+from html import escape
+from pathlib import Path
 
-from dashboard import office_preview
-from reconciliation.duplicate_workflow import fingerprint
+from dashboard.previews import office as office_preview
+from reconciliation.intake.duplicates import fingerprint
 from scripts.benchmark_matching import number
-
 
 CSS = """*{box-sizing:border-box}body{margin:0;font:15px system-ui;color:#172b40;background:#f4f7fb}header{padding:18px 24px;background:#142b43;color:white}h1{font-size:23px;margin:0 0 8px}h2{font-size:19px}p{line-height:1.5}a{color:#1761a0}header a{color:#c7e8ff}.shell{display:grid;grid-template-columns:310px 1fr;height:calc(100vh - 108px)}nav{overflow:auto;background:white;padding:12px}nav a{display:block;text-decoration:none;padding:12px;border-bottom:1px solid #e2e8ef}nav a:hover{background:#e9f2fb}iframe{width:100%;height:100%;border:0;background:white}.review{display:grid;grid-template-columns:minmax(300px,40%) 1fr;gap:16px;padding:16px;height:100vh}.details{overflow:auto}.preview{height:100%;border:1px solid #d9e2ec;border-radius:10px;overflow:hidden}.card{background:white;border:1px solid #d9e2ec;border-radius:10px;padding:16px;margin-bottom:14px}.reason{background:#fff5d9;border-left:4px solid #c18900}.muted{color:#62758a;font-size:13px}.money{font-size:25px;font-weight:700}.pill{display:inline-block;background:#e5eff8;padding:4px 8px;border-radius:5px;font-size:12px}pre{white-space:pre-wrap;overflow-wrap:anywhere;font:13px ui-monospace;line-height:1.5}img{max-width:100%;height:auto}table{border-collapse:collapse;font-size:13px}td,th{border:1px solid #cbd5df;padding:7px;white-space:pre-wrap;min-width:65px}.document{padding:20px;overflow:auto}.document iframe{height:85vh}.diff{color:#a33b16;font-weight:600}@media(max-width:850px){.shell{grid-template-columns:220px 1fr}.review{display:block;height:auto}.preview{height:85vh}}"""
 

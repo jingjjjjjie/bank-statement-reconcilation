@@ -2,15 +2,15 @@
 import tempfile
 import threading
 import unittest
-from tests.http_server import TestServer
 from pathlib import Path
 from zipfile import ZipFile
 
 from openpyxl import Workbook
-from playwright.sync_api import sync_playwright, expect
+from playwright.sync_api import expect, sync_playwright
 
 from dashboard.app import Review, create_app
-from reconciliation.duplicate_workflow import organize
+from reconciliation.intake.duplicates import organize
+from tests.http_server import TestServer
 
 
 class OfficePreviewTests(unittest.TestCase):

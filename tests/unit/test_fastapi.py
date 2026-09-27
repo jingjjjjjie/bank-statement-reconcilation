@@ -9,7 +9,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 from dashboard.routes import create_app
-from reconciliation.source_selection import SourceSelection
+from reconciliation.intake.workspace import SourceSelection
 from tests.http_server import TestServer
 
 
@@ -58,6 +58,7 @@ class FastApiTests(unittest.TestCase):
     def test_schema_validation_returns_readable_json(self):
         """Invalid evidence must not turn into a plain-text 500 response."""
         from unittest.mock import patch
+
         from jsonschema import validate
 
         def invalid_path(path):

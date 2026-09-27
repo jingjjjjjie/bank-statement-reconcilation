@@ -1,13 +1,13 @@
 """Check counterparty boundaries and financial validation failures."""
 
-import unittest
 import csv
 import tempfile
-from pathlib import Path
+import unittest
 from decimal import Decimal as D
+from pathlib import Path
 from unittest.mock import patch
 
-from reconciliation.bank_statement import describe, validate, read_master, write_master
+from reconciliation.bank.statement import describe, read_master, validate, write_master
 
 
 class BankStatementTests(unittest.TestCase):
@@ -84,7 +84,7 @@ class MasterIntegrityTests(unittest.TestCase):
                            {"date": "2025-12-01", "page": 2, "narration": "Fund Transfer /DEBIT TRANSFER, BOB, REF2",
                             "money_in": D("0.00"), "money_out": D("10.00"), "balance": D("80.00")}]}
         write_master(self.result, self.master)
-        mock = patch("reconciliation.bank_statement.extract", return_value=self.result)
+        mock = patch("reconciliation.bank.statement.extract", return_value=self.result)
         mock.start()
         self.addCleanup(mock.stop)
 

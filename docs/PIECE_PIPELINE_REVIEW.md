@@ -32,7 +32,7 @@ The old schema and Python projections remain deliberately as compatibility
 boundaries for historical records, duplicate-review tooling and inventory exports.
 They do not represent additional model-generated facts. The unused legacy bank
 matching editor was removed from the shared frontend receipt controller.
-Deterministic candidate retrieval now lives in `reconciliation/candidates.py`;
+Deterministic candidate retrieval now lives in `reconciliation/matching/candidates.py`;
 the live pipeline no longer imports its business rules from a benchmark script.
 
 ## Detailed review findings and fixes

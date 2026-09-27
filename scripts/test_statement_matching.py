@@ -1,17 +1,16 @@
 """Test a complete statement against saved evidence without approving live matches."""
 import argparse
-from collections import Counter, defaultdict
-from concurrent.futures import ThreadPoolExecutor, as_completed
 import csv
 import json
-from pathlib import Path
 import re
+from collections import Counter, defaultdict
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from pathlib import Path
 
-from reconciliation.codex_reviewer import CodexReviewer, TEXT, object_schema
-from reconciliation.duplicate_workflow import fingerprint
-from reconciliation.token_usage import summary
+from reconciliation.intake.duplicates import fingerprint
+from reconciliation.model.codex import TEXT, CodexReviewer, object_schema
+from reconciliation.model.token_usage import summary
 from scripts.benchmark_matching import build_candidates, number, save, shortlist, specific_name
-
 
 DECISION = object_schema({"bank_id": TEXT,
     "assessment": {"type": "string", "enum": ["strong", "tentative", "none"]},

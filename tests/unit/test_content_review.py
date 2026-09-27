@@ -6,19 +6,19 @@ import threading
 import unittest
 import urllib.error
 import urllib.request
-from tests.http_server import TestServer
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
 from PIL import Image
 
-from reconciliation.pieces import EXTRACTION as PIECE_EXTRACTION
-from reconciliation.codex_reviewer import EXTRACTION, ReviewCancelled
 from dashboard.app import Review, create_app
-from dashboard import content_review, regeneration, receipt_review
-from reconciliation.duplicate_workflow import organize
-from reconciliation.vision_workflow import load, run
+from dashboard.services import extraction_runs, receipt_review, regeneration
+from reconciliation.extraction.pieces import EXTRACTION as PIECE_EXTRACTION
+from reconciliation.extraction.workflow import load, run
+from reconciliation.intake.duplicates import organize
+from reconciliation.model.codex import EXTRACTION, ReviewCancelled
+from tests.http_server import TestServer
 
 
 class FixtureReviewer:
@@ -42,7 +42,7 @@ class FixtureReviewer:
 class ContentPageTests(unittest.TestCase):
     def setUp(self):
         """Create two nonidentical image files in an isolated source folder."""
-        mode = patch("reconciliation.development_cache.mode", return_value={"enabled": True})
+        mode = patch("reconciliation.core.development_cache.mode", return_value={"enabled": True})
         mode.start()
         self.addCleanup(mode.stop)
         self.temp = tempfile.TemporaryDirectory()
@@ -79,15 +79,15 @@ class ContentPageTests(unittest.TestCase):
         """A pending exact-copy group cannot start content review."""
         root = Path(self.review.root)
         (root / "copy.png").write_bytes((root / "first.png").read_bytes())
-        self.assertTrue(content_review.exact_problems(self.review))
+        self.assertTrue(extraction_runs.exact_problems(self.review))
         with self.assertRaisesRegex(ValueError, "Finish exact"):
-            content_review.prepare(self.review)
+            extraction_runs.prepare(self.review)
 
     def test_run_button_resumes_review_in_background(self):
         """Dashboard runs extract evidence without duplicate screening or comparison."""
-        content_review.prepare(self.review)
-        with patch("dashboard.content_review.CodexReviewer", side_effect=lambda *args, **kwargs: FixtureReviewer()):
-            content_review.start(self.review)
+        extraction_runs.prepare(self.review)
+        with patch("dashboard.services.extraction_runs.CodexReviewer", side_effect=lambda *args, **kwargs: FixtureReviewer()):
+            extraction_runs.start(self.review)
             self.review.content_thread.join(timeout=5)
         self.assertFalse(self.review.content_thread.is_alive())
         self.assertEqual(self.review.content_error, "")
@@ -100,7 +100,7 @@ class ContentPageTests(unittest.TestCase):
         config = json.loads(self.review.config_path.read_text(encoding="utf-8"))
         config["max_parallel"] = 2
         self.review.config_path.write_text(json.dumps(config), encoding="utf-8")
-        content_review.prepare(self.review)
+        extraction_runs.prepare(self.review)
         started, release = threading.Event(), threading.Event()
         lock = threading.Lock()
         prompts, active, peak = [], [0], [0]
@@ -126,8 +126,8 @@ class ContentPageTests(unittest.TestCase):
                     with lock:
                         active[0] -= 1
 
-        with patch("dashboard.content_review.CodexReviewer", side_effect=lambda *args, **kwargs: ParallelReviewer()):
-            content_review.start(self.review)
+        with patch("dashboard.services.extraction_runs.CodexReviewer", side_effect=lambda *args, **kwargs: ParallelReviewer()):
+            extraction_runs.start(self.review)
             try:
                 self.assertTrue(started.wait(timeout=5))
                 digests = list(load(self.manifest.parent / "review")[0]["documents"])
@@ -147,7 +147,7 @@ class ContentPageTests(unittest.TestCase):
 
     def test_failed_regeneration_retains_results_and_requires_retry(self):
         """An unsuccessful fresh call preserves evidence but cannot be approved."""
-        content_review.prepare(self.review)
+        extraction_runs.prepare(self.review)
         work = self.manifest.parent / "review"
         index, state = load(work)
         run(work, index, state, FixtureReviewer())
@@ -159,7 +159,7 @@ class ContentPageTests(unittest.TestCase):
                 """Fail without returning a fabricated extraction."""
                 raise RuntimeError("Fixture model failure")
 
-        with patch("dashboard.content_review.CodexReviewer", side_effect=lambda *args, **kwargs: FailedReviewer()):
+        with patch("dashboard.services.extraction_runs.CodexReviewer", side_effect=lambda *args, **kwargs: FailedReviewer()):
             regeneration.enqueue(self.review, digest)
             self.review.content_thread.join(timeout=5)
         self.assertEqual(load(work)[1]["units"], before)
@@ -175,7 +175,7 @@ class ContentPageTests(unittest.TestCase):
         config = json.loads(self.review.config_path.read_text(encoding="utf-8"))
         config["max_parallel"] = 2
         self.review.config_path.write_text(json.dumps(config), encoding="utf-8")
-        content_review.prepare(self.review)
+        extraction_runs.prepare(self.review)
         work = self.manifest.parent / "review"
         index, state = load(work)
         run(work, index, state, FixtureReviewer())
@@ -196,7 +196,7 @@ class ContentPageTests(unittest.TestCase):
                     raise AssertionError("Parallel slot was not filled")
                 return super().ask(prompt, schema, images)
 
-        with patch("dashboard.content_review.CodexReviewer", side_effect=lambda *args, **kwargs: BlockingReviewer()):
+        with patch("dashboard.services.extraction_runs.CodexReviewer", side_effect=lambda *args, **kwargs: BlockingReviewer()):
             digests = list(index["documents"])
             regeneration.enqueue(self.review, digests[0])
             try:
@@ -211,14 +211,14 @@ class ContentPageTests(unittest.TestCase):
 
     def test_regeneration_invalidates_approval_even_for_identical_output(self):
         """A fresh request requires review even if the model returns identical facts."""
-        content_review.prepare(self.review)
+        extraction_runs.prepare(self.review)
         work = self.manifest.parent / "review"
         index, state = load(work)
         run(work, index, state, FixtureReviewer())
         digest = next(iter(index["documents"]))
         data = receipt_review.snapshot(self.review)
         receipt_review.accept_extraction(self.review, {"revision": data["revision"], "key": digest + ":0", "receipts": []})
-        with patch("dashboard.content_review.CodexReviewer", side_effect=lambda *args, **kwargs: FixtureReviewer()):
+        with patch("dashboard.services.extraction_runs.CodexReviewer", side_effect=lambda *args, **kwargs: FixtureReviewer()):
             regeneration.enqueue(self.review, digest)
             self.review.content_thread.join(timeout=5)
         unit = next(unit for unit in receipt_review.snapshot(self.review)["units"] if unit["document_id"] == digest)
@@ -228,14 +228,14 @@ class ContentPageTests(unittest.TestCase):
 
     def test_interrupted_regeneration_is_unresolved(self):
         """Restarted servers expose unfinished durable jobs as retryable failures."""
-        content_review.prepare(self.review)
+        extraction_runs.prepare(self.review)
         regeneration.queue_path(self.review).write_text(json.dumps({"jobs": {
             "fixture": {"id": "attempt", "status": "running", "error": ""}}, "history": []}), encoding="utf-8")
         self.assertEqual(regeneration.snapshot(self.review)["fixture"]["status"], "failed")
 
     def test_stop_marks_running_regeneration_unresolved(self):
         """Cancellation retains the previous extraction and ends the live indicator."""
-        content_review.prepare(self.review)
+        extraction_runs.prepare(self.review)
         work = self.manifest.parent / "review"
         index, state = load(work)
         run(work, index, state, FixtureReviewer())
@@ -253,18 +253,18 @@ class ContentPageTests(unittest.TestCase):
                 """Release the waiting fixture call."""
                 cancelled.set()
 
-        with patch("dashboard.content_review.CodexReviewer", side_effect=lambda *args, **kwargs: CancelReviewer()):
+        with patch("dashboard.services.extraction_runs.CodexReviewer", side_effect=lambda *args, **kwargs: CancelReviewer()):
             digest = next(iter(index["documents"]))
             regeneration.enqueue(self.review, digest)
             self.assertTrue(started.wait(timeout=5))
-            content_review.stop(self.review)
+            extraction_runs.stop(self.review)
             self.review.content_thread.join(timeout=5)
         self.assertEqual(regeneration.snapshot(self.review)[digest]["status"], "failed")
         self.assertEqual(load(work)[1]["units"], before)
 
     def test_stop_keeps_incomplete_work_pending(self):
         """A stop request cancels the active batch without saving partial evidence."""
-        content_review.prepare(self.review)
+        extraction_runs.prepare(self.review)
         started = threading.Event()
         cancelled = threading.Event()
 
@@ -277,14 +277,14 @@ class ContentPageTests(unittest.TestCase):
             def cancel(self):
                 cancelled.set()
 
-        with patch("dashboard.content_review.CodexReviewer", side_effect=lambda *args, **kwargs: BlockingReviewer()):
-            content_review.start(self.review)
+        with patch("dashboard.services.extraction_runs.CodexReviewer", side_effect=lambda *args, **kwargs: BlockingReviewer()):
+            extraction_runs.start(self.review)
             self.assertTrue(started.wait(timeout=5))
-            self.assertTrue(content_review.stop(self.review)["stop_requested"])
+            self.assertTrue(extraction_runs.stop(self.review)["stop_requested"])
             self.review.content_thread.join(timeout=5)
         self.assertFalse(self.review.content_thread.is_alive())
         self.assertEqual(load(self.manifest.parent / "review")[1]["units"], {})
-        self.assertIn("stopped", content_review.execution_status(self.review)["run_error"])
+        self.assertIn("stopped", extraction_runs.execution_status(self.review)["run_error"])
 
     def test_stopped_requires_worker_finalization_and_verified_exit(self):
         """Keep Stop pending until the worker finishes its final checkpoint writes."""
@@ -292,9 +292,9 @@ class ContentPageTests(unittest.TestCase):
         self.review.content_cancel.set()
         self.review.content_engine = SimpleNamespace(active_count=0)
         self.review.content_thread = SimpleNamespace(is_alive=lambda: True)
-        self.assertEqual(content_review.execution_status(self.review)["execution_status"], "stopping")
+        self.assertEqual(extraction_runs.execution_status(self.review)["execution_status"], "stopping")
         self.review.content_thread = SimpleNamespace(is_alive=lambda: False)
-        self.assertEqual(content_review.execution_status(self.review)["execution_status"], "stopped")
+        self.assertEqual(extraction_runs.execution_status(self.review)["execution_status"], "stopped")
 
     def test_unverified_process_prevents_restart_after_worker_exits(self):
         """Expose shutdown failures and retain the engine that owns remaining processes."""
@@ -302,12 +302,12 @@ class ContentPageTests(unittest.TestCase):
         self.review.content_cancel.set()
         self.review.content_engine = SimpleNamespace(active_count=1)
         self.review.content_thread = SimpleNamespace(is_alive=lambda: False)
-        status = content_review.execution_status(self.review)
+        status = extraction_runs.execution_status(self.review)
         self.assertEqual(status["execution_status"], "stop_failed")
         self.assertTrue(status["running"])
         self.assertIn("could not be verified", status["run_error"])
         with self.assertRaisesRegex(ValueError, "already running"):
-            content_review.start(self.review)
+            extraction_runs.start(self.review)
 
 
 if __name__ == "__main__":

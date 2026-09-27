@@ -46,7 +46,7 @@ class MatchingExperimentTests(unittest.TestCase):
 
     def test_truncated_bank_name_keeps_recipient_in_shortlist(self):
         """Anchored truncation beats amount-only ties but never establishes approval."""
-        from reconciliation.candidates import truncated_name
+        from reconciliation.matching.candidates import truncated_name
         bank = {'id': 'payment', 'amount': '90', 'currency': 'MYR', 'direction': 'out',
                 'parties': ['SAFINAH BINTI ABDULL'], 'references': []}
         row = {'id': 'z-recipient', 'amount': '90', 'currency': 'MYR', 'direction': '',

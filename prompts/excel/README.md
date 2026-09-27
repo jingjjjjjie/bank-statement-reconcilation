@@ -30,8 +30,8 @@ Unknown, missing or duplicate fields and broken style references fail export.
 
 Version 2 uses field names rather than fixed column letters/numbers. Older
 version 1 definitions must be migrated; the bundled definition is already updated.
-`reconciliation/workbook_style.py` loads and renders the definition.
-`reconciliation/bank_excel.py` supplies typed bank values and evidence comments.
+`reconciliation/bank/workbook_style.py` loads and renders the definition.
+`reconciliation/bank/excel.py` supplies typed bank values and evidence comments.
 Accounting fields and particulars remain blank; matching status follows the bank
 workflow. These rules cannot be overridden by a style. No code is executed from XML.
 

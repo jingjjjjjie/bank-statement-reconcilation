@@ -72,10 +72,10 @@ def prepare(root, work, output):
 
 def run_level(output, tasks, workers):
     """Run every unit with uncached responses and the production Codex wrapper."""
-    from reconciliation.codex_reviewer import CodexReviewer, EXTRACTION
-    from reconciliation.prompts import extraction_prompt
-    from reconciliation.review_settings import document_stage
-    from reconciliation.token_usage import summary
+    from reconciliation.core.prompts import extraction_prompt
+    from reconciliation.core.settings import document_stage
+    from reconciliation.model.codex import EXTRACTION, CodexReviewer
+    from reconciliation.model.token_usage import summary
 
     folder = output / f'workers-{workers}'
     folder.mkdir(exist_ok=False)
@@ -160,7 +160,8 @@ def main():
          'scope': 'Fresh model extraction of all prepared units; local document rendering reused. No screening or matching.',
          'started_utc': datetime.now(timezone.utc).isoformat()})
     sys.path.insert(0, str(args.output / 'runtime'))
-    from reconciliation import development_cache
+    from reconciliation.core import development_cache
+
     # Disable sharing only inside this benchmark process; dashboard settings are untouched.
     development_cache.root_for = lambda path: None
     reports = []

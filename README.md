@@ -111,9 +111,9 @@ python -m dashboard.app
 For a prepared project's extraction workflow, substitute its real manifest and review paths:
 
 ```console
-python -m reconciliation.vision_workflow prepare --manifest duplicated/projects/PROJECT/duplicate-manifest.json --work duplicated/projects/PROJECT/review
-python -m reconciliation.vision_workflow run --work duplicated/projects/PROJECT/review --max-calls 1000
-python -m reconciliation.vision_workflow check --work duplicated/projects/PROJECT/review
+python -m reconciliation.extraction.workflow prepare --manifest duplicated/projects/PROJECT/duplicate-manifest.json --work duplicated/projects/PROJECT/review
+python -m reconciliation.extraction.workflow run --work duplicated/projects/PROJECT/review --max-calls 1000
+python -m reconciliation.extraction.workflow check --work duplicated/projects/PROJECT/review
 ```
 
 `prepare` performs local preparation. Add `--refresh` to intentionally archive/reprepare existing results. `run` extracts units and assembles multi-unit documents, then stops before vision duplicate comparisons. `--timeout` defaults to 240 seconds per call. `--model` and `--reasoning` override the configured selection. `prepare --config PATH` pins another configuration file.
@@ -122,7 +122,7 @@ python -m reconciliation.vision_workflow check --work duplicated/projects/PROJEC
 
 ### Legacy duplicate tools
 
-Standalone-folder `reconciliation.duplicate_workflow organize` verifies size, SHA-256 and bytes, records original locations, and **moves** groups into `duplicated/` beside the manifest. Legacy dashboard retain/undo controls use recoverable storage. These controls are separate from the automatic copy-only work-folder flow. Do not blindly rerun an interrupted organization or overwrite its manifest.
+Standalone-folder `reconciliation.intake.duplicates organize` verifies size, SHA-256 and bytes, records original locations, and **moves** groups into `duplicated/` beside the manifest. Legacy dashboard retain/undo controls use recoverable storage. These controls are separate from the automatic copy-only work-folder flow. Do not blindly rerun an interrupted organization or overwrite its manifest.
 
 Historical screening/comparison code, prompts and decisions remain for compatibility and audit. `vision_workflow decide` can record a verdict on an existing comparison, but normal dashboard/CLI runs no longer create those comparisons. Model output never authorizes file deletion. Original locations remain in manifests and extraction inventory exports.
 

@@ -9,11 +9,11 @@ from pathlib import Path
 import pymupdf
 from jsonschema import validate
 
-from reconciliation import pieces, vision_workflow as workflow
-from reconciliation.duplicate_workflow import organize
-from reconciliation.pdf_document import whole_request, chunk_requests
-from reconciliation.receipt_assembly import current_assembly
-from reconciliation.review_settings import DEFAULTS
+from reconciliation.core.settings import DEFAULTS
+from reconciliation.extraction import pieces, workflow
+from reconciliation.extraction.assembly import current_assembly
+from reconciliation.extraction.pdf_groups import chunk_requests, whole_request
+from reconciliation.intake.duplicates import organize
 
 
 class Reviewer:

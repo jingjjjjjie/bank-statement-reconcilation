@@ -1,13 +1,14 @@
 """Explicit live smoke test: one synthetic receipt, no customer documents."""
-import json
 import argparse
+import json
 from pathlib import Path
-from reconciliation.paths import WORKSPACE
-from reconciliation.prompts import load_prompt
 
 from PIL import Image, ImageDraw
-from reconciliation.codex_reviewer import CodexReviewer
-from reconciliation.pieces import EXTRACTION
+
+from reconciliation.core.paths import WORKSPACE
+from reconciliation.core.prompts import load_prompt
+from reconciliation.extraction.pieces import EXTRACTION
+from reconciliation.model.codex import CodexReviewer
 
 
 def main():
@@ -24,8 +25,8 @@ def main():
     ImageDraw.Draw(picture).text((40, 40), "SYNTHETIC TEST RECEIPT\nReference: TEST-001\nTotal: MYR 123.45", fill="black", font_size=38)
     picture.save(image)
     if args.pdf:
-        from reconciliation.document_reader import extract
-        from reconciliation.review_settings import load_config
+        from reconciliation.core.settings import load_config
+        from reconciliation.extraction.reader import extract
         pdf = work / "synthetic-receipt.pdf"
         picture.save(pdf, "PDF")
         units = extract(pdf, work / "rendered", load_config())

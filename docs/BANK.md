@@ -3,8 +3,8 @@
 Install the root `requirements.txt` into Python and run commands from the repository root.
 
 ```powershell
-python -m reconciliation.bank_statement "statement.pdf" --year 2025
-python -m reconciliation.bank_excel bank-output/master_statement.csv --company "Example Company Sdn. Bhd."
+python -m reconciliation.bank.statement "statement.pdf" --year 2025
+python -m reconciliation.bank.excel bank-output/master_statement.csv --company "Example Company Sdn. Bhd."
 python -m unittest tests.unit.test_bank_statement
 ```
 

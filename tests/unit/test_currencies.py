@@ -2,10 +2,9 @@
 import copy
 import unittest
 
-from reconciliation.currencies import normalize_currency, normalize_currencies
-from reconciliation.receipt_matching import currency
-from reconciliation.matching_retrieval import retrieve
-from dashboard.piece_match_jobs import validate_result
+from dashboard.services.piece_match_jobs import validate_result
+from reconciliation.core.money import currency, normalize_currencies, normalize_currency
+from reconciliation.matching.retrieval import retrieve
 
 
 class CurrencyTests(unittest.TestCase):

@@ -2,17 +2,17 @@
 import csv
 import json
 import os
-from pathlib import Path
 import threading
-from types import SimpleNamespace
 import unittest
+from pathlib import Path
+from types import SimpleNamespace
 
 import pymupdf
 from playwright.sync_api import expect, sync_playwright
 
-from dashboard import matching_review as matching
 from dashboard.routes import create_app
-from reconciliation.duplicate_workflow import fingerprint
+from dashboard.services import final_review as matching
+from reconciliation.intake.duplicates import fingerprint
 from tests.browser import browser_options
 from tests.http_server import TestServer
 from tests.unit import test_matching_review as fixtures

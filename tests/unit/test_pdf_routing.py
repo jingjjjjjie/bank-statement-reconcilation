@@ -9,14 +9,14 @@ from unittest.mock import patch
 
 import pymupdf
 
-from reconciliation.codex_reviewer import BudgetReached
-from reconciliation.schemas import EXTRACTION
-from reconciliation.document_reader import extract
-from reconciliation.pdf_routing import extract_unit, inspect_page
-from reconciliation.review_settings import DEFAULTS
+from reconciliation.core.settings import DEFAULTS
+from reconciliation.extraction import workflow
+from reconciliation.extraction.pdf_routing import extract_unit, inspect_page
+from reconciliation.extraction.reader import extract
+from reconciliation.extraction.schemas import EXTRACTION
+from reconciliation.intake.duplicates import organize
+from reconciliation.model.codex import BudgetReached
 from tests.helpers import FakeReviewer, ReviewFolder
-from reconciliation import vision_workflow
-from reconciliation.duplicate_workflow import organize
 
 
 class PdfRoutingTests(unittest.TestCase):
@@ -42,7 +42,7 @@ class PdfRoutingTests(unittest.TestCase):
 
     def run_route(self, selected="compare", ask=None, approved=None):
         """Run the routing layer with development enabled and inspect its audit."""
-        with patch('reconciliation.pdf_routing.mode', return_value={"enabled": True}):
+        with patch('reconciliation.extraction.pdf_routing.mode', return_value={"enabled": True}):
             result = extract_unit(self.unit, ask or self.ask, selected, self.root / 'audit.json', approved or set())
         return result, json.loads((self.root / 'audit.json').read_text())
 
@@ -69,7 +69,7 @@ class PdfRoutingTests(unittest.TestCase):
 
     def test_new_extraction_without_document_type_can_use_text(self):
         """Canonical piece type keeps approved text routing usable after field removal."""
-        from reconciliation.pieces import canonical, legacy_result
+        from reconciliation.extraction.pieces import canonical, legacy_result
         piece = canonical(self.result['receipts'][0])
         piece.pop('limitations')
         self.result = legacy_result({'readable': True, 'summary': 'Receipt', 'totals': [], 'pieces': [piece]})
@@ -97,10 +97,10 @@ class PdfRoutingTests(unittest.TestCase):
         config = fixture.base / 'config.json'
         config.write_text(json.dumps({**DEFAULTS, 'pdf_mode': 'compare'}))
         organize(fixture.root, fixture.manifest)
-        with patch('reconciliation.development_cache.mode', return_value={'enabled': True}), patch('reconciliation.pdf_routing.mode', return_value={'enabled': True}):
-            vision_workflow.prepare(fixture.manifest, fixture.work, config)
-            index, state = vision_workflow.load(fixture.work)
-            vision_workflow.run(fixture.work, index, state, FakeReviewer())
+        with patch('reconciliation.core.development_cache.mode', return_value={'enabled': True}), patch('reconciliation.extraction.pdf_routing.mode', return_value={'enabled': True}):
+            workflow.prepare(fixture.manifest, fixture.work, config)
+            index, state = workflow.load(fixture.work)
+            workflow.run(fixture.work, index, state, FakeReviewer())
         audits = list((fixture.work / 'pdf-routing').glob('*.json'))
         self.assertEqual(len(audits), 1)
         self.assertEqual(json.loads(audits[0].read_text())['status'], 'finished')
@@ -122,7 +122,7 @@ class PdfRoutingTests(unittest.TestCase):
 
     def test_old_system_disagreement_remains_visible(self):
         """Only the known system warning survives legacy storage in the removed field."""
-        from reconciliation.pdf_routing import DISAGREEMENT_WARNING, review_warnings
+        from reconciliation.extraction.pdf_routing import DISAGREEMENT_WARNING, review_warnings
         saved = {'limitations': ['Old model prose', DISAGREEMENT_WARNING]}
         before = copy.deepcopy(saved)
         self.assertEqual(review_warnings(saved), [DISAGREEMENT_WARNING])
@@ -146,7 +146,7 @@ class PdfRoutingTests(unittest.TestCase):
 
     def test_switch_off_blocks_experiment(self):
         """Disabling development prevents both experimental routes."""
-        with patch('reconciliation.pdf_routing.mode', return_value={"enabled": False}):
+        with patch('reconciliation.extraction.pdf_routing.mode', return_value={"enabled": False}):
             with self.assertRaisesRegex(ValueError, 'development mode'):
                 extract_unit(self.unit, self.ask, 'compare', self.root / 'audit.json')
         self.assertEqual(self.calls, [])

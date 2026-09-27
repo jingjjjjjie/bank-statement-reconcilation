@@ -40,7 +40,7 @@ def no_shared_cache(path):
 
 def extraction_coverage(index, state):
     """Count complete documents and keep missing or stale assembly unresolved."""
-    from reconciliation.receipt_assembly import current_assembly
+    from reconciliation.extraction.assembly import current_assembly
     complete, unresolved = [], []
     for key, document in index['documents'].items():
         if not document.get('accepted', True):
@@ -56,15 +56,15 @@ def extraction_coverage(index, state):
 
 def prepare(project, output, workers):
     """Freeze current bank evidence and all supporting extraction inputs."""
-    from dashboard.review import Review
-    from dashboard.piece_matching import current
-    from reconciliation.review_settings import load_config
+    from dashboard.services.piece_matching import current
+    from dashboard.services.review import Review
+    from reconciliation.core.settings import load_config
     root = Path(__file__).resolve().parents[1]
     output.mkdir(parents=True, exist_ok=False)
     review = Review(project / 'duplicate-manifest.json', project / 'dashboard-data')
     queue = project / 'review/regeneration.json'
     jobs = read(queue).get('jobs', {}) if queue.exists() else {}
-    with patch('dashboard.regeneration.snapshot', return_value=jobs):
+    with patch('dashboard.services.regeneration.snapshot', return_value=jobs):
         banks, old_items, index, old_facts = current(review)
     save(output / 'previous-evidence.json', {'banks': banks, 'items': old_items, 'facts': old_facts})
     save(output / 'previous-suggestions.json', read(project / 'final-review/piece-suggestions.json'))
@@ -119,9 +119,9 @@ def prepare(project, output, workers):
 
 def extract_fresh(output, workers):
     """Run the production extraction and assembly pipeline against frozen inputs."""
-    from reconciliation.codex_reviewer import CodexReviewer
-    from reconciliation.vision_workflow import load, run
-    from reconciliation.token_usage import summary
+    from reconciliation.extraction.workflow import load, run
+    from reconciliation.model.codex import CodexReviewer
+    from reconciliation.model.token_usage import summary
     work = output / 'extraction'
     config = read(output / 'config.json')
     config['max_parallel'] = workers
@@ -130,7 +130,7 @@ def extract_fresh(output, workers):
     engine = CodexReviewer(work, model='gpt-5.6-sol', max_calls=1000, timeout=300)
     started = time.perf_counter()
     status, error = 'finished', None
-    with patch('reconciliation.development_cache.root_for', no_shared_cache):
+    with patch('reconciliation.core.development_cache.root_for', no_shared_cache):
         try:
             run(work, index, state, engine)
         except Exception as failure:
@@ -176,10 +176,10 @@ def extract_with_retries(output, workers, retries):
 
 def build_facts(output):
     """Represent fresh extractions as unapproved benchmark pieces with stable IDs."""
-    from reconciliation.pieces import canonical
-    from reconciliation.receipt_assembly import current_assembly
-    from reconciliation.receipt_matching import revision
-    from reconciliation.currencies import normalize_currencies
+    from reconciliation.core.money import normalize_currencies
+    from reconciliation.core.revision import revision
+    from reconciliation.extraction.assembly import current_assembly
+    from reconciliation.extraction.pieces import canonical
     index, state = read(output / 'extraction/index.json'), read(output / 'extraction/state.json')
     banks = read(output / 'previous-evidence.json')['banks']
     items, documents, unresolved = {}, {}, []
@@ -212,9 +212,9 @@ def build_facts(output):
 
 def prepare_cases(output):
     """Freeze stratified bank cases and identical extracted facts for both arms."""
-    from dashboard.piece_matching import model_payload
-    from reconciliation.matching_retrieval import retrieve
-    from reconciliation.prompts import load_prompt
+    from dashboard.services.piece_matching import model_payload
+    from reconciliation.core.prompts import load_prompt
+    from reconciliation.matching.retrieval import retrieve
     coverage = extraction_coverage(read(output / 'extraction/index.json'), read(output / 'extraction/state.json'))
     if coverage['unresolved_documents']:
         raise ValueError('Finish fresh extraction before selecting matching cases: '
@@ -266,9 +266,9 @@ def prepare_cases(output):
 
 def match(output, workers):
     """Compare image-backed and text-only calls with the same strict validation."""
-    from dashboard.piece_match_jobs import SCHEMA, validate_result
-    from reconciliation.codex_reviewer import CodexReviewer
-    from reconciliation.token_usage import summary
+    from dashboard.services.piece_match_jobs import SCHEMA, validate_result
+    from reconciliation.model.codex import CodexReviewer
+    from reconciliation.model.token_usage import summary
     cases, evidence = prepare_cases(output) if not (output / 'cases.json').exists() else (read(output / 'cases.json'), read(output / 'fresh-evidence.json'))
 
     def job(case, arm):
@@ -308,7 +308,7 @@ def match(output, workers):
         return row
 
     results, started = [], time.perf_counter()
-    with patch('reconciliation.development_cache.root_for', no_shared_cache), ThreadPoolExecutor(max_workers=workers) as pool:
+    with patch('reconciliation.core.development_cache.root_for', no_shared_cache), ThreadPoolExecutor(max_workers=workers) as pool:
         futures = [pool.submit(job, case, arm) for case in cases
                    for arm in (['images', 'text'] if case['number'] % 2 else ['text', 'images'])]
         for future in as_completed(futures):

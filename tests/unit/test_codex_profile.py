@@ -4,7 +4,7 @@ import unittest
 from pathlib import Path
 from types import SimpleNamespace
 
-from reconciliation.codex_reviewer import CodexReviewer, object_schema
+from reconciliation.model.codex import CodexReviewer, object_schema
 from tests.helpers import mock_codex
 
 

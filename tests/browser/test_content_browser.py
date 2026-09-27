@@ -4,16 +4,16 @@ import json
 import tempfile
 import threading
 import unittest
-from tests.http_server import TestServer
 from pathlib import Path
 
 from PIL import Image
-from playwright.sync_api import sync_playwright, expect
+from playwright.sync_api import expect, sync_playwright
 
 from dashboard.app import Review, create_app
+from reconciliation.extraction.workflow import load, prepare, run
+from reconciliation.intake.duplicates import organize
+from tests.http_server import TestServer
 from tests.unit.test_content_review import FixtureReviewer
-from reconciliation.duplicate_workflow import organize
-from reconciliation.vision_workflow import load, prepare, run
 
 
 class ContentBrowserTests(unittest.TestCase):

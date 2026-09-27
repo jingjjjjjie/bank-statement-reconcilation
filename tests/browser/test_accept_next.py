@@ -7,7 +7,7 @@ from PIL import Image
 from playwright.sync_api import expect, sync_playwright
 
 from dashboard.routes import create_app
-from reconciliation.duplicate_workflow import fingerprint
+from reconciliation.intake.duplicates import fingerprint
 from tests.browser import browser_options
 from tests.http_server import TestServer
 from tests.unit import test_receipt_review as fixtures

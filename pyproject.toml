@@ -1,0 +1,8 @@
+# Tool settings only; the app is run from the repository (see README), not installed as a package.
+
+[tool.isort]
+line_length = 120
+multi_line_output = 5          # Parenthesized, hanging-indent wraps.
+combine_as_imports = true
+known_first_party = ["reconciliation", "dashboard", "scripts", "tests"]
+skip_glob = ["*/node_modules/*", "*/.data/*"]

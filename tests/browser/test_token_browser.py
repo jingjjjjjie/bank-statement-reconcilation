@@ -3,16 +3,16 @@ import json
 import tempfile
 import threading
 import unittest
-from unittest.mock import patch
-from tests.http_server import TestServer
-from tests.browser import browser_options
 from pathlib import Path
+from unittest.mock import patch
 
 from playwright.sync_api import expect, sync_playwright
 
 from dashboard.app import Review, create_app
-from reconciliation.duplicate_workflow import organize
-from reconciliation.token_usage import summary
+from reconciliation.intake.duplicates import organize
+from reconciliation.model.token_usage import summary
+from tests.browser import browser_options
+from tests.http_server import TestServer
 
 
 class TokenBrowserTests(unittest.TestCase):
@@ -20,7 +20,7 @@ class TokenBrowserTests(unittest.TestCase):
         """Show usage safely and keep final totals hidden before completion."""
         with tempfile.TemporaryDirectory() as folder:
             base = Path(folder)
-            usage = patch('dashboard.review.workspace_summary', return_value=summary(base / 'usage.jsonl'))
+            usage = patch('dashboard.services.review.workspace_summary', return_value=summary(base / 'usage.jsonl'))
             usage.start()
             self.addCleanup(usage.stop)
             source = base / "sources"

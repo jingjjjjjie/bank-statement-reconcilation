@@ -6,9 +6,10 @@ from unittest.mock import patch
 
 from PIL import Image
 
-from dashboard import content_review, extraction_preview, receipt_review
-from reconciliation import vision_workflow
-from reconciliation.duplicate_workflow import fingerprint
+from dashboard.previews import extraction as extraction_preview
+from dashboard.services import extraction_runs, receipt_review
+from reconciliation.extraction import workflow
+from reconciliation.intake.duplicates import fingerprint
 from tests.unit import test_receipt_review as fixtures
 
 
@@ -31,12 +32,12 @@ class ReviewPreviewSpeedTests(unittest.TestCase):
         """Preview lookup reads no derived images; saving still rejects tampering."""
         fixture = self.fixture
         revision = fixture.view()['revision']
-        with patch.object(vision_workflow, 'fingerprint', wraps=fingerprint) as hashes:
-            self.assertEqual(content_review.source(fixture.review, fixture.digest), fixture.source)
+        with patch.object(workflow, 'fingerprint', wraps=fingerprint) as hashes:
+            self.assertEqual(extraction_runs.source(fixture.review, fixture.digest), fixture.source)
         self.assertEqual([call.args[0] for call in hashes.call_args_list],
                          [fixture.work / 'index.json'])
         self.preview.write_bytes(b'changed page')
-        self.assertEqual(content_review.source(fixture.review, fixture.digest), fixture.source)
+        self.assertEqual(extraction_runs.source(fixture.review, fixture.digest), fixture.source)
         with self.assertRaisesRegex(ValueError, 'Prepared image changed'):
             receipt_review.accept_extraction(fixture.review, {
                 "revision": revision, "key": fixture.key, "receipts": fixture.pieces})
@@ -46,11 +47,11 @@ class ReviewPreviewSpeedTests(unittest.TestCase):
         fixture = self.fixture
         fixture.source.write_bytes(b'changed original')
         with self.assertRaisesRegex(ValueError, 'Source changed'):
-            content_review.source(fixture.review, fixture.digest)
+            extraction_runs.source(fixture.review, fixture.digest)
         with (fixture.work / 'index.json').open('a') as stream:
             stream.write(' ')
         with self.assertRaisesRegex(ValueError, 'Prepared index changed'):
-            content_review.source(fixture.review, fixture.digest)
+            extraction_runs.source(fixture.review, fixture.digest)
 
     def test_faster_png_encoding_preserves_every_pixel(self):
         """Lower compression changes only encoding effort, not evidence resolution."""

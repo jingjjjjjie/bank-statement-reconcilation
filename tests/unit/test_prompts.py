@@ -5,9 +5,10 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from jsonschema import validate, ValidationError
-from reconciliation.codex_reviewer import CodexReviewer, EXTRACTION, object_schema
-from reconciliation.prompts import load_prompt
+from jsonschema import ValidationError, validate
+
+from reconciliation.core.prompts import load_prompt
+from reconciliation.model.codex import EXTRACTION, CodexReviewer, object_schema
 from tests.helpers import mock_codex
 
 
@@ -33,7 +34,7 @@ class PromptTests(unittest.TestCase):
 
             reviewer = CodexReviewer(folder / "review", executable="codex")
             schema = object_schema({"ok": {"type": "boolean"}})
-            with patch("reconciliation.prompts.PROMPTS", folder), mock_codex(fake_run):
+            with patch("reconciliation.core.prompts.PROMPTS", folder), mock_codex(fake_run):
                 reviewer.ask(load_prompt("extraction/extraction"), schema)
                 reviewer.ask(load_prompt("extraction/extraction"), schema)
                 (folder / "extraction/extraction.md").write_text("Edited task", encoding="utf-8")
@@ -51,7 +52,7 @@ class PromptTests(unittest.TestCase):
         """Never substitute hidden instructions when editable files are invalid."""
         with tempfile.TemporaryDirectory() as temporary:
             folder = Path(temporary)
-            with patch("reconciliation.prompts.PROMPTS", folder):
+            with patch("reconciliation.core.prompts.PROMPTS", folder):
                 with self.assertRaises(FileNotFoundError):
                     load_prompt("extraction/extraction")
                 (folder / "extraction").mkdir()

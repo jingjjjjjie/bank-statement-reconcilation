@@ -1,7 +1,8 @@
 """Shared offline fixtures for workflow regression tests."""
 from contextlib import contextmanager
 from unittest.mock import patch
-from reconciliation.process_manager import ReviewCancelled
+
+from reconciliation.model.processes import ReviewCancelled
 
 
 @contextmanager
@@ -16,7 +17,7 @@ def mock_codex(fake_run):
         audit.update(pid=123, returncode=result.returncode, exit_verified=True)
         return result
 
-    with patch("reconciliation.process_manager.ProcessManager.run", run):
+    with patch("reconciliation.model.processes.ProcessManager.run", run):
         yield
 
 
@@ -48,6 +49,7 @@ class ReviewFolder:
         """Create sources outside any customer folder; removed when the test finishes."""
         import tempfile
         from pathlib import Path
+
         from PIL import Image
         temp = tempfile.TemporaryDirectory()
         add_cleanup(temp.cleanup)
@@ -61,13 +63,13 @@ class ReviewFolder:
 
     def prepared(self, duplicate=False):
         """Organize exact copies, prepare the review and return `(index, state)`."""
-        from reconciliation import vision_workflow
-        from reconciliation.duplicate_workflow import organize
+        from reconciliation.extraction import workflow
+        from reconciliation.intake.duplicates import organize
         if duplicate:
             (self.root / "copy.png").write_bytes((self.root / "a.png").read_bytes())
         organize(self.root, self.manifest)
-        vision_workflow.prepare(self.manifest, self.work)
-        return vision_workflow.load(self.work)
+        workflow.prepare(self.manifest, self.work)
+        return workflow.load(self.work)
 
 
 class ReviewFixture:

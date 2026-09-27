@@ -1,8 +1,8 @@
 # Live matching retrieval policy
 
 Updated 27 September 2026. Generate matches ranks candidates in Python
-(`reconciliation/match_ranking.py`) and asks the model only about batches of bank lines
-(`dashboard/piece_match_jobs.py`). The instructions are `prompts/matching/matching.md`.
+(`reconciliation/matching/ranking.py`) and asks the model only about batches of bank lines
+(`dashboard/services/piece_match_jobs.py`). The instructions are `prompts/matching/matching.md`.
 
 ## Candidates for one bank line
 
@@ -35,4 +35,4 @@ saves `final-review/piece-matching/retrieval.json` with every candidate's route 
 
 All proposals need human approval in Final review. Tests use local fixtures only; no live
 accuracy claim follows from them. The previous 20-name/20-amount retrieval
-(`reconciliation/matching_retrieval.py`) remains for historical benchmarks.
+(`reconciliation/matching/retrieval.py`) remains for historical benchmarks.

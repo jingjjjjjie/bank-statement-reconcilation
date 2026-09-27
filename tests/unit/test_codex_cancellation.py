@@ -8,10 +8,9 @@ from pathlib import Path
 from time import monotonic, sleep
 from unittest.mock import patch
 
-from reconciliation.codex_reviewer import CodexReviewer, object_schema
-from reconciliation.process_manager import ReviewCancelled, spawn
-from reconciliation.token_usage import summary
-
+from reconciliation.model.codex import CodexReviewer, object_schema
+from reconciliation.model.processes import ReviewCancelled, spawn
+from reconciliation.model.token_usage import summary
 
 CLI = """import pathlib, subprocess, sys, time
 if sys.argv[1:3] == ['login', 'status']:
@@ -40,7 +39,7 @@ class CodexCancellationTests(unittest.TestCase):
                 """Replace only the CLI executable; use real OS process management."""
                 return spawn([sys.executable, str(script), *command[1:]], **kwargs)
 
-            with patch("reconciliation.process_manager.spawn", local_spawn), ThreadPoolExecutor(3) as pool:
+            with patch("reconciliation.model.processes.spawn", local_spawn), ThreadPoolExecutor(3) as pool:
                 futures = [pool.submit(worker.ask, f"fixture-{n}", schema) for n, worker in enumerate(workers)]
                 try:
                     deadline = monotonic() + 5
@@ -70,7 +69,7 @@ class CodexCancellationTests(unittest.TestCase):
                 """Simulate a hanging login using a real sleeping process."""
                 return spawn([sys.executable, "-c", "import time; time.sleep(60)"], **kwargs)
 
-            with patch("reconciliation.process_manager.spawn", local_spawn), ThreadPoolExecutor(1) as pool:
+            with patch("reconciliation.model.processes.spawn", local_spawn), ThreadPoolExecutor(1) as pool:
                 future = pool.submit(reviewer.ask, "fixture", object_schema({"ok": {"type": "boolean"}}))
                 try:
                     deadline = monotonic() + 3

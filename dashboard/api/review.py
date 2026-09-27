@@ -5,12 +5,12 @@ from fastapi import APIRouter, Depends, Request
 from fastapi.responses import Response
 from pydantic import BaseModel, StrictBool
 
-from dashboard.routes import context, active_context, interrupt_context
-from dashboard.review import workflow_guide
-from dashboard import content_review, development, document_status, matching_review, receipt_review
-from reconciliation import development_cache
-from reconciliation.duplicate_workflow import check
-from reconciliation.review_settings import save_config
+from dashboard.routes import active_context, context, interrupt_context
+from dashboard.services import development, document_status, extraction_runs, final_review, receipt_review
+from dashboard.services.review import workflow_guide
+from reconciliation.core import development_cache
+from reconciliation.core.settings import save_config
+from reconciliation.intake.duplicates import check
 
 router = APIRouter(prefix="/api")
 
@@ -98,7 +98,7 @@ def mode():
 @router.post("/development-mode")
 def set_mode(body: ModeChoice, state=Depends(context)):
     """Change development mode only when processing is idle."""
-    if state.review and content_review.execution_status(state.review)["running"]:
+    if state.review and extraction_runs.execution_status(state.review)["running"]:
         raise ValueError("Stop the current review before changing development mode")
     result = development_cache.set_mode(body.enabled)
     if result["enabled"] and state.review:
@@ -145,25 +145,25 @@ def documents(state=Depends(context)):
 @router.post("/content/prepare")
 def prepare(state=Depends(active_context)):
     """Prepare local evidence in the request worker, outside the event loop."""
-    return content_review.prepare(state.review)
+    return extraction_runs.prepare(state.review)
 
 
 @router.post("/content/run")
 def run(state=Depends(active_context)):
     """Start the existing cancellable background processing worker."""
-    return content_review.start(state.review)
+    return extraction_runs.start(state.review)
 
 
 @router.post("/content/stop")
 def stop(review=Depends(interrupt_context)):
     """Cancel active model processes and retain completed checkpoints."""
-    return content_review.stop(review)
+    return extraction_runs.stop(review)
 
 
 @router.get("/content/execution")
 def execution(review=Depends(interrupt_context)):
     """Report process shutdown without reading document evidence."""
-    return content_review.execution_status(review)
+    return extraction_runs.execution_status(review)
 
 
 @router.get("/receipts")
@@ -189,7 +189,7 @@ def reset_original_receipts(body: dict, state=Depends(active_context)):
 @router.post("/receipts/merge-all")
 def merge_receipts(body: dict, state=Depends(active_context)):
     """Preview a merged draft; persistence still requires explicit acceptance."""
-    from reconciliation.pieces import merge_all
+    from reconciliation.extraction.pieces import merge_all
     receipt_review.require_current(state.review, body['revision'])
     return {'receipt': merge_all(body['receipts'])}
 
@@ -215,7 +215,7 @@ def accept_all_receipts(body: dict, state=Depends(active_context)):
 @router.post("/receipts/regenerate")
 def regenerate_receipts(body: dict, state=Depends(active_context)):
     """Queue a document on the shared background extraction worker."""
-    from dashboard import regeneration
+    from dashboard.services import regeneration
     return {"jobs": regeneration.enqueue(state.review, body["document_id"])}
 
 
@@ -228,51 +228,51 @@ def classify_receipts(body: dict, state=Depends(active_context)):
 @router.get("/receipts/regeneration")
 def regeneration_status(state=Depends(active_context)):
     """Poll regeneration progress without rebuilding document previews."""
-    from dashboard import regeneration
+    from dashboard.services import regeneration
     return {"jobs": regeneration.snapshot(state.review)}
 
 
 @router.get("/matching")
 def matching(review=Depends(interrupt_context)):
     """Read a captured review without queuing behind unrelated workflow checks."""
-    return matching_review.snapshot(review)
+    return final_review.snapshot(review)
 
 
 @router.post("/matching-decide")
 def matching_decide(body: dict, state=Depends(active_context)):
     """Keep evidence checks, revision checks, and human approval in the existing ledger."""
-    return matching_review.decide(state.review, body)
+    return final_review.decide(state.review, body)
 
 
 @router.post('/matching-pieces')
 def matching_pieces(body: dict, state=Depends(active_context)):
     """Switch to reviewed pieces while preserving previous decisions as history."""
-    from dashboard.piece_matching import activate
+    from dashboard.services.piece_matching import activate
     return activate(state.review)
 
 
 @router.post('/matching-run')
 def matching_run(body: dict, state=Depends(active_context)):
     """Generate proposals from complete documents without approving allocations."""
-    from dashboard.piece_match_jobs import start
+    from dashboard.services.piece_match_jobs import start
     return start(state.review)
 
 
 @router.get('/matching-run')
 def matching_run_status(review=Depends(interrupt_context)):
     """Keep matching progress available while the background pool is working."""
-    from dashboard.piece_match_jobs import status
+    from dashboard.services.piece_match_jobs import status
     return status(review)
 
 
 @router.post('/matching-stop')
 def matching_stop(body: dict, review=Depends(interrupt_context)):
     """Allow cancellation without waiting behind other review requests."""
-    from dashboard.piece_match_jobs import stop
+    from dashboard.services.piece_match_jobs import stop
     return stop(review)
 
 
 @router.get("/matching-export")
 def matching_export(state=Depends(active_context)):
     """Export every reviewed statement row under the existing export policy."""
-    return Response(matching_review.export_csv(state.review), media_type="text/csv")
+    return Response(final_review.export_csv(state.review), media_type="text/csv")

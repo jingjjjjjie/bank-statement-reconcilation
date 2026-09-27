@@ -1,12 +1,12 @@
 """Protect paired benchmarking from incomplete or stale extraction evidence."""
-import unittest
 import json
+import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
-from reconciliation.receipt_assembly import input_revision
-from scripts.benchmark_matching_images import extraction_coverage, extract_with_retries
+from reconciliation.extraction.assembly import input_revision
+from scripts.benchmark_matching_images import extract_with_retries, extraction_coverage
 
 
 class ExtractionCoverageTests(unittest.TestCase):

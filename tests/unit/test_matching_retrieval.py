@@ -2,7 +2,7 @@
 import unittest
 from unittest.mock import patch
 
-from reconciliation.matching_retrieval import retrieve
+from reconciliation.matching.retrieval import retrieve
 
 
 def record(key, **fields):
@@ -101,7 +101,7 @@ class RetrievalTests(unittest.TestCase):
 
     def test_live_payload_keeps_context_but_bounds_allocatable_ids(self):
         """Full parent evidence cannot silently enlarge the selected allocation shortlist."""
-        from dashboard import piece_matching
+        from dashboard.services import piece_matching
         from tests.unit.test_piece_pipeline import PiecePipelineTests
         fixture = PiecePipelineTests()
         fixture.setUp()
@@ -119,10 +119,11 @@ class RetrievalTests(unittest.TestCase):
 
     def test_incomplete_live_search_cannot_publish_definitive_no_match(self):
         """The server enforces incomplete-search wording even if a model overlooks it."""
-        from dashboard import piece_matching, piece_match_jobs
-        from reconciliation.review_settings import DEFAULTS
-        from tests.unit.test_piece_pipeline import PiecePipelineTests
         import json
+
+        from dashboard.services import piece_match_jobs, piece_matching
+        from reconciliation.core.settings import DEFAULTS
+        from tests.unit.test_piece_pipeline import PiecePipelineTests
         fixture = PiecePipelineTests()
         fixture.setUp()
         self.addCleanup(fixture.doCleanups)

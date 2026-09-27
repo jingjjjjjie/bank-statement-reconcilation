@@ -2,22 +2,22 @@
 import hashlib
 import json
 import tempfile
-import unittest
 import threading
-import urllib.request
+import unittest
 import urllib.error
-from tests.http_server import TestServer
+import urllib.request
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from dashboard import development
-from dashboard.review import Review
 from dashboard.routes import create_app
-from reconciliation import development_cache as cache
-from reconciliation.codex_reviewer import CodexReviewer, object_schema
-from reconciliation.duplicate_workflow import organize
+from dashboard.services import development
+from dashboard.services.review import Review
+from reconciliation.core import development_cache as cache
+from reconciliation.intake.duplicates import organize
+from reconciliation.model.codex import CodexReviewer, object_schema
 from tests.helpers import mock_codex
+from tests.http_server import TestServer
 
 
 class DevelopmentCacheTests(unittest.TestCase):
@@ -149,7 +149,7 @@ class DevelopmentCacheTests(unittest.TestCase):
             post("/api/development/remember", {})
         with self.assertRaises(urllib.error.HTTPError):
             post("/api/development-mode", {"enabled": "false"})
-        with patch("dashboard.content_review.execution_status", return_value={"running": True}):
+        with patch("dashboard.services.extraction_runs.execution_status", return_value={"running": True}):
             with self.assertRaises(urllib.error.HTTPError):
                 post("/api/development-mode", {"enabled": True})
         self.assertFalse(cache.mode()["enabled"])

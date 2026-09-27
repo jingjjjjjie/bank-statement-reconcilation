@@ -2,18 +2,17 @@
 import copy
 import json
 import threading
-from pathlib import Path
 import unittest
+from pathlib import Path
 from unittest.mock import patch
 
 from jsonschema import validate
 
-from dashboard import receipt_review, matching_review, piece_matching
-from dashboard.piece_match_jobs import validate_result
-from reconciliation import pieces
-from reconciliation.duplicate_workflow import fingerprint
+from dashboard.services import final_review, piece_matching, receipt_review
+from dashboard.services.piece_match_jobs import validate_result
+from reconciliation.extraction import pieces
+from reconciliation.intake.duplicates import fingerprint
 from tests.unit import test_receipt_review as fixtures
-
 
 
 def as_model(record):
@@ -41,7 +40,7 @@ class PiecePipelineTests(unittest.TestCase):
 
     def decision(self, bank='B1', action='approve', allocations=None):
         """Prepare a current final-review request with an explicit human decision."""
-        view = matching_review.snapshot(self.review)
+        view = final_review.snapshot(self.review)
         return {'binding': view['binding'], 'version': view['version'], 'bank_id': bank, 'action': action,
             'allocations': allocations or [], 'reviewer': 'Test', 'note': 'Checked separate receipts', 'acknowledged': True}
 
@@ -51,9 +50,9 @@ class PiecePipelineTests(unittest.TestCase):
         ids = [p['piece_id'] for p in view['units'][0]['receipts']]
         piece_matching.activate(self.review)
         for action in ('approve', 'deny', 'undo'):
-            result = matching_review.decide(self.review, self.decision(action=action, allocations=[
+            result = final_review.decide(self.review, self.decision(action=action, allocations=[
                 {'item_id': ids[0], 'amount': '45'}, {'item_id': ids[1], 'amount': '15'}]))
-            snapshot = matching_review.snapshot(self.review)
+            snapshot = final_review.snapshot(self.review)
             bank = next(row for row in snapshot['banks'] if row['id'] == 'B1')
             for key, value in result['bank'].items():
                 self.assertEqual(value, bank[key], key)
@@ -83,23 +82,23 @@ class PiecePipelineTests(unittest.TestCase):
         view = self.accept()
         ids = [p['piece_id'] for p in view['units'][0]['receipts']]
         piece_matching.activate(self.review)
-        matching_review.decide(self.review, self.decision(allocations=[
+        final_review.decide(self.review, self.decision(allocations=[
             {'item_id': ids[0], 'amount': '45'}, {'item_id': ids[1], 'amount': '15'}]))
-        self.assertEqual(matching_review.snapshot(self.review)['banks'][0]['support_status'], 'Supporting')
+        self.assertEqual(final_review.snapshot(self.review)['banks'][0]['support_status'], 'Supporting')
         with self.assertRaisesRegex(ValueError, 'available'):
-            matching_review.decide(self.review, self.decision('B2', allocations=[{'item_id': ids[0], 'amount': '45'}]))
+            final_review.decide(self.review, self.decision('B2', allocations=[{'item_id': ids[0], 'amount': '45'}]))
         edited = copy.deepcopy(view['units'][0]['receipts'])
         edited[0]['payee'] = 'Corrected merchant'
         self.accept(edited)
-        data = matching_review.snapshot(self.review)
+        data = final_review.snapshot(self.review)
         self.assertTrue(data['banks'][0]['stale'])
         self.assertEqual(data['banks'][0]['support_status'], 'No supporting')
-        self.assertIn('No supporting', matching_review.export_csv(self.review).decode())
+        self.assertIn('No supporting', final_review.export_csv(self.review).decode())
         with self.assertRaisesRegex(ValueError, 'stale allocations'):
-            matching_review.decide(self.review, self.decision('B2', allocations=[{'item_id': ids[0], 'amount': '45'}]))
-        matching_review.decide(self.review, self.decision(action='undo'))
-        matching_review.decide(self.review, self.decision('B2', allocations=[{'item_id': ids[0], 'amount': '45'}]))
-        self.assertEqual(matching_review.snapshot(self.review)['banks'][1]['support_status'], 'Supporting')
+            final_review.decide(self.review, self.decision('B2', allocations=[{'item_id': ids[0], 'amount': '45'}]))
+        final_review.decide(self.review, self.decision(action='undo'))
+        final_review.decide(self.review, self.decision('B2', allocations=[{'item_id': ids[0], 'amount': '45'}]))
+        self.assertEqual(final_review.snapshot(self.review)['banks'][1]['support_status'], 'Supporting')
 
     def test_historical_rm_displays_and_matches_as_myr_without_rewriting_evidence(self):
         """Normalize read-only projections and comparisons while preserving approval bindings."""
@@ -112,8 +111,8 @@ class PiecePipelineTests(unittest.TestCase):
         path.write_text(json.dumps(saved))
         before = path.read_bytes()
         piece_matching.activate(self.review)
-        matching_review.decide(self.review, self.decision('B2', allocations=[{'item_id': key, 'amount': '45'}]))
-        view = matching_review.snapshot(self.review)
+        final_review.decide(self.review, self.decision('B2', allocations=[{'item_id': key, 'amount': '45'}]))
+        view = final_review.snapshot(self.review)
         self.assertEqual(next(item for item in view['items'] if item['id'] == key)['currency'], 'MYR')
         bank = next(bank for bank in view['banks'] if bank['id'] == 'B2')
         self.assertFalse(bank['stale'])
@@ -129,7 +128,7 @@ class PiecePipelineTests(unittest.TestCase):
         path.write_text(json.dumps(saved))
         before = path.read_bytes()
         piece_matching.activate(self.review)
-        self.assertFalse(any(item['boundary_unresolved'] for item in matching_review.snapshot(self.review)['items']))
+        self.assertFalse(any(item['boundary_unresolved'] for item in final_review.snapshot(self.review)['items']))
         self.assertEqual(path.read_bytes(), before)
 
     def test_removed_piece_stays_visible_in_saved_approval(self):
@@ -137,21 +136,21 @@ class PiecePipelineTests(unittest.TestCase):
         view = self.accept()
         first, second = view['units'][0]['receipts']
         piece_matching.activate(self.review)
-        matching_review.decide(self.review, self.decision('B2', allocations=[{'item_id': first['piece_id'], 'amount': '45'}]))
+        final_review.decide(self.review, self.decision('B2', allocations=[{'item_id': first['piece_id'], 'amount': '45'}]))
         self.accept([second])
-        data = matching_review.snapshot(self.review)
+        data = final_review.snapshot(self.review)
         removed = next(i for i in data['items'] if i['id'] == first['piece_id'])
         self.assertTrue(removed['retired'])
         self.assertEqual(removed['used'], '45')
         self.assertTrue(data['banks'][1]['stale'])
-        matching_review.decide(self.review, self.decision('B2', action='undo'))
+        final_review.decide(self.review, self.decision('B2', action='undo'))
 
     def test_unreviewed_piece_cannot_be_approved(self):
         """Model extraction alone never becomes accepted support."""
         piece_matching.activate(self.review)
-        key = matching_review.snapshot(self.review)['items'][0]['id']
+        key = final_review.snapshot(self.review)['items'][0]['id']
         with self.assertRaisesRegex(ValueError, 'Accept the piece'):
-            matching_review.decide(self.review, self.decision('B2', allocations=[{'item_id': key, 'amount': '45'}]))
+            final_review.decide(self.review, self.decision('B2', allocations=[{'item_id': key, 'amount': '45'}]))
 
     def test_model_receives_whole_document_and_other_pieces(self):
         """A piece shortlist expands to complete parent context without inventing totals."""
@@ -213,13 +212,13 @@ class PiecePipelineTests(unittest.TestCase):
             {'bank_id': 'B1', 'assessment': 'strong', 'allocations': [{'item_id': key, 'amount': '45'}], 'reason': 'Saved evidence'},
             {'bank_id': 'B2', 'assessment': 'tentative', 'allocations': [], 'reason': 'Matching unresolved: currency'},
         ], 'errors': ['B2: currency'], 'total': 3}))
-        view = matching_review.snapshot(self.review)
+        view = final_review.snapshot(self.review)
         self.assertEqual(view['banks'][0]['confidence']['level'], 'outdated')
         self.assertEqual(view['banks'][0]['suggestion']['allocations'][0]['item_id'], key)
         self.assertEqual(view['banks'][1]['confidence']['level'], 'failed')
         self.assertEqual(view['proposal_counts']['outdated'], 1)
         self.assertEqual(view['proposal_counts']['failed'], 1)
-        from dashboard.piece_match_jobs import status
+        from dashboard.services.piece_match_jobs import status
         self.assertEqual(status(self.review)['failed'], 1)
         self.assertEqual(status(self.review)['total'], 3)
 
@@ -235,15 +234,15 @@ class PiecePipelineTests(unittest.TestCase):
         path = self.fixture.base / 'final-review/decisions.json'
         path.parent.mkdir()
         path.write_text(json.dumps(old))
-        with patch.object(matching_review, 'context', return_value=(path, old, banks, {'D1': old_item}, {}, {})):
+        with patch.object(final_review, 'context', return_value=(path, old, banks, {'D1': old_item}, {}, {})):
             piece_matching.activate(self.review)
-        data = matching_review.snapshot(self.review)
+        data = final_review.snapshot(self.review)
         self.assertEqual(data['banks'][1]['review_status'], 'approved')
         self.assertTrue(data['banks'][1]['stale'])
         self.assertEqual(data['banks'][1]['support_status'], 'No supporting')
         self.assertTrue(list(path.parent.glob('pre-pieces-*.json')))
         with self.assertRaisesRegex(ValueError, 'stale allocations'):
-            matching_review.decide(self.review, self.decision('B1', allocations=[{'item_id': item['id'], 'amount': '45'}]))
+            final_review.decide(self.review, self.decision('B1', allocations=[{'item_id': item['id'], 'amount': '45'}]))
 
     def test_strict_model_schemas_require_every_property(self):
         """Both actual model contracts satisfy Codex strict structured-output rules."""
@@ -258,12 +257,12 @@ class PiecePipelineTests(unittest.TestCase):
                 inspect(schema['items'])
         inspect(pieces.EXTRACTION)
         inspect(pieces.ASSEMBLY)
-        from dashboard.piece_match_jobs import SCHEMA
+        from dashboard.services.piece_match_jobs import SCHEMA
         inspect(SCHEMA)
 
     def test_payment_schedule_keeps_seven_rows_through_matching(self):
         """Equal amounts and shared project codes keep distinct recipient identities."""
-        from dashboard.piece_match_jobs import SCHEMA
+        from dashboard.services.piece_match_jobs import SCHEMA
         amounts = ['150', '150', '90', '90', '750', '200', '600']
         rows = [as_model({**self.fixture.pieces[0], 'payee': f'Recipient {n}',
             'total': value, 'references': [{'type': 'other', 'value': 'shared-project'}],
@@ -295,8 +294,8 @@ class PiecePipelineTests(unittest.TestCase):
 
     def test_matching_worker_refills_slots_and_checkpoints_full_context(self):
         """A slow bank request cannot hold up a free worker or approve test proposals."""
-        from dashboard import piece_match_jobs
-        from reconciliation.review_settings import DEFAULTS
+        from dashboard.services import piece_match_jobs
+        from reconciliation.core.settings import DEFAULTS
         self.accept()
         master = self.fixture.base / 'bank-output/master_statement.csv'
         master.write_text(master.read_text().replace('60.00', '45.00'))
@@ -356,12 +355,12 @@ class PiecePipelineTests(unittest.TestCase):
         with patch.object(piece_match_jobs.time, 'time', return_value=99999999999):
             self.assertEqual(piece_match_jobs.status(self.review)['elapsed_seconds'], elapsed)
         self.assertTrue(all(len(next(iter(c['documents'].values()))['pieces']) == 2 for c in calls))
-        self.assertTrue(all(not b['decision'] for b in matching_review.snapshot(self.review)['banks']))
+        self.assertTrue(all(not b['decision'] for b in final_review.snapshot(self.review)['banks']))
 
     def test_matching_omits_images_above_old_limit_and_preserves_context(self):
         """Forty-one source pages reach matching as complete text without image attachments."""
-        from dashboard import piece_match_jobs
-        from reconciliation.review_settings import DEFAULTS
+        from dashboard.services import piece_match_jobs
+        from reconciliation.core.settings import DEFAULTS
         self.accept()
         banks, items, index, facts = piece_matching.current(self.review)
         preview = self.fixture.base / 'preview.png'
@@ -416,17 +415,17 @@ class PiecePipelineTests(unittest.TestCase):
         statement_hash = next(iter(banks.values()))['source_sha256']
         old = {'version': 0, 'decisions': {}, 'history': []}
         frozen = (None, old, banks, items, index, {'statement_hash': statement_hash, 'bank_hash': bank_hash})
-        with patch.object(matching_review, 'frozen_context', return_value=frozen):
+        with patch.object(final_review, 'frozen_context', return_value=frozen):
             piece_matching.activate(self.review)
-        data = matching_review.snapshot(self.review)
+        data = final_review.snapshot(self.review)
         self.assertEqual(len(data['banks']), 3)
         self.assertFalse(any(b['stale'] for b in data['banks']))
         self.assertTrue((self.fixture.base / 'final-review/bank-import.json').exists())
 
     def test_canonical_model_output_reaches_saved_review_pieces(self):
         """Actual extraction orchestration requests the new contract and retains its facts."""
+        from reconciliation.extraction import workflow
         from tests.helpers import ReviewFolder
-        from reconciliation import vision_workflow
         fixture = ReviewFolder(self.addCleanup)
         index, state = fixture.prepared()
         supplied = {'readable': True, 'description': 'Two receipts',
@@ -446,7 +445,7 @@ class PiecePipelineTests(unittest.TestCase):
                 calls.append(schema)
                 return copy.deepcopy(supplied)
 
-        vision_workflow.run(fixture.work, index, state, Reviewer())
+        workflow.run(fixture.work, index, state, Reviewer())
         self.assertEqual(len(calls), 2)
         for result in state['units'].values():
             self.assertEqual(result['receipts'][0]['payee'], 'Merchant A')

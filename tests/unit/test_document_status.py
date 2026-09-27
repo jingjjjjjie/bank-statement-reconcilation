@@ -5,7 +5,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from dashboard.document_status import snapshot
+from dashboard.services.document_status import snapshot
 
 
 class DocumentStatusTests(unittest.TestCase):
@@ -28,7 +28,7 @@ class DocumentStatusTests(unittest.TestCase):
             index = {"manifest": str(review.manifest_path), "documents": documents}
             state = {"units": {}, "screens": {"left:right": {"candidate": True}},
                      "pairs": {"left:right": {"classification": "same_document"}}, "decisions": {}}
-            with patch("dashboard.document_status.load", return_value=(index, state)):
+            with patch("dashboard.services.document_status.load", return_value=(index, state)):
                 for verdict, expected in ((None, set()), ("keep_left", {"right"}),
                                           ("keep_right", {"left"}), ("keep_both", set()), (None, set())):
                     state["decisions"] = {"left:right": {"verdict": verdict}} if verdict else {}

@@ -1,19 +1,18 @@
 """Compare shortlist and batching policies in isolation from live review state."""
 import argparse
 import copy
-from collections import defaultdict
-from concurrent.futures import ThreadPoolExecutor, as_completed
 import hashlib
 import json
-from pathlib import Path
 import random
 import time
+from collections import defaultdict
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from pathlib import Path
 
-from reconciliation.codex_reviewer import CodexReviewer, TEXT, TEXTS, object_schema
-from reconciliation.token_usage import summary
+from reconciliation.matching.candidates import build_candidates, number, shortlist, specific_name, tokens
+from reconciliation.model.codex import TEXT, TEXTS, CodexReviewer, object_schema
+from reconciliation.model.token_usage import summary
 from scripts.matching_cases import make_cases
-from reconciliation.candidates import number, tokens, specific_name, build_candidates, shortlist
-
 
 SCHEMA = object_schema({"decisions": {"type": "array", "items": object_schema({
     "bank_id": TEXT, "status": {"type": "string", "enum": ["proposal", "review", "no_candidate"]},

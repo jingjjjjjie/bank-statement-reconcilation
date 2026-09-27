@@ -1,8 +1,8 @@
 """Verify exact merge arithmetic and fresh evidence identities on acceptance."""
 import unittest
 
-from reconciliation.pieces import merge_all
-from dashboard import receipt_review
+from dashboard.services import receipt_review
+from reconciliation.extraction.pieces import merge_all
 from tests.unit import test_receipt_review as fixtures
 
 

@@ -1,12 +1,13 @@
 """Review one bank transaction against several supporting candidates in Playwright."""
-from pathlib import Path
 import threading
 import unittest
+from pathlib import Path
 from types import SimpleNamespace
 
-from playwright.sync_api import sync_playwright, expect
+from playwright.sync_api import expect, sync_playwright
+
 from dashboard.routes import create_app
-from dashboard import matching_review
+from dashboard.services import final_review
 from tests.browser import browser_options
 from tests.http_server import TestServer
 from tests.unit import test_matching_review as fixtures
@@ -70,7 +71,7 @@ class MatchingReviewBrowserTests(unittest.TestCase):
         with sync_playwright() as playwright:
             browser = playwright.chromium.launch(**browser_options())
             page = browser.new_page()
-            data = matching_review.snapshot(fixture.review)
+            data = final_review.snapshot(fixture.review)
             data['items'][0]['amount_location'] = 'Sheet1!B45:D45'
             page.route('**/api/matching', lambda route: route.fulfill(json=data))
             page.route('**/api/matching-preview?*', lambda route: route.fulfill(json={
@@ -104,7 +105,7 @@ class MatchingReviewBrowserTests(unittest.TestCase):
         fixture.review.manifest = {}
         fixture.review.workspace = lambda: {'name': 'Fixture', 'period': 'December'}
         fixture.review.workflow_checks = lambda: (False, False, False)
-        facts = matching_review.read(fixture.cache / 'facts.json')
+        facts = final_review.read(fixture.cache / 'facts.json')
         master = fixture.project / 'bank-output/master_statement.csv'
         with master.open('a', encoding='utf-8', newline='') as stream:
             for number in range(4, 14):
@@ -116,7 +117,7 @@ class MatchingReviewBrowserTests(unittest.TestCase):
         (fixture.cache / 'matching').mkdir()
         fixture.write(fixture.cache / 'matching/input-candidates.json', {'banks': [
             {'id': f'B{i}', 'candidate_ids': [f'D{j}' for j in range(1, 9)]} for i in range(1, 14)]})
-        suggestions = matching_review.read(fixture.cache / 'decisions.json')
+        suggestions = final_review.read(fixture.cache / 'decisions.json')
         suggestions[0]['assessment'] = 'strong'
         suggestions[2]['allocations'] = []
         suggestions.extend(dict(suggestions[2], bank_id=f'B{i}') for i in range(4, 14))
@@ -222,7 +223,7 @@ class MatchingReviewBrowserTests(unittest.TestCase):
             self.assertNotIn(f'http://127.0.0.1:{server.server_port}/api/matching', save_requests)
             page.locator('[data-bank-id="B1"]').click()
             expect(page.locator('#evidence-content')).to_contain_text('Original receipt 2')
-            saved = matching_review.snapshot(fixture.review)['banks'][0]
+            saved = final_review.snapshot(fixture.review)['banks'][0]
             self.assertEqual(saved['decision']['allocations'][0]['item_id'], 'D2')
             self.assertEqual(saved['support_status'], 'Supporting')
             expect(page.locator('[data-bank-id="B1"]')).to_have_class('transaction-number finished')
@@ -239,7 +240,7 @@ class MatchingReviewBrowserTests(unittest.TestCase):
             expect(page.locator('.transaction-number[aria-current]')).to_have_attribute('data-bank-id', 'B2')
             page.locator('#deny-match').click()
             expect(page.locator('#save-status')).to_contain_text('Saved')
-            self.assertEqual(matching_review.snapshot(fixture.review)['banks'][1]['review_status'], 'denied')
+            self.assertEqual(final_review.snapshot(fixture.review)['banks'][1]['review_status'], 'denied')
             page.locator('#bank-filter').select_option('all')
             page.locator('[data-bank-id="B1"]').click()
             page.get_by_role('checkbox', name='Select D2 receipt-2.txt', exact=True).click()
@@ -264,7 +265,7 @@ class MatchingReviewBrowserTests(unittest.TestCase):
             expect(page.locator('.transaction-number[aria-current]')).to_have_attribute('data-bank-id', 'B4')
             page.locator('[data-bank-id="B3"]').click()
             expect(page.locator('#save-status')).to_contain_text('Saved')
-            self.assertEqual(matching_review.snapshot(fixture.review)['banks'][2]['support_status'], 'No supporting')
+            self.assertEqual(final_review.snapshot(fixture.review)['banks'][2]['support_status'], 'No supporting')
             page.locator('#undo-match').click()
             expect(page.locator('#save-status')).to_have_text('')
             page.get_by_role('button', name='Review options').click()

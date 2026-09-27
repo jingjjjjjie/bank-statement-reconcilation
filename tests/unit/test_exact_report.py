@@ -4,11 +4,11 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from dashboard.review import Review
-from reconciliation.duplicate_workflow import check, organize
-from reconciliation.exact_report import prepare
-from reconciliation.source_selection import SourceSelection
-from reconciliation.vision_workflow import inventory
+from dashboard.services.review import Review
+from reconciliation.extraction.workflow import inventory
+from reconciliation.intake.duplicates import check, organize
+from reconciliation.intake.exact_report import prepare
+from reconciliation.intake.workspace import SourceSelection
 
 
 class ExactReportTests(unittest.TestCase):
