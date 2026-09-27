@@ -103,12 +103,14 @@ function renderPieceNavigation() {
         if (field) row.append(field.closest('label'));
       }
       for (const label of [...card.querySelectorAll(':scope > label')]) detailFields.append(label);
-      const location = card.querySelector('[data-field="amount_location"]');
+      const location = detailFields.querySelector('[data-field="amount_location"]');
       if (location) {
         const show = node('button', 'button secondary', 'Show');
         show.type = 'button'; show.title = 'Show where this amount is in the original';
         show.onclick = () => showLocation(location.value);
-        location.closest('label').append(show);
+        const field = node('div', 'location-field');
+        location.replaceWith(field);
+        field.append(location, show);
       }
       details.append(detailFields);
       card.append(row, details);

@@ -93,8 +93,9 @@ function addReceiptPiece(piece=emptyPiece()) {
   receiptField(card, 'Payer', 'payer', piece.payer || '');
   receiptField(card, 'Amount', 'total', piece.total);
   receiptField(card, piece.currency_default ? 'Currency (default)' : 'Currency', 'currency', piece.currency);
-  receiptField(card, 'Date (YYYY-MM-DD)', 'date', piece.date || '');
-  receiptField(card, 'Document no.', 'document_number', piece.document_number || '');
+  receiptField(card, 'Date', 'date', piece.date || '');
+  // Older records kept the main number among their invoice references.
+  receiptField(card, 'Document no.', 'document_number', piece.document_number || piece.invoice_numbers?.[0] || '');
   receiptField(card, 'Type', 'document_type', piece.document_type);
   receiptField(card, 'Other names (one per line)', 'other_names', piece.other_names || [], true);
   receiptField(card, 'References (type: value)', 'references', (piece.references || (piece.invoice_numbers || []).map(value => ({type:'invoice', value}))).map(r => `${r.type}: ${r.value}`), true);
