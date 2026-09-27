@@ -156,3 +156,7 @@ Final review shows bank payment narration immediately beneath Pay to/Pay from, a
 Candidate search is collapsed behind Search beside the section heading. Opening it searches all eligible pieces automatically and exposes Reset to suggestion. Closing it clears the query and returns to the shortlist while preserving selected pieces. Escape closes search and restores focus.
 
 Selected supporting pieces occupy the upper tray and stay visible across search and candidate pages. Ticking an available candidate moves it up; its Remove button returns it to the lower tray without saving a decision. Five unselected candidates appear per lower-tray page. Pay to/from and party are smaller and right-aligned.
+
+Allocation warnings and differences use red styling. The explicit Confirm/Save button is the review action; there is no extra acknowledgment checkbox. Monetary validation, over-allocation blocking, unresolved flags and audit records remain in force.
+
+The payment header uses compact typography and inline-wrapped narration. The left panel and footer stay fixed; selected and available candidate lists scroll within their trays, preserving visible payment context and actions.

@@ -277,8 +277,6 @@ def decide(review, body):
             flags.append(f'Unallocated bank amount: {difference}')
         if len(allocations)>1:
             flags.append('Multiple supporting items: verify these are distinct expenses, not duplicate evidence')
-        if flags and body.get('acknowledged') is not True:
-            raise ValueError('Please confirm the flagged differences or evidence limitations')
         after = {'status':'approved','allocations':allocations,'allocated_total':str(total),
                  'difference':format(difference.normalize(),'f'),'context_only':total==0,'flags':flags,
                  'reviewer':reviewer,'note':note}

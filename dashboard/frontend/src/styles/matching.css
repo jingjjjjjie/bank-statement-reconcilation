@@ -80,3 +80,18 @@
 .candidate-tray{border:1px solid #dce5df;border-radius:8px;padding:10px;margin-bottom:12px}.candidate-tray .section-heading{margin-bottom:8px}.candidate-tray .section-heading h2{font-size:12px}
 #selected-tray{background:#f5f8f4}#selected-candidates .candidate-card:last-child,#candidate-list .candidate-card:last-child{margin-bottom:0}.tray-empty{font-size:12px;color:#64776b;margin:8px 0}
 .remove-candidate{flex:none;width:22px;height:26px;border:0;border-radius:4px;background:transparent;color:#6e554f;font-size:20px;padding:0;margin-top:10px}.remove-candidate:hover{background:#f5e5df;color:#943a28}
+
+.selection-summary{background:#fff0ee;border-color:#e4a49a;color:#a12d24}.selection-summary .warning,.selection-summary .difference,#footer-summary.allocation-warning{color:#a12d24}
+
+/* Keep payment facts and actions fixed; scroll only the candidate lists. */
+.decision-scroll{display:flex;flex-direction:column;overflow:hidden;padding:10px 16px}
+#transaction-detail{flex:none;padding-bottom:8px;margin-bottom:8px}
+.transaction-header{gap:10px}.transaction-title{font-size:12px}.transaction-direction{font-size:9px;margin-bottom:1px}.bank-amount{font-size:15px}
+.bank-meta{font-size:10px;margin:3px 0}.payment-description{font-size:11px;line-height:1.35;white-space:normal;margin:4px 0 0}
+#review-editor{display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden}
+.candidate-tray{display:flex;flex-direction:column;min-height:0;margin-bottom:8px;padding:8px}
+.candidate-tray .section-heading,.candidate-controls,.candidate-paging{flex:none}
+#selected-tray{flex:0 1 auto;max-height:40%}#support-group{flex:1;min-height:100px;margin-bottom:0}
+#selected-candidates,#candidate-list{overflow-y:auto;min-height:0;overscroll-behavior:contain;scrollbar-gutter:stable}
+#candidate-list{flex:1}.selection-summary{flex:none;margin:8px 0 0;padding:8px;font-size:11px;line-height:1.5}
+@media(max-width:700px){.decision-panel{height:80dvh;min-height:560px}.decision-scroll{overflow:hidden;padding:10px 12px}.bank-amount{font-size:15px}}

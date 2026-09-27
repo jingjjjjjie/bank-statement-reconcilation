@@ -139,9 +139,7 @@ class MatchingReviewTests(unittest.TestCase):
 
     def test_partial_and_contextual_support_stay_flagged(self):
         """A human approval cannot hide missing or partially allocated monetary evidence."""
-        with self.assertRaisesRegex(ValueError,'confirm'):
-            matching.decide(self.review,self.request(allocations=[{'item_id':'D1','amount':'5'}],acknowledged=False))
-        matching.decide(self.review,self.request(allocations=[{'item_id':'D1','amount':'5'}], note=''))
+        matching.decide(self.review,self.request(allocations=[{'item_id':'D1','amount':'5'}], note='', acknowledged=False))
         data = matching.snapshot(self.review)
         self.assertEqual(data['banks'][0]['decision']['difference'],'5')
         self.assertEqual(data['banks'][0]['support_status'],'No supporting')

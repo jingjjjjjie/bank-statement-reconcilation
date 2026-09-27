@@ -125,8 +125,6 @@ function chooseBank(id, addItem) {
   $('#candidate-search').hidden = true;
   $('#toggle-candidate-search').setAttribute('aria-expanded', 'false');
   $('#toggle-candidate-search').textContent = 'Search';
-  $('#approval-explanation').hidden = true;
-  $('#acknowledge').checked = false;
   transactionPage = Math.floor(Math.max(0, visibleBanks().findIndex(row => row.id === id)) / 10);
   $('#save-status').textContent = b.decision ? `Saved · ${new Date(b.decision.at).toLocaleString()}` : '';
   $('#review-editor').hidden = false; $('#undo-match').hidden = !b.decision;
@@ -268,6 +266,7 @@ function updateSummary() {
   /* Make incomplete, excessive or invalid allocations visible before submitting. */
   const b = bank(), values = [...selected.values()], total = values.reduce((sum, v) => sum + (cents(v) || 0), 0), difference = cents(b.amount) - total;
   const summary = $('#selection-summary'); summary.replaceChildren();
+  $('#footer-summary').classList.toggle('allocation-warning', difference !== 0 && selected.size > 0);
   summary.append(node('strong', '', `${selected.size} selected · ${formatMoney((total / 100).toFixed(2), b.currency)} allocated`));
   summary.append(node('div', difference ? 'difference' : '', difference === 0 ? 'The allocation equals the bank payment.' : `Difference: ${formatMoney((difference / 100).toFixed(2), b.currency)}`));
   $('#footer-summary').textContent = `${selected.size} selected · ${formatMoney((total / 100).toFixed(2), b.currency)} allocated${difference ? ' · Difference ' + formatMoney((difference / 100).toFixed(2), b.currency) : ''}`;
@@ -282,8 +281,6 @@ function updateSummary() {
     ? `${b.support_status}. ${b.review_status === 'denied' ? 'Suggestion rejected; other evidence may exist.' : 'Saved review decision.'}`
     : `${selected.size} selected · Not confirmed`;
   $('#approve-match').textContent = difference === 0 && values.some(v => v !== '') ? 'Confirm supporting' : 'Save partial / contextual evidence';
-  $('#acknowledge-label').hidden = !flagged;
-  $('#approval-explanation').hidden = !flagged || !selected.size;
   $('#approve-match').disabled = saving || !selected.size || b.stale || difference < 0 || values.some(v => v !== '' && (cents(v) === null || cents(v) <= 0));
 }
 async function saveDecision(action) {
@@ -294,7 +291,7 @@ async function saveDecision(action) {
   root.querySelectorAll('.decision-actions button').forEach(b => b.disabled = true);
   try {
     await api('/api/matching-decide', {bank_id:activeId,action,note:bank().decision?.note || '',
-      binding:reviewData.binding,version:reviewData.version,acknowledged:$('#acknowledge').checked,
+      binding:reviewData.binding,version:reviewData.version,
       allocations:[...selected].map(([item_id, amount]) => ({item_id,amount}))});
     persisted = true;
     await refresh(); saving = false; chooseBank(activeId);
