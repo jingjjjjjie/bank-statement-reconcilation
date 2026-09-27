@@ -103,7 +103,7 @@ function chooseBank(id, addItem) {
   source.forEach(a => { if (itemById.has(a.item_id)) selected.set(a.item_id, a.amount); });
   if (addItem) selected.set(addItem, defaultAllocation(itemById.get(addItem)));
   $('#candidate-query').value = ''; $('#all-candidates').checked = false;
-  $('#note-details').open = false;
+  $('#approval-explanation').hidden = true;
   $('#decision-note').value = b.decision?.note || ''; $('#acknowledge').checked = false;
   $('#save-status').textContent = b.decision ? `Saved · ${new Date(b.decision.at).toLocaleString()}` : '';
   $('#review-editor').hidden = false; $('#undo-match').hidden = !b.decision;
@@ -123,9 +123,6 @@ function chooseBank(id, addItem) {
   if (b.suggestion.failed) detail.append(node('p', 'warning', b.suggestion.reason));
   if (b.stale) detail.append(node('p', 'warning', 'Original evidence changed. This transaction cannot be treated as supported until rechecked.'));
   for (const flag of b.decision?.flags || []) detail.append(node('p', 'warning', flag));
-  const history = $('#decision-history'); history.replaceChildren();
-  for (const h of b.history.slice().reverse()) history.append(node('p', '', `${new Date(h.at).toLocaleString()} · ${h.action}${h.note ? '\n' + h.note : ''}`));
-  $('.history').hidden = !b.history.length;
   renderQueue(); renderCandidates(); updateSummary(); remember('active', id);
   savedDraft = draftSnapshot(); updateSummary();
   const first = addItem || selected.keys().next().value;
@@ -227,7 +224,7 @@ function updateSummary() {
     : `${selected.size} selected · Not confirmed`;
   $('#approve-match').textContent = difference === 0 && values.some(v => v !== '') ? 'Confirm supporting' : 'Save partial / contextual evidence';
   $('#acknowledge-label').hidden = !flagged;
-  if (flagged && selected.size) $('#note-details').open = true;
+  $('#approval-explanation').hidden = !flagged || !selected.size;
   $('#approve-match').disabled = saving || !selected.size || b.stale || difference < 0 || values.some(v => v !== '' && (cents(v) === null || cents(v) <= 0));
 }
 async function saveDecision(action) {

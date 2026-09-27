@@ -137,3 +137,7 @@ and previews its original without selecting or approving it. Use only this candi
 replaces the draft selection; checkboxes support several separate expenses. Confirm
 supporting remains the explicit saved decision. Unsaved-edit protection, source
 binding, monetary validation and the single final-review ledger remain in force.
+
+Final review omits optional Add a note and Decision history controls. An explanation
+field appears only for flagged allocations that require it; stored notes and the
+ledger audit history remain intact.
