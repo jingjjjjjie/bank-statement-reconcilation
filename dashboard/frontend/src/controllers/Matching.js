@@ -178,6 +178,7 @@ function renderCandidates() {
   for (const item of [...selected.keys()].map(id => itemById.get(id)).filter(Boolean).concat(items)) {
     const card = node('article', `candidate-card ${selected.has(item.id) ? 'selected' : ''}`);
     card.classList.toggle('suggested', suggested.has(item.id));
+    if (suggested.has(item.id)) card.dataset.confidence = b.confidence.level || 'none';
     card.dataset.itemId = item.id;
     card.setAttribute('aria-label', `Candidate ${item.id}`);
     if (previewState?.kind === 'item' && previewState.id === item.id) card.classList.add('previewing');

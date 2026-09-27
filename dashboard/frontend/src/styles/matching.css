@@ -60,8 +60,8 @@
 .candidate-name{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .candidate-parties{font-size:12px;line-height:1.5;overflow-wrap:anywhere;margin:8px 0;font-weight:600}
 
-.candidate-card.suggested{border:1px solid transparent;background:linear-gradient(110deg,#ffe1e8 0%,#fff0d5 22%,#e7f4d9 43%,#dff3f8 65%,#e8e0fa 84%,#f5dff2 100%) padding-box,linear-gradient(110deg,#e36a74,#eab454,#74b77a,#5ca6d8,#a77ad6) border-box}
-.candidate-card.suggested.selected{background:linear-gradient(110deg,#ffe1e8 0%,#fff0d5 22%,#e7f4d9 43%,#dff3f8 65%,#e8e0fa 84%,#f5dff2 100%) padding-box,linear-gradient(110deg,#e36a74,#eab454,#74b77a,#5ca6d8,#a77ad6) border-box}
+.candidate-card.suggested[data-confidence=high]{border:1px solid transparent;background:linear-gradient(110deg,#ffe1e8 0%,#fff0d5 22%,#e7f4d9 43%,#dff3f8 65%,#e8e0fa 84%,#f5dff2 100%) padding-box,linear-gradient(110deg,#e36a74,#eab454,#74b77a,#5ca6d8,#a77ad6) border-box}
+.candidate-card.suggested[data-confidence=low]{border:1px solid #7eae8d;background:#e1f0e5}
 .suggested-label{display:inline-block;font-size:9px;color:#7354a0;font-weight:700;margin-right:5px;text-transform:uppercase;letter-spacing:.3px}
 .suggestion-explanation{padding:10px;margin:5px 0 10px;border-radius:5px;background:#f4f0fa;font-size:12px;line-height:1.5;color:#443755}.suggestion-explanation p{margin:6px 0 0}.suggestion-confidence{display:block;font-size:11px;color:#68577c}
 
@@ -70,11 +70,13 @@
 #matching-options{border:1px solid var(--line);border-radius:8px;padding:16px;box-shadow:0 8px 30px #20383126;max-width:calc(100vw - 32px)}
 #matching-options .review-tabs{margin-bottom:12px}
 
-/* Move a painted layer so the rainbow does not animate layout or text. */
+/* Move a painted layer; confidence controls its palette without moving text. */
 .candidate-card.suggested{overflow:hidden;isolation:isolate}
-.candidate-card.suggested::before{content:"";position:absolute;inset:0 -50%;z-index:-1;pointer-events:none;background:linear-gradient(110deg,#ffe1e8,#fff0d5,#e7f4d9,#dff3f8,#e8e0fa,#f5dff2,#ffe1e8);animation:suggested-flow 3s ease-in-out infinite alternate}
+.candidate-card.suggested:is([data-confidence=high],[data-confidence=low])::before{content:"";position:absolute;inset:0 -50%;z-index:-1;pointer-events:none;animation:suggested-flow 3s ease-in-out infinite alternate}
+.candidate-card.suggested[data-confidence=high]::before{background:linear-gradient(110deg,#ffe1e8,#fff0d5,#e7f4d9,#dff3f8,#e8e0fa,#f5dff2,#ffe1e8)}
+.candidate-card.suggested[data-confidence=low]::before{background:linear-gradient(110deg,#eff8ef,#d4ebdc,#b9ddc5,#e7f4ea,#c9e5d1,#eff8ef)}
 @keyframes suggested-flow{from{transform:translate3d(-20%,0,0)}to{transform:translate3d(20%,0,0)}}
-@media(prefers-reduced-motion:reduce){.candidate-card.suggested::before{animation:none}}
+@media(prefers-reduced-motion:reduce){.candidate-card.suggested:is([data-confidence=high],[data-confidence=low])::before{animation:none}}
 
 .transaction-header{flex-direction:row-reverse}.transaction-party{text-align:right}.transaction-title{font-size:14px}.transaction-direction{font-size:10px}.transaction-header .bank-amount{padding-top:0}
 .candidate-tray{border:1px solid #dce5df;border-radius:8px;padding:10px;margin-bottom:12px}.candidate-tray .section-heading{margin-bottom:8px}.candidate-tray .section-heading h2{font-size:12px}
