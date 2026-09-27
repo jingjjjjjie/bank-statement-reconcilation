@@ -10,7 +10,7 @@ from pathlib import Path
 
 from reconciliation.model.token_usage import FIELDS, record
 from scripts.benchmark_matching import number, save
-from scripts.test_statement_matching import match_all, report, verify_strong
+from scripts.statement_matching import match_all, report, verify_strong
 
 
 def signature(row):

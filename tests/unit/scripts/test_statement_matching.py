@@ -5,7 +5,7 @@ import unittest
 from pathlib import Path
 
 from scripts.compare_statement_strategies import signature, stage_timing
-from scripts.test_statement_matching import check_response, match_all, payable_rows, report
+from scripts.statement_matching import check_response, match_all, payable_rows, report
 
 
 class FullStatementMatchingTests(unittest.TestCase):
