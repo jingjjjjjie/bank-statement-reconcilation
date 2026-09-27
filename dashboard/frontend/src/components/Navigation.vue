@@ -2,17 +2,19 @@
 import { computed } from 'vue';
 import { appState } from '../api.js';
 const links = [
-  ['/source', 'Workspace'], ['/review', 'Exact duplicates'], ['/documents', 'Documents'],
+  ['/source', 'Workspace'], ['/documents', 'Documents'],
   ['/extraction-review', 'Review results'], ['/bank', 'Bank statement'],
   ['/matching', 'Final review'], ['/final-report', 'Final report'],
   ['/complete', 'Completion'],
 ];
 // Pair each header destination with its existing workflow status.
-const items = computed(() => links.filter(([path]) =>
-  path !== '/review' || appState.session?.mode !== 'exact_report').map(([path, label]) => {
-    const index = appState.steps.findIndex(step => (step.href === '/' ? '/source' : step.href) === path);
-    return { path, label, step: index >= 0 ? appState.steps[index] : null, number: index + 1 };
-  }));
+const items = computed(() => {
+  const steps = appState.steps.filter(step => step.href !== '/review');
+  return links.map(([path, label]) => {
+    const index = steps.findIndex(step => (step.href === '/' ? '/source' : step.href) === path);
+    return { path, label, step: index >= 0 ? steps[index] : null, number: index + 1 };
+  });
+});
 </script>
 
 <template>
