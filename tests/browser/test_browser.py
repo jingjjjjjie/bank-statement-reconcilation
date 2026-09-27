@@ -7,7 +7,8 @@ from unittest.mock import patch
 from PIL import Image, ImageDraw
 from playwright.sync_api import expect, sync_playwright
 
-from dashboard.app import Review, create_app
+from dashboard.routes import create_app
+from dashboard.services.review import Review
 from reconciliation.core import development_cache
 from reconciliation.core.settings import DEFAULTS
 from reconciliation.intake.duplicates import organize

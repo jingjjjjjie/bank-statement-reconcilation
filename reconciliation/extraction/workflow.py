@@ -228,7 +228,7 @@ def model_gate(index, config, state, reviewer, choices, parallel):
     fail `verify`.
     """
     def ask(prompt, schema, images=(), stage="comparison", verify=None):
-        # Re-read settings before each call so switching Codex off stops the next call.
+        """Make one model call for a stage, re-reading settings first so switching Codex off stops the next call."""
         current = active_config(index)
         if current["pdf_mode"] in pdf_routing.MODES and not development_cache.mode()["enabled"]:
             raise ReviewPending("Development mode was switched off; stopped before the next call")

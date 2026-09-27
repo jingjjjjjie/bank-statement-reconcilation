@@ -5,7 +5,6 @@ import tempfile
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import patch
 
 from dashboard.services import receipt_review
 from reconciliation.intake.duplicates import fingerprint

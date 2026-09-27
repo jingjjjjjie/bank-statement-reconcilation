@@ -9,7 +9,7 @@ from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
-from reconciliation.matching.candidates import build_candidates, number, shortlist, specific_name, tokens
+from reconciliation.matching.candidates import build_candidates, number, shortlist, specific_name
 from reconciliation.model.codex import TEXT, TEXTS, CodexReviewer, object_schema
 from reconciliation.model.token_usage import summary
 from scripts.matching_cases import make_cases

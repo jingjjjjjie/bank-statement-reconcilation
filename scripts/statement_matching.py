@@ -118,7 +118,7 @@ def prepare(work, bank_path, statement, output):
                        "location": unit["label"] + " cells " + ", ".join(row["cells"]),
                        "source_cells": row["cells"], "limitations": [], "invoice_numbers": []}
                       for row in extracted_rows] or raw.get("receipts", [])
-            for position, piece in enumerate(pieces):
+            for piece in pieces:
                 amount = number(piece.get("total", ""))
                 if amount is not None and amount <= 0:
                     skipped.append({"document": digest, "unit": n, "reason": "nonpositive amount requires role review"})

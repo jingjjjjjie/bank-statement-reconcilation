@@ -1,7 +1,6 @@
 """Dashboard extraction runs: prepare, background start, regeneration queue and Stop."""
 
 import json
-import tempfile
 import threading
 import unittest
 import urllib.error
@@ -10,14 +9,10 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from PIL import Image
-
-from dashboard.app import Review, create_app
+from dashboard.routes import create_app
 from dashboard.services import extraction_runs, receipt_review, regeneration
-from reconciliation.extraction.pieces import EXTRACTION as PIECE_EXTRACTION
 from reconciliation.extraction.workflow import load, run
-from reconciliation.intake.duplicates import organize
-from reconciliation.model.codex import EXTRACTION, ReviewCancelled
+from reconciliation.model.codex import ReviewCancelled
 from tests.fixtures.extraction_runs import ExtractionRunsFixture, FixtureReviewer
 from tests.http_server import TestServer
 

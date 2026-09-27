@@ -8,8 +8,9 @@ import urllib.request
 from pathlib import Path
 from unittest.mock import patch
 
-from dashboard.app import Review, create_app, workflow_guide
+from dashboard.routes import create_app
 from dashboard.services import development
+from dashboard.services.review import Review, workflow_guide
 from reconciliation.intake.duplicates import check, organize
 from reconciliation.model.token_usage import record
 from tests.http_server import TestServer

@@ -63,7 +63,6 @@ class PiecePipelineBrowserTests(unittest.TestCase):
             page.locator('[data-field="references"]').first.fill('receipt: 000007')
             page.locator('#accept-receipts').click()
             expect(page.locator('#document-review-status')).to_have_attribute('aria-label', 'Extraction accepted')
-            original = json.loads((fixture.work / 'receipt-matches.json').read_text())['extractions'][digest + ':0']['receipts']
             expect(page.locator('#merge-piece')).to_have_count(0)
             page.get_by_role('button', name='Select piece 2', exact=True).click()
             page.locator('#remove-piece').click()

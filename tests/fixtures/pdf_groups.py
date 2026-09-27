@@ -1,6 +1,4 @@
 """Fixture: Multi-page PDF reviews with a page-counting fake model."""
-import copy
-import csv
 import json
 import tempfile
 import unittest
@@ -11,8 +9,6 @@ from jsonschema import validate
 
 from reconciliation.core.settings import DEFAULTS
 from reconciliation.extraction import pieces, workflow
-from reconciliation.extraction.assembly import current_assembly
-from reconciliation.extraction.pdf_groups import chunk_requests, whole_request
 from reconciliation.intake.duplicates import organize
 
 

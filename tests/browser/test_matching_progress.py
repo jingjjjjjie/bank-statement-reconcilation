@@ -1,5 +1,4 @@
 """Verify matching progress states without launching subscription calls."""
-import json
 import threading
 import unittest
 from types import SimpleNamespace

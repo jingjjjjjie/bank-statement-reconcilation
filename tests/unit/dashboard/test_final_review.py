@@ -1,14 +1,9 @@
 """Exercise the final human ledger without model calls or real customer decisions."""
 import csv
-import json
-import tempfile
 import unittest
-from pathlib import Path
-from types import SimpleNamespace
 from unittest.mock import patch
 
 from dashboard.services import final_review as matching
-from reconciliation.intake.duplicates import fingerprint
 from tests.fixtures.final_review import FinalReviewFixture
 
 

@@ -108,7 +108,7 @@ def build_candidates(banks, documents, grouped=True, specific=False):
             for _, key in ranked:
                 if pool[key].get("claim_group") and number(pool[key]["amount"]) is not None:
                     groups[pool[key]["claim_group"]].append(key)
-            for group, members in groups.items():
+            for members in groups.values():
                 # Small explicit groups only; large groups require a dedicated reconciliation.
                 if len(members) > MAX_CLAIM_GROUP:
                     continue

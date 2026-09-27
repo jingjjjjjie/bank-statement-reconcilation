@@ -29,6 +29,7 @@ def fingerprint(path):
 
 
 def identical(left, right):
+    """True when two files have identical bytes (compared in chunks, not by hash alone)."""
     with left.open("rb") as a, right.open("rb") as b:
         while True:
             block = a.read(CHUNK_SIZE)
@@ -56,6 +57,7 @@ def supporting_files(root, excluded=()):
 
 
 def duplicate_groups(files):
+    """Group files with identical bytes: by size, then SHA-256, then a byte comparison."""
     sizes = defaultdict(list)
     for path in files:
         sizes[path.stat().st_size].append(path)
@@ -76,12 +78,12 @@ def duplicate_groups(files):
 
 
 def duplicate_root(manifest, manifest_path):
-    # Older manifests stored duplicates inside the supporting folder.
+    """Return where this manifest's organized duplicate copies live (older manifests: inside the source folder)."""
     return Path(manifest.get("DuplicateRoot", Path(manifest["SupportingRoot"]) / "duplicated")).resolve()
 
 
 def review_files(root, manifest, manifest_path):
-    # Scan originals and the separate review folder without counting a path twice.
+    """List every supporting file for review: originals plus organized copies, each path once."""
     if manifest.get("Mode") == "exact_report":
         return supporting_files(root)
     destination = duplicate_root(manifest, manifest_path)
@@ -172,7 +174,7 @@ def finish_organization(root, manifest, manifest_path):
 
 
 def organize(root, manifest_path):
-    # Review copies live beside the workspace manifest, outside the source folder.
+    """Group exact duplicates and write the manifest; copies are organized beside it, outside the source folder."""
     destination = manifest_path.resolve().parent / "duplicated"
     if destination.exists() or manifest_path.exists():
         raise ValueError("Existing workflow found. Run check; do not reorganize it.")
@@ -197,6 +199,7 @@ def organize(root, manifest_path):
 
 
 def check(root, manifest, manifest_path):
+    """Return problems that block extraction: missing, changed or unexpected files in duplicate groups."""
     if Path(manifest["SupportingRoot"]).resolve() != root:
         raise ValueError("Manifest belongs to a different supporting root.")
     if manifest.get("Mode") == "exact_report":
@@ -235,6 +238,7 @@ def check(root, manifest, manifest_path):
 
 
 def main(argv=None):
+    """Run the organize / check command line; return the process exit code."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("action", choices=("organize", "check"), nargs="?", default="check")
     parser.add_argument("--root", type=Path, help="Supporting folder; defaults to existing manifest's root")

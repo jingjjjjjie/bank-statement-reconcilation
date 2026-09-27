@@ -16,11 +16,7 @@ MONEY = re.compile(r"(?:\d{1,3}(?:,\d{3})+|\d+)\.\d{2}")
 A4_WIDTH = 595.28
 #: Left edges (points) of each statement column; a column runs to the next edge.
 DATE_X, NARRATION_X, DEBIT_X, CREDIT_X, BALANCE_X = 0, 100, 310, 395, 480
-MASTER_FIELDS = ("transaction_id,source,source_sha256,page,sequence,account,currency,"
-                 "year_supplied,date,direction,money_in,money_out,balance,"
-                 "transaction_type,counterparty,counterparty_role,counterparty_raw,"
-                 "details_raw,particular,narration,opening_balance,closing_balance,"
-                 "total_money_in,total_money_out,balance_checks,matching_status").split(",")
+MASTER_FIELDS = ["transaction_id", "source", "source_sha256", "page", "sequence", "account", "currency", "year_supplied", "date", "direction", "money_in", "money_out", "balance", "transaction_type", "counterparty", "counterparty_role", "counterparty_raw", "details_raw", "particular", "narration", "opening_balance", "closing_balance", "total_money_in", "total_money_out", "balance_checks", "matching_status"]
 
 
 def describe(narration, money_in):
@@ -205,7 +201,7 @@ def extract(path, year):
 
 
 def main():
-    # Require the year explicitly because the sample's date header overlaps itself.
+    """Extract a statement PDF into the bank master CSV (the year is required: dates print without it)."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("pdf", type=Path)
     parser.add_argument("--year", type=int, required=True)

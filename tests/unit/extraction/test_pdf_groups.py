@@ -2,18 +2,13 @@
 import copy
 import csv
 import json
-import tempfile
-import unittest
-from pathlib import Path
 
-import pymupdf
 from jsonschema import validate
 
 from reconciliation.core.settings import DEFAULTS
 from reconciliation.extraction import pieces, workflow
 from reconciliation.extraction.assembly import current_assembly
 from reconciliation.extraction.pdf_groups import chunk_requests, whole_request
-from reconciliation.intake.duplicates import organize
 from tests.fixtures.pdf_groups import PdfGroupsFixture, Reviewer
 
 

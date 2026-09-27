@@ -1,5 +1,6 @@
 """Structured-output schemas shared by every model backend and workflow stage."""
 from reconciliation.core.prompts import load_schema
+from reconciliation.extraction.pieces import FACTS, TOTALS
 
 
 def object_schema(properties):
@@ -13,8 +14,6 @@ TEXTS = {"type": "array", "items": TEXT}
 
 EXTRACTION = load_schema("extraction/extraction.legacy")
 RECEIPT = EXTRACTION["properties"]["receipts"]["items"]
-from reconciliation.extraction.pieces import FACTS, TOTALS  # noqa: E402  (pieces needs prompts loaded first)
-
 # Old saved receipts remain valid; the model uses the lean canonical schema.
 RECEIPT['properties'].update({'payee': TEXT, 'references': FACTS, 'dates': FACTS, 'amount_basis': TEXT,
     'piece_id': TEXT, 'parent_piece_ids': TEXTS, 'payer': TEXT, 'other_names': TEXTS, 'date': TEXT,

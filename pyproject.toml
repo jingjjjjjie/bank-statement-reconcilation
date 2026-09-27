@@ -6,3 +6,26 @@ multi_line_output = 5          # Parenthesized, hanging-indent wraps.
 combine_as_imports = true
 known_first_party = ["reconciliation", "dashboard", "scripts", "tests"]
 skip_glob = ["*/node_modules/*", "*/.data/*"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+extend-exclude = ["dashboard/frontend", "dashboard/.data"]
+
+[tool.ruff.format]
+quote-style = "preserve"      # Mixed quote styles are kept; new code prefers double quotes.
+
+[tool.ruff.lint]
+# Pyflakes, pycodestyle errors/warnings, bugbear, simplifications, pydocstyle presence checks.
+select = ["F", "E", "W", "B", "SIM", "D1"]
+# E501: the formatter owns line length. SIM1xx: nested or compact forms are fine when clearer.
+# B905: adding zip(strict=True) would change behaviour; decide per call when editing it.
+ignore = ["E501", "D105", "D107", "SIM105", "SIM108", "SIM117", "B905"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["D1", "B023"]   # Test names describe behaviour; closures run inside the same loop pass.
+"scripts/**" = ["B023"]        # Benchmark closures are called within the loop that defines them.
+"**/__init__.py" = ["D104"]
+
+[tool.ruff.lint.flake8-bugbear]
+extend-immutable-calls = ["fastapi.Depends", "fastapi.Query", "fastapi.Body"]

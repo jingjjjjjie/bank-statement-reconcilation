@@ -17,7 +17,7 @@ from reconciliation.model.workspace_usage import workspace_summary
 
 
 def write_json(path, data):
-    # Replace state atomically so interrupted writes cannot corrupt the audit log.
+    """Write JSON atomically (temp file + rename) so an interrupted write cannot corrupt saved state."""
     temporary = path.with_suffix(".tmp")
     temporary.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
     temporary.replace(path)
@@ -27,7 +27,7 @@ class Review:
     """Manage a manifest and its human decisions without HTTP dependencies."""
 
     def __init__(self, manifest_path, data):
-        # Only manifest-listed files can be previewed, retained or restored.
+        """Load the exact-duplicate manifest and saved keep/undo decisions; only listed files are ever served."""
         self.manifest_path, self.data = manifest_path.resolve(), data.resolve()
         self.config_path = config_for_manifest(self.manifest_path)
         self.manifest = json.loads(manifest_path.read_text(encoding="utf-8-sig"))
@@ -51,11 +51,11 @@ class Review:
             self.groups.setdefault(row["Group"], []).append(file_id)
 
     def latest(self, group):
-        # Keep prior choices in history even after an undo.
+        """Return the most recent keep/undo decision for a group; history keeps earlier ones."""
         return next((a for a in reversed(self.state["actions"]) if a["group"] == group), None)
 
     def settings(self):
-        # Expose saved settings and whether the prepared inputs need refreshing.
+        """Return saved settings plus whether prepared inputs are stale for them."""
         config = load_config(self.config_path)
         index_path = self.manifest_path.parent / "review" / "index.json"
         refresh = False
@@ -167,7 +167,7 @@ class Review:
         return exact, content, bank
 
     def file_path(self, file_id):
-        # Archived copies remain previewable; arbitrary filesystem paths are never accepted.
+        """Resolve a manifest file id to its current location, including archived copies; never a free path."""
         record = self.records[file_id]
         current = Path(record["OrganizedPath"])
         if current.is_file():
@@ -229,7 +229,7 @@ class Review:
                 "attention": sum(g["status"] == "attention" for g in groups)}
 
     def keep(self, group, file_id):
-        # Save a recovery plan before moving any copies out of the active review folder.
+        """Keep one file of a duplicate group and move the other copies to recovery, saving the plan first."""
         if self.manifest.get("Mode") == "exact_report":
             raise ValueError("Exact duplicates are reported automatically; no selection is needed")
         with self.lock:
@@ -278,7 +278,7 @@ class Review:
             self.cache_decisions()
 
     def undo(self, group):
-        # Restore the original copies only if both the survivor and recovery files are unchanged.
+        """Undo a keep decision, restoring archived copies only if every file is unchanged."""
         if self.manifest.get("Mode") == "exact_report":
             raise ValueError("Automatic exact-duplicate reports have no selection to undo")
         with self.lock:
@@ -317,7 +317,7 @@ class Review:
         development.capture(self)
 
     def document(self, file_id):
-        # PDFs and images use native previews; Office files use structured visual pages.
+        """Describe how to preview one manifest file: native for PDFs and images, rendered pages for Office."""
         path = self.file_path(file_id)
         suffix = path.suffix.lower()
         if suffix == ".pdf":

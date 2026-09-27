@@ -1,23 +1,16 @@
 """Fixture: A two-image project with dashboard Review state for background extraction runs."""
 import json
 import tempfile
-import threading
 import unittest
-import urllib.error
-import urllib.request
 from pathlib import Path
-from types import SimpleNamespace
 from unittest.mock import patch
 
 from PIL import Image
 
-from dashboard.app import Review, create_app
-from dashboard.services import extraction_runs, receipt_review, regeneration
+from dashboard.services.review import Review
 from reconciliation.extraction.pieces import EXTRACTION as PIECE_EXTRACTION
-from reconciliation.extraction.workflow import load, run
 from reconciliation.intake.duplicates import organize
-from reconciliation.model.codex import EXTRACTION, ReviewCancelled
-from tests.http_server import TestServer
+from reconciliation.model.codex import EXTRACTION
 
 
 class FixtureReviewer:

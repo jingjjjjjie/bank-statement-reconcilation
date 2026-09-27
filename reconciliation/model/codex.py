@@ -74,7 +74,7 @@ class CodexReviewer:
     """Model client backed by `codex exec` and the ChatGPT subscription login (implements `reconciliation.model.client.ModelClient`)."""
 
     def __init__(self, work, executable=None, model=None, max_calls=DEFAULT_MAX_CALLS, timeout=DEFAULT_TIMEOUT, reasoning="default", cancel_event=None):
-        # Keep response caches scoped to model, prompt, schema and image bytes.
+        """Configure the codex executable, default model, call budget and cache folder under `work`."""
         bundled = Path(os.environ.get("LOCALAPPDATA", "")) / "Programs/OpenAI/Codex/bin/codex.exe"
         self.executable = executable or shutil.which("codex") or str(bundled)
         self.work, self.model = work, model if model is not None else DEFAULT_MODEL

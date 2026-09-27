@@ -9,9 +9,10 @@ import uvicorn
 WORKSPACE = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(WORKSPACE))
 
-from dashboard.routes import create_app
-from dashboard.services.review import Review, workflow_guide, write_json
-from reconciliation.intake.workspace import SourceSelection
+# Imports below need the repository on sys.path when this file is run directly.
+from dashboard.routes import create_app  # noqa: E402
+from dashboard.services.review import Review  # noqa: E402
+from reconciliation.intake.workspace import SourceSelection  # noqa: E402
 
 
 def main():

@@ -1,10 +1,5 @@
 """Receipt review: accepting, editing, discarding and bulk-accepting extracted pieces."""
-import csv
 import json
-import tempfile
-import unittest
-from pathlib import Path
-from types import SimpleNamespace
 from unittest.mock import patch
 
 from dashboard.services import receipt_review

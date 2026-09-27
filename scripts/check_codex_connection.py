@@ -12,7 +12,7 @@ from reconciliation.model.codex import CodexReviewer
 
 
 def main():
-    # Verify subscription-authenticated image input and structured output together.
+    """Make one real codex call with an image and a schema to confirm login, vision and structured output."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--model")
     parser.add_argument("--reasoning", default="default")

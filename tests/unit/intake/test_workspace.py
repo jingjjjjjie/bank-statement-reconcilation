@@ -9,7 +9,7 @@ from pathlib import Path
 from unittest.mock import patch
 from urllib.parse import urlencode
 
-from dashboard.app import create_app
+from dashboard.routes import create_app
 from reconciliation.intake.duplicates import check, fingerprint, organize
 from reconciliation.intake.workspace import SourceSelection
 from tests.http_server import TestServer

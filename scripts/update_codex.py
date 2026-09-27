@@ -76,7 +76,7 @@ def planned_pins(version):
         if name == '.env' and not re.search(pattern, text):
             after = text + ('\n' if text and not text.endswith('\n') else '') + replacement + '\n'
         else:
-            after, count = re.subn(pattern, lambda _: replacement, text)
+            after, count = re.subn(pattern, lambda _, value=replacement: value, text)
             if count != 1:
                 raise ValueError(f'Expected exactly one Codex version pin in {name}')
         if after.encode('utf-8') != before:

@@ -2,7 +2,8 @@
 from jsonschema import validate
 
 from reconciliation.core.revision import revision
-from reconciliation.extraction.schemas import RECEIPT, TEXTS, object_schema
+from reconciliation.extraction.pieces import TOTALS
+from reconciliation.extraction.schemas import RECEIPT, TEXT, TEXTS, object_schema
 
 ASSEMBLED_RECEIPT = object_schema({**RECEIPT["properties"],
     "source_units": {"type": "array", "items": {"type": "integer", "minimum": 1}, "minItems": 1},
@@ -14,8 +15,6 @@ ASSEMBLY = object_schema({
     "reviewed_units": {"type": "array", "items": {"type": "integer", "minimum": 1}},
     "limitations": TEXTS,
 })
-from reconciliation.extraction.pieces import TEXT, TOTALS
-
 ASSEMBLY['properties'].update({'summary': TEXT, 'description': TEXT, 'totals': TOTALS, 'document_type': TEXT,
                                'readable': {'type': 'boolean'}, 'review_warnings': TEXTS})
 

@@ -44,6 +44,7 @@ class NameIndex:
     """IDF-weighted trigram cosine similarity, which tolerates truncation and spacing."""
 
     def __init__(self, items):
+        """Build trigram vectors and IDF weights for every item's party names."""
         vectors = {key: grams(" ".join(names(item.get("parties", [])))) for key, item in items.items()}
         frequency = Counter(g for vector in vectors.values() for g in vector)
         self.default = math.log(1 + len(vectors))
@@ -113,7 +114,7 @@ def rank(banks, items, documents, root=""):
         rows = {}   # candidate id -> reason
         units = []  # (sort key, [ids], reason)
 
-        def compatible(item):
+        def compatible(item, bank=bank):
             """Unknown currencies stay eligible; conflicting ones do not."""
             return not (item.get("currency") and bank.get("currency")
                         and normalize_currency(item["currency"]) != normalize_currency(bank["currency"]))

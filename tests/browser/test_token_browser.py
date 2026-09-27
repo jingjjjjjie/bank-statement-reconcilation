@@ -8,7 +8,8 @@ from unittest.mock import patch
 
 from playwright.sync_api import expect, sync_playwright
 
-from dashboard.app import Review, create_app
+from dashboard.routes import create_app
+from dashboard.services.review import Review
 from reconciliation.intake.duplicates import organize
 from reconciliation.model.token_usage import summary
 from tests.browser import browser_options

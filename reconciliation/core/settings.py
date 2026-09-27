@@ -30,7 +30,7 @@ def config_for_manifest(manifest):
 
 
 def model_catalog():
-    # Read capability metadata from Codex's own cache; do not guess model identifiers.
+    """List models from Codex's own catalog cache with their reasoning levels and vision support."""
     home = Path(os.environ.get("CODEX_HOME", Path.home() / ".codex"))
     try:
         catalog = json.loads((home / "models_cache.json").read_text(encoding="utf-8"))
@@ -43,7 +43,7 @@ def model_catalog():
 
 
 def validate(config):
-    # Reject typos and wrong types instead of silently ignoring a switch.
+    """Return a complete, checked settings dict; raise ValueError on unknown keys, wrong types or out-of-range values."""
     required = {"pdf_mode", "pictures_enabled", "codex_enabled", "max_calls"}
     if not isinstance(config, dict) or not required <= set(config) or set(config) - set(DEFAULTS):
         raise ValueError("Settings contain missing or unknown fields")
@@ -92,26 +92,28 @@ def validate(config):
 
 
 def load_config(path=None):
-    # A missing file uses documented defaults; malformed files fail closed.
+    """Load settings from `path`; a missing file gives the defaults, a malformed one raises."""
     return validate(json.loads(Path(path).read_text(encoding="utf-8-sig"))) if path and Path(path).exists() else dict(DEFAULTS)
 
 
 def content_settings(config):
-    # Execution switches do not invalidate already extracted evidence.
+    """Return only the settings that change extracted evidence (PDF mode, pictures), not run switches."""
     return {key: config[key] for key in ("pdf_mode", "pictures_enabled")}
 
 
 def model_settings(config):
+    """Return the settings that pick models (model, reasoning, per-stage choices)."""
     return {key: config.get(key, DEFAULTS[key]) for key in ("model", "reasoning", "stages")}
 
 
 def stage_settings(config):
-    # Older configurations retain their shared model until stage choices are saved.
+    """Return the model and reasoning for each stage, falling back to the shared model for older configs."""
     fallback = {key: config.get(key, DEFAULTS[key]) for key in ("model", "reasoning")}
     return {stage: dict(config.get("stages", {}).get(stage, fallback)) for stage in STAGES}
 
 
 def document_stage(path):
+    """Return the settings stage used for a file: pdf, excel, word or images."""
     suffix = Path(path).suffix.lower()
     if suffix == ".pdf":
         return "pdf"
@@ -125,11 +127,12 @@ def document_stage(path):
 
 
 def revision(config):
+    """Return a stable hash of a settings dict, used to detect changes."""
     return hashlib.sha256(json.dumps(config, sort_keys=True).encode()).hexdigest()
 
 
 def save_config(path, config, expected_revision):
-    # Refuse stale browser saves and replace the JSON atomically.
+    """Validate and save settings atomically; refuse if the file changed since the browser loaded it."""
     config = validate(config)
     if config["pdf_mode"] in ("hybrid", "compare"):
         from reconciliation.core.development_cache import mode
