@@ -9,7 +9,8 @@ import pymupdf
 from jsonschema import validate
 
 from reconciliation.core.settings import DEFAULTS
-from reconciliation.extraction import pieces, workflow
+from reconciliation.extraction import workflow
+from reconciliation.extraction.results import pieces
 from reconciliation.intake.duplicates import organize
 
 

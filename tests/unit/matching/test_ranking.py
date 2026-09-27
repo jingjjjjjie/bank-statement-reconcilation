@@ -76,7 +76,7 @@ class RankTests(unittest.TestCase):
 class BatchTests(unittest.TestCase):
     def test_competing_lines_share_a_batch_and_over_allocation_is_flagged(self):
         """Lines sharing a candidate stay together; double use of one piece is downgraded."""
-        from dashboard.services.piece_match_jobs import batches, over_allocated
+        from dashboard.services.matching.piece_match_jobs import batches, over_allocated
 
         choices = {"B1": ["p1"], "B2": ["p9"], "B3": ["p1", "p2"]}
         self.assertIn(["B1", "B3"], [sorted(b) for b in batches(["B1", "B2", "B3"], choices, size=2)])
@@ -91,7 +91,7 @@ class BatchTests(unittest.TestCase):
 class CheckedRowsTests(unittest.TestCase):
     def test_one_invalid_answer_keeps_the_rest_of_the_batch(self):
         """A bad allocation or a skipped line becomes tentative; valid lines are kept."""
-        from dashboard.services.piece_match_jobs import checked_rows
+        from dashboard.services.matching.piece_match_jobs import checked_rows
 
         banks = {key: {"amount": "90", "currency": "MYR"} for key in ("B1", "B2", "B3")}
         items = {"p1": {"amount": "90", "currency": "MYR"}, "p2": {"amount": "90", "currency": ""}}

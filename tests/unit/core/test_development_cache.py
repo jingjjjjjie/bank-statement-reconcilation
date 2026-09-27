@@ -153,7 +153,7 @@ class DevelopmentCacheTests(unittest.TestCase):
             post("/api/development/remember", {})
         with self.assertRaises(urllib.error.HTTPError):
             post("/api/development-mode", {"enabled": "false"})
-        with patch("dashboard.services.extraction_runs.execution_status", return_value={"running": True}):
+        with patch("dashboard.services.extraction.extraction_runs.execution_status", return_value={"running": True}):
             with self.assertRaises(urllib.error.HTTPError):
                 post("/api/development-mode", {"enabled": True})
         self.assertFalse(cache.mode()["enabled"])

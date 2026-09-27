@@ -10,7 +10,7 @@ import openpyxl
 from PIL import Image
 
 from reconciliation.core.settings import DEFAULTS
-from reconciliation.extraction.reader import extract
+from reconciliation.extraction.sources.reader import extract
 
 
 class DocumentReaderTests(unittest.TestCase):

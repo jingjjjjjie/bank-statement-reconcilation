@@ -7,8 +7,8 @@ import unittest
 import pymupdf
 
 from reconciliation.extraction import workflow
-from reconciliation.extraction.assembly import ASSEMBLY, current_assembly, input_revision, validate_assembly
-from reconciliation.extraction.pieces import ASSEMBLY as PIECE_ASSEMBLY
+from reconciliation.extraction.pipeline.assembly import ASSEMBLY, current_assembly, input_revision, validate_assembly
+from reconciliation.extraction.results.pieces import ASSEMBLY as PIECE_ASSEMBLY
 from reconciliation.intake.duplicates import fingerprint
 from tests.fixtures.assembly import piece
 from tests.fixtures.receipt_review import ReceiptReviewFixture

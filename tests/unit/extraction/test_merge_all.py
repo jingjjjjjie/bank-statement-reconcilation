@@ -2,8 +2,8 @@
 
 import unittest
 
-from dashboard.services import receipt_review
-from reconciliation.extraction.pieces import merge_all
+from dashboard.services.extraction import receipt_review
+from reconciliation.extraction.results.pieces import merge_all
 from tests.fixtures import receipt_review as receipt_review_fixture
 
 

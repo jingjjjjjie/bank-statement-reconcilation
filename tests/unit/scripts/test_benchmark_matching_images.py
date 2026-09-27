@@ -6,8 +6,8 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
-from reconciliation.extraction.assembly import input_revision
-from scripts.benchmark_matching_images import extract_with_retries, extraction_coverage
+from reconciliation.extraction.pipeline.assembly import input_revision
+from scripts.matching.benchmark_matching_images import extract_with_retries, extraction_coverage
 
 
 class ExtractionCoverageTests(unittest.TestCase):
@@ -58,8 +58,8 @@ class CapacityRetryTests(unittest.TestCase):
                 return {'status': 'unresolved', 'unit_results': 0, 'assemblies': 0}
 
             with (
-                patch('scripts.benchmark_matching_images.extract_fresh', side_effect=reject) as run,
-                patch('scripts.benchmark_matching_images.time.sleep') as sleep,
+                patch('scripts.matching.benchmark_matching_images.extract_fresh', side_effect=reject) as run,
+                patch('scripts.matching.benchmark_matching_images.time.sleep') as sleep,
             ):
                 self.assertEqual(extract_with_retries(output, 1, 12)['status'], 'unresolved')
             self.assertEqual(run.call_count, 3)
@@ -76,7 +76,7 @@ class CapacityRetryTests(unittest.TestCase):
                 json.dumps({'status': 'failed', 'events': str(events)}) + '\n', encoding='utf-8'
             )
             with patch(
-                'scripts.benchmark_matching_images.extract_fresh',
+                'scripts.matching.benchmark_matching_images.extract_fresh',
                 return_value={'status': 'unresolved', 'unit_results': 0, 'assemblies': 0},
             ) as run:
                 extract_with_retries(output, 1, 12)

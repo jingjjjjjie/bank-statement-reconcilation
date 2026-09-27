@@ -14,12 +14,12 @@ Python performs extraction, hashing, validation, arithmetic and workflow state. 
 
 Documentation:
 
-- [Workflow and Mermaid diagrams](docs/WORKFLOW.md)
+- [Workflow and Mermaid diagrams](docs/workflow/WORKFLOW.md)
 - [Dashboard screens and maintenance](dashboard/README.md)
-- [Final comparison rules and open decisions](docs/FINAL_COMPARISON.md)
-- [Final report UI checks with synthetic evidence](docs/FINAL_REPORT_UI_REVIEW.md)
-- [Earlier live UI audit](docs/UI_REVIEW.md) - historical observations, not current sign-off
-- [PDF routing](docs/PDF_ROUTING.md), [bank extraction](docs/BANK.md), [development cache](docs/DEVELOPMENT_CACHE.md), [process cancellation](docs/PROCESS_CANCELLATION.md)
+- [Final comparison rules and open decisions](docs/workflow/FINAL_COMPARISON.md)
+- [Final report UI checks with synthetic evidence](docs/ui/FINAL_REPORT_UI_REVIEW.md)
+- [Earlier live UI audit](docs/ui/UI_REVIEW.md) - historical observations, not current sign-off
+- [PDF routing](docs/workflow/PDF_ROUTING.md), [bank extraction](docs/workflow/BANK.md), [development cache](docs/operations/DEVELOPMENT_CACHE.md), [process cancellation](docs/operations/PROCESS_CANCELLATION.md)
 
 ## Docker setup
 
@@ -65,8 +65,8 @@ The default `development` image includes Python 3.12, Node/npm, Codex, Git, ripg
 To update the workflow's Codex CLI to the latest stable [OpenAI release](https://github.com/openai/codex/releases/latest), run on the host with Docker and the dashboard running:
 
 ```console
-python scripts/update_codex.py --check
-python scripts/update_codex.py
+python scripts/codex/update_codex.py --check
+python scripts/codex/update_codex.py
 ```
 
 The first command only checks. The second builds and replaces the dashboard container when an update is needed, verifies its Codex version, and synchronizes `.env`, `.env.example`, `compose.yaml` and `docker/Dockerfile`. It refuses to interrupt active workflow or Codex calls. The dashboard briefly restarts; its ChatGPT login volume and document/review data are retained. Builds also include the current frontend files. This updates the project's Docker CLI; the separate Windows Codex installation is not modified.
@@ -84,15 +84,15 @@ Repeat browser installation after recreating the container. Existing host Chrome
 
 Settings saves `config/review_config.json`. Saving settings does not start model calls.
 
-- **PDF processing:** Vision is the default. Text + checked vision fallback and Compare text and vision require development mode and pictures. Legacy saved text-only/sparse-page modes remain supported. See [PDF routing](docs/PDF_ROUTING.md) for the actual safeguards.
+- **PDF processing:** Vision is the default. Text + checked vision fallback and Compare text and vision require development mode and pictures. Legacy saved text-only/sparse-page modes remain supported. See [PDF routing](docs/workflow/PDF_ROUTING.md) for the actual safeguards.
 - **Pictures:** controls model image inputs, including Office images; dashboard previews remain available.
 - **Codex:** switching off prevents subsequent calls; use Stop to cancel active calls.
 - **Calls per run:** 1-1,000, default 1,000. The CLI uses the saved allowance unless `--max-calls` overrides it. A call is a new model invocation, including started failed/timed-out attempts. Local processing and cache hits do not consume the allowance. Rerun to resume with a fresh allowance.
 - **Parallel requests:** 1-8, default 4. Calls share one allowance, and completed responses are checkpointed.
 - **Model/reasoning:** defaults to `gpt-6-sol` and model-default reasoning. Supported choices come from the installed Codex catalog. All model calls use ChatGPT login and structured output; vision calls attach images.
-- **Workflow context:** calls keep the model's built-in instructions and run in a temporary directory with project instructions, host skill discovery, plugins, computer use, other unused agent tools, and web search disabled. Vision attachments and the image-viewing tool remain enabled; Python renders PDF pages for the model. Run `python -m scripts.check_codex_connection --pdf` to verify this path with a synthetic receipt. This profile is part of the response-cache identity; existing accepted results are not recomputed automatically. The CLI must support `skip_host_skill_discovery` (verified locally with 0.157.1).
+- **Workflow context:** calls keep the model's built-in instructions and run in a temporary directory with project instructions, host skill discovery, plugins, computer use, other unused agent tools, and web search disabled. Vision attachments and the image-viewing tool remain enabled; Python renders PDF pages for the model. Run `python -m scripts.codex.check_codex_connection --pdf` to verify this path with a synthetic receipt. This profile is part of the response-cache identity; existing accepted results are not recomputed automatically. The CLI must support `skip_host_skill_discovery` (verified locally with 0.157.1).
 - **Token usage:** per-attempt records live in project `review/token-usage.jsonl`, with stage/model totals and zero new usage for cache hits. Missing usage is unknown, never estimated. Settings and review reports expose recorded totals; Completion's final totals depend on its older completion gates.
-- **Development mode:** optional local shared caches and explicit human-decision replay. See [development cache](docs/DEVELOPMENT_CACHE.md). It never makes human approval automatic.
+- **Development mode:** optional local shared caches and explicit human-decision replay. See [development cache](docs/operations/DEVELOPMENT_CACHE.md). It never makes human approval automatic.
 
 Changed extraction settings require preparing/refreshing the affected review. Refresh archives metadata and decisions in `review/history/`, retaining assets and successful model caches. Prompt/schema/model/reasoning/image changes affect cache identity. Completed results are not silently recomputed on resume. Regenerating one document refreshes its extraction and assembly and requires fresh acceptance.
 
@@ -118,26 +118,28 @@ python -m reconciliation.extraction.workflow check --work duplicated/projects/PR
 
 `prepare` performs local preparation. Add `--refresh` to intentionally archive/reprepare existing results. `run` extracts units and assembles multi-unit documents, then stops before vision duplicate comparisons. `--timeout` defaults to 240 seconds per call. `--model` and `--reasoning` override the configured selection. `prepare --config PATH` pins another configuration file.
 
-`check` follows the saved workflow mode: extraction-only runs check source/config consistency, readable units and required assembly; legacy comparison states retain their comparison checks. Exit 0 means that gate passed, 2 means unresolved work, and 1 means error. Extraction readiness is not human receipt acceptance or final bank approval.
+`check` verifies source/config consistency, readable units and required assembly, plus cleanup of any duplicate removals approved in older reviews. Exit 0 means that gate passed, 2 means unresolved work, and 1 means error. Extraction readiness is not human receipt acceptance or final bank approval.
 
 ### Legacy duplicate tools
 
 Standalone-folder `reconciliation.intake.duplicates organize` verifies size, SHA-256 and bytes, records original locations, and **moves** groups into `duplicated/` beside the manifest. Legacy dashboard retain/undo controls use recoverable storage. These controls are separate from the automatic copy-only work-folder flow. Do not blindly rerun an interrupted organization or overwrite its manifest.
 
-Historical screening/comparison code, prompts and decisions remain for compatibility and audit. `vision_workflow decide` can record a verdict on an existing comparison, but normal dashboard/CLI runs no longer create those comparisons. Model output never authorizes file deletion. Original locations remain in manifests and extraction inventory exports.
+The earlier AI duplicate screening and comparison has been removed. Keep/remove decisions saved by older reviews are still honoured by completion checks. Model output never authorizes file deletion. Original locations remain in manifests and extraction inventory exports.
 
 ## Source map and checks
 
-- `reconciliation/`: readers, model integration, workflow state and deterministic matching checks.
-- `dashboard/`: FastAPI APIs, background workers and Vue frontend.
+- `reconciliation/`: workflow logic, one package per step (`intake/`, `extraction/`, `bank/`, `matching/`) over shared `core/` and `model/`.
+- `dashboard/`: FastAPI app (`routes.py`, `api/`), page services (`services/`), previews and the Vue frontend.
 - `prompts/`: editable model instructions and deterministic workbook style.
-- `tests/unit/`, `tests/browser/`: offline regression and synthetic browser fixtures.
-- `scripts/`: benchmarks, matching experiments and the live connection check.
-- `docs/`, `config/`, `docker/`: documentation, saved settings and image definition.
+- `tests/unit/` mirrors the code; `tests/browser/` is grouped by page; shared setup lives in `tests/fixtures/`.
+- `scripts/`: extraction and matching benchmarks, and Codex maintenance.
+- `docs/`: start at [docs/README.md](docs/README.md); [architecture and how to change things](docs/ARCHITECTURE.md).
+
+Lint and format with Ruff (settings in `pyproject.toml`): `ruff check . && ruff format .`
 
 ```console
 python -m unittest discover -s tests/unit -t .
-python -m unittest tests.browser.test_matching_review tests.browser.test_final_report
+python -m unittest tests.browser.final_review.test_matching_review tests.browser.final_review.test_final_report
 ```
 
-Browser checks additionally require `dashboard/requirements-dev.txt`, built frontend assets, and Chrome/Chromium. See [test instructions](tests/README.md). Tests use isolated fixtures without model calls. `python -m scripts.check_codex_connection` is a separate explicit live subscription check using one synthetic receipt.
+Browser checks additionally require `dashboard/requirements-dev.txt`, built frontend assets, and Chrome/Chromium. See [test instructions](tests/README.md). Tests use isolated fixtures without model calls. `python -m scripts.codex.check_codex_connection` is a separate explicit live subscription check using one synthetic receipt.

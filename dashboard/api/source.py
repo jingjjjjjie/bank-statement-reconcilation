@@ -9,7 +9,7 @@ from fastapi.responses import Response
 from pydantic import BaseModel, Field, StrictInt
 
 from dashboard.routes import active_context, context
-from dashboard.services import extraction_runs
+from dashboard.services.extraction import extraction_runs
 from dashboard.services.review import Review
 from reconciliation.core import development_cache
 from reconciliation.intake.workspace import STATEMENT_YEARS

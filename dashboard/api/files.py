@@ -10,7 +10,8 @@ from fastapi.responses import Response
 
 from dashboard.previews import extraction as extraction_preview, office as office_preview
 from dashboard.routes import active_context
-from dashboard.services import extraction_runs, final_review
+from dashboard.services.extraction import extraction_runs
+from dashboard.services.matching import final_review
 from reconciliation.intake.duplicates import fingerprint
 
 router = APIRouter(prefix="/api")

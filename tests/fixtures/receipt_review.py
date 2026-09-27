@@ -7,7 +7,7 @@ import unittest
 from pathlib import Path
 from types import SimpleNamespace
 
-from dashboard.services import receipt_review
+from dashboard.services.extraction import receipt_review
 from reconciliation.intake.duplicates import fingerprint
 
 

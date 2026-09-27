@@ -2,8 +2,8 @@
 
 import unittest
 
-from scripts.benchmark_matching import build_candidates, fastlane, guard_allocations, shortlist, specific_name
-from scripts.matching_cases import make_cases
+from scripts.matching.benchmark_matching import build_candidates, fastlane, guard_allocations, shortlist, specific_name
+from scripts.matching.matching_cases import make_cases
 
 
 class MatchingExperimentTests(unittest.TestCase):

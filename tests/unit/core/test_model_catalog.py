@@ -8,7 +8,7 @@ from unittest.mock import patch
 from PIL import Image
 
 from reconciliation.core.settings import DEFAULT_MODEL, DEFAULTS, load_config, revision, save_config, validate
-from reconciliation.extraction.reader import extract
+from reconciliation.extraction.sources.reader import extract
 
 
 class ModelCatalogTests(unittest.TestCase):

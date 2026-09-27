@@ -9,7 +9,7 @@ from unittest.mock import patch
 from PIL import Image
 
 from dashboard.services.review import Review
-from reconciliation.extraction.pieces import EXTRACTION as PIECE_EXTRACTION
+from reconciliation.extraction.results.pieces import EXTRACTION as PIECE_EXTRACTION
 from reconciliation.intake.duplicates import organize
 from reconciliation.model.codex import EXTRACTION
 

@@ -19,7 +19,7 @@ from reconciliation.core.settings import (
     stage_settings,
     validate,
 )
-from reconciliation.extraction.reader import extract
+from reconciliation.extraction.sources.reader import extract
 from reconciliation.extraction.workflow import ReviewPending, active_config, run
 from reconciliation.model.codex import CodexReviewer, object_schema
 from tests.fixtures.workflow import mock_codex

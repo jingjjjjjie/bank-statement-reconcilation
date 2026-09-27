@@ -6,7 +6,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from scripts import update_codex as updater
+from scripts.codex import update_codex as updater
 
 
 class CodexUpdateTests(unittest.TestCase):

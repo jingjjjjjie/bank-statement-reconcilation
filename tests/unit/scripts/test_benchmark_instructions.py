@@ -4,7 +4,7 @@ import unittest
 from pathlib import Path
 from types import SimpleNamespace
 
-from scripts.benchmark_instructions import InstructionProcess, coverage_valid, facts
+from scripts.extraction.benchmark_instructions import InstructionProcess, coverage_valid, facts
 
 
 class InstructionBenchmarkTests(unittest.TestCase):

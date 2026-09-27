@@ -25,15 +25,16 @@ from reconciliation.core.settings import (
     stage_settings,
     validate as validate_config,
 )
-from reconciliation.extraction import pdf_routing, pieces
-from reconciliation.extraction.assembly import ASSEMBLY, current_assembly
-from reconciliation.extraction.inventory import export as export_inventory
-from reconciliation.extraction.job_runner import run_jobs  # noqa: F401  (re-exported for existing callers)
-from reconciliation.extraction.reader import SUPPORTED_SUFFIXES, extract
-from reconciliation.extraction.records import Index, State
-from reconciliation.extraction.report import render as render_report
-from reconciliation.extraction.schemas import EXTRACTION
-from reconciliation.extraction.stages import ReceiptAssembly, ReviewPending, RunContext, UnitExtraction
+from reconciliation.extraction.pipeline.assembly import ASSEMBLY, current_assembly
+from reconciliation.extraction.pipeline.job_runner import run_jobs  # noqa: F401  (re-exported for existing callers)
+from reconciliation.extraction.pipeline.stages import ReceiptAssembly, ReviewPending, RunContext, UnitExtraction
+from reconciliation.extraction.results import pieces
+from reconciliation.extraction.results.inventory import export as export_inventory
+from reconciliation.extraction.results.records import Index, State
+from reconciliation.extraction.results.report import render as render_report
+from reconciliation.extraction.results.schemas import EXTRACTION
+from reconciliation.extraction.sources import pdf_routing
+from reconciliation.extraction.sources.reader import SUPPORTED_SUFFIXES, extract
 from reconciliation.intake.duplicates import DEFAULT_MANIFEST, check as exact_check, fingerprint, review_files
 from reconciliation.model.client import acceptance, invalidate, supports_parallel, worker_for
 from reconciliation.model.codex import BudgetReached, CodexReviewer

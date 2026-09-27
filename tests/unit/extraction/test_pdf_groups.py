@@ -7,9 +7,10 @@ import json
 from jsonschema import validate
 
 from reconciliation.core.settings import DEFAULTS
-from reconciliation.extraction import pieces, workflow
-from reconciliation.extraction.assembly import current_assembly
-from reconciliation.extraction.pdf_groups import chunk_requests, whole_request
+from reconciliation.extraction import workflow
+from reconciliation.extraction.pipeline.assembly import current_assembly
+from reconciliation.extraction.pipeline.pdf_groups import chunk_requests, whole_request
+from reconciliation.extraction.results import pieces
 from tests.fixtures.pdf_groups import PdfGroupsFixture, Reviewer
 
 

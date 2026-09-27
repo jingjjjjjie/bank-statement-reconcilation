@@ -8,7 +8,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from dashboard.services import final_review as matching
+from dashboard.services.matching import final_review as matching
 from reconciliation.intake.duplicates import fingerprint
 
 

@@ -3,7 +3,7 @@
 import copy
 import unittest
 
-from dashboard.services.piece_match_jobs import validate_result
+from dashboard.services.matching.piece_match_jobs import validate_result
 from reconciliation.core.money import currency, normalize_currencies, normalize_currency
 from reconciliation.matching.retrieval import retrieve
 

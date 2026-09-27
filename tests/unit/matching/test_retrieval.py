@@ -137,7 +137,7 @@ class RetrievalTests(unittest.TestCase):
 
     def test_live_payload_keeps_context_but_bounds_allocatable_ids(self):
         """Full parent evidence cannot silently enlarge the selected allocation shortlist."""
-        from dashboard.services import piece_matching
+        from dashboard.services.matching import piece_matching
         from tests.fixtures.piece_pipeline import PiecePipelineFixture
 
         fixture = PiecePipelineFixture()
@@ -158,7 +158,7 @@ class RetrievalTests(unittest.TestCase):
         """The server enforces incomplete-search wording even if a model overlooks it."""
         import json
 
-        from dashboard.services import piece_match_jobs, piece_matching
+        from dashboard.services.matching import piece_match_jobs, piece_matching
         from reconciliation.core.settings import DEFAULTS
         from tests.fixtures.piece_pipeline import PiecePipelineFixture
 

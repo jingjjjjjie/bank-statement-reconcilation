@@ -17,8 +17,8 @@ from reconciliation.core import development_cache
 from reconciliation.core.prompts import load_prompt
 from reconciliation.core.settings import DEFAULT_MODEL
 
-# Schemas live in reconciliation.extraction.schemas; re-exported for existing callers.
-from reconciliation.extraction.schemas import EXTRACTION, RECEIPT, TEXT, TEXTS, object_schema  # noqa: F401
+# Schemas live in reconciliation.extraction.results.schemas; re-exported for existing callers.
+from reconciliation.extraction.results.schemas import EXTRACTION, RECEIPT, TEXT, TEXTS, object_schema  # noqa: F401
 from reconciliation.model.processes import ProcessManager, ReviewCancelled
 from reconciliation.model.token_usage import FIELDS, record, reported_usage
 

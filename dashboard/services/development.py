@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from uuid import uuid4
 
-from dashboard.services import extraction_runs
+from dashboard.services.extraction import extraction_runs
 from reconciliation.core import development_cache
 
 

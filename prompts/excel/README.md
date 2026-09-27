@@ -42,4 +42,4 @@ field requires a Python data-provider change and a corresponding style entry.
 The dashboard uses this saved style automatically. The CLI can select another
 compatible definition with `--style path/to/style.xml`. A missing or malformed
 file fails export rather than silently switching formats. Appearance and bank
-report conventions are documented in `docs/style.md`.
+report conventions are documented in `docs/workflow/BANK_WORKBOOK_STYLE.md`.

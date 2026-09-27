@@ -5,7 +5,7 @@ import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from scripts.report_matching_images import aggregate, allocation_key
+from scripts.matching.report_matching_images import aggregate, allocation_key
 
 
 class MatchingReportTests(unittest.TestCase):

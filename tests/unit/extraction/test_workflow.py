@@ -16,14 +16,14 @@ from openpyxl import Workbook
 import reconciliation.extraction.workflow as workflow
 from reconciliation.core.prompts import load_prompt
 from reconciliation.core.settings import DEFAULTS, STAGES
-from reconciliation.extraction.schemas import EXTRACTION
+from reconciliation.extraction.results.schemas import EXTRACTION
 from reconciliation.model.codex import CACHE_PROFILE, BudgetReached, CodexReviewer
 from tests.fixtures.workflow import FakeReviewer, ReviewFixture
 
 
 def is_extraction(schema):
     """True for the stored or the model-facing extraction schema."""
-    from reconciliation.extraction.pieces import EXTRACTION as MODEL_EXTRACTION
+    from reconciliation.extraction.results.pieces import EXTRACTION as MODEL_EXTRACTION
 
     return schema in (EXTRACTION, MODEL_EXTRACTION)
 

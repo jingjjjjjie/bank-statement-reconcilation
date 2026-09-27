@@ -404,7 +404,7 @@ class Review:
             return {"kind": "image", "pages": 1}
         if suffix in {".docx", ".xlsx"}:
             return office_preview.describe(path)
-        from reconciliation.extraction.reader import extract
+        from reconciliation.extraction.sources.reader import extract
 
         cache = self.data / "previews" / fingerprint(path)
         metadata = cache / "units.json"

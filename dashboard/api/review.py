@@ -7,7 +7,9 @@ from fastapi.responses import Response
 from pydantic import BaseModel, StrictBool
 
 from dashboard.routes import active_context, context, interrupt_context
-from dashboard.services import development, document_status, extraction_runs, final_review, receipt_review
+from dashboard.services import development
+from dashboard.services.extraction import document_status, extraction_runs, receipt_review
+from dashboard.services.matching import final_review
 from dashboard.services.review import workflow_guide
 from reconciliation.core import development_cache
 from reconciliation.core.settings import save_config
@@ -197,7 +199,7 @@ def reset_original_receipts(body: dict, state=Depends(active_context)):
 @router.post("/receipts/merge-all")
 def merge_receipts(body: dict, state=Depends(active_context)):
     """Preview a merged draft; persistence still requires explicit acceptance."""
-    from reconciliation.extraction.pieces import merge_all
+    from reconciliation.extraction.results.pieces import merge_all
 
     receipt_review.require_current(state.review, body['revision'])
     return {'receipt': merge_all(body['receipts'])}
@@ -224,7 +226,7 @@ def accept_all_receipts(body: dict, state=Depends(active_context)):
 @router.post("/receipts/regenerate")
 def regenerate_receipts(body: dict, state=Depends(active_context)):
     """Queue a document on the shared background extraction worker."""
-    from dashboard.services import regeneration
+    from dashboard.services.extraction import regeneration
 
     return {"jobs": regeneration.enqueue(state.review, body["document_id"])}
 
@@ -238,7 +240,7 @@ def classify_receipts(body: dict, state=Depends(active_context)):
 @router.get("/receipts/regeneration")
 def regeneration_status(state=Depends(active_context)):
     """Poll regeneration progress without rebuilding document previews."""
-    from dashboard.services import regeneration
+    from dashboard.services.extraction import regeneration
 
     return {"jobs": regeneration.snapshot(state.review)}
 
@@ -258,7 +260,7 @@ def matching_decide(body: dict, state=Depends(active_context)):
 @router.post('/matching-pieces')
 def matching_pieces(body: dict, state=Depends(active_context)):
     """Switch to reviewed pieces while preserving previous decisions as history."""
-    from dashboard.services.piece_matching import activate
+    from dashboard.services.matching.piece_matching import activate
 
     return activate(state.review)
 
@@ -266,7 +268,7 @@ def matching_pieces(body: dict, state=Depends(active_context)):
 @router.post('/matching-run')
 def matching_run(body: dict, state=Depends(active_context)):
     """Generate proposals from complete documents without approving allocations."""
-    from dashboard.services.piece_match_jobs import start
+    from dashboard.services.matching.piece_match_jobs import start
 
     return start(state.review)
 
@@ -274,7 +276,7 @@ def matching_run(body: dict, state=Depends(active_context)):
 @router.get('/matching-run')
 def matching_run_status(review=Depends(interrupt_context)):
     """Keep matching progress available while the background pool is working."""
-    from dashboard.services.piece_match_jobs import status
+    from dashboard.services.matching.piece_match_jobs import status
 
     return status(review)
 
@@ -282,7 +284,7 @@ def matching_run_status(review=Depends(interrupt_context)):
 @router.post('/matching-stop')
 def matching_stop(body: dict, review=Depends(interrupt_context)):
     """Allow cancellation without waiting behind other review requests."""
-    from dashboard.services.piece_match_jobs import stop
+    from dashboard.services.matching.piece_match_jobs import stop
 
     return stop(review)
 

@@ -7,9 +7,9 @@ from unittest.mock import patch
 
 from jsonschema import validate
 
-from dashboard.services import final_review, piece_matching
-from dashboard.services.piece_match_jobs import validate_result
-from reconciliation.extraction import pieces
+from dashboard.services.matching import final_review, piece_matching
+from dashboard.services.matching.piece_match_jobs import validate_result
+from reconciliation.extraction.results import pieces
 from reconciliation.intake.duplicates import fingerprint
 from tests.fixtures.piece_pipeline import PiecePipelineFixture, as_model
 
@@ -251,7 +251,7 @@ class PiecePipelineTests(PiecePipelineFixture):
         self.assertEqual(view['banks'][1]['confidence']['level'], 'failed')
         self.assertEqual(view['proposal_counts']['outdated'], 1)
         self.assertEqual(view['proposal_counts']['failed'], 1)
-        from dashboard.services.piece_match_jobs import status
+        from dashboard.services.matching.piece_match_jobs import status
 
         self.assertEqual(status(self.review)['failed'], 1)
         self.assertEqual(status(self.review)['total'], 3)
@@ -303,13 +303,13 @@ class PiecePipelineTests(PiecePipelineFixture):
 
         inspect(pieces.EXTRACTION)
         inspect(pieces.ASSEMBLY)
-        from dashboard.services.piece_match_jobs import SCHEMA
+        from dashboard.services.matching.piece_match_jobs import SCHEMA
 
         inspect(SCHEMA)
 
     def test_payment_schedule_keeps_seven_rows_through_matching(self):
         """Equal amounts and shared project codes keep distinct recipient identities."""
-        from dashboard.services.piece_match_jobs import SCHEMA
+        from dashboard.services.matching.piece_match_jobs import SCHEMA
 
         amounts = ['150', '150', '90', '90', '750', '200', '600']
         rows = [
@@ -362,7 +362,7 @@ class PiecePipelineTests(PiecePipelineFixture):
 
     def test_matching_worker_refills_slots_and_checkpoints_full_context(self):
         """A slow bank request cannot hold up a free worker or approve test proposals."""
-        from dashboard.services import piece_match_jobs
+        from dashboard.services.matching import piece_match_jobs
         from reconciliation.core.settings import DEFAULTS
 
         self.accept()
@@ -438,7 +438,7 @@ class PiecePipelineTests(PiecePipelineFixture):
 
     def test_matching_omits_images_above_old_limit_and_preserves_context(self):
         """Forty-one source pages reach matching as complete text without image attachments."""
-        from dashboard.services import piece_match_jobs
+        from dashboard.services.matching import piece_match_jobs
         from reconciliation.core.settings import DEFAULTS
 
         self.accept()

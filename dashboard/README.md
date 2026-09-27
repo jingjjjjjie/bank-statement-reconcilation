@@ -1,6 +1,6 @@
 # Bank Statement Reconciliation dashboard
 
-See [Application workflow](../docs/WORKFLOW.md) for detailed Mermaid diagrams and the current matching integration boundary.
+See [Application workflow](../docs/workflow/WORKFLOW.md) for detailed Mermaid diagrams and the current matching integration boundary.
 
 Start the complete application in Docker:
 
@@ -27,7 +27,7 @@ The following retain/undo controls apply only to older standalone-folder reviews
 - **Regenerate document** queues a fresh extraction of the selected document, including multi-page assembly, on the shared parallel worker. Its live indicator shows queued, regenerating, completed, or unresolved status while you browse other documents. Completed results reload automatically unless you have unsaved edits; regenerated results require fresh approval. Relevance flags allow informal Excel claims and KWSP reports, and reserve unrelated classification for clearly unrelated content.
 - **Document status** is always available at http://127.0.0.1:8765/documents and in every sidebar, including before a review is created. It reads saved progress, refreshes automatically, and remembers search/status filters in this browser across navigation and reloads.
 - **Settings** opens the separate page at http://127.0.0.1:8765/settings. It saves PDF mode, pictures on/off, Codex on/off, request limit, model and reasoning to `config/review_config.json`. The request-limit section explains exactly what counts, when the run pauses, how to resume and when changes apply. Model/effort options come from the installed Codex catalog. Saving does not start model calls. Changed extraction settings display a refresh instruction; disabled inputs remain unresolved during extraction.
-- **Development buttons** on Settings fill defaults without saving until **Save settings**. **Remember current decisions** pins human exact/legacy-comparison choices in the shared development cache when enabled, with a legacy per-review fallback. **Apply remembered decisions** requires a name and explicit click, checks original paths/hashes and comparison evidence, skips missing/already-decided entries, and makes no model calls. These tools do not approve current receipt extractions or final pairings. See [development cache](../docs/DEVELOPMENT_CACHE.md).
+- **Development buttons** on Settings fill defaults without saving until **Save settings**. **Remember current decisions** pins human exact/legacy-comparison choices in the shared development cache when enabled, with a legacy per-review fallback. **Apply remembered decisions** requires a name and explicit click, checks original paths/hashes and comparison evidence, skips missing/already-decided entries, and makes no model calls. These tools do not approve current receipt extractions or final pairings. See [development cache](../docs/operations/DEVELOPMENT_CACHE.md).
 - **Completion** opens http://127.0.0.1:8765/complete. It displays final recorded token totals only after exact/extraction gates and the bank master's matching flags pass. It does not read the separate final-review ledger, so it is not the final report.
 - **Get Started** at `/source` selects one workspace containing `documents/` and `statement/`. Proceed copies exact SHA duplicate groups to `output/duplicates/`, preserving originals, then opens the document list directly.
 - **Bank statement** opens http://127.0.0.1:8765/bank. It shows saved AmBank totals and transactions, supports searching narration and counterparties, and exports a styled bank-only Excel file from the validated master. Enter or verify the actual company name before export. Formatting comes from `prompts/excel/bank_statement.xml`; no sample workbook path is needed. The download is generated on request and does not overwrite saved files. Supporting-document matching is reviewed separately at `/matching`, using the authorized frozen cache; new-workspace import remains pending.
@@ -43,18 +43,17 @@ The local server defaults to loopback; Compose binds it to `0.0.0.0` inside the 
 ## Code layout
 
 - `app.py`: command-line options and Uvicorn startup.
-- `frontend/src/`: Vue views, shared navigation, scoped page controllers, and styles.
 - `routes.py`: FastAPI creation, local request protection, and compiled asset delivery.
-- `api/`: typed workspace, review, and preview endpoints calling the existing workflow code.
-- `review.py`: manifest access, recoverable keep/undo decisions, and workflow readiness.
-- `content_review.py`: background extraction/assembly, cancellation and retained legacy comparison verdicts.
-- `regeneration.py`: durable per-document regeneration queue.
-- `matching_review.py`: frozen-snapshot checks, human allocations, confidence labels and CSV export.
-- `office_preview.py` and `document_status.py`: document previews and review status.
-- `../reconciliation/extraction/reader.py`: extraction entry point; `READERS` maps each file type to its PDF, image, Excel, Word, and embedded-image readers.
-- `../reconciliation/extraction/workflow.py`: prepare, run, gate and report a review. `run` executes pluggable stages from `reconciliation/extraction/stages.py` (unit extraction, receipt assembly) and `legacy_comparison.py` on `reconciliation/extraction/job_runner.py`.
-- `../reconciliation/model/client.py`: the `ask(prompt, schema, images)` interface any model backend implements; `reconciliation/model/codex.py` is the `codex exec` backend.
-- `../reconciliation/extraction/schemas.py` and `reconciliation/extraction/records.py`: model output schemas and the shapes of saved `index.json` / `state.json` records.
+- `api/`: typed HTTP endpoints; each handler validates input and calls one service function.
+- `services/review.py`: the active project session, exact-duplicate keep/undo and workflow readiness.
+- `services/extraction/`: Documents and Review results pages: background extraction runs, regeneration queue,
+  receipt review decisions and document status.
+- `services/matching/`: Final review: frozen-snapshot checks, human allocations, live piece matching and jobs.
+- `services/development.py`: development-mode replay of remembered exact-duplicate choices.
+- `previews/`: render originals (PDF pages, images, Office files) for the browser.
+- `frontend/src/`: Vue views, shared navigation, scoped page controllers, and styles.
+
+Workflow logic lives in `../reconciliation/`; see [architecture](../docs/ARCHITECTURE.md).
 
 Tests (from the repository root, using Python with the project dependencies installed):
 
@@ -62,7 +61,7 @@ Build the frontend first, or run tests inside the Docker image where it is alrea
 
 ```console
 python -m unittest discover -s tests/unit -t .
-python -m unittest tests.unit.dashboard.test_app tests.unit.dashboard.test_extraction_runs
+python -m unittest tests.unit.dashboard.test_app tests.unit.dashboard.extraction.test_extraction_runs
 ```
 
 ## Final review, report and individual receipts
@@ -73,7 +72,7 @@ High / Low confidence and its reason are independent of Pending / Approved / Rej
 
 Reviewers may select multiple distinct expenses or allocate part of one source to different payments. Python validates decimal amounts, currencies, fresh source hashes, stale tabs, excluded documents, remaining balances and unassembled page totals. Flagged/partial/context-only approvals need a note and explicit acknowledgement. Approvals, denials and undo retain history. Changed evidence loses Supporting status but retains its reservation until explicitly undone. Only fully allocated current approvals export as Supporting; partial/contextual approvals retain their review status and visible differences. CSV includes all bank lines and original source references.
 
-The **Final report** navigation and Final review button open `/final-report`. This read-only page lists all bank rows from the same ledger, including pending/no-support rows, with search, support filters and CSV export. **View evidence** opens a modal: bank original on the left, approved supporting documents on the right, and saved totals, differences, flags and notes below. It supports document switching, page selection, zoom and original downloads. Escape/Close restores focus and preserves report filters. Mobile uses transaction cards and a full-screen stacked pane. Missing or changed evidence is explicit; pending/rejected suggestions are never shown as approved evidence. The report refreshes when revisited; it is not a locked archive. See [synthetic UI checks](../docs/FINAL_REPORT_UI_REVIEW.md).
+The **Final report** navigation and Final review button open `/final-report`. This read-only page lists all bank rows from the same ledger, including pending/no-support rows, with search, support filters and CSV export. **View evidence** opens a modal: bank original on the left, approved supporting documents on the right, and saved totals, differences, flags and notes below. It supports document switching, page selection, zoom and original downloads. Escape/Close restores focus and preserves report filters. Mobile uses transaction cards and a full-screen stacked pane. Missing or changed evidence is explicit; pending/rejected suggestions are never shown as approved evidence. The report refreshes when revisited; it is not a locked archive. See [synthetic UI checks](../docs/ui/FINAL_REPORT_UI_REVIEW.md).
 
 Document Status now links to Final review for matching. The older receipt-matching API below remains for legacy state, but cannot accept new allocations after a final-review ledger is created. Existing legacy approvals must be migrated or undone first; they are never silently ignored or double counted.
 
