@@ -1,42 +1,38 @@
 # Live matching retrieval policy
 
-The live Generate matches action uses `reconciliation/matching_retrieval.py`.
-Historical benchmark scoring remains available separately for comparisons.
+Updated 27 September 2026. Generate matches ranks candidates in Python
+(`reconciliation/match_ranking.py`) and asks the model only about batches of bank lines
+(`dashboard/piece_match_jobs.py`). The instructions are `prompts/matching/matching.md`.
 
-1. Reserve exact, typed or labelled invoice/receipt/payment/booking/order/claim IDs.
-   Case and whitespace are normalized; punctuation and leading zeros are retained.
-   Identifier boundaries prevent prefix matches. Tax/account IDs and merchant words
-   are not promoted to transaction references. Reference-linked currency/direction
-   conflicts remain visible and flagged; ordinary conflicting candidates are excluded.
-2. Independently select up to 20 name matches and 20 exact-amount matches.
-   Existing full-name and anchored truncated-name checks remain retrieval aids.
-   Within each route: exact reference, BM25 description relevance, date proximity,
-   then stable ID for deterministic ties. Dates never impose an exclusion window.
-3. Merge/deduplicate with reference reservations and cap at 40 IDs. Reference
-   reservations displace the lowest-ranked ordinary candidates when necessary.
-4. If fewer than 10 IDs remain, top up to 10 using positive BM25 matches only.
-   Boilerplate and bank-recipient name words are removed from the description query.
-   Missing amounts are not equal amounts; missing/unparsed dates sort after known dates.
+## Candidates for one bank line
 
-Each run saves `final-review/piece-matching/retrieval.json` with route counts,
-selected IDs, reasons, omitted counts and reference overflow. These are search
-diagnostics, not confidence scores. More than 40 exact references is explicitly
-incomplete. A model no-match result from an incomplete shortlist becomes tentative
-with a visible omitted-count explanation.
+Every candidate must match the amount, the name, or a filename. Nothing else qualifies.
 
-Full original parent documents and all their pieces remain available as context.
-Only the selected (at most 40) `candidate_ids` may receive allocations in a live
-run. A contextual piece outside this list must trigger further retrieval/review,
-not an invented allocation. Compact piece records retain substantive facts while
-omitting redundant metadata; source images/text are not truncated. Existing size
-limits still leave oversized requests unresolved. Token costs therefore include
-full source context, not merely the compact JSON estimates.
+1. **Amount matches first.** Pieces within RM 0.05 of the bank amount (sen rounding; the
+   difference stays visible), then documents with two or more pieces whose printed total
+   (each printed total is tried) or, without one, the sum of pieces matches. A document
+   total offers all its pieces. Within the amount group, name similarity orders the list,
+   then date closeness. An exact reference or document number in the bank note also qualifies.
+2. **Then name matches.** Pieces whose payee, payer or other names reach 0.35 trigram
+   similarity with the bank name, whatever their amount. Similarity is IDF-weighted over
+   three-letter chunks, which tolerates truncated bank names, spacing and honorifics.
+   Agency acronyms are expanded (KWSP/EPF, PERKESO/SOCSO/EIS, LHDN/PCB, HRDF, TNB).
+3. Up to **30** content candidates are kept. Currency conflicts are excluded; unknown
+   currencies stay eligible.
+4. **Up to 10 filename candidates** are added: pieces of documents whose folder or file
+   name shows the bank amount (dates and single digits ignored). They are labelled
+   "found by filename" and never make a match strong on their own.
+5. A line with no candidate is recorded as none found without a model call.
 
-The editable shared instructions are `prompts/matching/matching_policy.md`; the full-document
-piece contract remains in `prompts/matching/piece_matching.md`. Related bank context includes
-other payments whose selected evidence intersects these parent documents. Final
-human allocation checks still enforce remaining balances globally.
+## Model requests
 
-Changing retrieval does not rescore or approve existing saved matches. Generate
-matches explicitly to produce new proposals. Tests use local fixtures and the saved
-Canva example; no live model accuracy claim follows from these deterministic tests.
+Lines that share candidates are packed into the same request so the model can use each
+piece once; requests hold up to 20 lines and are halved until the text fits 180,000
+characters. The payload carries extracted facts and native document text, without page
+images. Proposals are validated against each line's own candidates; combined allocations
+beyond a piece's amount, and filename-only strong proposals, become tentative. Each run
+saves `final-review/piece-matching/retrieval.json` with every candidate's route and reason.
+
+All proposals need human approval in Final review. Tests use local fixtures only; no live
+accuracy claim follows from them. The previous 20-name/20-amount retrieval
+(`reconciliation/matching_retrieval.py`) remains for historical benchmarks.

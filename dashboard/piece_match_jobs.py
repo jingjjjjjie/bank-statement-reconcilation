@@ -159,7 +159,7 @@ def run_matching(review, binding, banks, items, index, facts, config):
                            timeout=600, cancel_event=review.piece_match_cancel, max_calls=config['max_calls'])
     engine.stage = 'piece_matching'
     review.piece_match_engine = engine
-    instructions = load_prompt('matching/matching_policy') + '\n\n' + load_prompt('matching/piece_matching')
+    instructions = load_prompt('matching/matching')
     results = [{'bank_id': key, 'assessment': 'none', 'allocations': [],
                 'reason': 'No amount, name or filename candidate; manual piece search remains available.'}
                for key in banks if not choices[key]]
