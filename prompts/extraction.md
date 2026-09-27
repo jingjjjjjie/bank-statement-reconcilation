@@ -15,7 +15,7 @@ For each piece record piece_type, payee, description, references, dates, amount,
 - Keep recipient handles and project codes as separate references of type other; retain their meaning in the description. A shared project code does not identify one recipient. A schedule date is type other unless explicitly labelled as an actual payment date.
 - Dates have type and value: invoice_date, payment_date, claim_period or other. Preserve ambiguity rather than inventing a date.
 - Amount is the supported piece total: receipt total, invoice total, claim total or net salary. Record that meaning in amount_basis. Use decimal strings without grouping or symbols.
-- Currency is an explicit three-letter code when supported. Extract amount independently of currency. A label limited to a commission column does not establish the currency of the whole payroll.
+- Currency is the supported three-letter code. When the relevant amount or its column explicitly states RM or MYR, output "MYR"; the literal three-letter code need not appear. If currency is unknown, output "". Preserve any explicitly different currency. Extract amount independently of currency. A label limited to a commission column does not establish the currency of the whole payroll.
 - Source locations identify pages, image regions or spreadsheet rows/cells.
 - Keep identifiable pieces with missing totals, leaving amount empty.
 

@@ -27,6 +27,9 @@ The user checks the pieces against the original before accepting. Set readable f
 reliably be read. Leave conflicting factual fields empty. Model output never grants approval.
 
 Extract claim, wage and invoice totals independently of payment status and currency.
+When the relevant amount or its column explicitly states RM or MYR, output currency
+"MYR"; the literal three-letter code need not appear. Preserve explicitly different
+currencies and leave genuinely unknown currencies empty.
 A document need not prove payment to have a supported printed total; an unknown currency
 stays empty without erasing that total. Read spreadsheet total labels with the title, rate and work entries: a printed
 claim total may sit under an hours column. For example, 1 training hour, hourly rate 25,
