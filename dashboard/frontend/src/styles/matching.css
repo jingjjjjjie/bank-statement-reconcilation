@@ -75,3 +75,8 @@
 .candidate-card.suggested::before{content:"";position:absolute;inset:0 -50%;z-index:-1;pointer-events:none;background:linear-gradient(110deg,#ffe1e8,#fff0d5,#e7f4d9,#dff3f8,#e8e0fa,#f5dff2,#ffe1e8);animation:suggested-flow 3s ease-in-out infinite alternate}
 @keyframes suggested-flow{from{transform:translate3d(-20%,0,0)}to{transform:translate3d(20%,0,0)}}
 @media(prefers-reduced-motion:reduce){.candidate-card.suggested::before{animation:none}}
+
+.transaction-header{flex-direction:row-reverse}.transaction-party{text-align:right}.transaction-title{font-size:14px}.transaction-direction{font-size:10px}.transaction-header .bank-amount{padding-top:0}
+.candidate-tray{border:1px solid #dce5df;border-radius:8px;padding:10px;margin-bottom:12px}.candidate-tray .section-heading{margin-bottom:8px}.candidate-tray .section-heading h2{font-size:12px}
+#selected-tray{background:#f5f8f4}#selected-candidates .candidate-card:last-child,#candidate-list .candidate-card:last-child{margin-bottom:0}.tray-empty{font-size:12px;color:#64776b;margin:8px 0}
+.remove-candidate{flex:none;width:22px;height:26px;border:0;border-radius:4px;background:transparent;color:#6e554f;font-size:20px;padding:0;margin-top:10px}.remove-candidate:hover{background:#f5e5df;color:#943a28}

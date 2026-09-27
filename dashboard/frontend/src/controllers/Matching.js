@@ -8,7 +8,7 @@ let token;
 /* Present cached evidence; Python validates and persists every human decision. */
 let reviewData, activeId, saving = false, previewSerial = 0, previewState;
 let savedDraft = '', candidatePage = 0, transactionPage = 0;
-const expandedCandidates = new Set();
+const expandedCandidates = new Set(), returnedCandidates = new Set();
 const selected = new Map();
 function draftSnapshot() {
   /* Track unsaved allocations independently of display preferences. */
@@ -117,7 +117,7 @@ function chooseBank(id, addItem) {
   /* Start a draft from this transaction's saved choice, or its cached proposal. */
   if (saving) return;
   activeId = id; selected.clear(); error();
-  candidatePage = 0; expandedCandidates.clear();
+  candidatePage = 0; expandedCandidates.clear(); returnedCandidates.clear();
   const b = bank(), source = b.decision ? b.decision.allocations : b.suggestion.allocations;
   source.forEach(a => { if (itemById.has(a.item_id)) selected.set(a.item_id, a.amount); });
   if (addItem) selected.set(addItem, defaultAllocation(itemById.get(addItem)));
@@ -168,29 +168,44 @@ function renderCandidates() {
   /* Compare shortlisted supporting pieces openly, five compact cards at a time. */
   const b = bank(), query = $('#candidate-query').value.trim().toLowerCase(), list = $('#candidate-list');
   list.replaceChildren();
+  const tray = $('#selected-candidates'); tray.replaceChildren();
+  $('#selected-count').textContent = String(selected.size);
+  if (!selected.size) tray.append(node('p', 'tray-empty', 'Tick a candidate below to add it.'));
   const suggested = new Set(b.suggestion.allocations.map(a => a.item_id));
-  const keys = new Set(b.candidates);
-  const items = reviewData.items.filter(i => (selected.has(i.id) || (!i.excluded && (!$('#candidate-search').hidden || keys.has(i.id)))) &&
-    (selected.has(i.id) || `${i.id} ${i.filename} ${i.amount} ${i.description} ${i.parties.join(' ')} ${(i.references || []).join(' ')}`.toLowerCase().includes(query)));
-  items.sort((a, c) => Number(suggested.has(c.id)) - Number(suggested.has(a.id)));
+  const keys = new Set([...b.candidates, ...returnedCandidates]);
+  const items = reviewData.items.filter(i => !selected.has(i.id) && !i.excluded && (!$('#candidate-search').hidden || keys.has(i.id)) &&
+    ( `${i.id} ${i.filename} ${i.amount} ${i.description} ${i.parties.join(' ')} ${(i.references || []).join(' ')}`.toLowerCase().includes(query)));
+  items.sort((a, c) => Number(returnedCandidates.has(c.id)) - Number(returnedCandidates.has(a.id)) || Number(suggested.has(c.id)) - Number(suggested.has(a.id)));
   candidatePage = Math.max(0, Math.min(candidatePage, Math.ceil(items.length / 5) - 1));
   const start = candidatePage * 5;
   $('#candidate-count').textContent = items.length ? `${start + 1}–${Math.min(start + 5, items.length)} of ${items.length} candidates` : 'No candidates';
   $('#candidate-prev').disabled = candidatePage === 0;
   $('#candidate-next').disabled = start + 5 >= items.length;
-  for (const item of items.slice(start, start + 5)) {
+  for (const item of [...selected.keys()].map(id => itemById.get(id)).filter(Boolean).concat(items.slice(start, start + 5))) {
     const card = node('article', `candidate-card ${selected.has(item.id) ? 'selected' : ''}`);
     card.classList.toggle('suggested', suggested.has(item.id));
     card.dataset.itemId = item.id;
     card.setAttribute('aria-label', `Candidate ${item.id}`);
     if (previewState?.kind === 'item' && previewState.id === item.id) card.classList.add('previewing');
-    const checkbox = node('input'); checkbox.type = 'checkbox'; checkbox.checked = selected.has(item.id); checkbox.disabled = item.stale;
-    checkbox.setAttribute('aria-label', `Select ${item.id} ${item.filename}`);
-    checkbox.onchange = () => {
-      if (checkbox.checked) selected.set(item.id, defaultAllocation(item)); else selected.delete(item.id);
+    const isSelected = selected.has(item.id);
+    const control = isSelected ? button('\u00d7', () => {
+      selected.delete(item.id); returnedCandidates.add(item.id);
+      $('#candidate-query').value = ''; candidatePage = 0;
       renderCandidates(); updateSummary();
-      [...root.querySelectorAll('.candidate-card')].find(c => c.dataset.itemId === item.id)?.querySelector('input').focus();
-    };
+      [...list.querySelectorAll('.candidate-card')].find(c => c.dataset.itemId === item.id)?.querySelector('input').focus();
+    }, 'remove-candidate') : node('input');
+    if (isSelected) {
+      control.setAttribute('aria-label', `Remove ${item.id} from selected`);
+      control.title = 'Remove from selected';
+    } else {
+      control.type = 'checkbox'; control.disabled = item.stale;
+      control.setAttribute('aria-label', `Select ${item.id} ${item.filename}`);
+      control.onchange = () => {
+        selected.set(item.id, defaultAllocation(item)); returnedCandidates.delete(item.id);
+        renderCandidates(); updateSummary();
+        [...tray.querySelectorAll('.candidate-card')].find(c => c.dataset.itemId === item.id)?.querySelector('.remove-candidate').focus();
+      };
+    }
     const details = node('details', 'candidate-details'); details.open = expandedCandidates.has(item.id);
     const summary = node('summary', 'candidate-summary');
     summary.setAttribute('aria-label', `Inspect ${item.id} ${item.filename}`);
@@ -245,7 +260,7 @@ function renderCandidates() {
     }, 'candidate-preview');
     use.disabled = item.stale || item.excluded;
     if (selected.size !== 1 || !selected.has(item.id)) actions.append(use);
-    body.append(actions); details.append(body); card.append(checkbox, details); list.append(card);
+    body.append(actions); details.append(body); card.append(control, details); (isSelected ? tray : list).append(card);
   }
   if (!items.length) list.append(node('p', 'empty-state', 'No candidates found. Search all pieces or change your search.'));
 }
@@ -262,7 +277,7 @@ function updateSummary() {
   const flagged = difference !== 0 || selected.size > 1 || [...selected].some(([id, value]) => value === '' || itemById.get(id).boundary_unresolved || (cents(value) !== null && cents(value) < cents(itemById.get(id).amount)));
   summary.hidden = !flagged || !selected.size;
   const unchanged = draftSnapshot() === savedDraft;
-  $('#support-heading').textContent = 'Supporting candidates';
+  $('#support-heading').textContent = 'Available candidates';
   $('#support-status').textContent = b.decision && unchanged
     ? `${b.support_status}. ${b.review_status === 'denied' ? 'Suggestion rejected; other evidence may exist.' : 'Saved review decision.'}`
     : `${selected.size} selected · Not confirmed`;
