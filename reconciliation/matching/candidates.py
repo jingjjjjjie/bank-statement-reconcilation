@@ -1,4 +1,5 @@
 """Deterministic candidate retrieval shared by live matching and historical experiments."""
+
 import hashlib
 import itertools
 import re
@@ -10,7 +11,7 @@ from reconciliation.core.money import normalize_currency
 #: Name words that do not identify a person or company (Malay honorifics, "bin", "berhad").
 IGNORED_NAME_WORDS = frozenset({"cik", "puan", "encik", "bin", "binti", "bt", "bint", "berhad"})
 #: Two names match when they share at least this share of the shorter name's words (and two or more words).
-NAME_OVERLAP_RATIO = .8
+NAME_OVERLAP_RATIO = 0.8
 #: Retrieval score weights; an exact amount outranks a name-only hit for retrieval, never for approval.
 REFERENCE_WEIGHT, NAME_WEIGHT, AMOUNT_WEIGHT, TRUNCATED_NAME_WEIGHT = 100, 30, 40, 20
 #: Claim groups larger than this are not searched for exact-sum subsets (combinations grow too fast).
@@ -85,8 +86,12 @@ def build_candidates(banks, documents, grouped=True, specific=False):
         for key in keys:
             c = pool[key]
             evaluations += 1
-            if (c["direction"] and c["direction"] != bank["direction"] or
-                    c["currency"] and normalize_currency(c["currency"]) != normalize_currency(bank["currency"])):
+            if (
+                c["direction"]
+                and c["direction"] != bank["direction"]
+                or c["currency"]
+                and normalize_currency(c["currency"]) != normalize_currency(bank["currency"])
+            ):
                 continue
             shared_refs = refs & {r.casefold() for r in c["references"]}
             reference = bool(shared_refs)
@@ -101,7 +106,12 @@ def build_candidates(banks, documents, grouped=True, specific=False):
                 continue
             # Reimbursements can name the claimant rather than the receipt merchant.
             # Exact amounts outrank name-only hits for retrieval, never for approval.
-            score = REFERENCE_WEIGHT * reference + NAME_WEIGHT * name + AMOUNT_WEIGHT * exact + TRUNCATED_NAME_WEIGHT * truncated
+            score = (
+                REFERENCE_WEIGHT * reference
+                + NAME_WEIGHT * name
+                + AMOUNT_WEIGHT * exact
+                + TRUNCATED_NAME_WEIGHT * truncated
+            )
             ranked.append((score, key))
         if grouped:
             groups = defaultdict(list)
@@ -117,9 +127,13 @@ def build_candidates(banks, documents, grouped=True, specific=False):
                         if sum(number(pool[k]["amount"]) for k in subset) != number(bank["amount"]):
                             continue
                         key = "G-" + hashlib.sha256("|".join(subset).encode()).hexdigest()[:12]
-                        pool[key] = {**pool[subset[0]], "id": key, "kind": "group",
-                                     "amount": bank["amount"],
-                                     "document_ids": [d for k in subset for d in pool[k]["document_ids"]]}
+                        pool[key] = {
+                            **pool[subset[0]],
+                            "id": key,
+                            "kind": "group",
+                            "amount": bank["amount"],
+                            "document_ids": [d for k in subset for d in pool[k]["document_ids"]],
+                        }
                         ranked.append((GROUP_MATCH_SCORE, key))
         choices[bank["id"]] = sorted(set(ranked), key=lambda item: (-item[0], item[1]))
     return pool, choices, evaluations
@@ -132,8 +146,14 @@ def truncated_name(bank_names, source_names):
         left = [word for word in re.findall(r"[\w]+", bank.casefold()) if word not in ignored]
         for source in source_names:
             right = [word for word in re.findall(r"[\w]+", source.casefold()) if word not in ignored]
-            if (len(left) >= 2 and len(left) == len(right) and left[:-1] == right[:-1]
-                    and len(left[-1]) >= MIN_TRUNCATED_WORD and right[-1] != left[-1] and right[-1].startswith(left[-1])):
+            if (
+                len(left) >= 2
+                and len(left) == len(right)
+                and left[:-1] == right[:-1]
+                and len(left[-1]) >= MIN_TRUNCATED_WORD
+                and right[-1] != left[-1]
+                and right[-1].startswith(left[-1])
+            ):
                 return True
     return False
 
@@ -141,7 +161,7 @@ def truncated_name(bank_names, source_names):
 def shortlist(ranked, policy):
     """Compare fixed cutoffs with tie-preserving expansion to at most `ADAPTIVE_MAX` options."""
     if policy != "adaptive":
-        return ranked[:int(policy)]
+        return ranked[: int(policy)]
     if len(ranked) <= ADAPTIVE_TOP:
         return ranked
     cutoff = ranked[ADAPTIVE_TOP - 1][0]

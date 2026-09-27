@@ -1,4 +1,5 @@
 """Conservative PDF routing with auditable evidence and visual fallback."""
+
 import hashlib
 import json
 import subprocess
@@ -25,8 +26,14 @@ HYBRID_VISION_SAMPLE_RATE = 10
 
 def review_warnings(result):
     """Read system warnings, including the old storage location, without rewriting evidence."""
-    return list(dict.fromkeys([*result.get('review_warnings', []),
-        *[note for note in result.get('limitations', []) if note == DISAGREEMENT_WARNING]]))
+    return list(
+        dict.fromkeys(
+            [
+                *result.get('review_warnings', []),
+                *[note for note in result.get('limitations', []) if note == DISAGREEMENT_WARNING],
+            ]
+        )
+    )
 
 
 def inspect_page(page):
@@ -52,15 +59,16 @@ def inspect_page(page):
         reasons.append("complex_vector_layout")
     for i, word in enumerate(words):
         box = word[:4]
-        if any(min(box[2], other[2]) - max(box[0], other[0]) > 1
-               and min(box[3], other[3]) - max(box[1], other[1]) > 1 for other in words[:i]):
+        if any(
+            min(box[2], other[2]) - max(box[0], other[0]) > 1 and min(box[3], other[3]) - max(box[1], other[1]) > 1
+            for other in words[:i]
+        ):
             reasons.append("overlapping_text")
             break
     # Exact geometry is intentionally conservative; unrecognized layouts keep vision.
     geometry = [[round(v, 1) for v in w[:4]] for w in words]
     signature = hashlib.sha256(json.dumps([list(page.rect), geometry]).encode()).hexdigest()
-    return {"layout": signature, "reasons": reasons,
-            "words": [{"text": w[4], "bbox": list(w[:4])} for w in words]}
+    return {"layout": signature, "reasons": reasons, "words": [{"text": w[4], "bbox": list(w[:4])} for w in words]}
 
 
 def approved_layouts():
@@ -73,14 +81,21 @@ def evidence_errors(result, probe):
     """Require unambiguous receipts with source-backed critical values."""
     validate(result, EXTRACTION)
     errors, evidence = [], []
-    if not result["readable"] or any(r.get("document_type") != "receipt" for r in result["receipts"]) or result.get("limitations") or result.get("review_warnings"):
+    if (
+        not result["readable"]
+        or any(r.get("document_type") != "receipt" for r in result["receipts"])
+        or result.get("limitations")
+        or result.get("review_warnings")
+    ):
         errors.append("uncertain_text_extraction")
     if len(result["receipts"]) != 1:
         errors.append("ambiguous_receipt_boundaries")
-    totals = {(m['amount'], m['currency']) for m in result['money']
-              if m['role'] in ('grand_total', 'invoice_total')}
-    totals.update((t['amount'], t['currency']) for t in result.get('totals', [])
-                  if t['label'].casefold().replace(' ', '_') in {'total', 'grand_total', 'invoice_total'})
+    totals = {(m['amount'], m['currency']) for m in result['money'] if m['role'] in ('grand_total', 'invoice_total')}
+    totals.update(
+        (t['amount'], t['currency'])
+        for t in result.get('totals', [])
+        if t['label'].casefold().replace(' ', '_') in {'total', 'grand_total', 'invoice_total'}
+    )
     if len(totals) > 1:
         errors.append("conflicting_totals_or_currencies")
     words = probe["words"]
@@ -100,8 +115,7 @@ def evidence_errors(result, probe):
 
 def critical_fields(result):
     """Compare receipt boundaries and financial identifiers, excluding prose."""
-    return [{k: r[k] for k in ("invoice_numbers", "total", "currency")}
-            for r in result.get("receipts", [])]
+    return [{k: r[k] for k in ("invoice_numbers", "total", "currency")} for r in result.get("receipts", [])]
 
 
 def extract_unit(unit, ask, selected_mode, audit_path, allowlist=None):
@@ -117,9 +131,16 @@ def extract_unit(unit, ask, selected_mode, audit_path, allowlist=None):
     reasons = list(probe["reasons"])
     if selected_mode == "hybrid" and probe["layout"] not in approved:
         reasons.append("layout_not_validated")
-    audit = {"mode": selected_mode, "location": unit["label"], "layout": probe["layout"],
-             "reasons": reasons, "status": "started", "text_result": None, "vision_result": None,
-             "text_schema_valid": False}
+    audit = {
+        "mode": selected_mode,
+        "location": unit["label"],
+        "layout": probe["layout"],
+        "reasons": reasons,
+        "status": "started",
+        "text_result": None,
+        "vision_result": None,
+        "text_schema_valid": False,
+    }
     write_json(audit_path, audit)
     payload = {"location": unit["label"], "text": "" if "long_page" in reasons else unit["text"], "limitation": ""}
     prompt = extraction_prompt() + "\n" + json.dumps(payload, ensure_ascii=False)

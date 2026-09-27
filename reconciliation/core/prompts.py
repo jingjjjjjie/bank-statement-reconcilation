@@ -1,4 +1,5 @@
 """Load editable workflow instructions and schemas from the prompt folder."""
+
 import json
 import re
 
@@ -33,7 +34,7 @@ def document_kinds():
     text = load_prompt("extraction/document_kinds")
     if "\n## " not in "\n" + text:
         raise ValueError("document_kinds.md needs at least one '## Kind' section")
-    return text[("\n" + text).index("\n## "):]
+    return text[("\n" + text).index("\n## ") :]
 
 
 def piece_types():

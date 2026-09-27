@@ -1,4 +1,5 @@
 """Check fast, save-confirmed extraction navigation with twelve synthetic documents."""
+
 import json
 import threading
 import unittest
@@ -28,8 +29,11 @@ class AcceptNextTests(unittest.TestCase):
             Image.new('RGB', (160, 220), (number * 15, 100, 100)).save(source)
             digest = fingerprint(source)
             keys.append(digest + ':0')
-            fixture.index['documents'][digest] = {'paths': [str(source)], 'error': None,
-                'units': [{'label': 'image 1', 'image': None}]}
+            fixture.index['documents'][digest] = {
+                'paths': [str(source)],
+                'error': None,
+                'units': [{'label': 'image 1', 'image': None}],
+            }
             fixture.state['units'][keys[-1]] = {'readable': True, 'receipts': fixture.pieces}
         (fixture.work / 'index.json').write_text(json.dumps(fixture.index))
         fixture.state['index_sha256'] = fingerprint(fixture.work / 'index.json')
@@ -49,8 +53,10 @@ class AcceptNextTests(unittest.TestCase):
             page = browser.new_page(viewport={'width': 1440, 'height': 1000})
             errors, held, previews = [], [], []
             page.on('pageerror', lambda error: errors.append(str(error)))
-            page.on('request', lambda request: previews.append(request.url)
-                    if '/api/extraction-preview?' in request.url else None)
+            page.on(
+                'request',
+                lambda request: previews.append(request.url) if '/api/extraction-preview?' in request.url else None,
+            )
             page.goto(f'http://127.0.0.1:{server.server_port}/extraction-review')
             expect(page.locator('#current-document-name')).to_have_text('receipt-1.png')
             expect(page.locator('#original-preview img')).to_be_visible()

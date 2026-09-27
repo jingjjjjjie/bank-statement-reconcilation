@@ -14,18 +14,31 @@ from reconciliation.core.paths import WORKSPACE
 STYLE_PATH = WORKSPACE / "prompts" / "excel" / "bank_statement.xml"
 
 
-FIELDS = ("date", "ledger", "sql", "sales_type", "voucher", "counterparty",
-          "particular", "money_in", "money_out", "balance", "status")
+FIELDS = (
+    "date",
+    "ledger",
+    "sql",
+    "sales_type",
+    "voucher",
+    "counterparty",
+    "particular",
+    "money_in",
+    "money_out",
+    "balance",
+    "status",
+)
 
 
 def transaction_values(transaction):
     """Map validated bank evidence to typed fields; accounting fields stay blank."""
-    return {"date": datetime.fromisoformat(transaction["date"]),
-            "counterparty": transaction["counterparty"].upper() or None,
-            "money_in": float(transaction["money_in"]) or None,
-            "money_out": float(transaction["money_out"]) or None,
-            "balance": float(transaction["balance"]),
-            "status": "PENDING" if transaction["counterparty"] else "REVIEW PAY TO"}
+    return {
+        "date": datetime.fromisoformat(transaction["date"]),
+        "counterparty": transaction["counterparty"].upper() or None,
+        "money_in": float(transaction["money_in"]) or None,
+        "money_out": float(transaction["money_out"]) or None,
+        "balance": float(transaction["balance"]),
+        "status": "PENDING" if transaction["counterparty"] else "REVIEW PAY TO",
+    }
 
 
 def export(data_path, company, output_path, style_path=None):
@@ -51,17 +64,22 @@ def export(data_path, company, output_path, style_path=None):
         style.cell(sheet, number, "date").comment = Comment(
             f"{Path(data['source']).name}, page {transaction['page']}.\n"
             f"ID: {transaction['transaction_id']}\n{transaction['narration']}\n"
-            "Supporting-document matching pending.", "Source")
+            "Supporting-document matching pending.",
+            "Source",
+        )
         style.cell(sheet, number, "counterparty").comment = Comment(
-            f"Role: {transaction['counterparty_role']}\n"
-            f"As printed: {transaction['counterparty_raw']}", "Source")
+            f"Role: {transaction['counterparty_role']}\nAs printed: {transaction['counterparty_raw']}", "Source"
+        )
 
     # Match the footer layout without inventing SQL reconciliation results.
     footer = len(data["transactions"]) + 7
     for offset, name in enumerate(("total", "sql", "variance")):
         style.apply_row(sheet, footer + offset, name)
-    style.write_row(sheet, footer, {"particular": "TOTAL", "money_in": float(data["total_money_in"]),
-                                    "money_out": float(data["total_money_out"])})
+    style.write_row(
+        sheet,
+        footer,
+        {"particular": "TOTAL", "money_in": float(data["total_money_in"]), "money_out": float(data["total_money_out"])},
+    )
     style.write_row(sheet, footer + 1, {"particular": "AS PER SQL"})
     style.write_row(sheet, footer + 2, {"particular": "VARIANCE"})
     style.finish(sheet, footer + 2)

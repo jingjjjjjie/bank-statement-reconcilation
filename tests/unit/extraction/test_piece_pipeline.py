@@ -1,4 +1,5 @@
 """Exercise persistent identities, live matching, migration and complete model evidence."""
+
 import copy
 import json
 import threading
@@ -14,16 +15,19 @@ from tests.fixtures.piece_pipeline import PiecePipelineFixture, as_model
 
 
 class PiecePipelineTests(PiecePipelineFixture):
-
-
     def test_live_save_delta_matches_full_snapshot(self):
         """Live approvals, rejections and undo return authoritative status and balances."""
         view = self.accept()
         ids = [p['piece_id'] for p in view['units'][0]['receipts']]
         piece_matching.activate(self.review)
         for action in ('approve', 'deny', 'undo'):
-            result = final_review.decide(self.review, self.decision(action=action, allocations=[
-                {'item_id': ids[0], 'amount': '45'}, {'item_id': ids[1], 'amount': '15'}]))
+            result = final_review.decide(
+                self.review,
+                self.decision(
+                    action=action,
+                    allocations=[{'item_id': ids[0], 'amount': '45'}, {'item_id': ids[1], 'amount': '15'}],
+                ),
+            )
             snapshot = final_review.snapshot(self.review)
             bank = next(row for row in snapshot['banks'] if row['id'] == 'B1')
             for key, value in result['bank'].items():
@@ -41,8 +45,11 @@ class PiecePipelineTests(PiecePipelineFixture):
         changed[0]['brief_description'] = 'Corrected delivery'
         after = self.accept(changed)['units'][0]['receipts']
         self.assertEqual([p['piece_id'] for p in after], [p['piece_id'] for p in before[::-1]])
-        children = [{**after[0], 'piece_id': '', 'parent_piece_ids': [after[0]['piece_id']], 'total': '5'},
-                    {**after[0], 'piece_id': '', 'parent_piece_ids': [after[0]['piece_id']], 'total': '10'}, after[1]]
+        children = [
+            {**after[0], 'piece_id': '', 'parent_piece_ids': [after[0]['piece_id']], 'total': '5'},
+            {**after[0], 'piece_id': '', 'parent_piece_ids': [after[0]['piece_id']], 'total': '10'},
+            after[1],
+        ]
         split = self.accept(children)['units'][0]['receipts']
         self.assertEqual(len({p['piece_id'] for p in split}), 3)
         self.assertNotIn(after[0]['piece_id'], [p['piece_id'] for p in split])
@@ -54,8 +61,10 @@ class PiecePipelineTests(PiecePipelineFixture):
         view = self.accept()
         ids = [p['piece_id'] for p in view['units'][0]['receipts']]
         piece_matching.activate(self.review)
-        final_review.decide(self.review, self.decision(allocations=[
-            {'item_id': ids[0], 'amount': '45'}, {'item_id': ids[1], 'amount': '15'}]))
+        final_review.decide(
+            self.review,
+            self.decision(allocations=[{'item_id': ids[0], 'amount': '45'}, {'item_id': ids[1], 'amount': '15'}]),
+        )
         self.assertEqual(final_review.snapshot(self.review)['banks'][0]['support_status'], 'Supporting')
         with self.assertRaisesRegex(ValueError, 'available'):
             final_review.decide(self.review, self.decision('B2', allocations=[{'item_id': ids[0], 'amount': '45'}]))
@@ -108,7 +117,9 @@ class PiecePipelineTests(PiecePipelineFixture):
         view = self.accept()
         first, second = view['units'][0]['receipts']
         piece_matching.activate(self.review)
-        final_review.decide(self.review, self.decision('B2', allocations=[{'item_id': first['piece_id'], 'amount': '45'}]))
+        final_review.decide(
+            self.review, self.decision('B2', allocations=[{'item_id': first['piece_id'], 'amount': '45'}])
+        )
         self.accept([second])
         data = final_review.snapshot(self.review)
         removed = next(i for i in data['items'] if i['id'] == first['piece_id'])
@@ -142,8 +153,16 @@ class PiecePipelineTests(PiecePipelineFixture):
         self.assertIn('Document total 60', document['sources'][0]['text'])
         self.assertEqual(set(allowed['B1']), set(keys))
         self.assertEqual(images, [])
-        result = {'decisions': [{'bank_id': 'B1', 'assessment': 'strong', 'allocations': [
-            {'item_id': keys[0], 'amount': '45'}, {'item_id': keys[1], 'amount': '15'}], 'reason': 'Two receipts'}]}
+        result = {
+            'decisions': [
+                {
+                    'bank_id': 'B1',
+                    'assessment': 'strong',
+                    'allocations': [{'item_id': keys[0], 'amount': '45'}, {'item_id': keys[1], 'amount': '15'}],
+                    'reason': 'Two receipts',
+                }
+            ]
+        }
         self.assertEqual(validate_result(result, ['B1'], allowed, banks, items), result['decisions'])
         result['decisions'][0]['allocations'][0]['amount'] = '60'
         with self.assertRaisesRegex(ValueError, 'exceeds'):
@@ -151,27 +170,50 @@ class PiecePipelineTests(PiecePipelineFixture):
 
     def test_canonical_schema_and_legacy_adapter(self):
         """The model emits only document context and pieces, preserving typed facts."""
-        base = {'piece_type': 'Receipt or invoice', 'payer': '', 'other_names': [], 'amount_location': 'image 1',
-                'date': '2025-11', 'references': [], 'description': 'Supplies'}
-        result = {'readable': True, 'description': 'Two receipts', 'totals': [], 'pieces': [
-            {**base, 'payee': 'Merchant', 'amount': '-45', 'currency': 'RM', 'document_number': '000123',
-             'references': [{'type': 'other', 'value': 'REF-9'}]},
-            {**base, 'payee': 'Other shop', 'amount': '15.004', 'currency': '', 'document_number': ''},
-            {**base, 'payee': 'Zero row', 'amount': '0', 'currency': 'MYR', 'document_number': ''}]}
+        base = {
+            'piece_type': 'Receipt or invoice',
+            'payer': '',
+            'other_names': [],
+            'amount_location': 'image 1',
+            'date': '2025-11',
+            'references': [],
+            'description': 'Supplies',
+        }
+        result = {
+            'readable': True,
+            'description': 'Two receipts',
+            'totals': [],
+            'pieces': [
+                {
+                    **base,
+                    'payee': 'Merchant',
+                    'amount': '-45',
+                    'currency': 'RM',
+                    'document_number': '000123',
+                    'references': [{'type': 'other', 'value': 'REF-9'}],
+                },
+                {**base, 'payee': 'Other shop', 'amount': '15.004', 'currency': '', 'document_number': ''},
+                {**base, 'payee': 'Zero row', 'amount': '0', 'currency': 'MYR', 'document_number': ''},
+            ],
+        }
         validate(result, pieces.EXTRACTION)
         adapted = pieces.legacy_result(pieces.clean_result(result))
         first, second = adapted['receipts']
         self.assertEqual((first['document_number'], first['invoice_numbers']), ('000123', ['000123']))
         self.assertEqual(first['references'][0]['value'], 'REF-9')
         # Python clean-ups: positive cents, month to last day, RM to MYR, default currency, zero skipped.
-        self.assertEqual((first['total'], first['date'], first['currency'], first['currency_default']),
-                         ('45.00', '2025-11-30', 'MYR', False))
+        self.assertEqual(
+            (first['total'], first['date'], first['currency'], first['currency_default']),
+            ('45.00', '2025-11-30', 'MYR', False),
+        )
         self.assertEqual((second['total'], second['currency'], second['currency_default']), ('15.00', 'MYR', True))
         self.assertIn('Skipped 1 zero-amount piece(s).', adapted['review_warnings'])
         self.assertEqual(adapted['brief_description'], 'Two receipts')
         self.assertNotIn('pieces', adapted)
         self.assertNotIn('money', pieces.EXTRACTION['properties'])
-        self.assertIn('Receipt or invoice', pieces.EXTRACTION['properties']['pieces']['items']['properties']['piece_type']['enum'])
+        self.assertIn(
+            'Receipt or invoice', pieces.EXTRACTION['properties']['pieces']['items']['properties']['piece_type']['enum']
+        )
 
     def test_outdated_and_failed_proposals_remain_visible(self):
         """A stale run retains saved evidence and failures instead of becoming no-match rows."""
@@ -180,10 +222,29 @@ class PiecePipelineTests(PiecePipelineFixture):
         banks, items, _, _ = piece_matching.current(self.review)
         key = next(iter(items))
         path = self.fixture.base / 'final-review/piece-suggestions.json'
-        path.write_text(json.dumps({'binding': 'older-evidence', 'decisions': [
-            {'bank_id': 'B1', 'assessment': 'strong', 'allocations': [{'item_id': key, 'amount': '45'}], 'reason': 'Saved evidence'},
-            {'bank_id': 'B2', 'assessment': 'tentative', 'allocations': [], 'reason': 'Matching unresolved: currency'},
-        ], 'errors': ['B2: currency'], 'total': 3}))
+        path.write_text(
+            json.dumps(
+                {
+                    'binding': 'older-evidence',
+                    'decisions': [
+                        {
+                            'bank_id': 'B1',
+                            'assessment': 'strong',
+                            'allocations': [{'item_id': key, 'amount': '45'}],
+                            'reason': 'Saved evidence',
+                        },
+                        {
+                            'bank_id': 'B2',
+                            'assessment': 'tentative',
+                            'allocations': [],
+                            'reason': 'Matching unresolved: currency',
+                        },
+                    ],
+                    'errors': ['B2: currency'],
+                    'total': 3,
+                }
+            )
+        )
         view = final_review.snapshot(self.review)
         self.assertEqual(view['banks'][0]['confidence']['level'], 'outdated')
         self.assertEqual(view['banks'][0]['suggestion']['allocations'][0]['item_id'], key)
@@ -191,6 +252,7 @@ class PiecePipelineTests(PiecePipelineFixture):
         self.assertEqual(view['proposal_counts']['outdated'], 1)
         self.assertEqual(view['proposal_counts']['failed'], 1)
         from dashboard.services.piece_match_jobs import status
+
         self.assertEqual(status(self.review)['failed'], 1)
         self.assertEqual(status(self.review)['total'], 3)
 
@@ -200,9 +262,19 @@ class PiecePipelineTests(PiecePipelineFixture):
         banks, items, _, _ = piece_matching.current(self.review)
         item = next(iter(items.values()))
         old_item = {**item, 'id': 'D1'}
-        old = {'version': 2, 'binding': 'old', 'history': [], 'decisions': {'B2': {
-            'status': 'approved', 'allocations': [{'item_id': 'D1', 'amount': '45', 'document': item['document']}],
-            'difference': '0', 'context_only': False}}}
+        old = {
+            'version': 2,
+            'binding': 'old',
+            'history': [],
+            'decisions': {
+                'B2': {
+                    'status': 'approved',
+                    'allocations': [{'item_id': 'D1', 'amount': '45', 'document': item['document']}],
+                    'difference': '0',
+                    'context_only': False,
+                }
+            },
+        }
         path = self.fixture.base / 'final-review/decisions.json'
         path.parent.mkdir()
         path.write_text(json.dumps(old))
@@ -218,6 +290,7 @@ class PiecePipelineTests(PiecePipelineFixture):
 
     def test_strict_model_schemas_require_every_property(self):
         """Both actual model contracts satisfy Codex strict structured-output rules."""
+
         def inspect(schema):
             """Check objects recursively, including typed references and array entries."""
             if schema.get('type') == 'object':
@@ -227,22 +300,37 @@ class PiecePipelineTests(PiecePipelineFixture):
                     inspect(value)
             if schema.get('type') == 'array':
                 inspect(schema['items'])
+
         inspect(pieces.EXTRACTION)
         inspect(pieces.ASSEMBLY)
         from dashboard.services.piece_match_jobs import SCHEMA
+
         inspect(SCHEMA)
 
     def test_payment_schedule_keeps_seven_rows_through_matching(self):
         """Equal amounts and shared project codes keep distinct recipient identities."""
         from dashboard.services.piece_match_jobs import SCHEMA
+
         amounts = ['150', '150', '90', '90', '750', '200', '600']
-        rows = [as_model({**self.fixture.pieces[0], 'payee': f'Recipient {n}',
-            'total': value, 'references': [{'type': 'other', 'value': 'shared-project'}],
-            'dates': [{'type': 'other', 'value': '26/11/2025'}],
-            'location': f'Sheet1 row {n + 9}'}) for n, value in enumerate(amounts)]
-        result = {'readable': True, 'description': 'Seven recipients',
+        rows = [
+            as_model(
+                {
+                    **self.fixture.pieces[0],
+                    'payee': f'Recipient {n}',
+                    'total': value,
+                    'references': [{'type': 'other', 'value': 'shared-project'}],
+                    'dates': [{'type': 'other', 'value': '26/11/2025'}],
+                    'location': f'Sheet1 row {n + 9}',
+                }
+            )
+            for n, value in enumerate(amounts)
+        ]
+        result = {
+            'readable': True,
+            'description': 'Seven recipients',
             'totals': [{'label': 'Grand total', 'amount': '2030', 'currency': 'MYR', 'location': 'Sheet1 I16'}],
-            'pieces': rows}
+            'pieces': rows,
+        }
         validate(result, pieces.EXTRACTION)
         self.fixture.state['units'][self.fixture.key] = pieces.legacy_result(result)
         self.fixture.save_state()
@@ -256,8 +344,16 @@ class PiecePipelineTests(PiecePipelineFixture):
         self.assertEqual([item['amount'] for item in items.values()], amounts)
         self.assertEqual([item['payee'] for item in items.values()], [r['payee'] for r in rows])
         banks['B1']['amount'] = '150'
-        response = {'decisions': [{'bank_id': 'B1', 'assessment': 'strong',
-            'allocations': [{'item_id': keys[0], 'amount': '150'}], 'reason': 'Identified recipient'}]}
+        response = {
+            'decisions': [
+                {
+                    'bank_id': 'B1',
+                    'assessment': 'strong',
+                    'allocations': [{'item_id': keys[0], 'amount': '150'}],
+                    'reason': 'Identified recipient',
+                }
+            ]
+        }
         validate(response, SCHEMA)
         validate_result(response, ['B1'], allowed, banks, items)
         response['decisions'][0]['allocations'][0]['item_id'] = 'schedule-total'
@@ -268,6 +364,7 @@ class PiecePipelineTests(PiecePipelineFixture):
         """A slow bank request cannot hold up a free worker or approve test proposals."""
         from dashboard.services import piece_match_jobs
         from reconciliation.core.settings import DEFAULTS
+
         self.accept()
         master = self.fixture.base / 'bank-output/master_statement.csv'
         master.write_text(master.read_text().replace('60.00', '45.00'))
@@ -294,11 +391,17 @@ class PiecePipelineTests(PiecePipelineFixture):
                     release.wait(5)
                 if key == 'B3':
                     third.set()
-                return {'decisions': [{'bank_id': key, 'assessment': 'tentative', 'allocations': [], 'reason': 'Fixture'}]}
+                return {
+                    'decisions': [{'bank_id': key, 'assessment': 'tentative', 'allocations': [], 'reason': 'Fixture'}]
+                }
 
         config = {**DEFAULTS, 'codex_enabled': True, 'max_parallel': 2}
         # One line per batch keeps this a check that a free worker takes the next batch.
-        with patch.object(piece_match_jobs, 'CodexReviewer', Reviewer), patch.object(piece_match_jobs, 'active_config', return_value=config),                 patch.object(piece_match_jobs, 'BATCH_LINES', 1):
+        with (
+            patch.object(piece_match_jobs, 'CodexReviewer', Reviewer),
+            patch.object(piece_match_jobs, 'active_config', return_value=config),
+            patch.object(piece_match_jobs, 'BATCH_LINES', 1),
+        ):
             piece_match_jobs.start(self.review)
             try:
                 self.assertTrue(third.wait(5), 'Free worker did not start the third bank request')
@@ -317,7 +420,11 @@ class PiecePipelineTests(PiecePipelineFixture):
         saved['decisions'] = [row for row in saved['decisions'] if row['bank_id'] != 'B3']
         next(row for row in saved['decisions'] if row['bank_id'] == 'B2')['reason'] = 'Matching unresolved: retry'
         checkpoint.write_text(json.dumps(saved))
-        with patch.object(piece_match_jobs, 'CodexReviewer', Reviewer), patch.object(piece_match_jobs, 'active_config', return_value=config), patch.object(piece_match_jobs, 'BATCH_LINES', 1):
+        with (
+            patch.object(piece_match_jobs, 'CodexReviewer', Reviewer),
+            patch.object(piece_match_jobs, 'active_config', return_value=config),
+            patch.object(piece_match_jobs, 'BATCH_LINES', 1),
+        ):
             piece_match_jobs.start(self.review)
             self.review.piece_match_thread.join(5)
         self.assertEqual([call['banks'][0]['id'] for call in calls].count('B1'), 1)
@@ -333,13 +440,20 @@ class PiecePipelineTests(PiecePipelineFixture):
         """Forty-one source pages reach matching as complete text without image attachments."""
         from dashboard.services import piece_match_jobs
         from reconciliation.core.settings import DEFAULTS
+
         self.accept()
         banks, items, index, facts = piece_matching.current(self.review)
         preview = self.fixture.base / 'preview.png'
         preview.write_bytes(b'preview fixture; no vision call is made')
         index['documents'][self.fixture.digest]['units'] = [
-            {'label': f'page {n}', 'text': f'Native page {n}', 'image': str(preview),
-             'image_sha256': fingerprint(preview)} for n in range(1, 42)]
+            {
+                'label': f'page {n}',
+                'text': f'Native page {n}',
+                'image': str(preview),
+                'image_sha256': fingerprint(preview),
+            }
+            for n in range(1, 42)
+        ]
         calls = []
 
         class Reviewer:
@@ -355,13 +469,24 @@ class PiecePipelineTests(PiecePipelineFixture):
                 """Capture the actual production request without invoking Codex."""
                 payload = json.loads(prompt.rsplit('\n', 1)[1])
                 calls.append((payload, images))
-                return {'decisions': [{'bank_id': bank['id'], 'assessment': 'tentative',
-                                       'allocations': [], 'reason': 'Review source evidence'} for bank in payload['banks']]}
+                return {
+                    'decisions': [
+                        {
+                            'bank_id': bank['id'],
+                            'assessment': 'tentative',
+                            'allocations': [],
+                            'reason': 'Review source evidence',
+                        }
+                        for bank in payload['banks']
+                    ]
+                }
 
         config = {**DEFAULTS, 'codex_enabled': True, 'max_parallel': 1}
         self.review.piece_match_cancel = threading.Event()
-        with patch.object(piece_match_jobs, 'CodexReviewer', Reviewer), \
-                patch.object(piece_match_jobs, 'active_config', return_value=config):
+        with (
+            patch.object(piece_match_jobs, 'CodexReviewer', Reviewer),
+            patch.object(piece_match_jobs, 'active_config', return_value=config),
+        ):
             piece_match_jobs.run_matching(self.review, 'fixture', banks, items, index, facts, config)
         self.assertEqual(self.review.piece_match_status['failed'], 0)
         self.assertTrue(calls)
@@ -398,10 +523,15 @@ class PiecePipelineTests(PiecePipelineFixture):
         """Actual extraction orchestration requests the new contract and retains its facts."""
         from reconciliation.extraction import workflow
         from tests.fixtures.workflow import ReviewFolder
+
         fixture = ReviewFolder(self.addCleanup)
         index, state = fixture.prepared()
-        supplied = {'readable': True, 'description': 'Two receipts',
-            'totals': [], 'pieces': [as_model(p) for p in self.fixture.pieces]}
+        supplied = {
+            'readable': True,
+            'description': 'Two receipts',
+            'totals': [],
+            'pieces': [as_model(p) for p in self.fixture.pieces],
+        }
         supplied['pieces'][0]['payee'] = 'Merchant A'
         calls = []
 

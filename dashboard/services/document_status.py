@@ -1,4 +1,5 @@
 """Summarize saved content-review progress for every source document."""
+
 from pathlib import Path
 
 from dashboard.services.extraction_runs import execution_status, work_path
@@ -18,6 +19,7 @@ def snapshot(review):
         raise ValueError("Prepared review belongs to a different manifest")
     documents = index["documents"]
     from dashboard.services.receipt_review import context
+
     review_units = context(review, include_banks=False, prepared=(index, state))[2]
     reviewed = {}
     discarded = {unit["document_id"] for unit in review_units.values() if unit.get("trash")}
@@ -46,12 +48,25 @@ def snapshot(review):
         else:
             status = "Complete"
         path = document["paths"][0]
-        rows.append({"id": digest, "name": Path(path).name, "path": path, "status": status,
-                     "paths": list(dict.fromkeys(document.get("original_paths") or document["paths"])),
-                     "approved_duplicate": digest in duplicates,
-                     "extracted": bool(units) and status in {"Needs review", "Complete", "Trash"},
-                     "assembly_total": int(len(units) > 1), "assembly_done": int(len(units) > 1 and bool(current_assembly(document, state))),
-                     "units_read": read, "units_total": len(units)})
+        rows.append(
+            {
+                "id": digest,
+                "name": Path(path).name,
+                "path": path,
+                "status": status,
+                "paths": list(dict.fromkeys(document.get("original_paths") or document["paths"])),
+                "approved_duplicate": digest in duplicates,
+                "extracted": bool(units) and status in {"Needs review", "Complete", "Trash"},
+                "assembly_total": int(len(units) > 1),
+                "assembly_done": int(len(units) > 1 and bool(current_assembly(document, state))),
+                "units_read": read,
+                "units_total": len(units),
+            }
+        )
     rows.sort(key=lambda row: (row["name"].casefold(), row["path"].casefold()))
-    return {"prepared": True, "source_root": str(getattr(review, "root", "")),
-            "documents": rows, **execution_status(review)}
+    return {
+        "prepared": True,
+        "source_root": str(getattr(review, "root", "")),
+        "documents": rows,
+        **execution_status(review),
+    }

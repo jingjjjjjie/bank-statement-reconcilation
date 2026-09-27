@@ -1,4 +1,5 @@
 """Human review of frozen matching suggestions, with a separate persistent ledger."""
+
 import csv
 import io
 import json
@@ -45,6 +46,7 @@ def context(review):
     if review is None:
         raise ValueError('Choose a workspace before reviewing matches')
     from dashboard.services import piece_matching
+
     if piece_matching.enabled(review):
         return piece_matching.context(review)
     return frozen_context(review)
@@ -52,37 +54,55 @@ def context(review):
 
 def frozen_context(review):
     """Read the original snapshot for audited migration and historical compatibility."""
-    index, facts = read(CACHE/'index.json'), read(CACHE/'facts.json')
+    index, facts = read(CACHE / 'index.json'), read(CACHE / 'facts.json')
     if Path(index['manifest']).resolve() != review.manifest_path.resolve():
         raise ValueError('The saved matching results belong to a different workspace')
-    path = review.manifest_path.parent/'final-review/decisions.json'
-    legacy_path = review.manifest_path.parent/'review/receipt-matches.json'
-    if legacy_path.exists() and any(m.get('review_status')=='accepted' for m in read(legacy_path).get('matches',{}).values()):
-        raise ValueError('Existing receipt-match approvals must be migrated or undone before using the cached final-review ledger')
-    binding = revision([facts, index, read(CACHE/'decisions.json')])
-    state = read(path) if path.exists() else {'binding':binding,'version':0,'decisions':{},'history':[]}
+    path = review.manifest_path.parent / 'final-review/decisions.json'
+    legacy_path = review.manifest_path.parent / 'review/receipt-matches.json'
+    if legacy_path.exists() and any(
+        m.get('review_status') == 'accepted' for m in read(legacy_path).get('matches', {}).values()
+    ):
+        raise ValueError(
+            'Existing receipt-match approvals must be migrated or undone before using the cached final-review ledger'
+        )
+    binding = revision([facts, index, read(CACHE / 'decisions.json')])
+    state = read(path) if path.exists() else {'binding': binding, 'version': 0, 'decisions': {}, 'history': []}
     if state['binding'] != binding:
-        raise ValueError('Cached evidence changed. Keep the existing review and import a separate revision before continuing.')
+        raise ValueError(
+            'Cached evidence changed. Keep the existing review and import a separate revision before continuing.'
+        )
     master = None
-    for candidate in (WORKSPACE/'duplicated/projects').glob('*/bank-output/master_statement.csv'):
-        if source_hash(candidate)==facts['bank_hash']:
+    for candidate in (WORKSPACE / 'duplicated/projects').glob('*/bank-output/master_statement.csv'):
+        if source_hash(candidate) == facts['bank_hash']:
             master = candidate
             break
     if master is None:
         raise ValueError('The original bank master for these cached results is unavailable')
-    with master.open(encoding='utf-8-sig',newline='') as stream:
-        bank_sources = {'B'+r['sequence']:r for r in csv.DictReader(stream)}
-    live_path = review.manifest_path.parent/'review/state.json'
+    with master.open(encoding='utf-8-sig', newline='') as stream:
+        bank_sources = {'B' + r['sequence']: r for r in csv.DictReader(stream)}
+    live_path = review.manifest_path.parent / 'review/state.json'
     excluded = set(removal_plan(read(live_path))) if live_path.exists() else set()
     if legacy_path.exists():
         excluded.update(read(legacy_path).get('trash', {}))
-    banks = {b['id']:{**b,'source':bank_sources[b['id']]['source'],
-                      'balance_checks':bank_sources[b['id']].get('balance_checks',''),
-                      'page':int(bank_sources[b['id']]['page'])-1} for b in facts['banks']}
-    items = {i['id']:{**i,'source_path':index['documents'][i['document']]['paths'][0],
-                     'filename':Path(index['documents'][i['document']]['paths'][0]).name,
-                     'excluded':i['document'] in excluded} for i in facts['items']}
-    return path,state,banks,items,index,facts
+    banks = {
+        b['id']: {
+            **b,
+            'source': bank_sources[b['id']]['source'],
+            'balance_checks': bank_sources[b['id']].get('balance_checks', ''),
+            'page': int(bank_sources[b['id']]['page']) - 1,
+        }
+        for b in facts['banks']
+    }
+    items = {
+        i['id']: {
+            **i,
+            'source_path': index['documents'][i['document']]['paths'][0],
+            'filename': Path(index['documents'][i['document']]['paths'][0]).name,
+            'excluded': i['document'] in excluded,
+        }
+        for i in facts['items']
+    }
+    return path, state, banks, items, index, facts
 
 
 def reservations(state, excluding=None):
@@ -93,7 +113,7 @@ def reservations(state, excluding=None):
             continue
         for entry in decision['allocations']:
             if entry['amount']:
-                used[entry['item_id']] = used.get(entry['item_id'],Decimal(0))+amount(entry['amount'])
+                used[entry['item_id']] = used.get(entry['item_id'], Decimal(0)) + amount(entry['amount'])
     return used
 
 
@@ -103,17 +123,25 @@ def pairing_confidence(bank, suggestion, items, decision, stale):
     if suggestion.get('failed'):
         return {'level': 'failed', 'reason': suggestion.get('reason', 'Matching failed; retry required.')}
     if suggestion.get('outdated'):
-        return {'level': 'outdated', 'reason': 'Saved proposal is outdated. Recheck current evidence or generate matches again.'}
+        return {
+            'level': 'outdated',
+            'reason': 'Saved proposal is outdated. Recheck current evidence or generate matches again.',
+        }
     if suggestion.get('saved') and not allocations and suggestion.get('assessment') == 'tentative':
         return {'level': 'unresolved', 'reason': suggestion.get('reason', 'Matching remains unresolved.')}
     suggested = {a['item_id']: money(a['amount']) for a in allocations}
     chosen = {a['item_id']: money(a['amount']) for a in decision['allocations']} if decision else {}
     if chosen and chosen != suggested:
-        return {'level': 'low', 'reason': 'Supporting selection changed; the saved confidence does not assess this pairing.'}
+        return {
+            'level': 'low',
+            'reason': 'Supporting selection changed; the saved confidence does not assess this pairing.',
+        }
     if not allocations:
         return {'level': None, 'reason': 'No proposed supporting match.'}
-    if stale or any(a['item_id'] not in items or items[a['item_id']]['stale'] or
-                    items[a['item_id']]['excluded'] for a in allocations):
+    if stale or any(
+        a['item_id'] not in items or items[a['item_id']]['stale'] or items[a['item_id']]['excluded']
+        for a in allocations
+    ):
         return {'level': 'low', 'reason': 'Supporting evidence changed, is unavailable, or is excluded.'}
     values = [money(a['amount']) for a in allocations]
     if any(value is None for value in values) or sum(values, Decimal(0)) != money(bank['amount']):
@@ -121,11 +149,15 @@ def pairing_confidence(bank, suggestion, items, decision, stale):
     if any(items[a['item_id']].get('boundary_unresolved') for a in allocations):
         return {'level': 'low', 'reason': 'Receipt boundaries still need checking against the original document.'}
     level = 'high' if suggestion.get('assessment') == 'strong' else 'low'
-    return {'level': level, 'reason': suggestion.get('reason') or 'The saved pairing needs checking against the original evidence.'}
+    return {
+        'level': level,
+        'reason': suggestion.get('reason') or 'The saved pairing needs checking against the original evidence.',
+    }
 
 
 def evidence_reason(bank, item):
     """Explain exact extracted facts without inferring identity or approving a match."""
+
     def names(values):
         """Ignore casing and spacing while preserving meaningful name differences."""
         return {' '.join(value.casefold().split()) for value in values if value.strip()}
@@ -134,9 +166,12 @@ def evidence_reason(bank, item):
         return 'Unavailable for confirmation: the source changed or was excluded.'
     parties = names(bank.get('parties', [])), names(item.get('parties', []))
     same_party = bool(parties[0] & parties[1])
-    same_amount = (bool(item.get('currency')) and normalize_currency(item['currency']) == normalize_currency(bank['currency'])
-                   and money(item.get('amount')) is not None
-                   and money(item['amount']) == money(bank['amount']))
+    same_amount = (
+        bool(item.get('currency'))
+        and normalize_currency(item['currency']) == normalize_currency(bank['currency'])
+        and money(item.get('amount')) is not None
+        and money(item['amount']) == money(bank['amount'])
+    )
     if same_party and same_amount:
         return 'Same extracted party name and amount. Check the original and payment context.'
     if same_party:
@@ -148,86 +183,118 @@ def evidence_reason(bank, item):
 
 def snapshot(review):
     """Expose suggestions, human outcomes, remaining evidence and changed-source flags."""
-    path,state,banks,items,index,facts = context(review)
-    hashes = {digest:source_hash(doc['paths'][0]) for digest,doc in index['documents'].items()}
+    path, state, banks, items, index, facts = context(review)
+    hashes = {digest: source_hash(doc['paths'][0]) for digest, doc in index['documents'].items()}
     bank_hashes = {source: source_hash(source) for source in {bank['source'] for bank in banks.values()}}
     if facts.get('live_pieces'):
         from dashboard.services.piece_matching import suggestions
+
         choices, suggestions = suggestions(review, banks, items, facts, index)
     else:
         choices = {}
         for stage in ('matching', 'contextual'):
-            for payload in (CACHE/stage).glob('input-*.json'):
+            for payload in (CACHE / stage).glob('input-*.json'):
                 for bank in read(payload)['banks']:
                     choices.setdefault(bank['id'], []).extend(bank['candidate_ids'])
-        suggestions = {r['bank_id']: r for r in read(CACHE/'decisions.json')}
+        suggestions = {r['bank_id']: r for r in read(CACHE / 'decisions.json')}
     used = reservations(state)
-    for key,item in items.items():
+    for key, item in items.items():
         total = money(item['amount'])
-        item.update(stale=item.get('retired', False) or hashes.get(item['document'])!=item['document'],
-                    used=str(used.get(key,Decimal(0))),
-                    remaining=str(total-used.get(key,Decimal(0))) if total is not None else '')
-    for key,bank in banks.items():
+        item.update(
+            stale=item.get('retired', False) or hashes.get(item['document']) != item['document'],
+            used=str(used.get(key, Decimal(0))),
+            remaining=str(total - used.get(key, Decimal(0))) if total is not None else '',
+        )
+    for key, bank in banks.items():
         suggestion = suggestions[key]
         decision = state['decisions'].get(key)
         stale = bank_hashes[bank['source']] != bank.get('source_sha256', facts.get('statement_hash', '')).upper()
         if decision:
-            stale = stale or any(items[a['item_id']]['stale'] or items[a['item_id']]['excluded'] or
-                (facts.get('live_pieces') and a.get('evidence_revision') != items[a['item_id']].get('evidence_revision')) for a in decision['allocations'])
+            stale = stale or any(
+                items[a['item_id']]['stale']
+                or items[a['item_id']]['excluded']
+                or (
+                    facts.get('live_pieces')
+                    and a.get('evidence_revision') != items[a['item_id']].get('evidence_revision')
+                )
+                for a in decision['allocations']
+            )
             if facts.get('live_pieces'):
                 stale = stale or decision.get('bank_revision') != bank.get('evidence_revision')
         status = decision['status'] if decision else 'pending'
-        support = bool(decision and status=='approved' and not stale and decision['difference']=='0' and not decision['context_only'])
-        bank.update(suggestion=suggestion,candidates=list(dict.fromkeys([a['item_id'] for a in suggestion['allocations']]+choices.get(key,[]))),
-                    decision=decision,review_status=status,stale=stale,
-                    confidence=pairing_confidence(bank,suggestion,items,decision,stale),
-                    support_status='Supporting' if support else 'No supporting',
-                    history=[h for h in state['history'] if h['bank_id']==key])
+        support = bool(
+            decision
+            and status == 'approved'
+            and not stale
+            and decision['difference'] == '0'
+            and not decision['context_only']
+        )
+        bank.update(
+            suggestion=suggestion,
+            candidates=list(dict.fromkeys([a['item_id'] for a in suggestion['allocations']] + choices.get(key, []))),
+            decision=decision,
+            review_status=status,
+            stale=stale,
+            confidence=pairing_confidence(bank, suggestion, items, decision, stale),
+            support_status='Supporting' if support else 'No supporting',
+            history=[h for h in state['history'] if h['bank_id'] == key],
+        )
         evidence_ids = set(bank['candidates'])
         if decision:
             evidence_ids.update(a['item_id'] for a in decision['allocations'])
-        bank['evidence_reasons'] = {item_id: evidence_reason(bank, items[item_id])
-                                    for item_id in evidence_ids if item_id in items}
-    return normalize_currencies({'binding':state['binding'],'version':state['version'],'banks':list(banks.values()),
-            'items':list(items.values()),'workspace':review.root.parent.name,
-            'source':'Reviewed pieces' if facts.get('live_pieces') else 'Saved matching results',
-            'live_pieces': bool(facts.get('live_pieces')), 'assembly_incomplete':not facts.get('assembly_count'),
-            'proposal_counts': {level: sum((bank['confidence']['level'] or 'none') == level for bank in banks.values())
-                                for level in ('high', 'low', 'none', 'unresolved', 'failed', 'outdated')}})
+        bank['evidence_reasons'] = {
+            item_id: evidence_reason(bank, items[item_id]) for item_id in evidence_ids if item_id in items
+        }
+    return normalize_currencies(
+        {
+            'binding': state['binding'],
+            'version': state['version'],
+            'banks': list(banks.values()),
+            'items': list(items.values()),
+            'workspace': review.root.parent.name,
+            'source': 'Reviewed pieces' if facts.get('live_pieces') else 'Saved matching results',
+            'live_pieces': bool(facts.get('live_pieces')),
+            'assembly_incomplete': not facts.get('assembly_count'),
+            'proposal_counts': {
+                level: sum((bank['confidence']['level'] or 'none') == level for bank in banks.values())
+                for level in ('high', 'low', 'none', 'unresolved', 'failed', 'outdated')
+            },
+        }
+    )
 
 
 def decide(review, body):
     """Validate and atomically save an explicit approval, denial or undo with history."""
-    path,state,banks,items,index,facts = context(review)
-    if body.get('binding')!=state['binding'] or body.get('version')!=state['version']:
+    path, state, banks, items, index, facts = context(review)
+    if body.get('binding') != state['binding'] or body.get('version') != state['version']:
         raise ValueError('Another decision was saved. Refresh before submitting this change.')
-    bank_id,action = body.get('bank_id'),body.get('action')
-    if bank_id not in banks or action not in {'approve','deny','undo'}:
+    bank_id, action = body.get('bank_id'), body.get('action')
+    if bank_id not in banks or action not in {'approve', 'deny', 'undo'}:
         raise ValueError('Choose a valid transaction and action')
     reviewer = str(body.get('reviewer') or 'Local user').strip() or 'Local user'
-    note = str(body.get('note','')).strip()
+    note = str(body.get('note', '')).strip()
     if len(reviewer) > MAX_REVIEWER_CHARS or len(note) > MAX_NOTE_CHARS:
         raise ValueError('Keep the review note under 4,000 characters')
     bank = banks[bank_id]
     before = state['decisions'].get(bank_id)
-    allocations,flags = [],[]
+    allocations, flags = [], []
     total = Decimal(0)
-    if action=='approve':
-        if bank['balance_checks']!='passed':
+    if action == 'approve':
+        if bank['balance_checks'] != 'passed':
             raise ValueError('The bank master must pass balance validation before approving matches')
-        if source_hash(bank['source'])!=bank.get('source_sha256', facts.get('statement_hash', '')).upper():
+        if source_hash(bank['source']) != bank.get('source_sha256', facts.get('statement_hash', '')).upper():
             raise ValueError('The bank statement changed or is unavailable')
         selected = body.get('allocations')
-        if not isinstance(selected,list) or not 1 <= len(selected) <= MAX_ALLOCATIONS:
+        if not isinstance(selected, list) or not 1 <= len(selected) <= MAX_ALLOCATIONS:
             raise ValueError('Select at least one supporting item')
-        used,seen,documents = reservations(state,bank_id),set(),{}
+        used, seen, documents = reservations(state, bank_id), set(), {}
         for entry in selected:
             key = entry.get('item_id')
             if key not in items or key in seen:
                 raise ValueError('Unknown or repeated supporting item')
             seen.add(key)
             item = items[key]
-            if item['excluded'] or source_hash(item['source_path'])!=item['document']:
+            if item['excluded'] or source_hash(item['source_path']) != item['document']:
                 raise ValueError('A selected document was excluded, changed or is unavailable')
             if facts.get('live_pieces') and not item.get('accepted'):
                 raise ValueError('Accept the piece extraction before approving a match')
@@ -235,56 +302,105 @@ def decide(review, body):
                 for other_id, previous in state['decisions'].items():
                     if other_id == bank_id or previous['status'] != 'approved':
                         continue
-                    if any(a['document'] == item['document'] and
-                           (items.get(a['item_id'], {}).get('retired') or
-                            a.get('evidence_revision') != items.get(a['item_id'], {}).get('evidence_revision'))
-                           for a in previous['allocations']):
+                    if any(
+                        a['document'] == item['document']
+                        and (
+                            items.get(a['item_id'], {}).get('retired')
+                            or a.get('evidence_revision') != items.get(a['item_id'], {}).get('evidence_revision')
+                        )
+                        for a in previous['allocations']
+                    ):
                         raise ValueError('Undo stale allocations for this document before using its revised pieces')
-            value = entry.get('amount','')
+            value = entry.get('amount', '')
             capacity = money(item['amount'])
             if value:
                 value = amount(value)
-                if capacity is None or not item['currency'] or normalize_currency(item['currency']) != normalize_currency(bank['currency']):
-                    raise ValueError('Unknown or different currencies/amounts can only be linked as contextual evidence with no allocation')
-                if value<=0 or value>capacity-used.get(key,Decimal(0)):
+                if (
+                    capacity is None
+                    or not item['currency']
+                    or normalize_currency(item['currency']) != normalize_currency(bank['currency'])
+                ):
+                    raise ValueError(
+                        'Unknown or different currencies/amounts can only be linked as contextual evidence with no allocation'
+                    )
+                if value <= 0 or value > capacity - used.get(key, Decimal(0)):
                     raise ValueError(f'{key}: allocation exceeds the available supporting amount')
                 if value < capacity:
-                    flags.append(f'{key}: source {capacity}, allocated here {value}, source difference {capacity-value}')
+                    flags.append(
+                        f'{key}: source {capacity}, allocated here {value}, source difference {capacity - value}'
+                    )
                 total += value
             else:
                 flags.append(f'{key}: contextual evidence without a monetary allocation')
-            documents.setdefault(item['document'],[]).append(item)
+            documents.setdefault(item['document'], []).append(item)
             if item['boundary_unresolved']:
                 flags.append(f'{key}: receipt boundaries require human verification')
-            allocations.append({'item_id':key,'amount':str(value) if value else '',
-                                'document':item['document'],'source_path':item['source_path'],
-                                'location':item['location'],'source_amount':item['amount'],'currency':item['currency'],
-                                'source_difference':str(capacity-value) if capacity is not None and value else '',
-                                **({'evidence_revision': item['evidence_revision'], 'item_snapshot': item} if facts.get('live_pieces') else {})})
+            allocations.append(
+                {
+                    'item_id': key,
+                    'amount': str(value) if value else '',
+                    'document': item['document'],
+                    'source_path': item['source_path'],
+                    'location': item['location'],
+                    'source_amount': item['amount'],
+                    'currency': item['currency'],
+                    'source_difference': str(capacity - value) if capacity is not None and value else '',
+                    **(
+                        {'evidence_revision': item['evidence_revision'], 'item_snapshot': item}
+                        if facts.get('live_pieces')
+                        else {}
+                    ),
+                }
+            )
         # A page total cannot silently become a second expense or capacity pool.
-        for digest,selected_items in documents.items():
-            if len(selected_items)>1 and any(i['boundary_unresolved'] for i in selected_items):
-                raise ValueError('Select one monetary item from this unassembled document; repeated page totals cannot be added')
-            for other_id,decision in state['decisions'].items():
-                if other_id==bank_id or decision['status']!='approved':
+        for digest, selected_items in documents.items():
+            if len(selected_items) > 1 and any(i['boundary_unresolved'] for i in selected_items):
+                raise ValueError(
+                    'Select one monetary item from this unassembled document; repeated page totals cannot be added'
+                )
+            for other_id, decision in state['decisions'].items():
+                if other_id == bank_id or decision['status'] != 'approved':
                     continue
                 for previous in decision['allocations']:
-                    if (previous['document']==digest and previous['item_id'] not in seen and previous['amount']
-                            and (items[previous['item_id']]['boundary_unresolved'] or any(i['boundary_unresolved'] for i in selected_items))):
-                        raise ValueError('Another payment uses a different page of this unassembled document; undo that allocation or resolve the receipt boundaries first')
-        if total>amount(bank['amount']):
+                    if (
+                        previous['document'] == digest
+                        and previous['item_id'] not in seen
+                        and previous['amount']
+                        and (
+                            items[previous['item_id']]['boundary_unresolved']
+                            or any(i['boundary_unresolved'] for i in selected_items)
+                        )
+                    ):
+                        raise ValueError(
+                            'Another payment uses a different page of this unassembled document; undo that allocation or resolve the receipt boundaries first'
+                        )
+        if total > amount(bank['amount']):
             raise ValueError('Total allocation exceeds the bank payment. Adjust the selected amounts.')
-        difference = amount(bank['amount'])-total
+        difference = amount(bank['amount']) - total
         if difference:
             flags.append(f'Unallocated bank amount: {difference}')
-        if len(allocations)>1:
+        if len(allocations) > 1:
             flags.append('Multiple supporting items: verify these are distinct expenses, not duplicate evidence')
-        after = {'status':'approved','allocations':allocations,'allocated_total':str(total),
-                 'difference':format(difference.normalize(),'f'),'context_only':total==0,'flags':flags,
-                 'reviewer':reviewer,'note':note}
-    elif action=='deny':
-        after = {'status':'denied','allocations':[],'difference':bank['amount'],
-                 'context_only':False,'reviewer':reviewer,'note':note,'flags':[]}
+        after = {
+            'status': 'approved',
+            'allocations': allocations,
+            'allocated_total': str(total),
+            'difference': format(difference.normalize(), 'f'),
+            'context_only': total == 0,
+            'flags': flags,
+            'reviewer': reviewer,
+            'note': note,
+        }
+    elif action == 'deny':
+        after = {
+            'status': 'denied',
+            'allocations': [],
+            'difference': bank['amount'],
+            'context_only': False,
+            'reviewer': reviewer,
+            'note': note,
+            'flags': [],
+        }
     else:
         if not before:
             raise ValueError('There is no saved decision to undo')
@@ -296,13 +412,23 @@ def decide(review, body):
             after['bank_revision'] = bank.get('evidence_revision')
         state['decisions'][bank_id] = after
     else:
-        state['decisions'].pop(bank_id,None)
-    state['history'].append({'bank_id':bank_id,'transaction_id':bank['transaction_id'],'action':action,
-                             'reviewer':reviewer,'at':at,'note':note,'before':before,'after':after})
+        state['decisions'].pop(bank_id, None)
+    state['history'].append(
+        {
+            'bank_id': bank_id,
+            'transaction_id': bank['transaction_id'],
+            'action': action,
+            'reviewer': reviewer,
+            'at': at,
+            'note': note,
+            'before': before,
+            'after': after,
+        }
+    )
     state['version'] += 1
-    path.parent.mkdir(parents=True,exist_ok=True)
+    path.parent.mkdir(parents=True, exist_ok=True)
     result = decision_update(review, state, bank_id, banks, items, facts, before)
-    write_json(path,state)
+    write_json(path, state)
     return result
 
 
@@ -312,14 +438,22 @@ def decision_update(review, state, bank_id, banks, items, facts, before):
     if facts.get('live_pieces'):
         path = review.manifest_path.parent / 'final-review/piece-suggestions.json'
         saved = read(path) if path.exists() else {}
-        suggestion = next((dict(row, saved=True, outdated=saved.get('binding') != state['binding'],
-                                failed=row.get('reason', '').startswith('Matching unresolved:'))
-                           for row in saved.get('decisions', []) if row['bank_id'] == bank_id),
-                          {'assessment': 'none', 'allocations': []})
+        suggestion = next(
+            (
+                dict(
+                    row,
+                    saved=True,
+                    outdated=saved.get('binding') != state['binding'],
+                    failed=row.get('reason', '').startswith('Matching unresolved:'),
+                )
+                for row in saved.get('decisions', [])
+                if row['bank_id'] == bank_id
+            ),
+            {'assessment': 'none', 'allocations': []},
+        )
     else:
         suggestion = next(row for row in read(CACHE / 'decisions.json') if row['bank_id'] == bank_id)
-    relevant = {a['item_id'] for entry in (before, decision, suggestion) if entry
-                for a in entry.get('allocations', [])}
+    relevant = {a['item_id'] for entry in (before, decision, suggestion) if entry for a in entry.get('allocations', [])}
     hashes = {}
     relevant.intersection_update(items)
     for key in relevant:
@@ -329,35 +463,65 @@ def decision_update(review, state, bank_id, banks, items, facts, before):
             hashes[source] = source_hash(source)
         item['stale'] = item.get('retired', False) or hashes[source] != item['document']
     stale_source = source_hash(bank['source']) != bank.get('source_sha256', facts.get('statement_hash', '')).upper()
-    stale_source = stale_source or bool(decision and any(
-        items[a['item_id']]['stale'] or items[a['item_id']]['excluded'] or
-        (facts.get('live_pieces') and a.get('evidence_revision') != items[a['item_id']].get('evidence_revision'))
-        for a in decision['allocations']))
+    stale_source = stale_source or bool(
+        decision
+        and any(
+            items[a['item_id']]['stale']
+            or items[a['item_id']]['excluded']
+            or (facts.get('live_pieces') and a.get('evidence_revision') != items[a['item_id']].get('evidence_revision'))
+            for a in decision['allocations']
+        )
+    )
     if decision and facts.get('live_pieces'):
         stale_source = stale_source or decision.get('bank_revision') != bank.get('evidence_revision')
-    support = bool(decision and decision['status'] == 'approved' and not stale_source
-                   and decision['difference'] == '0' and not decision['context_only'])
+    support = bool(
+        decision
+        and decision['status'] == 'approved'
+        and not stale_source
+        and decision['difference'] == '0'
+        and not decision['context_only']
+    )
     used = reservations(state)
-    balances = [{'id': key, 'used': str(used.get(key, Decimal(0))),
-                 'remaining': str(money(items[key]['amount']) - used.get(key, Decimal(0)))
-                 if money(items[key]['amount']) is not None else ''} for key in relevant]
-    return {'saved': True, 'version': state['version'], 'binding': state['binding'], 'items': balances,
-            'bank': {'id': bank_id, 'decision': decision, 'review_status': decision['status'] if decision else 'pending',
-                     'support_status': 'Supporting' if support else 'No supporting', 'stale': stale_source,
-                     'confidence': pairing_confidence(bank, suggestion, items, decision, stale_source),
-                     'history': [row for row in state['history'] if row['bank_id'] == bank_id]}}
+    balances = [
+        {
+            'id': key,
+            'used': str(used.get(key, Decimal(0))),
+            'remaining': str(money(items[key]['amount']) - used.get(key, Decimal(0)))
+            if money(items[key]['amount']) is not None
+            else '',
+        }
+        for key in relevant
+    ]
+    return {
+        'saved': True,
+        'version': state['version'],
+        'binding': state['binding'],
+        'items': balances,
+        'bank': {
+            'id': bank_id,
+            'decision': decision,
+            'review_status': decision['status'] if decision else 'pending',
+            'support_status': 'Supporting' if support else 'No supporting',
+            'stale': stale_source,
+            'confidence': pairing_confidence(bank, suggestion, items, decision, stale_source),
+            'history': [row for row in state['history'] if row['bank_id'] == bank_id],
+        },
+    }
 
 
 def evidence(review, kind, key):
     """Resolve only corpus-listed originals and verify their bytes before previewing."""
-    _,_,banks,items,_,facts = context(review)
-    if kind=='bank':
-        source,expected = banks[key]['source'],banks[key].get('source_sha256', facts.get('statement_hash', '')).upper()
-    elif kind=='item':
-        source,expected = items[key]['source_path'],items[key]['document']
+    _, _, banks, items, _, facts = context(review)
+    if kind == 'bank':
+        source, expected = (
+            banks[key]['source'],
+            banks[key].get('source_sha256', facts.get('statement_hash', '')).upper(),
+        )
+    elif kind == 'item':
+        source, expected = items[key]['source_path'], items[key]['document']
     else:
         raise ValueError('Unknown evidence type')
-    if source_hash(source)!=expected:
+    if source_hash(source) != expected:
         raise ValueError('Original evidence changed or is unavailable')
     return Path(source)
 
@@ -367,13 +531,47 @@ def export_csv(review):
     data = snapshot(review)
     stream = io.StringIO(newline='')
     writer = csv.writer(stream)
-    writer.writerow(['Bank ID','Transaction ID','Date','Party','Direction','Currency','Bank amount','Support status',
-                     'Review status','Stale evidence','Allocated amount','Difference','Evidence','Flags','Reviewer','Notes'])
+    writer.writerow(
+        [
+            'Bank ID',
+            'Transaction ID',
+            'Date',
+            'Party',
+            'Direction',
+            'Currency',
+            'Bank amount',
+            'Support status',
+            'Review status',
+            'Stale evidence',
+            'Allocated amount',
+            'Difference',
+            'Evidence',
+            'Flags',
+            'Reviewer',
+            'Notes',
+        ]
+    )
     for bank in data['banks']:
         decision = bank['decision'] or {}
-        values = [bank['id'],bank['transaction_id'],bank['date'],' / '.join(bank['parties']),bank['direction'],
-                  bank['currency'],bank['amount'],bank['support_status'],bank['review_status'],str(bank['stale']),
-                  decision.get('allocated_total','0'),decision.get('difference',bank['amount']),
-                  json.dumps(decision.get('allocations',[]),ensure_ascii=False),' | '.join(decision.get('flags',[])),decision.get('reviewer',''),decision.get('note','')]
-        writer.writerow(["'"+v if isinstance(v,str) and v.startswith(('=','+','-','@','\t','\r')) else v for v in values])
-    return ('\ufeff'+stream.getvalue()).encode('utf-8')
+        values = [
+            bank['id'],
+            bank['transaction_id'],
+            bank['date'],
+            ' / '.join(bank['parties']),
+            bank['direction'],
+            bank['currency'],
+            bank['amount'],
+            bank['support_status'],
+            bank['review_status'],
+            str(bank['stale']),
+            decision.get('allocated_total', '0'),
+            decision.get('difference', bank['amount']),
+            json.dumps(decision.get('allocations', []), ensure_ascii=False),
+            ' | '.join(decision.get('flags', [])),
+            decision.get('reviewer', ''),
+            decision.get('note', ''),
+        ]
+        writer.writerow(
+            ["'" + v if isinstance(v, str) and v.startswith(('=', '+', '-', '@', '\t', '\r')) else v for v in values]
+        )
+    return ('\ufeff' + stream.getvalue()).encode('utf-8')

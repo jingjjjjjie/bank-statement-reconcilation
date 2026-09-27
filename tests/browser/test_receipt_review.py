@@ -1,4 +1,5 @@
 """Receipt review in Chromium: accept, navigate and reload with fixture data."""
+
 import json
 import threading
 import unittest
@@ -61,7 +62,7 @@ class ReceiptReviewBrowserTests(unittest.TestCase):
             left = page.locator('.extraction-original').bounding_box()
             right = page.locator('.extraction-editor').bounding_box()
             self.assertLessEqual(left['x'] + left['width'], right['x'])
-            self.assertAlmostEqual(left['width'] / (left['width'] + right['width']), .45, places=2)
+            self.assertAlmostEqual(left['width'] / (left['width'] + right['width']), 0.45, places=2)
             expect(page.locator('#receipt-pieces fieldset:visible')).to_have_count(2)
             expect(page.locator('#receipt-pieces .piece-row')).to_have_count(2)
             expect(page.locator('[data-field="location"]').first).not_to_be_visible()
@@ -77,19 +78,23 @@ class ReceiptReviewBrowserTests(unittest.TestCase):
             expect(page.locator('#original-preview')).to_have_css('transform', 'matrix(2, 0, 0, 2, 0, 0)')
             page.locator('#original-zoom').select_option('1')
             viewport = page.locator('#original-viewport').bounding_box()
-            x, y = viewport['x'] + viewport['width'] * .55, viewport['y'] + viewport['height'] * .45
+            x, y = viewport['x'] + viewport['width'] * 0.55, viewport['y'] + viewport['height'] * 0.45
             original = page.locator('#original-preview img').bounding_box()
             page.mouse.move(x, y)
             page.mouse.wheel(0, -240)
             page.wait_for_function("Number(document.querySelector('#original-zoom').value) > 1.5")
             magnified = page.locator('#original-preview img').bounding_box()
             self.assertGreater(magnified['width'], original['width'] * 1.5)
-            self.assertAlmostEqual((x - original['x']) / original['width'],
-                                   (x - magnified['x']) / magnified['width'], delta=.005)
-            self.assertAlmostEqual((y - original['y']) / original['height'],
-                                   (y - magnified['y']) / magnified['height'], delta=.005)
+            self.assertAlmostEqual(
+                (x - original['x']) / original['width'], (x - magnified['x']) / magnified['width'], delta=0.005
+            )
+            self.assertAlmostEqual(
+                (y - original['y']) / original['height'], (y - magnified['y']) / magnified['height'], delta=0.005
+            )
             before_pan = page.locator('#original-viewport').evaluate('(el) => el.scrollLeft')
-            page.mouse.down(); page.mouse.move(x - 70, y - 40, steps=5); page.mouse.up()
+            page.mouse.down()
+            page.mouse.move(x - 70, y - 40, steps=5)
+            page.mouse.up()
             self.assertGreater(page.locator('#original-viewport').evaluate('(el) => el.scrollLeft'), before_pan + 50)
             page.mouse.wheel(0, 240)
             page.wait_for_function("Number(document.querySelector('#original-zoom').value) < 1.01")
@@ -101,16 +106,16 @@ class ReceiptReviewBrowserTests(unittest.TestCase):
             artifacts.mkdir(exist_ok=True)
             page.evaluate('window.scrollTo(0, 0)')
             page.screenshot(path=str(artifacts / 'extraction-review.png'), full_page=True)
-            page.set_viewport_size({'width':1280, 'height':720})
+            page.set_viewport_size({'width': 1280, 'height': 720})
             footer = page.locator('#accept-receipts').bounding_box()
             self.assertLessEqual(footer['y'] + footer['height'], 720)
-            page.set_viewport_size({'width':390, 'height':844})
+            page.set_viewport_size({'width': 390, 'height': 844})
             self.assertTrue(page.evaluate('document.documentElement.scrollWidth <= window.innerWidth'))
             last_piece = page.locator('#receipt-pieces fieldset').last.bounding_box()
             actions = page.locator('.editor-footer').bounding_box()
             self.assertGreaterEqual(actions['y'], last_piece['y'] + last_piece['height'])
             page.screenshot(path=str(artifacts / 'extraction-review-mobile.png'), full_page=True)
-            page.set_viewport_size({'width':1440, 'height':1000})
+            page.set_viewport_size({'width': 1440, 'height': 1000})
             expect(page.locator('[data-field="total"]').first).to_have_value("45.00")
             expect(page.locator("#receipt-reviewer")).to_have_count(0)
             expect(page.locator('#current-document-name')).to_be_visible()

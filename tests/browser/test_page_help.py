@@ -1,4 +1,5 @@
 """Verify shared page help against the real Vue build with Python Playwright."""
+
 import tempfile
 import threading
 import unittest
@@ -34,8 +35,17 @@ class PageHelpTests(unittest.TestCase):
                     errors = []
                     page.on('pageerror', lambda error: errors.append(str(error)))
                     base = f'http://127.0.0.1:{server.server_port}'
-                    routes = ['source', 'bank', 'documents', 'review', 'settings',
-                              'complete', 'extraction-review', 'matching', 'final-report']
+                    routes = [
+                        'source',
+                        'bank',
+                        'documents',
+                        'review',
+                        'settings',
+                        'complete',
+                        'extraction-review',
+                        'matching',
+                        'final-report',
+                    ]
                     for route in routes:
                         with self.subTest(route=route):
                             page.goto(f'{base}/{route}')
@@ -68,7 +78,9 @@ class PageHelpTests(unittest.TestCase):
                             self.assertGreaterEqual(box['y'], 0)
                             self.assertLessEqual(box['y'] + box['height'], 844)
                             expect(page.get_by_role('navigation', name='Main navigation')).to_have_count(1)
-                            expect(page.locator('.app-header a[href="/source"] .header-step.complete svg')).to_have_count(1)
+                            expect(
+                                page.locator('.app-header a[href="/source"] .header-step.complete svg')
+                            ).to_have_count(1)
                             expect(page.locator('.app-header a[href="/bank"] .header-step')).to_have_text('3')
                             expect(page.locator('.app-header a[href="/review"]')).to_have_count(0)
                             expect(page.locator('#workflow-progress, .page-navigation')).to_have_count(0)

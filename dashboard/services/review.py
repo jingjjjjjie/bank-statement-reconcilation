@@ -1,4 +1,5 @@
 """Review state, recoverable duplicate decisions, and workflow readiness."""
+
 import csv
 import hashlib
 import json
@@ -9,7 +10,13 @@ from pathlib import Path
 
 from dashboard.previews import office as office_preview
 from reconciliation.core.settings import (
-    DEFAULTS, config_for_manifest, content_settings, load_config, model_catalog, model_settings, revision
+    DEFAULTS,
+    config_for_manifest,
+    content_settings,
+    load_config,
+    model_catalog,
+    model_settings,
+    revision,
 )
 from reconciliation.intake.duplicates import check, duplicate_root, fingerprint, supporting_files
 from reconciliation.model.token_usage import summary as token_summary
@@ -37,7 +44,11 @@ class Review:
             raise ValueError("Recovery storage must be outside scanned supporting folders")
         self.data.mkdir(parents=True, exist_ok=True)
         self.state_path = self.data / "decisions.json"
-        self.state = json.loads(self.state_path.read_text(encoding="utf-8")) if self.state_path.exists() else {"actions": [], "manifest": str(self.manifest_path)}
+        self.state = (
+            json.loads(self.state_path.read_text(encoding="utf-8"))
+            if self.state_path.exists()
+            else {"actions": [], "manifest": str(self.manifest_path)}
+        )
         if self.state.get("manifest", str(self.manifest_path)) != str(self.manifest_path):
             raise ValueError("This recovery folder belongs to another manifest")
         self.records, self.groups = {}, {}
@@ -68,9 +79,14 @@ class Review:
                 state = json.loads(state_path.read_text(encoding="utf-8"))
                 if state.get("model_config") and model_settings(state["model_config"]) != model_settings(config):
                     refresh = True
-        return {"config": config, "defaults": DEFAULTS, "revision": revision(config), "requires_refresh": refresh,
-                "token_usage": workspace_summary(),
-                "models": model_catalog()}
+        return {
+            "config": config,
+            "defaults": DEFAULTS,
+            "revision": revision(config),
+            "requires_refresh": refresh,
+            "token_usage": workspace_summary(),
+            "models": model_catalog(),
+        }
 
     def workspace(self):
         """Name the active source and statement period without fixed customer text."""
@@ -91,6 +107,7 @@ class Review:
         company = ""
         if workbook.is_file():
             from openpyxl import load_workbook
+
             source = load_workbook(workbook, read_only=True)
             try:
                 company = source.active["A1"].value or ""
@@ -116,11 +133,16 @@ class Review:
         if content_done and master.exists():
             with master.open(newline="", encoding="utf-8-sig") as source:
                 rows = list(csv.DictReader(source))
-            bank_done = bool(rows) and all(row.get("balance_checks") == "passed" and
-                                           row.get("matching_status") == "matched" for row in rows)
-        return {"exact_done": exact_done, "content_done": content_done,
-                "bank_done": bank_done, "complete": exact_done and content_done and bank_done,
-                "token_usage": token_summary(work / "token-usage.jsonl") if bank_done else None}
+            bank_done = bool(rows) and all(
+                row.get("balance_checks") == "passed" and row.get("matching_status") == "matched" for row in rows
+            )
+        return {
+            "exact_done": exact_done,
+            "content_done": content_done,
+            "bank_done": bank_done,
+            "complete": exact_done and content_done and bank_done,
+            "token_usage": token_summary(work / "token-usage.jsonl") if bank_done else None,
+        }
 
     def bank_statement(self):
         """Read the prepared bank master for the dashboard without changing it."""
@@ -131,17 +153,35 @@ class Review:
             rows = list(csv.DictReader(source))
         if not rows:
             raise ValueError("Bank master has no transactions")
-        fields = ("transaction_id", "date", "page", "direction", "money_in", "money_out",
-                  "balance", "counterparty", "counterparty_role", "narration", "matching_status")
+        fields = (
+            "transaction_id",
+            "date",
+            "page",
+            "direction",
+            "money_in",
+            "money_out",
+            "balance",
+            "counterparty",
+            "counterparty_role",
+            "narration",
+            "matching_status",
+        )
         first = rows[0]
         workbook = self.manifest_path.parent / "bank-output" / "answer_statement_bank_only.xlsx"
-        return {"available": True, "account": first["account"], "currency": first["currency"],
-                "opening_balance": first["opening_balance"], "closing_balance": first["closing_balance"],
-                "total_money_in": first["total_money_in"], "total_money_out": first["total_money_out"],
-                "count": len(rows), "balance_checks": first["balance_checks"],
-                "matched": sum(row["matching_status"] == "matched" for row in rows),
-                "workbook_available": workbook.is_file(),
-                "transactions": [{key: row[key] for key in fields} for row in rows]}
+        return {
+            "available": True,
+            "account": first["account"],
+            "currency": first["currency"],
+            "opening_balance": first["opening_balance"],
+            "closing_balance": first["closing_balance"],
+            "total_money_in": first["total_money_in"],
+            "total_money_out": first["total_money_out"],
+            "count": len(rows),
+            "balance_checks": first["balance_checks"],
+            "matched": sum(row["matching_status"] == "matched" for row in rows),
+            "workbook_available": workbook.is_file(),
+            "transactions": [{key: row[key] for key in fields} for row in rows],
+        }
 
     def workflow_checks(self):
         """Check saved stage results without changing review files or invoking a model."""
@@ -204,29 +244,49 @@ class Review:
                     errors.append("A file has changed since duplicate verification")
             except FileNotFoundError:
                 pass
-            files.append({"id": file_id, "name": Path(record["OriginalPath"]).name,
-                          "original": record["OriginalPath"], "present": present,
-                          "available": available, "valid": valid, "size": size})
+            files.append(
+                {
+                    "id": file_id,
+                    "name": Path(record["OriginalPath"]).name,
+                    "original": record["OriginalPath"],
+                    "present": present,
+                    "available": available,
+                    "valid": valid,
+                    "size": size,
+                }
+            )
         count = sum(f["present"] for f in files)
         action = self.latest(name)
         if action and action["status"] in {"moving", "restoring"}:
             errors.append("An interrupted action needs recovery; no further changes allowed")
         if not count:
             errors.append("No retained file in this group")
-        return {"id": name, "files": files, "hash": self.records[ids[0]]["SHA256"],
-                "status": "attention" if errors else "reviewed" if self.manifest.get("Mode") == "exact_report" or count == 1 else "pending",
-                "errors": errors, "can_undo": bool(action and action["status"] == "done"),
-                "kept": action["keep"] if action and action["status"] == "done" else None}
+        return {
+            "id": name,
+            "files": files,
+            "hash": self.records[ids[0]]["SHA256"],
+            "status": "attention"
+            if errors
+            else "reviewed"
+            if self.manifest.get("Mode") == "exact_report" or count == 1
+            else "pending",
+            "errors": errors,
+            "can_undo": bool(action and action["status"] == "done"),
+            "kept": action["keep"] if action and action["status"] == "done" else None,
+        }
 
     def snapshot(self):
         """Verify every group for the dashboard summary."""
         groups = [self.group_snapshot(name) for name in self.groups]
-        return {"groups": groups, "folder": str(self.duplicates),
-                "automatic": self.manifest.get("Mode") == "exact_report",
-                "summary": self.manifest.get("Summary", {}),
-                "reviewed": sum(g["status"] == "reviewed" for g in groups),
-                "pending": sum(g["status"] == "pending" for g in groups),
-                "attention": sum(g["status"] == "attention" for g in groups)}
+        return {
+            "groups": groups,
+            "folder": str(self.duplicates),
+            "automatic": self.manifest.get("Mode") == "exact_report",
+            "summary": self.manifest.get("Summary", {}),
+            "reviewed": sum(g["status"] == "reviewed" for g in groups),
+            "pending": sum(g["status"] == "pending" for g in groups),
+            "attention": sum(g["status"] == "attention" for g in groups),
+        }
 
     def keep(self, group, file_id):
         """Keep one file of a duplicate group and move the other copies to recovery, saving the plan first."""
@@ -243,8 +303,14 @@ class Review:
                 raise ValueError("Choose a copy that is still in the group, or undo first")
             if len(active) == 1:
                 return
-            action = {"id": secrets.token_hex(8), "group": group, "keep": file_id,
-                      "at": datetime.now(timezone.utc).isoformat(), "status": "moving", "moves": []}
+            action = {
+                "id": secrets.token_hex(8),
+                "group": group,
+                "keep": file_id,
+                "at": datetime.now(timezone.utc).isoformat(),
+                "status": "moving",
+                "moves": [],
+            }
             archive = self.data / "recovery" / action["id"]
             archive.mkdir(parents=True)
             for other in active:
@@ -257,7 +323,9 @@ class Review:
             try:
                 for move in action["moves"]:
                     source, target = Path(move["source"]), Path(move["archive"])
-                    if not source.resolve().is_relative_to(self.duplicates) or not target.resolve().is_relative_to(self.data):
+                    if not source.resolve().is_relative_to(self.duplicates) or not target.resolve().is_relative_to(
+                        self.data
+                    ):
                         raise ValueError("Move escaped its expected folder")
                     if target.exists() or fingerprint(source) != self.records[move["id"]]["SHA256"]:
                         raise ValueError("File changed during review; no choice applied")
@@ -290,9 +358,15 @@ class Review:
                 raise ValueError("Resolve file errors before undo")
             for move in action["moves"]:
                 source, archived = Path(move["source"]), Path(move["archive"])
-                if not source.resolve().is_relative_to(self.duplicates) or not archived.resolve().is_relative_to(self.data):
+                if not source.resolve().is_relative_to(self.duplicates) or not archived.resolve().is_relative_to(
+                    self.data
+                ):
                     raise ValueError("Recovery path escaped its expected folder")
-                if source.exists() or not archived.is_file() or fingerprint(archived) != self.records[move["id"]]["SHA256"]:
+                if (
+                    source.exists()
+                    or not archived.is_file()
+                    or fingerprint(archived) != self.records[move["id"]]["SHA256"]
+                ):
                     raise ValueError("Recovery files changed or original location is occupied")
             restored = []
             action["status"] = "restoring"
@@ -314,6 +388,7 @@ class Review:
     def cache_decisions(self):
         """Keep development history outside the review folder when enabled."""
         from dashboard.services import development
+
         development.capture(self)
 
     def document(self, file_id):
@@ -322,6 +397,7 @@ class Review:
         suffix = path.suffix.lower()
         if suffix == ".pdf":
             import pymupdf
+
             with pymupdf.open(path) as pdf:
                 return {"kind": "pdf", "pages": len(pdf)}
         if suffix in {".jpg", ".jpeg", ".png", ".webp", ".bmp"}:
@@ -329,13 +405,17 @@ class Review:
         if suffix in {".docx", ".xlsx"}:
             return office_preview.describe(path)
         from reconciliation.extraction.reader import extract
+
         cache = self.data / "previews" / fingerprint(path)
         metadata = cache / "units.json"
         if not metadata.exists():
             write_json(metadata, extract(path, cache))
         units = json.loads(metadata.read_text(encoding="utf-8"))
-        return {"kind": "office", "pages": len(units), "units": [
-            {"label": u["label"], "text": u["text"], "has_image": bool(u["image"])} for u in units]}
+        return {
+            "kind": "office",
+            "pages": len(units),
+            "units": [{"label": u["label"], "text": u["text"], "has_image": bool(u["image"])} for u in units],
+        }
 
 
 def workflow_guide(review):
@@ -347,15 +427,26 @@ def workflow_guide(review):
             complete = review.completion()["complete"]
         except (OSError, ValueError, KeyError):
             pass
-    stages = [("Workspace", "/", bool(review)),
-              ("Exact duplicates", "/review", exact),
-              ("Documents", "/documents", content),
-              ("Bank extraction", "/bank", bank),
-              ("Completion", "/complete", complete)]
+    stages = [
+        ("Workspace", "/", bool(review)),
+        ("Exact duplicates", "/review", exact),
+        ("Documents", "/documents", content),
+        ("Bank extraction", "/bank", bank),
+        ("Completion", "/complete", complete),
+    ]
     if review and review.manifest.get("Mode") == "exact_report":
         stages = [stage for stage in stages if stage[1] != "/review"]
         stages[1] = ("Documents", "/documents", content)
-    return {"steps": [{"name": name, "href": href, "checked": checked,
-                       "next": stages[number + 1][1] if checked and number < len(stages) - 1
-                       and all(previous[2] for previous in stages[:number]) else None}
-                      for number, (name, href, checked) in enumerate(stages)]}
+    return {
+        "steps": [
+            {
+                "name": name,
+                "href": href,
+                "checked": checked,
+                "next": stages[number + 1][1]
+                if checked and number < len(stages) - 1 and all(previous[2] for previous in stages[:number])
+                else None,
+            }
+            for number, (name, href, checked) in enumerate(stages)
+        ]
+    }

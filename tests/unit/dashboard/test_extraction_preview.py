@@ -1,4 +1,5 @@
 """Exercise source previews without depending on browser document plugins."""
+
 import io
 import tempfile
 import unittest
@@ -38,7 +39,9 @@ class ExtractionPreviewTests(unittest.TestCase):
         """PDF pages, all worksheet sections, Word and explicit fallbacks are available."""
         path = self.base / 'source.pdf'
         with pymupdf.open() as pdf:
-            pdf.new_page(); pdf.new_page(); pdf.save(path)
+            pdf.new_page()
+            pdf.new_page()
+            pdf.save(path)
         self.assertEqual(describe(path)['pages'], 2)
         self.assertTrue(image(path, 1).startswith(b'\x89PNG'))
         with self.assertRaises(ValueError):
@@ -46,18 +49,24 @@ class ExtractionPreviewTests(unittest.TestCase):
         workbook = Workbook()
         workbook.active['A42'] = 'last row'
         workbook.create_sheet('Second')['A1'] = 'second sheet'
-        path = self.base / 'source.xlsx'; workbook.save(path)
+        path = self.base / 'source.xlsx'
+        workbook.save(path)
         self.assertEqual(describe(path)['pages'], 3)
         path = self.base / 'source.docx'
         with ZipFile(path, 'w') as archive:
-            archive.writestr('word/document.xml', '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body/></w:document>')
+            archive.writestr(
+                'word/document.xml',
+                '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body/></w:document>',
+            )
             picture = io.BytesIO()
             Image.new('RGB', (20, 30)).save(picture, format='PNG')
             archive.writestr('word/media/image1.png', picture.getvalue())
         self.assertEqual(describe(path)['kind'], 'word')
         self.assertEqual(describe(path)['pages'], 2)
         self.assertTrue(image(path, 1).startswith(b'\x89PNG'))
-        path = self.base / 'source.txt'; path.write_text('<script>not executable</script>')
+        path = self.base / 'source.txt'
+        path.write_text('<script>not executable</script>')
         self.assertEqual(describe(path)['kind'], 'text')
-        path = self.base / 'source.unknown'; path.write_bytes(b'unsupported')
+        path = self.base / 'source.unknown'
+        path.write_bytes(b'unsupported')
         self.assertEqual(describe(path)['kind'], 'unsupported')

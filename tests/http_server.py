@@ -1,4 +1,5 @@
 """Run the real ASGI application over an ephemeral loopback port in tests."""
+
 import socket
 import threading
 

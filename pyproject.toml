@@ -1,12 +1,5 @@
 # Tool settings only; the app is run from the repository (see README), not installed as a package.
 
-[tool.isort]
-line_length = 120
-multi_line_output = 5          # Parenthesized, hanging-indent wraps.
-combine_as_imports = true
-known_first_party = ["reconciliation", "dashboard", "scripts", "tests"]
-skip_glob = ["*/node_modules/*", "*/.data/*"]
-
 [tool.ruff]
 line-length = 120
 target-version = "py312"
@@ -16,8 +9,8 @@ extend-exclude = ["dashboard/frontend", "dashboard/.data"]
 quote-style = "preserve"      # Mixed quote styles are kept; new code prefers double quotes.
 
 [tool.ruff.lint]
-# Pyflakes, pycodestyle errors/warnings, bugbear, simplifications, pydocstyle presence checks.
-select = ["F", "E", "W", "B", "SIM", "D1"]
+# Pyflakes, pycodestyle, bugbear, simplifications, docstring presence, import sorting (I).
+select = ["F", "E", "W", "B", "SIM", "D1", "I"]
 # E501: the formatter owns line length. SIM1xx: nested or compact forms are fine when clearer.
 # B905: adding zip(strict=True) would change behaviour; decide per call when editing it.
 ignore = ["E501", "D105", "D107", "SIM105", "SIM108", "SIM117", "B905"]
@@ -29,3 +22,7 @@ ignore = ["E501", "D105", "D107", "SIM105", "SIM108", "SIM117", "B905"]
 
 [tool.ruff.lint.flake8-bugbear]
 extend-immutable-calls = ["fastapi.Depends", "fastapi.Query", "fastapi.Body"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["reconciliation", "dashboard", "scripts", "tests"]
+combine-as-imports = true

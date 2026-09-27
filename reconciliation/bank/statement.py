@@ -16,7 +16,34 @@ MONEY = re.compile(r"(?:\d{1,3}(?:,\d{3})+|\d+)\.\d{2}")
 A4_WIDTH = 595.28
 #: Left edges (points) of each statement column; a column runs to the next edge.
 DATE_X, NARRATION_X, DEBIT_X, CREDIT_X, BALANCE_X = 0, 100, 310, 395, 480
-MASTER_FIELDS = ["transaction_id", "source", "source_sha256", "page", "sequence", "account", "currency", "year_supplied", "date", "direction", "money_in", "money_out", "balance", "transaction_type", "counterparty", "counterparty_role", "counterparty_raw", "details_raw", "particular", "narration", "opening_balance", "closing_balance", "total_money_in", "total_money_out", "balance_checks", "matching_status"]
+MASTER_FIELDS = [
+    "transaction_id",
+    "source",
+    "source_sha256",
+    "page",
+    "sequence",
+    "account",
+    "currency",
+    "year_supplied",
+    "date",
+    "direction",
+    "money_in",
+    "money_out",
+    "balance",
+    "transaction_type",
+    "counterparty",
+    "counterparty_role",
+    "counterparty_raw",
+    "details_raw",
+    "particular",
+    "narration",
+    "opening_balance",
+    "closing_balance",
+    "total_money_in",
+    "total_money_out",
+    "balance_checks",
+    "matching_status",
+]
 
 
 def describe(narration, money_in):
@@ -36,9 +63,14 @@ def describe(narration, money_in):
         role = "original payment recipient"
     # Preserve reference line breaks; replacing them with spaces changes identifiers.
     details = raw_details
-    return {"transaction_type": method, "counterparty": party,
-            "counterparty_role": role, "counterparty_raw": raw_party,
-            "details_raw": raw_details, "particular": details or method}
+    return {
+        "transaction_type": method,
+        "counterparty": party,
+        "counterparty_role": role,
+        "counterparty_raw": raw_party,
+        "details_raw": raw_details,
+        "particular": details or method,
+    }
 
 
 def write_master(result, path):
@@ -49,11 +81,17 @@ def write_master(result, path):
         writer = csv.DictWriter(file, fieldnames=MASTER_FIELDS)
         writer.writeheader()
         for sequence, row in enumerate(result["transactions"], 1):
-            writer.writerow({**metadata, **row, **describe(row["narration"], row["money_in"]),
-                             "sequence": sequence,
-                             "transaction_id": f"{metadata['source_sha256']}:{sequence:04d}",
-                             "direction": "in" if row["money_in"] else "out",
-                             "matching_status": "pending"})
+            writer.writerow(
+                {
+                    **metadata,
+                    **row,
+                    **describe(row["narration"], row["money_in"]),
+                    "sequence": sequence,
+                    "transaction_id": f"{metadata['source_sha256']}:{sequence:04d}",
+                    "direction": "in" if row["money_in"] else "out",
+                    "matching_status": "pending",
+                }
+            )
 
 
 def read_master(path):
@@ -62,16 +100,26 @@ def read_master(path):
         rows = list(csv.DictReader(file))
     if not rows:
         raise ValueError("Master CSV contains no transactions")
-    summary_keys = ("source", "source_sha256", "account", "currency", "year_supplied",
-                    "opening_balance", "closing_balance", "total_money_in", "total_money_out")
+    summary_keys = (
+        "source",
+        "source_sha256",
+        "account",
+        "currency",
+        "year_supplied",
+        "opening_balance",
+        "closing_balance",
+        "total_money_in",
+        "total_money_out",
+    )
     for row in rows:
         if any(row[k] != rows[0][k] for k in summary_keys):
             raise ValueError("Inconsistent statement metadata in master CSV")
         for key in ("money_in", "money_out", "balance"):
             row[key] = amount(row[key])
     result = {key: rows[0][key] for key in summary_keys}
-    validate(rows, *(amount(result[k]) for k in
-                    ("opening_balance", "closing_balance", "total_money_out", "total_money_in")))
+    validate(
+        rows, *(amount(result[k]) for k in ("opening_balance", "closing_balance", "total_money_out", "total_money_in"))
+    )
 
     # Bind each CSV row to the unchanged PDF, not merely to plausible arithmetic.
     source = Path(result["source"])
@@ -86,9 +134,13 @@ def read_master(path):
         raise ValueError("Master row count differs from source PDF")
     for number, (row, expected) in enumerate(zip(rows, original["transactions"]), 1):
         derived = describe(expected["narration"], expected["money_in"])
-        required = {**expected, **derived, "sequence": number,
-                    "transaction_id": f"{digest}:{number:04d}",
-                    "direction": "in" if expected["money_in"] else "out"}
+        required = {
+            **expected,
+            **derived,
+            "sequence": number,
+            "transaction_id": f"{digest}:{number:04d}",
+            "direction": "in" if expected["money_in"] else "out",
+        }
         if any(str(row[key]) != str(value) for key, value in required.items()):
             raise ValueError(f"Master row {number} differs from source extraction")
     for key in ("opening_balance", "closing_balance", "total_money_in", "total_money_out"):
@@ -148,15 +200,21 @@ def extract(path, year):
             lines = page.extract_text_lines()
             if not lines:
                 raise ValueError(f"Page {page_number} has no readable text; OCR required")
-            header = next((i for i, line in enumerate(lines)
-                           if line["text"] == "DATE TRANSACTION CHEQUE NO. DEBIT CREDIT BALANCE"), None)
+            header = next(
+                (
+                    i
+                    for i, line in enumerate(lines)
+                    if line["text"] == "DATE TRANSACTION CHEQUE NO. DEBIT CREDIT BALANCE"
+                ),
+                None,
+            )
             if header is None:
                 if any(re.match(r"^\d{2}-[A-Za-z]{3}\s", line["text"]) for line in lines):
                     raise ValueError(f"Transaction-like page {page_number} has an unsupported header")
                 continue
             if abs(page.width - A4_WIDTH) > 1:
                 raise ValueError("Unsupported page width for AmBank column positions")
-            for line in lines[header + 1:]:
+            for line in lines[header + 1 :]:
                 text = line["text"]
                 if text.startswith("TARIKH TRANSAKSI"):
                     continue
@@ -179,14 +237,16 @@ def extract(path, year):
                 if re.fullmatch(r"\d{2}-[A-Za-z]{3}", date_text):
                     if bool(debit) == bool(credit):
                         raise ValueError(f"Expected one debit or credit on page {page_number}")
-                    rows.append({
-                        "date": datetime.strptime(f"{date_text}-{year}", "%d-%b-%Y").date().isoformat(),
-                        "narration": narration,
-                        "money_out": amount(debit) if debit else Decimal("0.00"),
-                        "money_in": amount(credit) if credit else Decimal("0.00"),
-                        "balance": amount(balance),
-                        "page": page_number,
-                    })
+                    rows.append(
+                        {
+                            "date": datetime.strptime(f"{date_text}-{year}", "%d-%b-%Y").date().isoformat(),
+                            "narration": narration,
+                            "money_out": amount(debit) if debit else Decimal("0.00"),
+                            "money_in": amount(credit) if credit else Decimal("0.00"),
+                            "balance": amount(balance),
+                            "page": page_number,
+                        }
+                    )
                 elif not date_text and not (debit or credit or balance) and narration and rows:
                     rows[-1]["narration"] += "\n" + narration
                 else:
@@ -194,10 +254,18 @@ def extract(path, year):
 
     # Only reconciled records can reach the output stage.
     validate(rows, opening, closing, debit_total, credit_total)
-    return {"source": str(path.resolve()), "account": account, "currency": "MYR",
-            "year_supplied": year, "opening_balance": opening, "closing_balance": closing,
-            "total_money_in": credit_total, "total_money_out": debit_total,
-            "balance_checks": "passed", "transactions": rows}
+    return {
+        "source": str(path.resolve()),
+        "account": account,
+        "currency": "MYR",
+        "year_supplied": year,
+        "opening_balance": opening,
+        "closing_balance": closing,
+        "total_money_in": credit_total,
+        "total_money_out": debit_total,
+        "balance_checks": "passed",
+        "transactions": rows,
+    }
 
 
 def main():
@@ -216,8 +284,10 @@ def main():
     args.output.mkdir(parents=True, exist_ok=True)
     write_master(result, args.output / "master_statement.csv")
     print(f"Extracted {len(result['transactions'])} transactions; all balance and total checks passed.")
-    print(f"Opening: {result['opening_balance']} | In: {result['total_money_in']} | "
-          f"Out: {result['total_money_out']} | Closing: {result['closing_balance']}")
+    print(
+        f"Opening: {result['opening_balance']} | In: {result['total_money_in']} | "
+        f"Out: {result['total_money_out']} | Closing: {result['closing_balance']}"
+    )
     print(f"Output: {args.output.resolve()}")
 
 

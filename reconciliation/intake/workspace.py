@@ -1,4 +1,5 @@
 """Select a local supporting folder and create an isolated review when requested."""
+
 import hashlib
 import json
 import os
@@ -7,7 +8,11 @@ from pathlib import Path
 
 from reconciliation.core import development_cache
 from reconciliation.intake.duplicates import (
-    duplicate_groups, fingerprint, finish_organization, organize, supporting_files
+    duplicate_groups,
+    fingerprint,
+    finish_organization,
+    organize,
+    supporting_files,
 )
 
 #: Statement years accepted when preparing a bank statement (inclusive).
@@ -48,17 +53,19 @@ class SourceSelection:
         pdfs = [p for p in supporting_files(statement) if p.suffix.lower() == ".pdf"]
         if len(pdfs) != 1 or pdfs[0].parent != statement:
             raise ValueError("statement/ must contain exactly one bank-statement PDF directly inside it")
-        return {"workspace": str(work), "selected": self.inspect(documents),
-                "bank": self.inspect_bank(pdfs[0])}
+        return {"workspace": str(work), "selected": self.inspect(documents), "bank": self.inspect_bank(pdfs[0])}
 
     def save_workspace(self, path):
         """Save both validated inputs together; selecting a workspace moves no files."""
         result = self.inspect_workspace(path)
         self.data.mkdir(parents=True, exist_ok=True)
         temporary = self.selection.with_suffix(".tmp")
-        temporary.write_text(json.dumps({"path": result["selected"]["path"],
-                                        "workspace": result["workspace"],
-                                        "bank": result["bank"]["path"]}), encoding="utf-8")
+        temporary.write_text(
+            json.dumps(
+                {"path": result["selected"]["path"], "workspace": result["workspace"], "bank": result["bank"]["path"]}
+            ),
+            encoding="utf-8",
+        )
         temporary.replace(self.selection)
         return result
 
@@ -98,11 +105,17 @@ class SourceSelection:
         self.inspect(source)
         files = supporting_files(source)
         groups = duplicate_groups(files)
-        identity = {"files": [(str(path), path.stat().st_size, path.stat().st_mtime_ns) for path in files],
-                    "groups": [(digest, [str(path) for path in members]) for digest, members in groups]}
+        identity = {
+            "files": [(str(path), path.stat().st_size, path.stat().st_mtime_ns) for path in files],
+            "groups": [(digest, [str(path) for path in members]) for digest, members in groups],
+        }
         token = hashlib.sha256(json.dumps(identity, ensure_ascii=False).encode("utf-8")).hexdigest()
-        return {"files": len(files), "groups": len(groups),
-                "copies_to_move": sum(len(members) for _, members in groups), "token": token}
+        return {
+            "files": len(files),
+            "groups": len(groups),
+            "copies_to_move": sum(len(members) for _, members in groups),
+            "token": token,
+        }
 
     def selected_bank(self):
         """Return the saved bank PDF path, if one was chosen."""
@@ -163,6 +176,7 @@ class SourceSelection:
         manifest = project / "duplicate-manifest.json"
         if source.name == "documents" and (source.parent / "statement").is_dir():
             from reconciliation.intake.exact_report import prepare
+
             prepare(source, manifest)
         elif not manifest.exists():
             organize(source, manifest)

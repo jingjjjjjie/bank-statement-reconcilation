@@ -1,4 +1,5 @@
 """Protect paired benchmarking from incomplete or stale extraction evidence."""
+
 import json
 import unittest
 from pathlib import Path
@@ -14,11 +15,14 @@ class ExtractionCoverageTests(unittest.TestCase):
 
     def test_partial_document_and_excluded_input(self):
         """Partial page reads and preparation errors cannot count as completed docs."""
-        index = {'documents': {
-            'one': {'id': 'one', 'units': [{}]},
-            'two': {'id': 'two', 'units': [{}, {}]},
-            'bad': {'id': 'bad', 'units': [], 'error': 'unreadable input'},
-            'trash': {'id': 'trash', 'units': [{}], 'accepted': False}}}
+        index = {
+            'documents': {
+                'one': {'id': 'one', 'units': [{}]},
+                'two': {'id': 'two', 'units': [{}, {}]},
+                'bad': {'id': 'bad', 'units': [], 'error': 'unreadable input'},
+                'trash': {'id': 'trash', 'units': [{}], 'accepted': False},
+            }
+        }
         result = extraction_coverage(index, {'units': {'one:0': {}, 'two:0': {}}})
         self.assertEqual(result['complete_documents'], 1)
         self.assertEqual(result['eligible_documents'], 3)
@@ -53,8 +57,10 @@ class CapacityRetryTests(unittest.TestCase):
                     stream.write(json.dumps({'status': 'failed', 'events': str(events)}) + '\n')
                 return {'status': 'unresolved', 'unit_results': 0, 'assemblies': 0}
 
-            with patch('scripts.benchmark_matching_images.extract_fresh', side_effect=reject) as run, \
-                 patch('scripts.benchmark_matching_images.time.sleep') as sleep:
+            with (
+                patch('scripts.benchmark_matching_images.extract_fresh', side_effect=reject) as run,
+                patch('scripts.benchmark_matching_images.time.sleep') as sleep,
+            ):
                 self.assertEqual(extract_with_retries(output, 1, 12)['status'], 'unresolved')
             self.assertEqual(run.call_count, 3)
             self.assertEqual(sleep.call_count, 2)
@@ -67,9 +73,12 @@ class CapacityRetryTests(unittest.TestCase):
             events = output / 'events.jsonl'
             events.write_text('Selected model is at capacity', encoding='utf-8')
             (output / 'extraction/token-usage.jsonl').write_text(
-                json.dumps({'status': 'failed', 'events': str(events)}) + '\n', encoding='utf-8')
-            with patch('scripts.benchmark_matching_images.extract_fresh', return_value={
-                    'status': 'unresolved', 'unit_results': 0, 'assemblies': 0}) as run:
+                json.dumps({'status': 'failed', 'events': str(events)}) + '\n', encoding='utf-8'
+            )
+            with patch(
+                'scripts.benchmark_matching_images.extract_fresh',
+                return_value={'status': 'unresolved', 'unit_results': 0, 'assemblies': 0},
+            ) as run:
                 extract_with_retries(output, 1, 12)
             self.assertEqual(run.call_count, 1)
 

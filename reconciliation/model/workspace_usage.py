@@ -1,4 +1,5 @@
 """Durable workspace totals, deduplicated across review and benchmark logs."""
+
 import hashlib
 import json
 import os
@@ -7,8 +8,21 @@ from pathlib import Path
 
 from reconciliation.core.paths import WORKSPACE
 
-SKIP = {'.git', 'node_modules', '.venv', '__pycache__', 'model-cache', 'model-requests',
-        'assets', 'test-deps', 'playwright', 'uploads', 'documents', 'statement', 'runtime'}
+SKIP = {
+    '.git',
+    'node_modules',
+    '.venv',
+    '__pycache__',
+    'model-cache',
+    'model-requests',
+    'assets',
+    'test-deps',
+    'playwright',
+    'uploads',
+    'documents',
+    'statement',
+    'runtime',
+}
 
 
 def connect(root):
@@ -26,8 +40,9 @@ def merge(db, event, mirrored=False):
     if event.get('status') == 'cached':
         if mirrored and not event.get('event_id'):
             return
-        key = 'cache:' + (event.get('event_id') or hashlib.sha256(
-            json.dumps(event, sort_keys=True).encode()).hexdigest())
+        key = 'cache:' + (
+            event.get('event_id') or hashlib.sha256(json.dumps(event, sort_keys=True).encode()).hexdigest()
+        )
     elif event.get('id'):
         key = 'attempt:' + event['id']
     else:
@@ -58,6 +73,7 @@ def persist(path, event):
 def workspace_summary(root=None):
     """Import historical logs and return all retained workspace usage once."""
     from reconciliation.model.token_usage import summarize
+
     root = Path(root or WORKSPACE)
     db = connect(root)
     unreadable = []
@@ -86,13 +102,19 @@ def workspace_summary(root=None):
                             continue
                         merge(db, event, mirrored='development-cache/runs/' in relative)
                     if relative not in unreadable:
-                        db.execute('INSERT OR REPLACE INTO imports VALUES (?, ?, ?)',
-                                   (relative, stat.st_size, stat.st_mtime_ns))
+                        db.execute(
+                            'INSERT OR REPLACE INTO imports VALUES (?, ?, ?)',
+                            (relative, stat.st_size, stat.st_mtime_ns),
+                        )
                 except (OSError, UnicodeError):
                     unreadable.append(str(path))
             events = [json.loads(row[0]) for row in db.execute('SELECT event FROM events')]
         result = summarize(events)
-        return {**result, 'scope': 'workspace', 'unreadable_logs': sorted(set(unreadable)),
-                'complete': result['unknown_attempts'] == 0 and not unreadable}
+        return {
+            **result,
+            'scope': 'workspace',
+            'unreadable_logs': sorted(set(unreadable)),
+            'complete': result['unknown_attempts'] == 0 and not unreadable,
+        }
     finally:
         db.close()

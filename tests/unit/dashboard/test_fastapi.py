@@ -1,4 +1,5 @@
 """Exercise migration-specific HTTP validation and stale-workspace protection."""
+
 import json
 import tempfile
 import threading
@@ -24,9 +25,11 @@ class FastApiTests(unittest.TestCase):
             (work / "statement").mkdir(exist_ok=True)
             (work / "statement/bank.pdf").write_bytes(b"fixture")
             state.sources.save_workspace(work)
-            request = urllib.request.Request(self.base + "/api/source/start",
+            request = urllib.request.Request(
+                self.base + "/api/source/start",
                 json.dumps({"preview": state.sources.preview()["token"]}).encode(),
-                {"Content-Type": "application/json", "X-Review-Token": "token"})
+                {"Content-Type": "application/json", "X-Review-Token": "token"},
+            )
             with urllib.request.urlopen(request) as response:
                 result = json.load(response)
             self.assertEqual(result["resumed"], len(identities) == 1)
@@ -48,8 +51,11 @@ class FastApiTests(unittest.TestCase):
 
     def post_error(self, path, data, expected, headers=None):
         """Check a rejected request without changing fixture state."""
-        request = urllib.request.Request(self.base + path, json.dumps(data).encode(),
-            {"Content-Type": "application/json", "X-Review-Token": "token", **(headers or {})})
+        request = urllib.request.Request(
+            self.base + path,
+            json.dumps(data).encode(),
+            {"Content-Type": "application/json", "X-Review-Token": "token", **(headers or {})},
+        )
         with self.assertRaises(urllib.error.HTTPError) as error:
             urllib.request.urlopen(request)
         self.assertEqual(error.exception.code, expected)
@@ -71,8 +77,9 @@ class FastApiTests(unittest.TestCase):
 
     def test_stale_workspace_cannot_mutate_current_project(self):
         """A cached tab may not write after another tab switches workspaces."""
-        result = self.post_error("/api/source/workspace-select",
-                                 {"path": "unused"}, 409, {"X-Review-Id": "old-workspace"})
+        result = self.post_error(
+            "/api/source/workspace-select", {"path": "unused"}, 409, {"X-Review-Id": "old-workspace"}
+        )
         self.assertIn("workspace changed", result["error"])
 
     def test_default_selection_is_local_to_the_supplied_review(self):

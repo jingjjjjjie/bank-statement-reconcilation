@@ -1,4 +1,5 @@
 """Check isolated Codex workflow arguments without live model calls."""
+
 import tempfile
 import unittest
 from pathlib import Path
@@ -46,4 +47,3 @@ class CodexProfileTests(unittest.TestCase):
             self.assertTrue(engine.ask("test", object_schema({"ok": {"type": "boolean"}}), [image])["ok"])
         self.assertTrue(working_dirs)
         self.assertTrue(all(not path.exists() for path in working_dirs))
-

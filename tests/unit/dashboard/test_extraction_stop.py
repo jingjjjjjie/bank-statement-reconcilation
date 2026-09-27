@@ -1,4 +1,5 @@
 """Exercise stop priority and races without calling the model service."""
+
 import json
 import tempfile
 import threading
@@ -24,8 +25,11 @@ class ExtractionStopTests(unittest.TestCase):
     def test_stop_bypasses_busy_dashboard_and_checks_review_identity(self):
         """A document scan cannot queue Stop behind the global request lock."""
         entered, release, cancelled = threading.Event(), threading.Event(), threading.Event()
-        review = SimpleNamespace(content_cancel=cancelled, content_engine=None,
-                                 content_thread=SimpleNamespace(is_alive=lambda: not cancelled.is_set()))
+        review = SimpleNamespace(
+            content_cancel=cancelled,
+            content_engine=None,
+            content_thread=SimpleNamespace(is_alive=lambda: not cancelled.is_set()),
+        )
         app = create_app(token="test-token")
         app.state.context.review = review
 
@@ -93,8 +97,10 @@ class ExtractionStopTests(unittest.TestCase):
                 Path(command[command.index("--output-last-message") + 1]).write_text('{"ok":true}')
                 return SimpleNamespace(returncode=0)
 
-            with patch.object(reviewer.processes, "run", completed), \
-                    patch("reconciliation.model.codex.validate", side_effect=lambda *args: reviewer.cancel()):
+            with (
+                patch.object(reviewer.processes, "run", completed),
+                patch("reconciliation.model.codex.validate", side_effect=lambda *args: reviewer.cancel()),
+            ):
                 with self.assertRaises(ReviewCancelled):
                     reviewer.ask("test", object_schema({"ok": {"type": "boolean"}}))
             self.assertFalse(list(reviewer.cache.glob("*/result.json")))

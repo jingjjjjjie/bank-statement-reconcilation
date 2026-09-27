@@ -1,4 +1,5 @@
 """Schema-validated, cached codex exec calls using the existing ChatGPT login."""
+
 import hashlib
 import json
 import os
@@ -15,20 +16,40 @@ from jsonschema import validate
 from reconciliation.core import development_cache
 from reconciliation.core.prompts import load_prompt
 from reconciliation.core.settings import DEFAULT_MODEL
+
 # Schemas live in reconciliation.extraction.schemas; re-exported for existing callers.
 from reconciliation.extraction.schemas import EXTRACTION, RECEIPT, TEXT, TEXTS, object_schema  # noqa: F401
 from reconciliation.model.processes import ProcessManager, ReviewCancelled
 from reconciliation.model.token_usage import FIELDS, record, reported_usage
 
 DISABLED_FEATURES = (
-    "apps", "browser_use", "browser_use_external", "computer_use", "plugins",
-    "remote_plugin", "image_generation", "shell_tool", "unified_exec",
-    "multi_agent", "multi_agent_v2", "goals", "sleep_tool",
-    "code_mode", "code_mode_host", "skill_search", "memories", "hooks",
+    "apps",
+    "browser_use",
+    "browser_use_external",
+    "computer_use",
+    "plugins",
+    "remote_plugin",
+    "image_generation",
+    "shell_tool",
+    "unified_exec",
+    "multi_agent",
+    "multi_agent_v2",
+    "goals",
+    "sleep_tool",
+    "code_mode",
+    "code_mode_host",
+    "skill_search",
+    "memories",
+    "hooks",
 )
 # Codex settings that change responses are part of every cache key.
-CACHE_PROFILE = ["builtin-instructions", DISABLED_FEATURES, "skip_host_skill_discovery",
-                 "web_search=disabled", "project_doc_max_bytes=0"]
+CACHE_PROFILE = [
+    "builtin-instructions",
+    DISABLED_FEATURES,
+    "skip_host_skill_discovery",
+    "web_search=disabled",
+    "project_doc_max_bytes=0",
+]
 
 #: Default seconds one `codex exec` call may run before it is stopped.
 DEFAULT_TIMEOUT = 240
@@ -48,10 +69,22 @@ def request_digest(prompt, schema, model, reasoning, images=()):
 
 def codex_command(executable, schema_path, output_path, model=None, reasoning="default", images=()):
     """Build an isolated, read-only codex exec command that reads its prompt from stdin."""
-    command = [executable, "exec", "--ignore-user-config", "--skip-git-repo-check",
-               "--ephemeral", "--sandbox", "read-only", "--color", "never", "--json",
-               "--output-schema", str(Path(schema_path).resolve()),
-               "--output-last-message", str(Path(output_path).resolve())]
+    command = [
+        executable,
+        "exec",
+        "--ignore-user-config",
+        "--skip-git-repo-check",
+        "--ephemeral",
+        "--sandbox",
+        "read-only",
+        "--color",
+        "never",
+        "--json",
+        "--output-schema",
+        str(Path(schema_path).resolve()),
+        "--output-last-message",
+        str(Path(output_path).resolve()),
+    ]
     command += ["-c", 'web_search="disabled"', "-c", "project_doc_max_bytes=0"]
     command += ["--enable", "skip_host_skill_discovery"]
     command += ["--enable", "view_image", "-c", "tools.view_image=true"]
@@ -73,7 +106,16 @@ class BudgetReached(Exception):
 class CodexReviewer:
     """Model client backed by `codex exec` and the ChatGPT subscription login (implements `reconciliation.model.client.ModelClient`)."""
 
-    def __init__(self, work, executable=None, model=None, max_calls=DEFAULT_MAX_CALLS, timeout=DEFAULT_TIMEOUT, reasoning="default", cancel_event=None):
+    def __init__(
+        self,
+        work,
+        executable=None,
+        model=None,
+        max_calls=DEFAULT_MAX_CALLS,
+        timeout=DEFAULT_TIMEOUT,
+        reasoning="default",
+        cancel_event=None,
+    ):
         """Configure the codex executable, default model, call budget and cache folder under `work`."""
         bundled = Path(os.environ.get("LOCALAPPDATA", "")) / "Programs/OpenAI/Codex/bin/codex.exe"
         self.executable = executable or shutil.which("codex") or str(bundled)
@@ -158,9 +200,16 @@ class CodexReviewer:
             validate(result, schema)
             (folder / "prompt.txt").write_text(prompt, encoding="utf-8")
             development_cache.share_request(self.work, folder)
-            self._record({"status": "cached", "run_id": self.run_id,
-                          "stage": self.stage, "model": self.model, "request": folder.name,
-                          "usage": {field: 0 for field in FIELDS}})
+            self._record(
+                {
+                    "status": "cached",
+                    "run_id": self.run_id,
+                    "stage": self.stage,
+                    "model": self.model,
+                    "request": folder.name,
+                    "usage": {field: 0 for field in FIELDS},
+                }
+            )
             with self.acceptance():
                 return result
 
@@ -179,9 +228,15 @@ class CodexReviewer:
         output_path.unlink(missing_ok=True)
         command = codex_command(self.executable, schema_path, output_path, self.model, self.reasoning, images)
         events_path = folder / f"events-{attempt_id}.jsonl"
-        entry = {"id": attempt_id, "run_id": self.run_id, "stage": self.stage,
-                 "model": self.model, "reasoning": self.reasoning, "request": folder.name,
-                 "events": str(events_path)}
+        entry = {
+            "id": attempt_id,
+            "run_id": self.run_id,
+            "stage": self.stage,
+            "model": self.model,
+            "reasoning": self.reasoning,
+            "request": folder.name,
+            "events": str(events_path),
+        }
         with self._shared_lock:
             if self._cancelled.is_set():
                 raise ReviewCancelled("Review stopped by user")
@@ -193,17 +248,27 @@ class CodexReviewer:
         process_audit = {}
         status = "failed"
         try:
-            with TemporaryDirectory(prefix="reconciliation-codex-") as isolated, events_path.open("w", encoding="utf-8") as events, (folder / f"exec-{attempt_id}.log").open("w", encoding="utf-8") as log:
-                process = self.processes.run(command, input=prompt, timeout=self.timeout,
-                                             stdout=events, stderr=log, cwd=isolated, audit=process_audit)
+            with (
+                TemporaryDirectory(prefix="reconciliation-codex-") as isolated,
+                events_path.open("w", encoding="utf-8") as events,
+                (folder / f"exec-{attempt_id}.log").open("w", encoding="utf-8") as log,
+            ):
+                process = self.processes.run(
+                    command,
+                    input=prompt,
+                    timeout=self.timeout,
+                    stdout=events,
+                    stderr=log,
+                    cwd=isolated,
+                    audit=process_audit,
+                )
                 status = "finished" if process.returncode == 0 else "failed"
         except ReviewCancelled:
             status = "cancelled"
             raise
         finally:
             usage = reported_usage(events_path)
-            self._record({**entry, "status": status,
-                          "usage": usage, **process_audit})
+            self._record({**entry, "status": status, "usage": usage, **process_audit})
             development_cache.share_request(self.work, folder)
         if self._cancelled.is_set():
             raise ReviewCancelled("Review stopped by user")

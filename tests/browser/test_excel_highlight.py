@@ -1,4 +1,5 @@
 """Verify source-row navigation against an actual workbook preview."""
+
 import json
 import threading
 import unittest
@@ -32,11 +33,18 @@ class ExcelHighlightTests(unittest.TestCase):
         workbook['Other'].append(['Other person', 15])
         workbook.save(source)
         digest = fingerprint(source)
-        fixture.index['documents'] = {digest: {'paths': [str(source)], 'error': None,
-            'units': [{'label': 'sheet Sheet A (visible)', 'image': None}]}}
+        fixture.index['documents'] = {
+            digest: {
+                'paths': [str(source)],
+                'error': None,
+                'units': [{'label': 'sheet Sheet A (visible)', 'image': None}],
+            }
+        }
         (fixture.work / 'index.json').write_text(json.dumps(fixture.index))
-        pieces = [{**fixture.pieces[0], 'amount_location': "'Sheet A'!$A$55:$C$56"},
-                  {**fixture.pieces[1], 'amount_location': 'Other!B2'}]
+        pieces = [
+            {**fixture.pieces[0], 'amount_location': "'Sheet A'!$A$55:$C$56"},
+            {**fixture.pieces[1], 'amount_location': 'Other!B2'},
+        ]
         fixture.state['units'] = {digest + ':0': {'readable': True, 'receipts': pieces}}
         fixture.state['index_sha256'] = fingerprint(fixture.work / 'index.json')
         fixture.save_state()
@@ -68,11 +76,11 @@ class ExcelHighlightTests(unittest.TestCase):
             folder = Path('duplicated/inspection')
             folder.mkdir(parents=True, exist_ok=True)
             page.screenshot(path=str(folder / 'excel-row-highlight.png'))
-            page.set_viewport_size({'width':390, 'height':844})
+            page.set_viewport_size({'width': 390, 'height': 844})
             page.get_by_role('button', name='Show original for piece 1', exact=True).click()
             expect(page.locator('.source-highlight')).to_have_count(2)
             self.assertTrue(page.evaluate('document.documentElement.scrollWidth <= innerWidth'))
-            page.set_viewport_size({'width':1440, 'height':960})
+            page.set_viewport_size({'width': 1440, 'height': 960})
             page.get_by_role('button', name='Show original for piece 2', exact=True).click()
             expect(page.locator('.sheet-title')).to_have_text('Other')
             expect(page.locator('.source-highlight')).to_have_count(1)

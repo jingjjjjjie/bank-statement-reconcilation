@@ -1,4 +1,5 @@
 """Ensure package organization does not relocate existing workflow state."""
+
 import unittest
 from pathlib import Path
 

@@ -1,4 +1,5 @@
 """Content hashes that bind saved decisions to the exact evidence they were made on."""
+
 import hashlib
 import json
 

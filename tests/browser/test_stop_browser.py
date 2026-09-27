@@ -1,4 +1,5 @@
 """Exercise content-review stop and resume from the browser without Codex calls."""
+
 import json
 import tempfile
 import threading
@@ -32,8 +33,20 @@ class StopBrowserTests(unittest.TestCase):
             Image.new("RGB", (20, 20), "black").save(source / "second.png")
             manifest = base / "manifest.json"
             organize(source, manifest)
-            (base / "review_config.json").write_text(json.dumps({"pdf_mode": "auto", "pictures_enabled": True,
-                "codex_enabled": True, "max_calls": 20, "model": "", "reasoning": "default", "stages": {}}), encoding="utf-8")
+            (base / "review_config.json").write_text(
+                json.dumps(
+                    {
+                        "pdf_mode": "auto",
+                        "pictures_enabled": True,
+                        "codex_enabled": True,
+                        "max_calls": 20,
+                        "model": "",
+                        "reasoning": "default",
+                        "stages": {},
+                    }
+                ),
+                encoding="utf-8",
+            )
             review = Review(manifest, base / "data")
             work = base / "review"
             prepare(manifest, work, review.config_path)
@@ -54,7 +67,10 @@ class StopBrowserTests(unittest.TestCase):
             server = TestServer(("127.0.0.1", 0), create_app(review, "test-token"))
             threading.Thread(target=server.serve_forever, daemon=True).start()
             try:
-                with patch("dashboard.services.extraction_runs.CodexReviewer", side_effect=lambda *args, **kwargs: next(reviewers)):
+                with patch(
+                    "dashboard.services.extraction_runs.CodexReviewer",
+                    side_effect=lambda *args, **kwargs: next(reviewers),
+                ):
                     with sync_playwright() as playwright:
                         browser = playwright.chromium.launch(executable_path=str(chrome), headless=True)
                         page = browser.new_page()

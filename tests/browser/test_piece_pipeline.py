@@ -1,4 +1,5 @@
 """Verify piece editing, search and live-ledger activation with real local HTTP."""
+
 import json
 import threading
 import unittest
@@ -59,7 +60,10 @@ class PiecePipelineBrowserTests(unittest.TestCase):
             expect(page.get_by_label('Document type', exact=True)).to_have_count(0)
             expect(page.locator('[data-field="limitations"]')).to_have_count(0)
             (Path(__file__).resolve().parents[2] / '.tools/field-removal').mkdir(parents=True, exist_ok=True)
-            page.screenshot(path=str(Path(__file__).resolve().parents[2] / '.tools/field-removal/extraction-desktop.png'), full_page=True)
+            page.screenshot(
+                path=str(Path(__file__).resolve().parents[2] / '.tools/field-removal/extraction-desktop.png'),
+                full_page=True,
+            )
             page.locator('[data-field="references"]').first.fill('receipt: 000007')
             page.locator('#accept-receipts').click()
             expect(page.locator('#document-review-status')).to_have_attribute('aria-label', 'Extraction accepted')
@@ -79,14 +83,19 @@ class PiecePipelineBrowserTests(unittest.TestCase):
             expect(page.locator('#receipt-pieces fieldset')).to_have_count(2)
             page.set_viewport_size({'width': 390, 'height': 844})
             self.assertTrue(page.evaluate('document.documentElement.scrollWidth <= innerWidth'))
-            page.screenshot(path=str(Path(__file__).resolve().parents[2] / '.tools/field-removal/extraction-mobile.png'), full_page=True)
+            page.screenshot(
+                path=str(Path(__file__).resolve().parents[2] / '.tools/field-removal/extraction-mobile.png'),
+                full_page=True,
+            )
             page.goto(f'http://127.0.0.1:{server.server_port}/matching')
             expect(page.locator('#generate-matches')).to_have_count(0)
             page.route('**/api/bank-statement', lambda route: route.fulfill(json={'available': False}))
             page.route('**/api/source', lambda route: route.fulfill(json={'bank': None}))
             page.locator('.app-header a[href="/bank"]').click()
             page.locator('#load-final-matching').click()
-            expect(page.locator('#final-matching-ready')).to_have_text('Progress is saved automatically. Review results on Final review.')
+            expect(page.locator('#final-matching-ready')).to_have_text(
+                'Progress is saved automatically. Review results on Final review.'
+            )
             expect(page.locator('#generate-matches')).to_be_visible()
             expect(page.locator('#generate-matches')).to_be_enabled()
             page.locator('.app-header a[href="/matching"]').click()
@@ -95,6 +104,9 @@ class PiecePipelineBrowserTests(unittest.TestCase):
             page.locator('#document-tab').click()
             page.locator('#document-query').fill('Delivery piece')
             expect(page.locator('#unmatched-list')).to_contain_text('Delivery piece')
-            page.screenshot(path=str(Path(__file__).resolve().parents[2] / '.tools/field-removal/matching-mobile.png'), full_page=True)
+            page.screenshot(
+                path=str(Path(__file__).resolve().parents[2] / '.tools/field-removal/matching-mobile.png'),
+                full_page=True,
+            )
             self.assertFalse(errors)
             browser.close()

@@ -1,4 +1,5 @@
 """Ensure read-only media never waits for decision/status work or skips validation."""
+
 import concurrent.futures
 import json
 import threading
@@ -42,7 +43,10 @@ class MatchingMediaSpeedTests(unittest.TestCase):
             release.wait(8)
             return {'steps': []}
 
-        with patch('dashboard.api.review.workflow_guide', slow_workflow), concurrent.futures.ThreadPoolExecutor() as pool:
+        with (
+            patch('dashboard.api.review.workflow_guide', slow_workflow),
+            concurrent.futures.ThreadPoolExecutor() as pool,
+        ):
             check = pool.submit(self.get, '/api/workflow-checks')
             try:
                 self.assertTrue(started.wait(2))
@@ -53,7 +57,9 @@ class MatchingMediaSpeedTests(unittest.TestCase):
                 with patch('dashboard.api.files.extraction_preview.image', return_value=b'preview'):
                     self.assertEqual(self.get('/api/matching-image?kind=item&id=D1&page=0'), b'preview')
                 with patch('dashboard.api.files.office_preview.page', return_value={'kind': 'spreadsheet'}):
-                    self.assertEqual(json.loads(self.get('/api/matching-office?kind=item&id=D1&page=0'))['kind'], 'spreadsheet')
+                    self.assertEqual(
+                        json.loads(self.get('/api/matching-office?kind=item&id=D1&page=0'))['kind'], 'spreadsheet'
+                    )
             finally:
                 release.set()
             check.result()
@@ -62,10 +68,12 @@ class MatchingMediaSpeedTests(unittest.TestCase):
         """Removing lock contention must retain original-byte and corpus membership checks."""
         self.get('/api/matching-preview?kind=item&id=D1')
         (self.fixture.review.root / 'receipt-1.txt').write_text('Changed source')
-        for path, code in [('/api/matching-preview?kind=item&id=D1', 400),
-                           ('/api/matching-image?kind=item&id=D1&page=0', 400),
-                           ('/api/matching-office?kind=item&id=D1&page=0', 400),
-                           ('/api/matching-preview?kind=item&id=unknown', 404)]:
+        for path, code in [
+            ('/api/matching-preview?kind=item&id=D1', 400),
+            ('/api/matching-image?kind=item&id=D1&page=0', 400),
+            ('/api/matching-office?kind=item&id=D1&page=0', 400),
+            ('/api/matching-preview?kind=item&id=unknown', 404),
+        ]:
             with self.assertRaises(urllib.error.HTTPError) as error:
                 self.get(path)
             self.assertEqual(error.exception.code, code)
@@ -82,6 +90,7 @@ class MatchingMediaSpeedTests(unittest.TestCase):
         from PIL import Image
 
         from reconciliation.intake.duplicates import fingerprint
+
         source = self.fixture.root / 'large-original.jpg'
         Image.new('RGB', (1600, 1200), 'white').save(source)
         digest = fingerprint(source)
@@ -95,16 +104,23 @@ class MatchingMediaSpeedTests(unittest.TestCase):
             release.wait(8)
             return {'steps': []}
 
-        with patch('dashboard.services.extraction_runs.load_index', return_value=(index, 'fixture')), \
-             patch('dashboard.api.review.workflow_guide', slow_workflow), \
-             concurrent.futures.ThreadPoolExecutor() as pool:
+        with (
+            patch('dashboard.services.extraction_runs.load_index', return_value=(index, 'fixture')),
+            patch('dashboard.api.review.workflow_guide', slow_workflow),
+            concurrent.futures.ThreadPoolExecutor() as pool,
+        ):
             check = pool.submit(self.get, '/api/workflow-checks')
             try:
                 self.assertTrue(started.wait(2))
                 info = json.loads(self.get('/api/extraction-preview?id=' + digest))
                 self.assertEqual(info['kind'], 'image')
-                with patch('dashboard.api.files.extraction_preview.image', side_effect=AssertionError('unnecessary PNG conversion')):
-                    with urllib.request.urlopen(self.base + '/api/extraction-preview-image?id=' + digest, timeout=3) as response:
+                with patch(
+                    'dashboard.api.files.extraction_preview.image',
+                    side_effect=AssertionError('unnecessary PNG conversion'),
+                ):
+                    with urllib.request.urlopen(
+                        self.base + '/api/extraction-preview-image?id=' + digest, timeout=3
+                    ) as response:
                         self.assertEqual(response.headers.get_content_type(), 'image/jpeg')
                         self.assertEqual(response.read(), original)
                 with patch('dashboard.api.files.office_preview.page', return_value={'kind': 'spreadsheet'}):
@@ -127,14 +143,19 @@ class MatchingMediaSpeedTests(unittest.TestCase):
             release.wait(8)
             return {'steps': []}
 
-        with patch('dashboard.api.review.workflow_guide', slow_workflow), \
-             patch('dashboard.services.receipt_review.accept_extraction', return_value={'saved': True}), \
-             concurrent.futures.ThreadPoolExecutor() as pool:
+        with (
+            patch('dashboard.api.review.workflow_guide', slow_workflow),
+            patch('dashboard.services.receipt_review.accept_extraction', return_value={'saved': True}),
+            concurrent.futures.ThreadPoolExecutor() as pool,
+        ):
             check = pool.submit(self.get, '/api/workflow-checks')
             try:
                 self.assertTrue(started.wait(2))
-                request = urllib.request.Request(self.base + '/api/receipts/accept', b'{}',
-                    {'Content-Type': 'application/json', 'X-Review-Token': 'token'})
+                request = urllib.request.Request(
+                    self.base + '/api/receipts/accept',
+                    b'{}',
+                    {'Content-Type': 'application/json', 'X-Review-Token': 'token'},
+                )
                 with urllib.request.urlopen(request, timeout=3) as response:
                     self.assertTrue(json.load(response)['saved'])
             finally:

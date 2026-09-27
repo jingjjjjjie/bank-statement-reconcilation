@@ -1,4 +1,5 @@
 """Exercise risky PDF detection, evidence failures and cancellation propagation."""
+
 import copy
 import hashlib
 import json
@@ -31,8 +32,17 @@ class PdfRoutingTests(unittest.TestCase):
             pdf.save(path)
         self.unit = extract(path, self.root / "assets", {**DEFAULTS, "pdf_mode": "compare"})[0]
         self.result = FakeReviewer().ask("", EXTRACTION)
-        self.result['receipts'] = [{"location": "page 1", "document_type": "receipt", "invoice_numbers": ["TEST-1"],
-            "brief_description": "Example", "total": "1.00", "currency": "MYR", "limitations": []}]
+        self.result['receipts'] = [
+            {
+                "location": "page 1",
+                "document_type": "receipt",
+                "invoice_numbers": ["TEST-1"],
+                "brief_description": "Example",
+                "total": "1.00",
+                "currency": "MYR",
+                "limitations": [],
+            }
+        ]
         self.calls = []
 
     def ask(self, prompt, schema, images=(), stage=None):
@@ -70,6 +80,7 @@ class PdfRoutingTests(unittest.TestCase):
     def test_new_extraction_without_document_type_can_use_text(self):
         """Canonical piece type keeps approved text routing usable after field removal."""
         from reconciliation.extraction.pieces import canonical, legacy_result
+
         piece = canonical(self.result['receipts'][0])
         piece.pop('limitations')
         self.result = legacy_result({'readable': True, 'summary': 'Receipt', 'totals': [], 'pieces': [piece]})
@@ -81,9 +92,11 @@ class PdfRoutingTests(unittest.TestCase):
 
     def test_invalid_response_uses_original_image(self):
         """Malformed text output is recorded and replaced by full-page vision."""
+
         def ask(prompt, schema, images=(), stage=None):
             """Return an invalid text object and a valid visual extraction."""
             return self.ask(prompt, schema, images, stage) if images else {"receipts": ["invalid"]}
+
         _, audit = self.run_route(ask=ask)
         self.assertEqual(audit['route'], 'vision')
         self.assertTrue(any(r.startswith('text_attempt_failed:') for r in audit['reasons']))
@@ -97,7 +110,10 @@ class PdfRoutingTests(unittest.TestCase):
         config = fixture.base / 'config.json'
         config.write_text(json.dumps({**DEFAULTS, 'pdf_mode': 'compare'}))
         organize(fixture.root, fixture.manifest)
-        with patch('reconciliation.core.development_cache.mode', return_value={'enabled': True}), patch('reconciliation.extraction.pdf_routing.mode', return_value={'enabled': True}):
+        with (
+            patch('reconciliation.core.development_cache.mode', return_value={'enabled': True}),
+            patch('reconciliation.extraction.pdf_routing.mode', return_value={'enabled': True}),
+        ):
             workflow.prepare(fixture.manifest, fixture.work, config)
             index, state = workflow.load(fixture.work)
             workflow.run(fixture.work, index, state, FakeReviewer())
@@ -108,12 +124,14 @@ class PdfRoutingTests(unittest.TestCase):
 
     def test_unsupported_amount_falls_back_and_flags_disagreement(self):
         """A plausible invented amount fails exact source evidence checks."""
+
         def ask(prompt, schema, images=(), stage=None):
             """Invent a text-only amount while keeping vision unchanged."""
             value = self.ask(prompt, schema, images, stage)
             if not images:
                 value['receipts'][0]['total'] = '99.00'
             return value
+
         result, audit = self.run_route('hybrid', ask, {self.unit['pdf_probe']['layout']})
         self.assertEqual(self.calls, ['pdf_text', 'pdf_vision'])
         self.assertIn('unsupported_total', audit['reasons'])
@@ -123,6 +141,7 @@ class PdfRoutingTests(unittest.TestCase):
     def test_old_system_disagreement_remains_visible(self):
         """Only the known system warning survives legacy storage in the removed field."""
         from reconciliation.extraction.pdf_routing import DISAGREEMENT_WARNING, review_warnings
+
         saved = {'limitations': ['Old model prose', DISAGREEMENT_WARNING]}
         before = copy.deepcopy(saved)
         self.assertEqual(review_warnings(saved), [DISAGREEMENT_WARNING])
@@ -130,9 +149,11 @@ class PdfRoutingTests(unittest.TestCase):
 
     def test_budget_stop_does_not_launch_fallback(self):
         """Stop signals remain unresolved rather than spending another call."""
+
         def stop(*args, **kwargs):
             """Simulate exhausted user request budget."""
             raise BudgetReached('stop')
+
         with self.assertRaises(BudgetReached):
             self.run_route(ask=stop)
         self.assertEqual(json.loads((self.root / 'audit.json').read_text())['status'], 'unresolved')

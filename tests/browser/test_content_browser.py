@@ -32,8 +32,20 @@ class ContentBrowserTests(unittest.TestCase):
             manifest = base / "manifest.json"
             organize(root, manifest)
             config = base / "review_config.json"
-            config.write_text(json.dumps({"pdf_mode": "auto", "pictures_enabled": True,
-                "codex_enabled": True, "max_calls": 20, "model": "", "reasoning": "default", "stages": {}}), encoding="utf-8")
+            config.write_text(
+                json.dumps(
+                    {
+                        "pdf_mode": "auto",
+                        "pictures_enabled": True,
+                        "codex_enabled": True,
+                        "max_calls": 20,
+                        "model": "",
+                        "reasoning": "default",
+                        "stages": {},
+                    }
+                ),
+                encoding="utf-8",
+            )
             work = base / "review"
             prepare(manifest, work, config)
             index, state = load(work)

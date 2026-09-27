@@ -1,4 +1,5 @@
 """Exercise agreed retrieval quotas, references, text ordering and coverage flags."""
+
 import unittest
 from unittest.mock import patch
 
@@ -7,9 +8,17 @@ from reconciliation.matching.retrieval import retrieve
 
 def record(key, **fields):
     """Create minimal bank/piece facts without any source or model calls."""
-    return {'id': key, 'amount': '250.00', 'currency': 'MYR', 'direction': '',
-            'parties': ['Wu Wenjun'], 'description': '', 'references': [],
-            'date': '2025-12-01', **fields}
+    return {
+        'id': key,
+        'amount': '250.00',
+        'currency': 'MYR',
+        'direction': '',
+        'parties': ['Wu Wenjun'],
+        'description': '',
+        'references': [],
+        'date': '2025-12-01',
+        **fields,
+    }
 
 
 class RetrievalTests(unittest.TestCase):
@@ -33,7 +42,9 @@ class RetrievalTests(unittest.TestCase):
     def test_canva_description_precedes_recent_unrelated_amounts(self):
         """An older merchant receipt survives more than twenty same-amount alternatives."""
         items = [record(f'noise{n}', parties=['Other'], description='Wage payment') for n in range(30)]
-        items.append(record('canva', parties=['Canva Pty Ltd'], description='Canva Pro subscription', date='2024-11-27'))
+        items.append(
+            record('canva', parties=['Canva Pty Ltd'], description='Canva Pro subscription', date='2024-11-27')
+        )
         selected, _ = self.select(items, description='Fund Transfer /DEBIT TRANSFER, WU WENJUN, Canva zuotufei')
         self.assertEqual(selected[0], 'canva')
         self.assertEqual(len(selected), 20)
@@ -46,7 +57,9 @@ class RetrievalTests(unittest.TestCase):
     def test_top_up_to_ten_not_ten_more(self):
         """Seven primary candidates receive only three meaningful fallback pieces."""
         items = [record(f'primary{n}') for n in range(7)]
-        items += [record(f'fallback{n}', amount='99', parties=['Other'], description='Canva subscription') for n in range(15)]
+        items += [
+            record(f'fallback{n}', amount='99', parties=['Other'], description='Canva subscription') for n in range(15)
+        ]
         selected, audit = self.select(items, description='Canva')
         self.assertEqual(len(selected), 10)
         self.assertEqual(sum(k.startswith('fallback') for k in selected), 3)
@@ -54,17 +67,30 @@ class RetrievalTests(unittest.TestCase):
 
     def test_never_pad_with_unrelated_or_excluded_pieces(self):
         """Boilerplate, dates and unknown amounts cannot fabricate eligible candidates."""
-        selected, _ = self.select([record('noise', amount='', parties=['Other'], description='Payment receipt fee'),
-                                   record('excluded', excluded=True), record('retired', retired=True)],
-                                  amount='', description='Fund transfer payment')
+        selected, _ = self.select(
+            [
+                record('noise', amount='', parties=['Other'], description='Payment receipt fee'),
+                record('excluded', excluded=True),
+                record('retired', retired=True),
+            ],
+            amount='',
+            description='Fund transfer payment',
+        )
         self.assertEqual(selected, [])
 
     def test_exact_reference_reserved_and_conflict_flagged(self):
         """A reference-linked partial/cross-currency payment is retained as a flagged candidate."""
         items = [record(f'N{n}', amount='99') for n in range(25)]
         items += [record(f'A{n}', parties=['Other']) for n in range(25)]
-        items.append(record('ref', amount='1000', currency='USD', parties=['Other'],
-                            typed_references=[{'type': 'invoice', 'value': 'INV-00123'}]))
+        items.append(
+            record(
+                'ref',
+                amount='1000',
+                currency='USD',
+                parties=['Other'],
+                typed_references=[{'type': 'invoice', 'value': 'INV-00123'}],
+            )
+        )
         selected, audit = self.select(items, description='Payment INV-00123')
         self.assertEqual(selected[0], 'ref')
         self.assertEqual(len(selected), 40)
@@ -72,16 +98,24 @@ class RetrievalTests(unittest.TestCase):
 
     def test_reference_boundaries_and_tax_ids(self):
         """Never promote prefixes, recurring accounts or tax numbers to transaction references."""
-        items = [record(key, amount='99', parties=['Other'], typed_references=[{'type': kind, 'value': value}])
-                 for key, kind, value in [('prefix', 'invoice', 'INV-12'), ('tax', 'tax', '123456'),
-                                          ('account', 'account', '00999'), ('correct', 'invoice', 'INV-123')]]
+        items = [
+            record(key, amount='99', parties=['Other'], typed_references=[{'type': kind, 'value': value}])
+            for key, kind, value in [
+                ('prefix', 'invoice', 'INV-12'),
+                ('tax', 'tax', '123456'),
+                ('account', 'account', '00999'),
+                ('correct', 'invoice', 'INV-123'),
+            ]
+        ]
         selected, _ = self.select(items, description='INV-123 123456 00999')
         self.assertEqual(selected, ['correct'])
 
     def test_whitespace_case_and_leading_zeros(self):
         """Normalize whitespace/case, preserving significant leading zero differences."""
-        items = [record(key, amount='99', parties=['Other'], typed_references=[{'type': 'invoice', 'value': value}])
-                 for key, value in [('yes', 'Inv-00123'), ('no', 'INV-123')]]
+        items = [
+            record(key, amount='99', parties=['Other'], typed_references=[{'type': 'invoice', 'value': value}])
+            for key, value in [('yes', 'Inv-00123'), ('no', 'INV-123')]
+        ]
         selected, _ = self.select(items, description='payment inv - 00123')
         self.assertEqual(selected, ['yes'])
 
@@ -95,14 +129,17 @@ class RetrievalTests(unittest.TestCase):
 
     def test_labelled_legacy_references_are_supported(self):
         """Old labelled booking records remain usable without promoting arbitrary words."""
-        selected, _ = self.select([record('booking', amount='99', parties=['Other'],
-                                           references=['Booking number: B8G43P'])], description='Booking B8G43P')
+        selected, _ = self.select(
+            [record('booking', amount='99', parties=['Other'], references=['Booking number: B8G43P'])],
+            description='Booking B8G43P',
+        )
         self.assertEqual(selected, ['booking'])
 
     def test_live_payload_keeps_context_but_bounds_allocatable_ids(self):
         """Full parent evidence cannot silently enlarge the selected allocation shortlist."""
         from dashboard.services import piece_matching
         from tests.fixtures.piece_pipeline import PiecePipelineFixture
+
         fixture = PiecePipelineFixture()
         fixture.setUp()
         self.addCleanup(fixture.doCleanups)
@@ -124,6 +161,7 @@ class RetrievalTests(unittest.TestCase):
         from dashboard.services import piece_match_jobs, piece_matching
         from reconciliation.core.settings import DEFAULTS
         from tests.fixtures.piece_pipeline import PiecePipelineFixture
+
         fixture = PiecePipelineFixture()
         fixture.setUp()
         self.addCleanup(fixture.doCleanups)
@@ -146,17 +184,32 @@ class RetrievalTests(unittest.TestCase):
             def ask(self, prompt, schema, images):
                 """Return a no-match assessment to exercise the deterministic guard."""
                 supplied = json.loads(prompt.rsplit('\n', 1)[1])
-                return {'decisions': [{'bank_id': bank['id'], 'assessment': 'none',
-                                       'allocations': [], 'reason': 'No match in supplied evidence.'} for bank in supplied['banks']]}
+                return {
+                    'decisions': [
+                        {
+                            'bank_id': bank['id'],
+                            'assessment': 'none',
+                            'allocations': [],
+                            'reason': 'No match in supplied evidence.',
+                        }
+                        for bank in supplied['banks']
+                    ]
+                }
 
         config = {**DEFAULTS, 'codex_enabled': True, 'max_parallel': 2}
-        with patch.object(piece_match_jobs, 'CodexReviewer', Reviewer), \
-                patch.object(piece_match_jobs, 'rank', return_value=(choices, audit)), \
-                patch.object(piece_match_jobs, 'active_config', return_value=config):
+        with (
+            patch.object(piece_match_jobs, 'CodexReviewer', Reviewer),
+            patch.object(piece_match_jobs, 'rank', return_value=(choices, audit)),
+            patch.object(piece_match_jobs, 'active_config', return_value=config),
+        ):
             piece_match_jobs.start(fixture.review)
             fixture.review.piece_match_thread.join(5)
         self.assertFalse(piece_match_jobs.status(fixture.review)['running'])
         self.assertEqual(piece_match_jobs.status(fixture.review)['error'], '')
         result = json.loads((fixture.review.manifest_path.parent / 'final-review/piece-suggestions.json').read_text())
-        self.assertTrue(all(row['assessment'] == 'tentative' and '5 further candidates' in row['reason']
-                            for row in result['decisions']))
+        self.assertTrue(
+            all(
+                row['assessment'] == 'tentative' and '5 further candidates' in row['reason']
+                for row in result['decisions']
+            )
+        )

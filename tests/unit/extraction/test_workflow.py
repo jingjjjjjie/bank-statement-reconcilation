@@ -1,4 +1,5 @@
 """Extraction workflow: preparation, completion gate, inventory, resume and settings safeguards."""
+
 import copy
 import csv
 import hashlib
@@ -23,6 +24,7 @@ from tests.fixtures.workflow import FakeReviewer, ReviewFixture
 def is_extraction(schema):
     """True for the stored or the model-facing extraction schema."""
     from reconciliation.extraction.pieces import EXTRACTION as MODEL_EXTRACTION
+
     return schema in (EXTRACTION, MODEL_EXTRACTION)
 
 
@@ -121,8 +123,12 @@ class WorkflowTests(ReviewFixture, unittest.TestCase):
         """prepare --refresh reuses an identical completed Codex response without a new call."""
         self.prepared()
         prompt, model = "Cached fixture extraction", "fixture"
-        key = hashlib.sha256(json.dumps([load_prompt("shared/styles") + "\n\n" + prompt, EXTRACTION, model, "default",
-                                         CACHE_PROFILE], sort_keys=True).encode()).hexdigest()
+        key = hashlib.sha256(
+            json.dumps(
+                [load_prompt("shared/styles") + "\n\n" + prompt, EXTRACTION, model, "default", CACHE_PROFILE],
+                sort_keys=True,
+            ).encode()
+        ).hexdigest()
         folder = self.work / "model-cache" / key
         folder.mkdir(parents=True)
         expected = FakeReviewer().ask(prompt, EXTRACTION)
@@ -187,7 +193,9 @@ class WorkflowTests(ReviewFixture, unittest.TestCase):
         book.save(self.root / "invoice.xlsx")
         book.close()
         with ZipFile(self.root / "claim.docx", "w") as document:
-            document.writestr("word/document.xml", '<w:document xmlns:w="urn:test"><w:t>Travel claim MYR 45.00</w:t></w:document>')
+            document.writestr(
+                "word/document.xml", '<w:document xmlns:w="urn:test"><w:t>Travel claim MYR 45.00</w:t></w:document>'
+            )
         index, state = self.prepared()
         choices = {stage: {"model": stage, "reasoning": "high"} for stage in STAGES}
         config = {**DEFAULTS, "stages": choices}

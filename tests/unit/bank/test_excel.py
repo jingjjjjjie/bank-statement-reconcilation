@@ -1,4 +1,5 @@
 """Check reusable styles and bank-only export content without a sample workbook."""
+
 import tempfile
 import unittest
 from pathlib import Path
@@ -19,13 +20,27 @@ class BankExcelTests(unittest.TestCase):
         self.addCleanup(temporary.cleanup)
         self.root = Path(temporary.name)
         self.output = self.root / "answer.xlsx"
-        row = {"date": "2026-01-02", "counterparty": "Example vendor", "money_in": "0",
-               "money_out": "20", "balance": "80", "page": 2, "transaction_id": "test-1",
-               "narration": "Synthetic transfer", "counterparty_role": "recipient",
-               "counterparty_raw": "Example vendor"}
-        data = {"account": "123", "currency": "MYR", "source": "statement.pdf",
-                "opening_balance": "100", "total_money_in": "0", "total_money_out": "20",
-                "transactions": [row]}
+        row = {
+            "date": "2026-01-02",
+            "counterparty": "Example vendor",
+            "money_in": "0",
+            "money_out": "20",
+            "balance": "80",
+            "page": 2,
+            "transaction_id": "test-1",
+            "narration": "Synthetic transfer",
+            "counterparty_role": "recipient",
+            "counterparty_raw": "Example vendor",
+        }
+        data = {
+            "account": "123",
+            "currency": "MYR",
+            "source": "statement.pdf",
+            "opening_balance": "100",
+            "total_money_in": "0",
+            "total_money_out": "20",
+            "transactions": [row],
+        }
         mock = patch("reconciliation.bank.excel.read_master", return_value=data)
         mock.start()
         self.addCleanup(mock.stop)

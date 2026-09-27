@@ -1,4 +1,5 @@
 """FastAPI application, local request protection, and Vue asset delivery."""
+
 import asyncio
 import hashlib
 import os
@@ -13,8 +14,20 @@ from jsonschema.exceptions import ValidationError as SchemaValidationError
 from reconciliation.intake.workspace import SourceSelection
 
 FRONTEND = Path(os.environ.get("DASHBOARD_FRONTEND", Path(__file__).parent / "frontend/dist"))
-PAGES = {"", "source", "review", "exact-report", "content-review", "documents", "bank",
-         "matching", "final-report", "extraction-review", "settings", "complete"}
+PAGES = {
+    "",
+    "source",
+    "review",
+    "exact-report",
+    "content-review",
+    "documents",
+    "bank",
+    "matching",
+    "final-report",
+    "extraction-review",
+    "settings",
+    "complete",
+}
 
 
 class Context:
@@ -60,8 +73,11 @@ def create_app(review=None, token=None, sources=None):
     from dashboard.api import files, review as review_api, source
 
     workspace = Path(__file__).resolve().parent.parent
-    sources = sources or (SourceSelection(review.manifest_path.parent, review.data) if review else
-                          SourceSelection(workspace, workspace / "dashboard/.data"))
+    sources = sources or (
+        SourceSelection(review.manifest_path.parent, review.data)
+        if review
+        else SourceSelection(workspace, workspace / "dashboard/.data")
+    )
     app = FastAPI(title="Reconciliation dashboard", docs_url=None, redoc_url=None, openapi_url=None)
     app.state.context = Context(review, token or secrets.token_urlsafe(32), sources)
 
@@ -74,8 +90,9 @@ def create_app(review=None, token=None, sources=None):
             return JSONResponse({"error": "Local access only"}, status_code=403)
         if request.method == "POST":
             origin = request.headers.get("origin")
-            if (request.headers.get("X-Review-Token") != app.state.context.token or
-                    (origin and origin not in {f"http://{host}" for host in hosts})):
+            if request.headers.get("X-Review-Token") != app.state.context.token or (
+                origin and origin not in {f"http://{host}" for host in hosts}
+            ):
                 return JSONResponse({"error": "Refresh the dashboard before making changes"}, status_code=403)
             body = bytearray()
             async for chunk in request.stream():
@@ -88,7 +105,9 @@ def create_app(review=None, token=None, sources=None):
         response = await call_next(request)
         response.headers.setdefault("Cache-Control", "no-store")
         response.headers["X-Content-Type-Options"] = "nosniff"
-        response.headers["Content-Security-Policy"] = "default-src 'self'; img-src 'self' blob:; frame-ancestors 'none'; base-uri 'none'"
+        response.headers["Content-Security-Policy"] = (
+            "default-src 'self'; img-src 'self' blob:; frame-ancestors 'none'; base-uri 'none'"
+        )
         return response
 
     @app.exception_handler(HTTPException)
@@ -120,9 +139,12 @@ def create_app(review=None, token=None, sources=None):
     async def session():
         """Return routing metadata without scanning documents or acquiring a workflow lock."""
         state = app.state.context
-        return {"token": state.token, "review_id": state.review_id,
-                "active": state.review is not None,
-                "mode": state.review.manifest.get("Mode", "legacy") if state.review else None}
+        return {
+            "token": state.token,
+            "review_id": state.review_id,
+            "active": state.review is not None,
+            "mode": state.review.manifest.get("Mode", "legacy") if state.review else None,
+        }
 
     app.include_router(source.router)
     app.include_router(review_api.router)
@@ -149,7 +171,8 @@ def create_app(review=None, token=None, sources=None):
         etag = chr(34) + hashlib.sha256(body).hexdigest() + chr(34)
         headers = {"ETag": etag, "Cache-Control": "private, no-cache"}
         cached = request.headers.get("if-none-match") == etag
-        return Response(b"" if cached else body, status_code=304 if cached else 200,
-                        media_type="text/html", headers=headers)
+        return Response(
+            b"" if cached else body, status_code=304 if cached else 200, media_type="text/html", headers=headers
+        )
 
     return app

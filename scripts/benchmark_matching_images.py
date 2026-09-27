@@ -1,4 +1,5 @@
 """Regenerate isolated extraction, then compare final matching with and without images."""
+
 import argparse
 import copy
 import hashlib
@@ -41,17 +42,24 @@ def no_shared_cache(path):
 def extraction_coverage(index, state):
     """Count complete documents and keep missing or stale assembly unresolved."""
     from reconciliation.extraction.assembly import current_assembly
+
     complete, unresolved = [], []
     for key, document in index['documents'].items():
         if not document.get('accepted', True):
             continue
-        ready = not document.get('error') and bool(document['units']) and all(
-            f'{key}:{n}' in state.get('units', {}) for n in range(len(document['units'])))
+        ready = (
+            not document.get('error')
+            and bool(document['units'])
+            and all(f'{key}:{n}' in state.get('units', {}) for n in range(len(document['units'])))
+        )
         if ready and len(document['units']) > 1:
             ready = current_assembly(document, state) is not None
         (complete if ready else unresolved).append(key)
-    return {'complete_documents': len(complete), 'eligible_documents': len(complete) + len(unresolved),
-            'unresolved_documents': unresolved}
+    return {
+        'complete_documents': len(complete),
+        'eligible_documents': len(complete) + len(unresolved),
+        'unresolved_documents': unresolved,
+    }
 
 
 def prepare(project, output, workers):
@@ -59,6 +67,7 @@ def prepare(project, output, workers):
     from dashboard.services.piece_matching import current
     from dashboard.services.review import Review
     from reconciliation.core.settings import load_config
+
     root = Path(__file__).resolve().parents[1]
     output.mkdir(parents=True, exist_ok=False)
     review = Review(project / 'duplicate-manifest.json', project / 'dashboard-data')
@@ -99,21 +108,46 @@ def prepare(project, output, workers):
                 shutil.copyfile(image, destination)
                 unit['image'] = str(destination)
     save(output / 'extraction/index.json', frozen)
-    save(output / 'extraction/state.json', {'index_sha256': digest(output / 'extraction/index.json').upper(),
-         'units': {}, 'screens': {}, 'pairs': {}, 'decisions': {}, 'model': None})
+    save(
+        output / 'extraction/state.json',
+        {
+            'index_sha256': digest(output / 'extraction/index.json').upper(),
+            'units': {},
+            'screens': {},
+            'pairs': {},
+            'decisions': {},
+            'model': None,
+        },
+    )
     for name in ['reconciliation', 'prompts', 'dashboard']:
-        shutil.copytree(root / name, output / 'runtime' / name,
-            ignore=shutil.ignore_patterns('__pycache__', 'node_modules', 'frontend', '.data'))
-    save(output / 'plan.json', {'model': 'gpt-5.6-sol', 'workers': workers, 'seed': 20260927,
-        'document_count': len(frozen['documents']),
-        'eligible_documents': sum(d.get('accepted', True) and not d.get('error') for d in frozen['documents'].values()),
-        'arms': ['images', 'text'], 'matching_cases': 50,
-        'scope': 'Fresh extraction with clarified RM/MYR rule, then paired matching on identical facts; no live approvals or matches written.',
-        'code_hashes': {str(p.relative_to(output / 'runtime')): digest(p)
-                        for p in (output / 'runtime').rglob('*') if p.is_file()},
-        'live_index_hash': digest(project / 'review/index.json'),
-        'live_state_hash': digest(project / 'review/state.json'),
-        'live_accepted_hash': digest(project / 'review/receipt-matches.json')})
+        shutil.copytree(
+            root / name,
+            output / 'runtime' / name,
+            ignore=shutil.ignore_patterns('__pycache__', 'node_modules', 'frontend', '.data'),
+        )
+    save(
+        output / 'plan.json',
+        {
+            'model': 'gpt-5.6-sol',
+            'workers': workers,
+            'seed': 20260927,
+            'document_count': len(frozen['documents']),
+            'eligible_documents': sum(
+                d.get('accepted', True) and not d.get('error') for d in frozen['documents'].values()
+            ),
+            'arms': ['images', 'text'],
+            'matching_cases': 50,
+            'scope': 'Fresh extraction with clarified RM/MYR rule, then paired matching on identical facts; no live approvals or matches written.',
+            'code_hashes': {
+                str(p.relative_to(output / 'runtime')): digest(p)
+                for p in (output / 'runtime').rglob('*')
+                if p.is_file()
+            },
+            'live_index_hash': digest(project / 'review/index.json'),
+            'live_state_hash': digest(project / 'review/state.json'),
+            'live_accepted_hash': digest(project / 'review/receipt-matches.json'),
+        },
+    )
     print(json.dumps({k: v for k, v in read(output / 'plan.json').items() if k != 'code_hashes'}), flush=True)
 
 
@@ -122,6 +156,7 @@ def extract_fresh(output, workers):
     from reconciliation.extraction.workflow import load, run
     from reconciliation.model.codex import CodexReviewer
     from reconciliation.model.token_usage import summary
+
     work = output / 'extraction'
     config = read(output / 'config.json')
     config['max_parallel'] = workers
@@ -135,16 +170,21 @@ def extract_fresh(output, workers):
             run(work, index, state, engine)
         except Exception as failure:
             status, error = 'unresolved', str(failure)
-    result = {'status': status, 'error': error, 'seconds': time.perf_counter() - started,
-              'usage': summary(engine.usage_path), 'unit_results': len(state['units']),
-              'assemblies': len(state.get('assemblies', {})), **extraction_coverage(index, state)}
+    result = {
+        'status': status,
+        'error': error,
+        'seconds': time.perf_counter() - started,
+        'usage': summary(engine.usage_path),
+        'unit_results': len(state['units']),
+        'assemblies': len(state.get('assemblies', {})),
+        **extraction_coverage(index, state),
+    }
     if result['unresolved_documents']:
         result['status'] = 'unresolved'
     save(output / 'extraction-summary.json', result)
     with (output / 'extraction-runs.jsonl').open('a', encoding='utf-8') as stream:
         stream.write(json.dumps({**result, 'workers': workers, 'new_attempts': engine.calls}) + '\n')
-    print(json.dumps({key: value for key, value in result.items()
-                      if key != 'unresolved_documents'}), flush=True)
+    print(json.dumps({key: value for key, value in result.items() if key != 'unresolved_documents'}), flush=True)
     return result
 
 
@@ -157,7 +197,11 @@ def extract_with_retries(output, workers, retries):
         result = extract_fresh(output, workers)
         if result['status'] == 'finished' or attempt == retries:
             return result
-        events = [json.loads(line) for line in audit.read_text(encoding='utf-8').splitlines()[offset:]] if audit.exists() else []
+        events = (
+            [json.loads(line) for line in audit.read_text(encoding='utf-8').splitlines()[offset:]]
+            if audit.exists()
+            else []
+        )
         failures = [event for event in events if event.get('status') == 'failed']
         if not failures or not failures[-1].get('events'):
             return result
@@ -180,14 +224,14 @@ def build_facts(output):
     from reconciliation.core.revision import revision
     from reconciliation.extraction.assembly import current_assembly
     from reconciliation.extraction.pieces import canonical
+
     index, state = read(output / 'extraction/index.json'), read(output / 'extraction/state.json')
     banks = read(output / 'previous-evidence.json')['banks']
     items, documents, unresolved = {}, {}, []
     for key, document in index['documents'].items():
         if not document.get('accepted', True) or document.get('error'):
             continue
-        raw = (current_assembly(document, state) if len(document['units']) > 1
-               else state['units'].get(key + ':0'))
+        raw = current_assembly(document, state) if len(document['units']) > 1 else state['units'].get(key + ':0')
         if raw is None:
             unresolved.append(key)
             continue
@@ -195,17 +239,40 @@ def build_facts(output):
         for n, piece in enumerate(raw.get('receipts', [])):
             fact = canonical(piece)
             item_id = 'bench_' + revision([key, fact, n])[:24]
-            item = {**fact, 'id': item_id, 'piece_id': item_id, 'document': key,
-                    'source_path': document['paths'][0], 'parties': [fact['payee']] if fact['payee'] else [],
-                    'references': [r['value'] for r in fact['references']], 'typed_references': fact['references'],
-                    'date': '', 'direction': '', 'claim_group': '', 'expense_id': '',
-                    'accepted': False, 'excluded': False, 'boundary_unresolved': not raw.get('readable', True)}
+            item = {
+                **fact,
+                'id': item_id,
+                'piece_id': item_id,
+                'document': key,
+                'source_path': document['paths'][0],
+                'parties': [fact['payee']] if fact['payee'] else [],
+                'references': [r['value'] for r in fact['references']],
+                'typed_references': fact['references'],
+                'date': '',
+                'direction': '',
+                'claim_group': '',
+                'expense_id': '',
+                'accepted': False,
+                'excluded': False,
+                'boundary_unresolved': not raw.get('readable', True),
+            }
             items[item_id] = item
             doc_items.append(item)
-        documents[key] = {'document_id': key, 'summaries': [raw.get('summary', '')],
-                          'totals': raw.get('totals', []), 'pieces': doc_items}
-    value = normalize_currencies({'banks': banks, 'items': items, 'index': index,
-                                 'facts': {'documents': documents}, 'unresolved_documents': unresolved})
+        documents[key] = {
+            'document_id': key,
+            'summaries': [raw.get('summary', '')],
+            'totals': raw.get('totals', []),
+            'pieces': doc_items,
+        }
+    value = normalize_currencies(
+        {
+            'banks': banks,
+            'items': items,
+            'index': index,
+            'facts': {'documents': documents},
+            'unresolved_documents': unresolved,
+        }
+    )
     save(output / 'fresh-evidence.json', value)
     return value
 
@@ -215,10 +282,14 @@ def prepare_cases(output):
     from dashboard.services.piece_matching import model_payload
     from reconciliation.core.prompts import load_prompt
     from reconciliation.matching.retrieval import retrieve
+
     coverage = extraction_coverage(read(output / 'extraction/index.json'), read(output / 'extraction/state.json'))
     if coverage['unresolved_documents']:
-        raise ValueError('Finish fresh extraction before selecting matching cases: '
-                         + str(len(coverage['unresolved_documents'])) + ' documents unresolved')
+        raise ValueError(
+            'Finish fresh extraction before selecting matching cases: '
+            + str(len(coverage['unresolved_documents']))
+            + ' documents unresolved'
+        )
     evidence = build_facts(output)
     banks, items = evidence['banks'], evidence['items']
     choices, retrieval = retrieve(list(banks.values()), list(items.values()))
@@ -226,7 +297,13 @@ def prepare_cases(output):
     errors = {entry.split(': ', 1)[0]: entry.split(': ', 1)[1] for entry in prior.get('errors', [])}
     groups = {'currency': [], 'size': [], 'other': []}
     for key in sorted(banks, key=lambda value: int(value[1:])):
-        label = 'currency' if 'matching currencies' in errors.get(key, '') else 'size' if 'matching limit' in errors.get(key, '') else 'other'
+        label = (
+            'currency'
+            if 'matching currencies' in errors.get(key, '')
+            else 'size'
+            if 'matching limit' in errors.get(key, '')
+            else 'other'
+        )
         if choices[key]:
             groups[label].append(key)
     rng = random.Random(20260927)
@@ -243,24 +320,48 @@ def prepare_cases(output):
     rng.shuffle(selected)
     cases = []
     for number, (key, group) in enumerate(selected, 1):
-        payload, images, allowed = model_payload(banks, items, evidence['index'], evidence['facts'], choices, [key], retrieval)
+        payload, images, allowed = model_payload(
+            banks, items, evidence['index'], evidence['facts'], choices, [key], retrieval
+        )
         # Both prompts truthfully describe optional images; all accounting rules stay identical.
         # This historical comparison keeps the prompt text it was measured with.
         instructions = load_prompt('legacy/matching_policy') + '\n\n' + load_prompt('legacy/piece_matching')
-        instructions = instructions.replace('supplied complete supporting documents and their pieces',
-            'supplied extracted supporting-document facts and their pieces')
-        instructions += ('\nEvidence mode is stated in the payload. Use attached images only when supplied. '
-                         'Without images, do not claim to have inspected visuals. Missing, ambiguous or conflicting '
-                         'extracted facts remain unknown and require tentative or context-only treatment. '
-                         'Never fill a blank extracted currency from the bank currency.\n')
-        cases.append({'number': number, 'bank_id': key, 'stratum': group, 'payload': payload,
-                      'images': images, 'allowed': allowed, 'instructions': instructions,
-                      'retrieval': retrieval[key]})
+        instructions = instructions.replace(
+            'supplied complete supporting documents and their pieces',
+            'supplied extracted supporting-document facts and their pieces',
+        )
+        instructions += (
+            '\nEvidence mode is stated in the payload. Use attached images only when supplied. '
+            'Without images, do not claim to have inspected visuals. Missing, ambiguous or conflicting '
+            'extracted facts remain unknown and require tentative or context-only treatment. '
+            'Never fill a blank extracted currency from the bank currency.\n'
+        )
+        cases.append(
+            {
+                'number': number,
+                'bank_id': key,
+                'stratum': group,
+                'payload': payload,
+                'images': images,
+                'allowed': allowed,
+                'instructions': instructions,
+                'retrieval': retrieval[key],
+            }
+        )
     save(output / 'cases.json', cases)
-    print(json.dumps({'cases': len(cases), 'strata': dict(Counter(c['stratum'] for c in cases)),
-          'images_over_limit': sum(len(c['images']) > 40 for c in cases),
-          'fresh_pieces': len(items), 'blank_currency_pieces': sum(not i['currency'] for i in items.values()),
-          'unresolved_documents': evidence['unresolved_documents']}), flush=True)
+    print(
+        json.dumps(
+            {
+                'cases': len(cases),
+                'strata': dict(Counter(c['stratum'] for c in cases)),
+                'images_over_limit': sum(len(c['images']) > 40 for c in cases),
+                'fresh_pieces': len(items),
+                'blank_currency_pieces': sum(not i['currency'] for i in items.values()),
+                'unresolved_documents': evidence['unresolved_documents'],
+            }
+        ),
+        flush=True,
+    )
     return cases, evidence
 
 
@@ -269,7 +370,12 @@ def match(output, workers):
     from dashboard.services.piece_match_jobs import SCHEMA, validate_result
     from reconciliation.model.codex import CodexReviewer
     from reconciliation.model.token_usage import summary
-    cases, evidence = prepare_cases(output) if not (output / 'cases.json').exists() else (read(output / 'cases.json'), read(output / 'fresh-evidence.json'))
+
+    cases, evidence = (
+        prepare_cases(output)
+        if not (output / 'cases.json').exists()
+        else (read(output / 'cases.json'), read(output / 'fresh-evidence.json'))
+    )
 
     def job(case, arm):
         """Measure one arm and retain app limits or invalid proposals as unresolved."""
@@ -277,7 +383,11 @@ def match(output, workers):
         if (folder / 'measurement.json').exists():
             return read(folder / 'measurement.json')
         payload = copy.deepcopy(case['payload'])
-        payload['evidence_mode'] = 'extracted facts plus attached page images' if arm == 'images' else 'extracted facts and native text only; no page images attached'
+        payload['evidence_mode'] = (
+            'extracted facts plus attached page images'
+            if arm == 'images'
+            else 'extracted facts and native text only; no page images attached'
+        )
         images = case['images'] if arm == 'images' else []
         if arm == 'text':
             for doc in payload['documents'].values():
@@ -285,8 +395,13 @@ def match(output, workers):
                     source.pop('image_number', None)
         prompt = case['instructions'] + json.dumps(payload, ensure_ascii=False, separators=(',', ':'))
         save(folder / 'request.json', {'prompt': prompt, 'images': images, 'schema': SCHEMA})
-        row = {'bank_id': case['bank_id'], 'arm': arm, 'stratum': case['stratum'],
-               'image_count': len(images), 'prompt_characters': len(prompt)}
+        row = {
+            'bank_id': case['bank_id'],
+            'arm': arm,
+            'stratum': case['stratum'],
+            'image_count': len(images),
+            'prompt_characters': len(prompt),
+        }
         engine = CodexReviewer(folder, model='gpt-5.6-sol', max_calls=1, timeout=600)
         engine.stage = 'matching_' + arm
         started = time.perf_counter()
@@ -295,7 +410,9 @@ def match(output, workers):
                 raise ValueError('Complete document context exceeds the matching limit; review manually')
             response = engine.ask(prompt, SCHEMA, images)
             row['raw_response'] = response
-            decision = validate_result(response, [case['bank_id']], case['allowed'], evidence['banks'], evidence['items'])[0]
+            decision = validate_result(
+                response, [case['bank_id']], case['allowed'], evidence['banks'], evidence['items']
+            )[0]
             if case['retrieval']['search_incomplete']:
                 if decision['assessment'] == 'none' or case['retrieval']['reference_overflow']:
                     decision['assessment'] = 'tentative'
@@ -308,13 +425,26 @@ def match(output, workers):
         return row
 
     results, started = [], time.perf_counter()
-    with patch('reconciliation.core.development_cache.root_for', no_shared_cache), ThreadPoolExecutor(max_workers=workers) as pool:
-        futures = [pool.submit(job, case, arm) for case in cases
-                   for arm in (['images', 'text'] if case['number'] % 2 else ['text', 'images'])]
+    with (
+        patch('reconciliation.core.development_cache.root_for', no_shared_cache),
+        ThreadPoolExecutor(max_workers=workers) as pool,
+    ):
+        futures = [
+            pool.submit(job, case, arm)
+            for case in cases
+            for arm in (['images', 'text'] if case['number'] % 2 else ['text', 'images'])
+        ]
         for future in as_completed(futures):
             results.append(future.result())
-            save(output / 'matching-progress.json', {'completed': len(results), 'total': len(futures),
-                'seconds': time.perf_counter() - started, 'statuses': dict(Counter(r['status'] for r in results))})
+            save(
+                output / 'matching-progress.json',
+                {
+                    'completed': len(results),
+                    'total': len(futures),
+                    'seconds': time.perf_counter() - started,
+                    'statuses': dict(Counter(r['status'] for r in results)),
+                },
+            )
             if len(results) % 10 == 0:
                 print(f'Matching {len(results)}/{len(futures)}', flush=True)
     save(output / 'matching-results.json', results)

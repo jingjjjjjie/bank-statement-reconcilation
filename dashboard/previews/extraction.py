@@ -1,4 +1,5 @@
 """Read-only original-document previews for extraction review."""
+
 import io
 from zipfile import ZipFile
 
@@ -14,9 +15,12 @@ PREVIEW_DPI = 150
 def embedded_images(path):
     """List Office picture parts without extracting archive paths onto disk."""
     with ZipFile(path) as archive:
-        return sorted(name for name in archive.namelist()
-                      if name.startswith(("word/media/", "xl/media/"))
-                      and name.lower().endswith((".png", ".jpg", ".jpeg", ".tif", ".tiff", ".bmp", ".webp", ".gif")))
+        return sorted(
+            name
+            for name in archive.namelist()
+            if name.startswith(("word/media/", "xl/media/"))
+            and name.lower().endswith((".png", ".jpg", ".jpeg", ".tif", ".tiff", ".bmp", ".webp", ".gif"))
+        )
 
 
 def describe(path):
@@ -25,8 +29,12 @@ def describe(path):
     if suffix in {".docx", ".xlsx"}:
         info = office_preview.describe(path)
         pictures = embedded_images(path)
-        return {**info, "office_pages": info["pages"], "pages": info["pages"] + len(pictures),
-                "labels": info["labels"] + [f"Embedded image: {name}" for name in pictures]}
+        return {
+            **info,
+            "office_pages": info["pages"],
+            "pages": info["pages"] + len(pictures),
+            "labels": info["labels"] + [f"Embedded image: {name}" for name in pictures],
+        }
     if suffix == ".pdf":
         with pymupdf.open(path) as document:
             if document.needs_pass:
@@ -39,10 +47,18 @@ def describe(path):
         return {"kind": "image", "pages": count, "labels": [f"Image {n + 1}" for n in range(count)]}
     except UnidentifiedImageError:
         if suffix in {".txt", ".csv", ".json", ".xml", ".md", ".log"}:
-            return {"kind": "text", "pages": 1, "labels": ["Document"],
-                    "text": path.read_text(encoding="utf-8-sig", errors="replace")}
-        return {"kind": "unsupported", "pages": 0, "labels": [],
-                "message": "Inline preview is unavailable for this format. Open the original document to review it."}
+            return {
+                "kind": "text",
+                "pages": 1,
+                "labels": ["Document"],
+                "text": path.read_text(encoding="utf-8-sig", errors="replace"),
+            }
+        return {
+            "kind": "unsupported",
+            "pages": 0,
+            "labels": [],
+            "message": "Inline preview is unavailable for this format. Open the original document to review it.",
+        }
 
 
 def image(path, page):

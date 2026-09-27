@@ -20,7 +20,9 @@ class BankStatementTests(unittest.TestCase):
 
     # Retain bank address evidence while separating it from the display name.
     def test_incoming_address(self):
-        row = describe("INWARD RENTAS /MISC CREDIT, 110172001 Yihai\nMalaysia Food Sdn Bhd LEVEL 6+MENARA 1, REF", D("10"))
+        row = describe(
+            "INWARD RENTAS /MISC CREDIT, 110172001 Yihai\nMalaysia Food Sdn Bhd LEVEL 6+MENARA 1, REF", D("10")
+        )
         self.assertEqual(row["counterparty"], "Yihai Malaysia Food Sdn Bhd")
         self.assertIn("LEVEL", row["counterparty_raw"])
         self.assertEqual(row["counterparty_role"], "payer")
@@ -40,7 +42,9 @@ class BankStatementTests(unittest.TestCase):
 
     # A reference wrapping at the page width must not acquire an extra space.
     def test_wrapped_reference_is_preserved(self):
-        row = describe("DuitNow CR TRF /MISC CREDIT, MONEYMATCH SDN BHD,\nMMCGV4UGQ6DM90VUL69Y\nH9D00AT1, 28255609", D("310.90"))
+        row = describe(
+            "DuitNow CR TRF /MISC CREDIT, MONEYMATCH SDN BHD,\nMMCGV4UGQ6DM90VUL69Y\nH9D00AT1, 28255609", D("310.90")
+        )
         self.assertEqual(row["particular"], "MMCGV4UGQ6DM90VUL69Y\nH9D00AT1, 28255609")
 
     # Empty or two-sided transactions can conceal errors despite balancing.
@@ -74,15 +78,35 @@ class MasterIntegrityTests(unittest.TestCase):
         self.source = self.root / "source.pdf"
         self.source.write_bytes(b"synthetic source fingerprint")
         self.master = self.root / "master.csv"
-        self.result = {"source": str(self.source), "account": "123", "currency": "MYR",
-                       "year_supplied": 2025, "opening_balance": D("100.00"),
-                       "closing_balance": D("80.00"), "total_money_in": D("0.00"),
-                       "total_money_out": D("20.00"), "balance_checks": "passed",
-                       "transactions": [
-                           {"date": "2025-12-01", "page": 2, "narration": "Fund Transfer /DEBIT TRANSFER, ALICE, REF1",
-                            "money_in": D("0.00"), "money_out": D("10.00"), "balance": D("90.00")},
-                           {"date": "2025-12-01", "page": 2, "narration": "Fund Transfer /DEBIT TRANSFER, BOB, REF2",
-                            "money_in": D("0.00"), "money_out": D("10.00"), "balance": D("80.00")}]}
+        self.result = {
+            "source": str(self.source),
+            "account": "123",
+            "currency": "MYR",
+            "year_supplied": 2025,
+            "opening_balance": D("100.00"),
+            "closing_balance": D("80.00"),
+            "total_money_in": D("0.00"),
+            "total_money_out": D("20.00"),
+            "balance_checks": "passed",
+            "transactions": [
+                {
+                    "date": "2025-12-01",
+                    "page": 2,
+                    "narration": "Fund Transfer /DEBIT TRANSFER, ALICE, REF1",
+                    "money_in": D("0.00"),
+                    "money_out": D("10.00"),
+                    "balance": D("90.00"),
+                },
+                {
+                    "date": "2025-12-01",
+                    "page": 2,
+                    "narration": "Fund Transfer /DEBIT TRANSFER, BOB, REF2",
+                    "money_in": D("0.00"),
+                    "money_out": D("10.00"),
+                    "balance": D("80.00"),
+                },
+            ],
+        }
         write_master(self.result, self.master)
         mock = patch("reconciliation.bank.statement.extract", return_value=self.result)
         mock.start()
@@ -142,8 +166,6 @@ class MasterIntegrityTests(unittest.TestCase):
         self.change(lambda rows: [row.update(account="OTHER") for row in rows])
         with self.assertRaisesRegex(ValueError, "account differs from source PDF"):
             read_master(self.master)
-
-
 
 
 if __name__ == "__main__":

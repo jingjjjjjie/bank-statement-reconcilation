@@ -1,4 +1,5 @@
 """Fixture: Multi-page PDF reviews with a page-counting fake model."""
+
 import json
 import tempfile
 import unittest
@@ -14,6 +15,7 @@ from reconciliation.intake.duplicates import organize
 
 class Reviewer:
     """Return validated source-bound pieces while counting actual workflow requests."""
+
     model = 'fixture'
 
     def __init__(self, pages):
@@ -26,15 +28,29 @@ class Reviewer:
         self.calls.append({'stage': self.stage, 'prompt': prompt, 'images': list(images)})
         if self.fail or len(self.calls) == self.fail_at:
             raise ValueError('Model request failed')
-        piece = {'piece_type': 'Receipt or invoice', 'payer': '', 'payee': 'Supplier', 'other_names': [],
-            'amount': '45.00', 'amount_location': 'page ' + str(self.pages), 'currency': 'RM', 'date': '',
-            'document_number': 'INV-001', 'references': [], 'description': 'Supplies'}
-        result = {'readable': True, 'description': 'Invoice', 'totals': [
-            {'label': 'Invoice total', 'amount': '45.00', 'currency': 'RM', 'location': 'last page'}],
-            'pieces': [piece]}
+        piece = {
+            'piece_type': 'Receipt or invoice',
+            'payer': '',
+            'payee': 'Supplier',
+            'other_names': [],
+            'amount': '45.00',
+            'amount_location': 'page ' + str(self.pages),
+            'currency': 'RM',
+            'date': '',
+            'document_number': 'INV-001',
+            'references': [],
+            'description': 'Supplies',
+        }
+        result = {
+            'readable': True,
+            'description': 'Invoice',
+            'totals': [{'label': 'Invoice total', 'amount': '45.00', 'currency': 'RM', 'location': 'last page'}],
+            'pieces': [piece],
+        }
         if schema == pieces.ASSEMBLY:
-            payload = next(json.loads(line) for line in reversed(prompt.splitlines())
-                           if line.startswith('[{"source_unit":'))
+            payload = next(
+                json.loads(line) for line in reversed(prompt.splitlines()) if line.startswith('[{"source_unit":')
+            )
             numbers = [unit['source_unit'] for unit in payload]
             if self.renumber:
                 numbers = list(range(1, len(numbers) + 1))
@@ -67,4 +83,3 @@ class PdfGroupsFixture(unittest.TestCase):
         workflow.prepare(manifest, work, config)
         index, state = workflow.load(work)
         return work, index, state
-

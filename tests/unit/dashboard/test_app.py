@@ -1,4 +1,5 @@
 """Dashboard decisions only touch temporary duplicate fixtures in these tests."""
+
 import json
 import tempfile
 import threading
@@ -48,16 +49,16 @@ class DashboardTests(unittest.TestCase):
     def test_workflow_guide_rechecks_undo_and_bank_evidence(self):
         """Only verified steps turn green, and undo removes exact readiness."""
         self.assertFalse(any(step["checked"] for step in workflow_guide(None)["steps"]))
-        self.assertEqual([step["checked"] for step in workflow_guide(self.review)["steps"]],
-                         [True, False, False, False, False])
+        self.assertEqual(
+            [step["checked"] for step in workflow_guide(self.review)["steps"]], [True, False, False, False, False]
+        )
         self.review.keep(self.group, self.ids[0])
         steps = workflow_guide(self.review)["steps"]
         self.assertTrue(steps[1]["checked"])
         self.assertEqual(steps[1]["next"], "/documents")
         bank = self.base / "bank-output"
         bank.mkdir()
-        (bank / "master_statement.csv").write_text(
-            "balance_checks,matching_status\npassed,pending\n", encoding="utf-8")
+        (bank / "master_statement.csv").write_text("balance_checks,matching_status\npassed,pending\n", encoding="utf-8")
         steps = workflow_guide(self.review)["steps"]
         self.assertTrue(steps[3]["checked"])
         self.assertIsNone(steps[3]["next"])
@@ -103,14 +104,31 @@ class DashboardTests(unittest.TestCase):
         work = self.base / "review"
         work.mkdir()
         (work / "index.json").write_text("{}", encoding="utf-8")
-        record(work / "token-usage.jsonl", {"id": "one", "status": "finished", "stage": "pdf",
-               "model": "test", "usage": {"input_tokens": 100, "cached_input_tokens": 20,
-                                          "output_tokens": 25, "reasoning_output_tokens": 5}})
-        with patch("reconciliation.extraction.workflow.load", return_value=({}, {})), patch("reconciliation.extraction.workflow.gate", return_value=[]):
+        record(
+            work / "token-usage.jsonl",
+            {
+                "id": "one",
+                "status": "finished",
+                "stage": "pdf",
+                "model": "test",
+                "usage": {
+                    "input_tokens": 100,
+                    "cached_input_tokens": 20,
+                    "output_tokens": 25,
+                    "reasoning_output_tokens": 5,
+                },
+            },
+        )
+        with (
+            patch("reconciliation.extraction.workflow.load", return_value=({}, {})),
+            patch("reconciliation.extraction.workflow.gate", return_value=[]),
+        ):
             self.assertFalse(self.review.completion()["complete"])
             bank = self.base / "bank-output"
             bank.mkdir()
-            (bank / "master_statement.csv").write_text("balance_checks,matching_status\npassed,matched\n", encoding="utf-8")
+            (bank / "master_statement.csv").write_text(
+                "balance_checks,matching_status\npassed,matched\n", encoding="utf-8"
+            )
             result = self.review.completion()
         self.assertTrue(result["complete"])
         self.assertEqual(result["token_usage"]["totals"]["input_tokens"], 100)
@@ -123,7 +141,8 @@ class DashboardTests(unittest.TestCase):
         (bank / "master_statement.csv").write_text(
             "account,currency,opening_balance,closing_balance,total_money_in,total_money_out,balance_checks,transaction_id,date,page,direction,money_in,money_out,balance,counterparty,counterparty_role,narration,matching_status\n"
             "8866,MYR,100.00,110.00,10.00,0.00,passed,tx-1,2025-12-01,2,in,10.00,0.00,110.00,Payer,payer,Transfer,pending\n",
-            encoding="utf-8")
+            encoding="utf-8",
+        )
         workbook = bank / "answer_statement_bank_only.xlsx"
         workbook.write_bytes(b"bank workbook fixture")
         server = TestServer(("127.0.0.1", 0), create_app(self.review, "test-token"))
@@ -134,8 +153,7 @@ class DashboardTests(unittest.TestCase):
         url = f"http://127.0.0.1:{server.server_port}"
         with urllib.request.urlopen(url + "/api/bank-statement") as response:
             data = json.load(response)
-        self.assertEqual((data["count"], data["matched"], data["transactions"][0]["counterparty"]),
-                         (1, 0, "Payer"))
+        self.assertEqual((data["count"], data["matched"], data["transactions"][0]["counterparty"]), (1, 0, "Payer"))
         self.assertTrue(data["workbook_available"])
         with urllib.request.urlopen(url + "/api/bank-workbook") as response:
             self.assertEqual(response.read(), b"bank workbook fixture")
@@ -161,13 +179,16 @@ class DashboardTests(unittest.TestCase):
             with self.assertRaises(urllib.error.HTTPError) as error:
                 urllib.request.urlopen(urllib.request.Request(url + "/api/keep", body, headers))
             self.assertEqual(error.exception.code, 403)
-        request = urllib.request.Request(url + "/api/keep", body, {"X-Review-Token": "test-token", "Content-Type": "application/json"})
+        request = urllib.request.Request(
+            url + "/api/keep", body, {"X-Review-Token": "test-token", "Content-Type": "application/json"}
+        )
         with urllib.request.urlopen(request) as response:
             self.assertEqual(json.load(response)["reviewed"], 1)
 
     def test_vue_assets_and_direct_routes(self):
         """Known routes serve one shell and bundled assets remain local."""
         from dashboard.routes import FRONTEND
+
         server = TestServer(("127.0.0.1", 0), create_app(self.review, "test-token"))
         threading.Thread(target=server.serve_forever, daemon=True).start()
         self.addCleanup(server.server_close)

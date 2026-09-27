@@ -1,4 +1,5 @@
 """Benchmark fresh extraction at increasing concurrency without altering review state."""
+
 import argparse
 import hashlib
 import json
@@ -41,15 +42,23 @@ def prepare(root, work, output):
         source = Path(document['paths'][0])
         if digest(source) != key.lower():
             raise ValueError(f'Source changed: {source}')
-        sources.append({'id': key, 'paths': document['paths'],
-                        'original_paths': document.get('original_paths', document['paths'])})
+        sources.append(
+            {'id': key, 'paths': document['paths'], 'original_paths': document.get('original_paths', document['paths'])}
+        )
         if document.get('error') or not document.get('accepted', True):
             excluded.append({'document': key, 'reason': document.get('error') or 'unsupported'})
             continue
         for number, unit in enumerate(document['units']):
-            task = {'id': f'{key}-{number}', 'document': key, 'number': number,
-                    'source': str(source), 'label': unit['label'], 'text': unit['text'],
-                    'limitation': unit.get('limitation', ''), 'image': None}
+            task = {
+                'id': f'{key}-{number}',
+                'document': key,
+                'number': number,
+                'source': str(source),
+                'label': unit['label'],
+                'text': unit['text'],
+                'limitation': unit.get('limitation', ''),
+                'image': None,
+            }
             if unit.get('blocked'):
                 excluded.append({'unit': task['id'], 'reason': 'blocked input'})
                 continue
@@ -62,10 +71,15 @@ def prepare(root, work, output):
                 shutil.copyfile(image, target)
                 task.update(image=str(target), image_sha256=fingerprint)
             tasks.append(task)
-    manifest = {'source_index': str(work / 'index.json'), 'source_index_sha256': digest(work / 'index.json'),
-                'sources': sources, 'tasks': tasks, 'excluded': excluded,
-                'snapshot_seconds': time.perf_counter() - started,
-                'runtime_hashes': {str(p.relative_to(runtime)): digest(p) for p in runtime.rglob('*') if p.is_file()}}
+    manifest = {
+        'source_index': str(work / 'index.json'),
+        'source_index_sha256': digest(work / 'index.json'),
+        'sources': sources,
+        'tasks': tasks,
+        'excluded': excluded,
+        'snapshot_seconds': time.perf_counter() - started,
+        'runtime_hashes': {str(p.relative_to(runtime)): digest(p) for p in runtime.rglob('*') if p.is_file()},
+    }
     save(output / 'inputs.json', manifest)
     return manifest
 
@@ -93,14 +107,23 @@ def run_level(output, tasks, workers):
         # Per-unit namespaces also prevent identical units from hitting a local cache.
         worker.cache = folder / 'model-cache' / task['id']
         worker.cache.mkdir(parents=True)
-        result = {'unit': task['id'], 'document': task['document'], 'stage': worker.stage,
-                  'started_offset_seconds': begin - started}
+        result = {
+            'unit': task['id'],
+            'document': task['document'],
+            'stage': worker.stage,
+            'started_offset_seconds': begin - started,
+        }
         try:
-            request = prompt + '\n' + json.dumps({'location': task['label'], 'text': task['text'],
-                         'limitation': task['limitation']}, ensure_ascii=False)
+            request = (
+                prompt
+                + '\n'
+                + json.dumps(
+                    {'location': task['label'], 'text': task['text'], 'limitation': task['limitation']},
+                    ensure_ascii=False,
+                )
+            )
             response = worker.ask(request, EXTRACTION, [task['image']] if task['image'] else [])
-            result.update(status='finished' if response['readable'] else 'unresolved',
-                          readable=response['readable'])
+            result.update(status='finished' if response['readable'] else 'unresolved', readable=response['readable'])
         except Exception as error:
             result.update(status='unresolved', error=f'{type(error).__name__}: {error}')
         result['elapsed_seconds'] = time.perf_counter() - begin
@@ -118,23 +141,43 @@ def run_level(output, tasks, workers):
             results.append(result)
             with (folder / 'unit-results.jsonl').open('a', encoding='utf-8') as log:
                 log.write(json.dumps(result) + '\n')
-            save(folder / 'progress.json', {'status': 'running', 'workers': workers, 'total': len(tasks),
-                 'completed': len(results), 'elapsed_seconds': time.perf_counter() - started,
-                 'statuses': dict(Counter(row['status'] for row in results))})
+            save(
+                folder / 'progress.json',
+                {
+                    'status': 'running',
+                    'workers': workers,
+                    'total': len(tasks),
+                    'completed': len(results),
+                    'elapsed_seconds': time.perf_counter() - started,
+                    'statuses': dict(Counter(row['status'] for row in results)),
+                },
+            )
             task = next(remaining, None)
             if task is not None:
                 pending.add(pool.submit(job, task))
             if len(results) % 20 == 0 or len(results) == len(tasks):
-                print(f'{workers} workers: {len(results)}/{len(tasks)} units, {time.perf_counter() - started:.1f}s', flush=True)
+                print(
+                    f'{workers} workers: {len(results)}/{len(tasks)} units, {time.perf_counter() - started:.1f}s',
+                    flush=True,
+                )
     elapsed = time.perf_counter() - started
     durations = sorted(row['elapsed_seconds'] for row in results)
     successful = sum(row['status'] == 'finished' for row in results)
-    report = {'workers': workers, 'units': len(tasks), 'documents': len({t['document'] for t in tasks}),
-              'elapsed_seconds': elapsed, 'statuses': dict(Counter(row['status'] for row in results)),
-              'successful_units_per_minute': successful * 60 / elapsed,
-              'latency_seconds': {'mean': mean(durations), 'median': median(durations),
-                                  'p90': durations[max(0, (len(durations) * 9 + 9) // 10 - 1)], 'max': max(durations)},
-              'tokens': summary(folder / 'token-usage.jsonl')}
+    report = {
+        'workers': workers,
+        'units': len(tasks),
+        'documents': len({t['document'] for t in tasks}),
+        'elapsed_seconds': elapsed,
+        'statuses': dict(Counter(row['status'] for row in results)),
+        'successful_units_per_minute': successful * 60 / elapsed,
+        'latency_seconds': {
+            'mean': mean(durations),
+            'median': median(durations),
+            'p90': durations[max(0, (len(durations) * 9 + 9) // 10 - 1)],
+            'max': max(durations),
+        },
+        'tokens': summary(folder / 'token-usage.jsonl'),
+    }
     report['tokens']['complete'] = report['tokens']['unknown_attempts'] == 0
     save(folder / 'report.json', report)
     save(folder / 'progress.json', {**report, 'status': 'complete'})
@@ -155,10 +198,18 @@ def main():
     if any(count < 1 for count in args.workers) or len(set(args.workers)) != len(args.workers):
         parser.error('Worker levels must be positive and unique')
     manifest = prepare(root, args.work, args.output)
-    save(args.output / 'plan.json', {'workers': args.workers, 'model': 'gpt-5.6-sol', 'reasoning': 'default',
-         'timeout_seconds': 240, 'cache': 'disabled per unit and per level',
-         'scope': 'Fresh model extraction of all prepared units; local document rendering reused. No screening or matching.',
-         'started_utc': datetime.now(timezone.utc).isoformat()})
+    save(
+        args.output / 'plan.json',
+        {
+            'workers': args.workers,
+            'model': 'gpt-5.6-sol',
+            'reasoning': 'default',
+            'timeout_seconds': 240,
+            'cache': 'disabled per unit and per level',
+            'scope': 'Fresh model extraction of all prepared units; local document rendering reused. No screening or matching.',
+            'started_utc': datetime.now(timezone.utc).isoformat(),
+        },
+    )
     sys.path.insert(0, str(args.output / 'runtime'))
     from reconciliation.core import development_cache
 

@@ -1,4 +1,5 @@
 """Verify editable instructions reach Codex and invalidate cached requests."""
+
 import tempfile
 import unittest
 from pathlib import Path
@@ -28,8 +29,7 @@ class PromptTests(unittest.TestCase):
                 if command[1:3] == ["login", "status"]:
                     return SimpleNamespace(returncode=0, stdout="ChatGPT", stderr="")
                 received.append(kwargs["input"])
-                Path(command[command.index("--output-last-message") + 1]).write_text(
-                    '{"ok": true}', encoding="utf-8")
+                Path(command[command.index("--output-last-message") + 1]).write_text('{"ok": true}', encoding="utf-8")
                 return SimpleNamespace(returncode=0)
 
             reviewer = CodexReviewer(folder / "review", executable="codex")
@@ -41,11 +41,11 @@ class PromptTests(unittest.TestCase):
                 reviewer.ask(load_prompt("extraction/extraction"), schema)
                 (folder / "shared/styles.md").write_text("Edited rules", encoding="utf-8-sig")
                 reviewer.ask(load_prompt("extraction/extraction"), schema)
-            self.assertEqual(received, ["Original rules\n\nOriginal task",
-                                        "Original rules\n\nEdited task",
-                                        "Edited rules\n\nEdited task"])
-            saved = {path.read_text(encoding="utf-8")
-                     for path in reviewer.cache.glob("*/prompt.txt")}
+            self.assertEqual(
+                received,
+                ["Original rules\n\nOriginal task", "Original rules\n\nEdited task", "Edited rules\n\nEdited task"],
+            )
+            saved = {path.read_text(encoding="utf-8") for path in reviewer.cache.glob("*/prompt.txt")}
             self.assertEqual(saved, set(received))
 
     def test_missing_and_empty_files_fail(self):
@@ -62,16 +62,35 @@ class PromptTests(unittest.TestCase):
 
     def test_non_receipt_support_allows_empty_factual_fields(self):
         """A claim can be potential evidence without fabricated invoice details."""
-        result = {"receipts": [], "readable": True, "document_type": "expense_claim",
-                  "receipt_status": "not_receipt", "supporting_evidence_status": "potential_support",
-                  "supporting_evidence_reason": "Claim lists expenses, without proof of payment.",
-                  "invoice_numbers": [], "company": [], "brief_description": "Travel expense claim",
-                  "references": [], "parties": [], "dates": [], "amounts_and_currencies": [],
-                  "money": [], "details": "", "annotations_and_signatures": "", "limitations": []}
+        result = {
+            "receipts": [],
+            "readable": True,
+            "document_type": "expense_claim",
+            "receipt_status": "not_receipt",
+            "supporting_evidence_status": "potential_support",
+            "supporting_evidence_reason": "Claim lists expenses, without proof of payment.",
+            "invoice_numbers": [],
+            "company": [],
+            "brief_description": "Travel expense claim",
+            "references": [],
+            "parties": [],
+            "dates": [],
+            "amounts_and_currencies": [],
+            "money": [],
+            "details": "",
+            "annotations_and_signatures": "",
+            "limitations": [],
+        }
         validate(result, EXTRACTION)
-        result.update(readable=False, document_type="", receipt_status="unsure",
-                      supporting_evidence_status="uncertain", supporting_evidence_reason="",
-                      brief_description="", limitations=["Document is unreadable."])
+        result.update(
+            readable=False,
+            document_type="",
+            receipt_status="unsure",
+            supporting_evidence_status="uncertain",
+            supporting_evidence_reason="",
+            brief_description="",
+            limitations=["Document is unreadable."],
+        )
         validate(result, EXTRACTION)
         result["supporting_evidence_status"] = "accepted"
         with self.assertRaises(ValidationError):

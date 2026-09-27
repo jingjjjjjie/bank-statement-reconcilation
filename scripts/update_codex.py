@@ -1,4 +1,5 @@
 """Update this project's Docker Codex CLI to the latest stable OpenAI release."""
+
 import argparse
 import json
 import os
@@ -9,10 +10,12 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 RELEASES = 'https://api.github.com/repos/openai/codex/releases/latest'
-PINS = {'.env': r'(?m)^CODEX_VERSION=[^\r\n]+',
-        '.env.example': r'(?m)^CODEX_VERSION=[^\r\n]+',
-        'docker/Dockerfile': r'(?m)^ARG CODEX_VERSION=[^\r\n]+',
-        'compose.yaml': r'\$\{CODEX_VERSION:-[^}]+\}'}
+PINS = {
+    '.env': r'(?m)^CODEX_VERSION=[^\r\n]+',
+    '.env.example': r'(?m)^CODEX_VERSION=[^\r\n]+',
+    'docker/Dockerfile': r'(?m)^ARG CODEX_VERSION=[^\r\n]+',
+    'compose.yaml': r'\$\{CODEX_VERSION:-[^}]+\}',
+}
 IDLE_CHECK = '''import json, pathlib, urllib.request, urllib.error
 for endpoint in ('content/execution', 'matching-run'):
     try:
@@ -39,8 +42,9 @@ def compose(*arguments, capture=False, version=None):
     environment = dict(os.environ)
     if version:
         environment['CODEX_VERSION'] = version
-    result = subprocess.run(['docker', 'compose', *arguments], cwd=ROOT, env=environment,
-                            text=True, capture_output=capture, check=True)
+    result = subprocess.run(
+        ['docker', 'compose', *arguments], cwd=ROOT, env=environment, text=True, capture_output=capture, check=True
+    )
     return result.stdout.strip() if capture else None
 
 
@@ -71,8 +75,11 @@ def planned_pins(version):
         path = ROOT / name
         before = path.read_bytes() if path.exists() else b''
         text = before.decode('utf-8')
-        replacement = ('${CODEX_VERSION:-' + version + '}' if name == 'compose.yaml' else
-                       ('ARG ' if name == 'docker/Dockerfile' else '') + 'CODEX_VERSION=' + version)
+        replacement = (
+            '${CODEX_VERSION:-' + version + '}'
+            if name == 'compose.yaml'
+            else ('ARG ' if name == 'docker/Dockerfile' else '') + 'CODEX_VERSION=' + version
+        )
         if name == '.env' and not re.search(pattern, text):
             after = text + ('\n' if text and not text.endswith('\n') else '') + replacement + '\n'
         else:
@@ -109,8 +116,7 @@ def update(check=False):
     for path, (_, after) in changes.items():
         path.write_bytes(after)
     if current != latest:
-        compose('up', '-d', '--no-deps', '--no-build', '--wait', '--wait-timeout', '90',
-                'dashboard', version=latest)
+        compose('up', '-d', '--no-deps', '--no-build', '--wait', '--wait-timeout', '90', 'dashboard', version=latest)
         actual = installed_version()
         if actual != latest:
             raise ValueError(f'Expected Codex {latest}, but the container reports {actual}')

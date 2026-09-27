@@ -1,4 +1,5 @@
 """Verify exact merge arithmetic and fresh evidence identities on acceptance."""
+
 import unittest
 
 from dashboard.services import receipt_review
@@ -9,9 +10,12 @@ from tests.fixtures import receipt_review as receipt_review_fixture
 class MergeAllTests(unittest.TestCase):
     def test_sum_and_lineage(self):
         """Keep exact cents, original references and parent identities."""
-        value = merge_all([
-            {'piece_id': 'a', 'total': '0.10', 'currency': 'RM', 'payee': 'A', 'source_units': [1]},
-            {'piece_id': 'b', 'total': '0.20', 'currency': 'MYR', 'payee': 'B', 'source_units': [1, 2]}])
+        value = merge_all(
+            [
+                {'piece_id': 'a', 'total': '0.10', 'currency': 'RM', 'payee': 'A', 'source_units': [1]},
+                {'piece_id': 'b', 'total': '0.20', 'currency': 'MYR', 'payee': 'B', 'source_units': [1, 2]},
+            ]
+        )
         self.assertEqual(value['total'], '0.30')
         self.assertEqual(value['payee'], 'A / B')
         self.assertEqual(value['source_units'], [1, 2])
@@ -37,8 +41,9 @@ class MergeAllTests(unittest.TestCase):
             row['currency'] = 'MYR'
         merged = merge_all(rows)
         self.assertEqual(len(receipt_review.snapshot(fixture.review)['units'][0]['receipts']), 2)
-        after = receipt_review.accept_extraction(fixture.review, {
-            'revision': before['revision'], 'key': fixture.key, 'receipts': [merged]})
+        after = receipt_review.accept_extraction(
+            fixture.review, {'revision': before['revision'], 'key': fixture.key, 'receipts': [merged]}
+        )
         entry = after['units'][0]['receipts'][0]
         self.assertEqual(entry['parent_piece_ids'], [row['piece_id'] for row in rows])
         self.assertNotIn(entry['piece_id'], entry['parent_piece_ids'])
@@ -52,16 +57,19 @@ class MergeAllTests(unittest.TestCase):
         original = before['units'][0]['receipts']
         merged = merge_all(original)
         merged['total'] = '123.45'
-        accepted = receipt_review.accept_extraction(fixture.review, {
-            'revision': before['revision'], 'key': fixture.key, 'receipts': [merged]})
+        accepted = receipt_review.accept_extraction(
+            fixture.review, {'revision': before['revision'], 'key': fixture.key, 'receipts': [merged]}
+        )
         with self.assertRaisesRegex(ValueError, 'changed'):
             receipt_review.original_extraction(fixture.review, {'revision': before['revision'], 'key': fixture.key})
-        draft = receipt_review.original_extraction(fixture.review, {
-            'revision': accepted['revision'], 'key': fixture.key})
+        draft = receipt_review.original_extraction(
+            fixture.review, {'revision': accepted['revision'], 'key': fixture.key}
+        )
         self.assertEqual([p['total'] for p in draft['receipts']], [p['total'] for p in original])
         self.assertEqual(len(receipt_review.snapshot(fixture.review)['units'][0]['receipts']), 1)
-        restored = receipt_review.accept_extraction(fixture.review, {
-            'revision': accepted['revision'], 'key': fixture.key, 'receipts': draft['receipts']})
+        restored = receipt_review.accept_extraction(
+            fixture.review, {'revision': accepted['revision'], 'key': fixture.key, 'receipts': draft['receipts']}
+        )
         self.assertEqual(len(restored['units'][0]['receipts']), 2)
         previous_id = accepted['units'][0]['receipts'][0]['piece_id']
         self.assertTrue(all(p['parent_piece_ids'] == [previous_id] for p in restored['units'][0]['receipts']))

@@ -1,4 +1,5 @@
 """Batched subscription-model matching over ranked candidate pieces."""
+
 import json
 import threading
 import time
@@ -17,9 +18,21 @@ from reconciliation.intake.duplicates import fingerprint
 from reconciliation.matching.ranking import rank
 from reconciliation.model.codex import CodexReviewer
 
-SCHEMA = object_schema({'decisions': {'type': 'array', 'items': object_schema({
-    'bank_id': TEXT, 'assessment': {'type': 'string', 'enum': ['strong', 'tentative', 'none']},
-    'allocations': {'type': 'array', 'items': object_schema({'item_id': TEXT, 'amount': TEXT})}, 'reason': TEXT})}})
+SCHEMA = object_schema(
+    {
+        'decisions': {
+            'type': 'array',
+            'items': object_schema(
+                {
+                    'bank_id': TEXT,
+                    'assessment': {'type': 'string', 'enum': ['strong', 'tentative', 'none']},
+                    'allocations': {'type': 'array', 'items': object_schema({'item_id': TEXT, 'amount': TEXT})},
+                    'reason': TEXT,
+                }
+            ),
+        }
+    }
+)
 
 #: Seconds one matching batch call may run; batches are larger than single-document extraction calls.
 MATCHING_CALL_TIMEOUT = 600
@@ -43,7 +56,9 @@ def validate_result(result, keys, allowed, banks, items):
                 number = amount(value)
                 if not items[key]['amount'] or number <= 0 or number > amount(items[key]['amount']):
                     raise ValueError('Matching allocation exceeds the stated piece amount')
-                if not items[key]['currency'] or normalize_currency(items[key]['currency']) != normalize_currency(banks[row['bank_id']]['currency']):
+                if not items[key]['currency'] or normalize_currency(items[key]['currency']) != normalize_currency(
+                    banks[row['bank_id']]['currency']
+                ):
                     raise ValueError('Matching allocation requires supported matching currencies')
                 total += number
         if total > amount(banks[row['bank_id']]['amount']):
@@ -63,14 +78,26 @@ def checked_rows(result, keys, allowed, banks, items):
     for key in keys:
         row = returned.get(key)
         if row is None:
-            rows.append({'bank_id': key, 'assessment': 'tentative', 'allocations': [],
-                         'reason': 'Matching unresolved: the model did not return this line.'})
+            rows.append(
+                {
+                    'bank_id': key,
+                    'assessment': 'tentative',
+                    'allocations': [],
+                    'reason': 'Matching unresolved: the model did not return this line.',
+                }
+            )
             continue
         try:
             rows.append(validate_result({'decisions': [row]}, [key], allowed, banks, items)[0])
         except ValueError as error:
-            rows.append({'bank_id': key, 'assessment': 'tentative', 'allocations': [],
-                         'reason': f'Matching unresolved: {error}. Model said: {row.get("reason", "")}'})
+            rows.append(
+                {
+                    'bank_id': key,
+                    'assessment': 'tentative',
+                    'allocations': [],
+                    'reason': f'Matching unresolved: {error}. Model said: {row.get("reason", "")}',
+                }
+            )
     return rows
 
 
@@ -86,21 +113,30 @@ def status(review):
         path = review.manifest_path.parent / 'final-review/piece-suggestions.json'
         if path.exists():
             previous = json.loads(path.read_text(encoding='utf-8'))
-            saved = {'completed': len(previous.get('decisions', [])),
-                     'total': previous.get('total', len(previous.get('decisions', []))),
-                     'failed': len(previous.get('errors', [])), 'error': '\n'.join(previous.get('errors', []))}
+            saved = {
+                'completed': len(previous.get('decisions', [])),
+                'total': previous.get('total', len(previous.get('decisions', []))),
+                'failed': len(previous.get('errors', [])),
+                'error': '\n'.join(previous.get('errors', [])),
+            }
     active = getattr(getattr(review, 'piece_match_engine', None), 'active_count', 0)
     running = bool(worker and worker.is_alive()) or bool(active)
     started = saved.get('started_at')
     end = time.time() if running else saved.get('finished_at', saved.get('updated_at', started))
     elapsed = max(0, int(end - started)) if started else None
-    return {**saved, 'running': running, 'active_processes': active, 'elapsed_seconds': elapsed,
-            'stop_requested': bool(getattr(review, 'piece_match_stopping', saved.get('stop_requested', False)))}
+    return {
+        **saved,
+        'running': running,
+        'active_processes': active,
+        'elapsed_seconds': elapsed,
+        'stop_requested': bool(getattr(review, 'piece_match_stopping', saved.get('stop_requested', False))),
+    }
 
 
 def start(review):
     """Start one bounded model run without holding the HTTP decision lock."""
     from dashboard.services.extraction_runs import execution_status
+
     if status(review)['running']:
         return status(review)
     if execution_status(review)['running']:
@@ -113,12 +149,19 @@ def start(review):
     config = active_config(index)
     if not config['codex_enabled']:
         raise ValueError('Enable Codex before generating matches')
-    review.piece_match_status = {'completed': 0, 'total': len(banks), 'error': '',
-                                 'started_at': time.time(), 'phase': 'Preparing matching'}
+    review.piece_match_status = {
+        'completed': 0,
+        'total': len(banks),
+        'error': '',
+        'started_at': time.time(),
+        'phase': 'Preparing matching',
+    }
     review.piece_match_stopping = False
     review.piece_match_cancel = threading.Event()
     review.piece_match_engine = None
-    review.piece_match_thread = threading.Thread(target=run, args=(review, state['binding'], banks, items, index, facts, config), daemon=True)
+    review.piece_match_thread = threading.Thread(
+        target=run, args=(review, state['binding'], banks, items, index, facts, config), daemon=True
+    )
     review.piece_match_thread.start()
     return status(review)
 
@@ -130,8 +173,9 @@ def run(review, binding, banks, items, index, facts, config):
     except Exception as error:
         review.piece_match_status['error'] = str(error)
     finally:
-        review.piece_match_status.update(finished_at=time.time(),
-                                        stop_requested=bool(getattr(review, 'piece_match_stopping', False)))
+        review.piece_match_status.update(
+            finished_at=time.time(), stop_requested=bool(getattr(review, 'piece_match_stopping', False))
+        )
         write_json(review.manifest_path.parent / 'final-review/matching-status.json', review.piece_match_status)
 
 
@@ -149,6 +193,7 @@ def batches(keys, choices, size=None):
             parent[key] = parent[parent[key]]
             key = parent[key]
         return key
+
     owner = {}
     for key in keys:
         for item_id in choices[key]:
@@ -162,7 +207,7 @@ def batches(keys, choices, size=None):
     # Largest competing groups first; oversized groups are split into consecutive batches.
     for group in sorted(groups.values(), key=len, reverse=True):
         for start in range(0, len(group), size):
-            part = group[start:start + size]
+            part = group[start : start + size]
             if current and len(current) + len(part) > size:
                 packed.append(current)
                 current = []
@@ -178,7 +223,9 @@ def over_allocated(rows, items):
     for row in rows:
         for allocation in row.get('allocations', []):
             if allocation['amount']:
-                used[allocation['item_id']] = used.get(allocation['item_id'], amount('0')) + amount(allocation['amount'])
+                used[allocation['item_id']] = used.get(allocation['item_id'], amount('0')) + amount(
+                    allocation['amount']
+                )
     over = {key for key, total in used.items() if items[key]['amount'] and total > amount(items[key]['amount'])}
     for row in rows:
         if over & {a['item_id'] for a in row.get('allocations', [])} and 'Competes with another' not in row['reason']:
@@ -194,30 +241,48 @@ def run_matching(review, binding, banks, items, index, facts, config):
     choices, retrieval = rank(list(banks.values()), items, facts['documents'], index.get('root', ''))
     write_json(directory / 'piece-matching' / 'retrieval.json', retrieval)
     choice = stage_settings(config)['comparison']
-    engine = CodexReviewer(directory / 'piece-matching', model=choice['model'], reasoning=choice['reasoning'],
-                           timeout=MATCHING_CALL_TIMEOUT, cancel_event=review.piece_match_cancel, max_calls=config['max_calls'])
+    engine = CodexReviewer(
+        directory / 'piece-matching',
+        model=choice['model'],
+        reasoning=choice['reasoning'],
+        timeout=MATCHING_CALL_TIMEOUT,
+        cancel_event=review.piece_match_cancel,
+        max_calls=config['max_calls'],
+    )
     engine.stage = 'piece_matching'
     review.piece_match_engine = engine
     instructions = load_prompt('matching/matching')
     request_revision = revision([binding, banks, items, index, facts, choice, instructions])
     previous_path = directory / 'piece-suggestions.json'
     previous = json.loads(previous_path.read_text(encoding='utf-8')) if previous_path.exists() else {}
-    results = [row for row in previous.get('decisions', [])
-               if previous.get('request_revision') == request_revision and row['bank_id'] in banks
-               and not row.get('reason', '').startswith('Matching unresolved:')]
+    results = [
+        row
+        for row in previous.get('decisions', [])
+        if previous.get('request_revision') == request_revision
+        and row['bank_id'] in banks
+        and not row.get('reason', '').startswith('Matching unresolved:')
+    ]
     completed = {row['bank_id'] for row in results}
     # Reuse only unchanged, still-verifiable evidence; no model request is needed.
     for keys in batches([key for key in completed if choices[key]], choices):
         piece_matching.model_payload(banks, items, index, facts, choices, keys, retrieval, include_images=False)
-    results.extend({'bank_id': key, 'assessment': 'none', 'allocations': [],
-                    'reason': 'No amount, name or filename candidate; manual piece search remains available.'}
-                   for key in banks if not choices[key] and key not in completed)
+    results.extend(
+        {
+            'bank_id': key,
+            'assessment': 'none',
+            'allocations': [],
+            'reason': 'No amount, name or filename candidate; manual piece search remains available.',
+        }
+        for key in banks
+        if not choices[key] and key not in completed
+    )
     errors = []
 
     def requests(keys):
         """Build prompts for a batch, halving it until each fits the text limit."""
         supplied, images, allowed = piece_matching.model_payload(
-            banks, items, index, facts, choices, keys, retrieval, include_images=False)
+            banks, items, index, facts, choices, keys, retrieval, include_images=False
+        )
         prompt = instructions + '\n' + json.dumps(supplied, ensure_ascii=False, separators=(',', ':'))
         if len(prompt) <= PROMPT_LIMIT:
             return [(keys, supplied, prompt, allowed)]
@@ -239,8 +304,14 @@ def run_matching(review, binding, banks, items, index, facts, config):
                 for row in checked_rows(result, part, allowed, banks, items):
                     reasons = retrieval[row['bank_id']].get('reasons', {})
                     # A folder or file name can find evidence but never makes a match strong on its own.
-                    if row['assessment'] == 'strong' and row['allocations'] and all(
-                            reasons.get(a['item_id'], {}).get('route') == 'found by filename' for a in row['allocations']):
+                    if (
+                        row['assessment'] == 'strong'
+                        and row['allocations']
+                        and all(
+                            reasons.get(a['item_id'], {}).get('route') == 'found by filename'
+                            for a in row['allocations']
+                        )
+                    ):
                         row['assessment'] = 'tentative'
                         row['reason'] += ' Linked only through a folder or file name; confirm from the documents.'
                     if retrieval[row['bank_id']]['search_incomplete'] and row['assessment'] == 'none':
@@ -254,12 +325,25 @@ def run_matching(review, binding, banks, items, index, facts, config):
 
     def publish():
         """Checkpoint proposals after every batch so a stop keeps completed work."""
-        write_json(directory / 'piece-suggestions.json', {'binding': binding, 'request_revision': request_revision,
-                                                       'total': len(banks), 'decisions': results, 'errors': errors})
-        review.piece_match_status = {**getattr(review, 'piece_match_status', {}),
-                                    'completed': len(results), 'total': len(banks), 'phase': 'Matching transactions',
-                                    'updated_at': time.time(),
-                                    'failed': len(errors), 'error': '\n'.join(errors)}
+        write_json(
+            directory / 'piece-suggestions.json',
+            {
+                'binding': binding,
+                'request_revision': request_revision,
+                'total': len(banks),
+                'decisions': results,
+                'errors': errors,
+            },
+        )
+        review.piece_match_status = {
+            **getattr(review, 'piece_match_status', {}),
+            'completed': len(results),
+            'total': len(banks),
+            'phase': 'Matching transactions',
+            'updated_at': time.time(),
+            'failed': len(errors),
+            'error': '\n'.join(errors),
+        }
         write_json(directory / 'matching-status.json', review.piece_match_status)
 
     try:
@@ -278,8 +362,15 @@ def run_matching(review, binding, banks, items, index, facts, config):
                     results.extend(future.result())
                 except Exception as error:
                     errors.append(f'{keys[0]} (+{len(keys) - 1} lines): {error}')
-                    results.extend({'bank_id': key, 'assessment': 'tentative', 'allocations': [],
-                                    'reason': f'Matching unresolved: {error}'} for key in keys)
+                    results.extend(
+                        {
+                            'bank_id': key,
+                            'assessment': 'tentative',
+                            'allocations': [],
+                            'reason': f'Matching unresolved: {error}',
+                        }
+                        for key in keys
+                    )
                 over_allocated(results, items)
                 publish()
                 keys = None if getattr(review, 'piece_match_stopping', False) else next(queue, None)

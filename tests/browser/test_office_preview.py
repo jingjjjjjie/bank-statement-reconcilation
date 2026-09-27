@@ -1,4 +1,5 @@
 """Verify Word and Excel previews through the dashboard browser."""
+
 import tempfile
 import threading
 import unittest
@@ -26,7 +27,10 @@ class OfficePreviewTests(unittest.TestCase):
             source.mkdir()
             word = source / "report.docx"
             with ZipFile(word, "w") as archive:
-                archive.writestr("word/document.xml", """<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:pPr><w:pStyle w:val="Heading1"/></w:pPr><w:r><w:t>Quarterly report</w:t></w:r></w:p><w:tbl><w:tr><w:tc><w:p><w:r><w:t>Approved</w:t></w:r></w:p></w:tc></w:tr></w:tbl></w:body></w:document>""")
+                archive.writestr(
+                    "word/document.xml",
+                    """<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:pPr><w:pStyle w:val="Heading1"/></w:pPr><w:r><w:t>Quarterly report</w:t></w:r></w:p><w:tbl><w:tr><w:tc><w:p><w:r><w:t>Approved</w:t></w:r></w:p></w:tc></w:tr></w:tbl></w:body></w:document>""",
+                )
             (source / "report-copy.docx").write_bytes(word.read_bytes())
             book = Workbook()
             book.active.title = "Accounts"

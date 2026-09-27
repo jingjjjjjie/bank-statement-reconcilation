@@ -1,4 +1,5 @@
 """Verify PDF batching, complete evidence, resume and atomic failure without live models."""
+
 import copy
 import csv
 import json
@@ -13,7 +14,6 @@ from tests.fixtures.pdf_groups import PdfGroupsFixture, Reviewer
 
 
 class PdfDocumentTests(PdfGroupsFixture):
-
     def test_model_currency_fields_allow_other_currencies(self):
         """The schemas accept other currencies; normalization belongs to Python."""
         for schema in (pieces.EXTRACTION, pieces.ASSEMBLY):
@@ -55,8 +55,9 @@ class PdfDocumentTests(PdfGroupsFixture):
         reviewer = Reviewer(3)
         workflow.run(work, index, state, reviewer)
         digest = next(iter(index['documents']))
-        workflow.run(work, index, state, reviewer,
-                     regeneration={digest: 'fresh'}, queued_regenerations=lambda: {digest: 'fresh'})
+        workflow.run(
+            work, index, state, reviewer, regeneration={digest: 'fresh'}, queued_regenerations=lambda: {digest: 'fresh'}
+        )
         self.assertEqual(len(reviewer.calls), 2)
         self.assertIn('Regeneration request: fresh', reviewer.calls[-1]['prompt'])
 
@@ -120,8 +121,10 @@ class PdfDocumentTests(PdfGroupsFixture):
         self.assertEqual([len(call['images']) for call in reviewer.calls], [5, 5, 3, 13])
         self.assertEqual([call['stage'] for call in reviewer.calls], ['pdf_chunk'] * 3 + ['pdf'])
         payloads = [json.loads(call['prompt'].splitlines()[-1]) for call in reviewer.calls]
-        self.assertEqual([[u['source_unit'] for u in payload] for payload in payloads[:3]],
-                         [list(range(1, 6)), list(range(6, 11)), list(range(11, 14))])
+        self.assertEqual(
+            [[u['source_unit'] for u in payload] for payload in payloads[:3]],
+            [list(range(1, 6)), list(range(6, 11)), list(range(11, 14))],
+        )
         self.assertEqual(payloads[3][5]['extraction']['receipts'][0]['source_units'], list(range(6, 11)))
         document = next(iter(index['documents'].values()))
         assembly = current_assembly(document, state)
@@ -131,8 +134,14 @@ class PdfDocumentTests(PdfGroupsFixture):
         self.assertEqual(workflow.gate(index, state), [])
         workflow.run(work, index, state, reviewer)
         self.assertEqual(len(reviewer.calls), 4)
-        workflow.run(work, index, state, reviewer,
-                     regeneration={document['id']: 'fresh'}, queued_regenerations=lambda: {document['id']: 'fresh'})
+        workflow.run(
+            work,
+            index,
+            state,
+            reviewer,
+            regeneration={document['id']: 'fresh'},
+            queued_regenerations=lambda: {document['id']: 'fresh'},
+        )
         self.assertEqual(len(reviewer.calls), 8)
 
     def test_failed_group_resumes_without_repeating_saved_pages(self):

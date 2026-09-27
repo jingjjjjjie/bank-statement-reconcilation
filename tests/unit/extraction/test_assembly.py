@@ -1,4 +1,5 @@
 """Verify cross-page boundaries, coverage, and stale approval protection."""
+
 import copy
 import json
 import unittest
@@ -15,7 +16,6 @@ from tests.fixtures.workflow import FakeReviewer, ReviewFixture
 
 
 class AssemblyWorkflowTests(ReviewFixture, unittest.TestCase):
-
     def test_duplicate_source_references_are_rejected_locally(self):
         """Keep uniqueness checks without unsupported Codex schema keywords."""
         self.assertNotIn('uniqueItems', json.dumps(ASSEMBLY))
@@ -48,9 +48,14 @@ class AssemblyWorkflowTests(ReviewFixture, unittest.TestCase):
         self.assertEqual(len(calls[0]), 2)
         document = next(doc for doc in index["documents"].values() if len(doc["units"]) == 2)
         progress = []
-        workflow.run(self.work, index, state, Reviewer(),
-                     regeneration={document["id"]: "fresh-attempt"},
-                     progress=lambda digest, status: progress.append((digest, status)))
+        workflow.run(
+            self.work,
+            index,
+            state,
+            Reviewer(),
+            regeneration={document["id"]: "fresh-attempt"},
+            progress=lambda digest, status: progress.append((digest, status)),
+        )
         self.assertEqual(len(calls), 2)
         self.assertEqual(progress[-1], (document["id"], "completed"))
         assembled = next(iter(state["assemblies"].values()))
@@ -74,7 +79,6 @@ class AssemblyWorkflowTests(ReviewFixture, unittest.TestCase):
 
 
 class AssemblyApprovalTests(ReceiptReviewFixture):
-
     def test_assembled_receipts_allow_human_acceptance_with_legacy_flag(self):
         """Only document receipts become allocatable, and page refresh invalidates approval."""
         document = self.index["documents"][self.digest]
@@ -88,8 +92,14 @@ class AssemblyApprovalTests(ReceiptReviewFixture):
         self.assertTrue(self.view()["units"][0]["assembly_pending"])
         with self.assertRaisesRegex(ValueError, "finish receipt assembly"):
             self.accept_pieces([piece([1, 2])])
-        self.state["assemblies"] = {self.digest: {"receipts": [piece([1, 2])],
-            "reviewed_units": [1, 2], "limitations": [], "input_revision": input_revision(document, self.state)}}
+        self.state["assemblies"] = {
+            self.digest: {
+                "receipts": [piece([1, 2])],
+                "reviewed_units": [1, 2],
+                "limitations": [],
+                "input_revision": input_revision(document, self.state),
+            }
+        }
         self.save_state()
         flagged = {**piece([1, 2]), "needs_review": True}
         view = self.accept_pieces([flagged])

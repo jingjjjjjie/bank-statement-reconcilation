@@ -1,4 +1,5 @@
 """Load and apply field-based Excel formatting independently of bank values."""
+
 from copy import copy
 from xml.etree import ElementTree as ET
 
@@ -6,8 +7,7 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Protection
 from openpyxl.utils import get_column_letter
 
 ROW_NAMES = ("title", "subtitle", "spacer", "header", "opening", "transaction", "total", "sql", "variance")
-COMPONENTS = {"font": Font, "fill": PatternFill, "border": Border,
-              "alignment": Alignment, "protection": Protection}
+COMPONENTS = {"font": Font, "fill": PatternFill, "border": Border, "alignment": Alignment, "protection": Protection}
 
 
 class WorkbookStyle:

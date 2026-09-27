@@ -1,4 +1,5 @@
 """Verify actual Vue navigation, cached edits, and page lifecycle in Chrome."""
+
 import os
 import tempfile
 import threading
@@ -32,8 +33,12 @@ class NavigationTests(unittest.TestCase):
             threading.Thread(target=server.serve_forever, daemon=True).start()
             try:
                 with sync_playwright() as playwright:
-                    browser = playwright.chromium.launch(headless=True, executable_path=
-                        r"C:\Program Files\Google\Chrome\Application\chrome.exe" if os.name == "nt" else None)
+                    browser = playwright.chromium.launch(
+                        headless=True,
+                        executable_path=r"C:\Program Files\Google\Chrome\Application\chrome.exe"
+                        if os.name == "nt"
+                        else None,
+                    )
                     page = browser.new_page()
                     base = f"http://127.0.0.1:{server.server_port}"
                     page.goto(base + "/settings")
@@ -42,8 +47,18 @@ class NavigationTests(unittest.TestCase):
                     page.evaluate("window.savedSettings = document.querySelector('#max-calls')")
                     session = app.state.context.review_id
                     starts, previews = [], []
-                    page.on('request', lambda request: starts.append(request.url) if request.url.endswith('/api/source/start') else None)
-                    page.on('request', lambda request: previews.append(request.url) if request.url.endswith('/api/source/preview') else None)
+                    page.on(
+                        'request',
+                        lambda request: (
+                            starts.append(request.url) if request.url.endswith('/api/source/start') else None
+                        ),
+                    )
+                    page.on(
+                        'request',
+                        lambda request: (
+                            previews.append(request.url) if request.url.endswith('/api/source/preview') else None
+                        ),
+                    )
                     dialogs = []
                     page.on('dialog', lambda dialog: (dialogs.append(dialog.message), dialog.dismiss()))
                     page.locator('.app-header a[href="/source"]').click()
@@ -96,18 +111,32 @@ class NavigationTests(unittest.TestCase):
             threading.Thread(target=server.serve_forever, daemon=True).start()
             try:
                 with sync_playwright() as playwright:
-                    browser = playwright.chromium.launch(headless=True, executable_path=
-                        r"C:\Program Files\Google\Chrome\Application\chrome.exe" if os.name == "nt" else None)
+                    browser = playwright.chromium.launch(
+                        headless=True,
+                        executable_path=r"C:\Program Files\Google\Chrome\Application\chrome.exe"
+                        if os.name == "nt"
+                        else None,
+                    )
                     page = browser.new_page(viewport={"width": 1440, "height": 1000})
                     errors, documents, polls = [], [], []
                     page.on("pageerror", lambda error: errors.append(str(error)))
-                    page.on("request", lambda request: documents.append(request.url) if request.resource_type == "document" else None)
-                    page.on("request", lambda request: polls.append(request.url) if request.url.endswith('/api/document-status') else None)
+                    page.on(
+                        "request",
+                        lambda request: documents.append(request.url) if request.resource_type == "document" else None,
+                    )
+                    page.on(
+                        "request",
+                        lambda request: (
+                            polls.append(request.url) if request.url.endswith('/api/document-status') else None
+                        ),
+                    )
                     base = f"http://127.0.0.1:{server.server_port}"
                     page.goto(base + "/documents")
                     expect(page.locator('#document-summary')).to_contain_text('Run documents to prepare')
                     page.locator('#document-search').fill('preserved filter')
-                    page.evaluate("window.savedInput = document.querySelector('#document-search'); window.savedNavigation = document.querySelector('.app-header')")
+                    page.evaluate(
+                        "window.savedInput = document.querySelector('#document-search'); window.savedNavigation = document.querySelector('.app-header')"
+                    )
                     page.locator('.app-header a[href="/settings"]').click()
                     expect(page.locator('#save-state')).not_to_have_text('Loading settings…')
                     expect(page.locator('#max-calls')).to_be_enabled()

@@ -1,4 +1,5 @@
 """Checks use temporary fixtures only, never customer documents."""
+
 import errno
 import json
 import tempfile
@@ -32,8 +33,13 @@ class WorkflowTests(unittest.TestCase):
         source.write_bytes(b"original")
         target = self.base / "copy.txt"
         expected = workflow.fingerprint(source)
-        with patch.object(Path, "rename", side_effect=OSError(errno.EXDEV, "cross mount")), \
-                patch("reconciliation.intake.duplicates.shutil.copyfileobj", side_effect=lambda _reader, writer, _size: writer.write(b"bad")):
+        with (
+            patch.object(Path, "rename", side_effect=OSError(errno.EXDEV, "cross mount")),
+            patch(
+                "reconciliation.intake.duplicates.shutil.copyfileobj",
+                side_effect=lambda _reader, writer, _size: writer.write(b"bad"),
+            ),
+        ):
             with self.assertRaisesRegex(ValueError, "changed during transfer"):
                 workflow.move_verified(source, target, expected)
         self.assertEqual(source.read_bytes(), b"original")

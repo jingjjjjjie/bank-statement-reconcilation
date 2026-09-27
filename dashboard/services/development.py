@@ -27,7 +27,10 @@ def snapshot(review):
         result.update(saved=bool(data["exact"]), at=data["at"], exact=len(data["exact"]))
     root = development_cache.root_for(review.manifest_path)
     if root is not None:
-        result["cache"] = {"path": str(root), "model_results": len(list((root / "model-requests").glob("*/result.json")))}
+        result["cache"] = {
+            "path": str(root),
+            "model_results": len(list((root / "model-requests").glob("*/result.json"))),
+        }
     return result
 
 
@@ -40,8 +43,13 @@ def capture(review, pin=False):
     for group in review.snapshot()["groups"]:
         if group["status"] == "reviewed" and group["kept"]:
             record = review.records[group["kept"]]
-            exact.append({"hash": record["SHA256"], "original": record["OriginalPath"],
-                          "relative": Path(record["OriginalPath"]).relative_to(review.root).as_posix()})
+            exact.append(
+                {
+                    "hash": record["SHA256"],
+                    "original": record["OriginalPath"],
+                    "relative": Path(record["OriginalPath"]).relative_to(review.root).as_posix(),
+                }
+            )
     data = {"at": datetime.now(timezone.utc).isoformat(), "exact": exact}
     data.update(version=1, source=str(review.root), manifest=str(review.manifest_path))
     if project is None:
@@ -89,9 +97,12 @@ def apply(review, reviewer):
     data = json.loads(target.read_text(encoding="utf-8"))
     exact_count = 0
     groups = {item["id"]: item for item in review.snapshot()["groups"]}
-    identities = {(record["SHA256"], record["OriginalPath"]): (group, file_id)
-                  for group, ids in review.groups.items() for file_id in ids
-                  for record in [review.records[file_id]]}
+    identities = {
+        (record["SHA256"], record["OriginalPath"]): (group, file_id)
+        for group, ids in review.groups.items()
+        for file_id in ids
+        for record in [review.records[file_id]]
+    }
     for saved in data["exact"]:
         match = identities.get((saved["hash"], saved["original"]))
         if match is None:

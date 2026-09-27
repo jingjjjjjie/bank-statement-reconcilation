@@ -1,4 +1,5 @@
 """Validated settings shared by the dashboard and document-review pipeline."""
+
 import hashlib
 import json
 import os
@@ -8,8 +9,17 @@ from reconciliation.core.paths import WORKSPACE
 
 CONFIG_PATH = WORKSPACE / "config" / "review_config.json"
 DEFAULT_MODEL = "gpt-6-sol"
-DEFAULTS = {"pdf_whole_document_max_pages": 5, "pdf_mode": "vision", "pictures_enabled": True, "codex_enabled": True,
-            "max_calls": 1000, "max_parallel": 4, "model": DEFAULT_MODEL, "reasoning": "default", "stages": {}}
+DEFAULTS = {
+    "pdf_whole_document_max_pages": 5,
+    "pdf_mode": "vision",
+    "pictures_enabled": True,
+    "codex_enabled": True,
+    "max_calls": 1000,
+    "max_parallel": 4,
+    "model": DEFAULT_MODEL,
+    "reasoning": "default",
+    "stages": {},
+}
 STAGES = ("pdf", "images", "excel", "word", "comparison")
 
 #: Allowed ranges for numeric settings, as (lowest, highest) inclusive.
@@ -34,10 +44,16 @@ def model_catalog():
     home = Path(os.environ.get("CODEX_HOME", Path.home() / ".codex"))
     try:
         catalog = json.loads((home / "models_cache.json").read_text(encoding="utf-8"))
-        return [{"id": m["slug"], "name": m.get("display_name", m["slug"]),
-                 "reasoning": [r["effort"] for r in m.get("supported_reasoning_levels", [])],
-                 "vision": "image" in m.get("input_modalities", [])}
-                for m in catalog["models"] if m.get("visibility") == "list"]
+        return [
+            {
+                "id": m["slug"],
+                "name": m.get("display_name", m["slug"]),
+                "reasoning": [r["effort"] for r in m.get("supported_reasoning_levels", [])],
+                "vision": "image" in m.get("input_modalities", []),
+            }
+            for m in catalog["models"]
+            if m.get("visibility") == "list"
+        ]
     except (OSError, ValueError, KeyError):
         return []
 
@@ -48,7 +64,9 @@ def validate(config):
     if not isinstance(config, dict) or not required <= set(config) or set(config) - set(DEFAULTS):
         raise ValueError("Settings contain missing or unknown fields")
     config = {**DEFAULTS, **config}
-    if type(config["pdf_whole_document_max_pages"]) is not int or not in_range(config["pdf_whole_document_max_pages"], WHOLE_PDF_PAGES_RANGE):
+    if type(config["pdf_whole_document_max_pages"]) is not int or not in_range(
+        config["pdf_whole_document_max_pages"], WHOLE_PDF_PAGES_RANGE
+    ):
         raise ValueError("Whole-document PDF page limit must be an integer between %d and %d" % WHOLE_PDF_PAGES_RANGE)
     if config["pdf_mode"] not in PDF_MODES:
         raise ValueError("Unknown PDF processing mode")
@@ -66,8 +84,7 @@ def validate(config):
         catalog = model_catalog()
         model = next((m for m in catalog if m["id"] == config["model"]), None)
         # Fresh installations can use the project default before Codex caches capabilities.
-        uncached_default = (not catalog and config["model"] == DEFAULT_MODEL
-                            and config["reasoning"] == "default")
+        uncached_default = not catalog and config["model"] == DEFAULT_MODEL and config["reasoning"] == "default"
         if not model and not uncached_default:
             raise ValueError("Model is not listed in the local Codex catalog; refresh Codex or choose its default")
         if model:
@@ -93,7 +110,11 @@ def validate(config):
 
 def load_config(path=None):
     """Load settings from `path`; a missing file gives the defaults, a malformed one raises."""
-    return validate(json.loads(Path(path).read_text(encoding="utf-8-sig"))) if path and Path(path).exists() else dict(DEFAULTS)
+    return (
+        validate(json.loads(Path(path).read_text(encoding="utf-8-sig")))
+        if path and Path(path).exists()
+        else dict(DEFAULTS)
+    )
 
 
 def content_settings(config):
@@ -136,6 +157,7 @@ def save_config(path, config, expected_revision):
     config = validate(config)
     if config["pdf_mode"] in ("hybrid", "compare"):
         from reconciliation.core.development_cache import mode
+
         if not mode()["enabled"]:
             raise ValueError("Enable development mode before selecting experimental PDF processing")
     if expected_revision != revision(load_config(path)):

@@ -1,4 +1,5 @@
 """Canonical document and payable-piece facts, with legacy read adapters."""
+
 import calendar
 import re
 from copy import deepcopy
@@ -23,8 +24,15 @@ EXTRACTION = model_schema('extraction')
 ASSEMBLY = model_schema('receipt_assembly')
 PIECE = EXTRACTION['properties']['pieces']['items']
 # Stored typed facts keep any type so older records (invoice, claim_period...) stay valid.
-FACTS = {'type': 'array', 'items': {'type': 'object', 'additionalProperties': False, 'required': ['type', 'value'],
-                                    'properties': {'type': TEXT, 'value': TEXT}}}
+FACTS = {
+    'type': 'array',
+    'items': {
+        'type': 'object',
+        'additionalProperties': False,
+        'required': ['type', 'value'],
+        'properties': {'type': TEXT, 'value': TEXT},
+    },
+}
 TOTALS = EXTRACTION['properties']['totals']
 
 
@@ -60,36 +68,56 @@ def clean_result(result):
 
 def canonical(piece):
     """Read new facts or old receipt records without inventing payees or dates."""
-    references = deepcopy(piece.get('references', [{'type': 'invoice', 'value': v} for v in piece.get('invoice_numbers', [])]))
+    references = deepcopy(
+        piece.get('references', [{'type': 'invoice', 'value': v} for v in piece.get('invoice_numbers', [])])
+    )
     dates = deepcopy(piece.get('dates', []))
     old_number = next((r['value'] for r in references if r.get('type') == 'invoice'), '')
-    return {'piece_type': piece.get('piece_type', piece.get('document_type', '')),
-        'payer': piece.get('payer', ''), 'payee': piece.get('payee', ''), 'other_names': list(piece.get('other_names', [])),
-        'amount': piece.get('amount', piece.get('total', '')), 'currency': piece.get('currency', ''),
+    return {
+        'piece_type': piece.get('piece_type', piece.get('document_type', '')),
+        'payer': piece.get('payer', ''),
+        'payee': piece.get('payee', ''),
+        'other_names': list(piece.get('other_names', [])),
+        'amount': piece.get('amount', piece.get('total', '')),
+        'currency': piece.get('currency', ''),
         'currency_default': bool(piece.get('currency_default', False)),
         'date': piece.get('date', dates[0]['value'] if dates and isinstance(dates[0], dict) else ''),
         'document_number': piece.get('document_number', old_number),
         'amount_location': piece.get('amount_location', piece.get('location', '')),
-        'references': references, 'dates': dates,
+        'references': references,
+        'dates': dates,
         'description': piece.get('description', piece.get('brief_description', '')),
         'amount_basis': piece.get('amount_basis', ''),
         'source_locations': piece.get('source_locations', [piece['location']] if piece.get('location') else []),
-        'limitations': piece.get('limitations', [])}
+        'limitations': piece.get('limitations', []),
+    }
 
 
 def legacy_piece(piece):
     """Store canonical facts in the editor's record, keeping old accessors for existing consumers."""
     facts = canonical(piece)
     dates = facts['dates'] or ([{'type': 'date', 'value': facts['date']}] if facts['date'] else [])
-    result = {'location': facts['amount_location'] or ' | '.join(facts['source_locations']),
+    result = {
+        'location': facts['amount_location'] or ' | '.join(facts['source_locations']),
         'document_type': facts['piece_type'],
-        'invoice_numbers': [facts['document_number']] if facts['document_number'] else
-                           [r['value'] for r in facts['references'] if r['type'] == 'invoice'],
-        'brief_description': facts['description'], 'total': facts['amount'], 'currency': facts['currency'],
-        'limitations': facts['limitations'], 'payee': facts['payee'], 'references': facts['references'],
-        'dates': dates, 'amount_basis': facts['amount_basis'], 'payer': facts['payer'],
-        'other_names': facts['other_names'], 'date': facts['date'], 'document_number': facts['document_number'],
-        'amount_location': facts['amount_location'], 'currency_default': facts['currency_default']}
+        'invoice_numbers': [facts['document_number']]
+        if facts['document_number']
+        else [r['value'] for r in facts['references'] if r['type'] == 'invoice'],
+        'brief_description': facts['description'],
+        'total': facts['amount'],
+        'currency': facts['currency'],
+        'limitations': facts['limitations'],
+        'payee': facts['payee'],
+        'references': facts['references'],
+        'dates': dates,
+        'amount_basis': facts['amount_basis'],
+        'payer': facts['payer'],
+        'other_names': facts['other_names'],
+        'date': facts['date'],
+        'document_number': facts['document_number'],
+        'amount_location': facts['amount_location'],
+        'currency_default': facts['currency_default'],
+    }
     for field in ('piece_id', 'source_units', 'needs_review', 'parent_piece_ids'):
         if field in piece:
             result[field] = deepcopy(piece[field])
@@ -102,24 +130,37 @@ def legacy_result(result):
         return result
     pieces = [legacy_piece(p) for p in result['pieces']]
     description = result.get('description', result.get('summary', ''))
-    return {**{k: v for k, v in result.items() if k != 'pieces'}, 'receipts': pieces, 'brief_description': description,
-        'summary': description, 'details': '',
-        'document_type': result.get('document_type', ''), 'limitations': result.get('limitations', []),
+    return {
+        **{k: v for k, v in result.items() if k != 'pieces'},
+        'receipts': pieces,
+        'brief_description': description,
+        'summary': description,
+        'details': '',
+        'document_type': result.get('document_type', ''),
+        'limitations': result.get('limitations', []),
         'receipt_status': 'receipt' if result.get('document_type') == 'receipt' else 'unsure',
         'supporting_evidence_status': 'potential_support' if pieces else 'uncertain',
-        'supporting_evidence_reason': '', 'company': [],
+        'supporting_evidence_reason': '',
+        'company': [],
         'parties': list(dict.fromkeys(n for p in pieces for n in [p['payee'], p['payer'], *p['other_names']] if n)),
         'invoice_numbers': list(dict.fromkeys(v for p in pieces for v in p['invoice_numbers'])),
         'references': list(dict.fromkeys(r['value'] for p in pieces for r in p['references'])),
         'dates': list(dict.fromkeys(d['value'] for p in pieces for d in p['dates'])),
-        'money': [], 'amounts_and_currencies': [], 'annotations_and_signatures': ''}
+        'money': [],
+        'amounts_and_currencies': [],
+        'annotations_and_signatures': '',
+    }
 
 
 def identify(pieces, document_id, unit, source_revision):
     """Give old pieces deterministic identities scoped to their original evidence."""
-    return [{**piece, 'piece_id': piece.get('piece_id') or
-             'p_' + revision([document_id, unit, source_revision, position])[:24]}
-            for position, piece in enumerate(pieces)]
+    return [
+        {
+            **piece,
+            'piece_id': piece.get('piece_id') or 'p_' + revision([document_id, unit, source_revision, position])[:24],
+        }
+        for position, piece in enumerate(pieces)
+    ]
 
 
 def assign_submitted(pieces, existing):
@@ -169,8 +210,9 @@ def merge_all(pieces):
     merged['currency_default'] = any(p['currency_default'] for p in facts)
     complete = all(re.fullmatch(r'\d+(?:\.\d{1,2})?', p['amount']) for p in facts)
     merged['amount'] = format(sum((Decimal(p['amount']) for p in facts), Decimal(0)), '.2f') if complete else ''
-    merged['parent_piece_ids'] = unique(value for p in pieces
-                                      for value in ([p['piece_id']] if p.get('piece_id') else p.get('parent_piece_ids', [])))
+    merged['parent_piece_ids'] = unique(
+        value for p in pieces for value in ([p['piece_id']] if p.get('piece_id') else p.get('parent_piece_ids', []))
+    )
     sources = unique(value for p in pieces for value in p.get('source_units', []))
     if sources:
         merged['source_units'] = sources

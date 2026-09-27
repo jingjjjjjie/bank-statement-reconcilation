@@ -1,4 +1,5 @@
 """Walk through PDF threshold settings and whole-document review using isolated fixtures."""
+
 import threading
 import unittest
 from pathlib import Path

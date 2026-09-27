@@ -186,10 +186,14 @@ def organize(root, manifest_path):
             target = destination / group / f"{copy:02d}__{source.name}"
             if not source.resolve().is_relative_to(root) or not target.resolve().is_relative_to(destination):
                 raise ValueError("Source or target escaped its expected folder")
-            records.append(dict(Group=group, SHA256=digest,
-                                OriginalPath=str(source), OrganizedPath=str(target)))
-    manifest = dict(SupportingRoot=str(root), DuplicateRoot=str(destination),
-                    Created=datetime.now(timezone.utc).isoformat(), Files=records, OrganizationComplete=False)
+            records.append(dict(Group=group, SHA256=digest, OriginalPath=str(source), OrganizedPath=str(target)))
+    manifest = dict(
+        SupportingRoot=str(root),
+        DuplicateRoot=str(destination),
+        Created=datetime.now(timezone.utc).isoformat(),
+        Files=records,
+        OrganizationComplete=False,
+    )
     # Write the recovery map before moving any files. Never overwrite a manifest.
     with manifest_path.open("x", encoding="utf-8") as stream:
         json.dump(manifest, stream, indent=2, ensure_ascii=False)
@@ -204,6 +208,7 @@ def check(root, manifest, manifest_path):
         raise ValueError("Manifest belongs to a different supporting root.")
     if manifest.get("Mode") == "exact_report":
         from reconciliation.intake.exact_report import check as check_report
+
         return check_report(root, manifest)
     destination = duplicate_root(manifest, manifest_path)
     problems = []
@@ -263,7 +268,9 @@ def main(argv=None):
             print("PENDING: admin cleanup required. Step 2 is blocked.")
             print("\n".join(problems))
             return 2
-        print("PASS 1 COMPLETE: every expected group has one unchanged file and no exact duplicates remain. LLM/vision review is still required before the next reconciliation step.")
+        print(
+            "PASS 1 COMPLETE: every expected group has one unchanged file and no exact duplicates remain. LLM/vision review is still required before the next reconciliation step."
+        )
         return 0
     except (OSError, ValueError, KeyError, TypeError) as error:
         print(f"ERROR: {error}. Step 2 is blocked.", file=sys.stderr)

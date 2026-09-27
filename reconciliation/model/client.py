@@ -4,6 +4,7 @@ Only `ask` is required. Parallel runs, cancellation fences and cache invalidatio
 are optional; the helpers below give safe defaults so simple clients (for example
 test fakes) work unchanged.
 """
+
 from contextlib import nullcontext
 from typing import Protocol, runtime_checkable
 

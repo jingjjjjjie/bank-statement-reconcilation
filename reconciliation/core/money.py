@@ -1,4 +1,5 @@
 """Money parsing: currency spelling and strict amounts; never converts or guesses values."""
+
 import re
 from decimal import Decimal
 
@@ -14,8 +15,10 @@ def normalize_currency(value):
 def normalize_currencies(value):
     """Copy structured output with currency fields normalized and all other facts unchanged."""
     if isinstance(value, dict):
-        return {key: normalize_currency(item) if key == 'currency' else normalize_currencies(item)
-                for key, item in value.items()}
+        return {
+            key: normalize_currency(item) if key == 'currency' else normalize_currencies(item)
+            for key, item in value.items()
+        }
     if isinstance(value, list):
         return [normalize_currencies(item) for item in value]
     return value

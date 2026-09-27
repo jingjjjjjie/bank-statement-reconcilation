@@ -1,4 +1,5 @@
 """Run cancellable process trees with bounded cleanup and verified exits."""
+
 import os
 import signal
 import subprocess
@@ -29,8 +30,9 @@ class PosixProcess:
 
     def __init__(self, command, stdin, stdout, stderr, cwd=None):
         """Start a session so cancellation never signals the dashboard's group."""
-        self.process = subprocess.Popen(command, stdin=stdin, stdout=stdout, stderr=stderr,
-                                        cwd=cwd, start_new_session=True)
+        self.process = subprocess.Popen(
+            command, stdin=stdin, stdout=stdout, stderr=stderr, cwd=cwd, start_new_session=True
+        )
         self.pid = self.process.pid
 
     def poll(self):
@@ -71,6 +73,7 @@ def spawn(command, **streams):
     """Select the operating system's process-tree implementation."""
     if os.name == "nt":
         from reconciliation.model.windows_process import WindowsProcess
+
         return WindowsProcess(command, **streams)
     return PosixProcess(command, **streams)
 

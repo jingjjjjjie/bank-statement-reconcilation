@@ -1,4 +1,5 @@
 """Verify mode isolation, cross-review cache reuse, and preserved human history."""
+
 import hashlib
 import json
 import tempfile
@@ -139,8 +140,11 @@ class DevelopmentCacheTests(unittest.TestCase):
 
         def post(path, body):
             """Send an authenticated action to the isolated dashboard."""
-            request = urllib.request.Request(f"http://127.0.0.1:{server.server_port}{path}",
-                json.dumps(body).encode(), {"X-Review-Token": "token", "Content-Type": "application/json"})
+            request = urllib.request.Request(
+                f"http://127.0.0.1:{server.server_port}{path}",
+                json.dumps(body).encode(),
+                {"X-Review-Token": "token", "Content-Type": "application/json"},
+            )
             with urllib.request.urlopen(request) as response:
                 return json.load(response)
 

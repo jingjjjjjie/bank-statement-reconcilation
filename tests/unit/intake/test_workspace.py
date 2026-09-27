@@ -1,4 +1,5 @@
 """Verify source choices stay read-only until an explicit workflow action."""
+
 import json
 import os
 import tempfile
@@ -85,8 +86,11 @@ class SourceSelectionTests(unittest.TestCase):
 
             def post(route, body):
                 """Submit a local dashboard action using the fixture session token."""
-                request = urllib.request.Request(root + route, json.dumps(body).encode(),
-                    {"Content-Type": "application/json", "X-Review-Token": "test-token"})
+                request = urllib.request.Request(
+                    root + route,
+                    json.dumps(body).encode(),
+                    {"Content-Type": "application/json", "X-Review-Token": "test-token"},
+                )
                 with urllib.request.urlopen(request) as response:
                     return json.load(response)
 
@@ -207,8 +211,9 @@ class SourceSelectionTests(unittest.TestCase):
             manifest, _ = sources.start()
             self.assertTrue(manifest.is_file())
             self.assertFalse((documents / "a.txt").exists())
-            self.assertFalse(any("Unexpected group: projects" in item for item in
-                                 check(legacy, old_review, legacy_manifest)))
+            self.assertFalse(
+                any("Unexpected group: projects" in item for item in check(legacy, old_review, legacy_manifest))
+            )
             sources.activate(manifest)
             self.assertEqual(sources.active_manifest(base / "unused.json"), manifest)
 
@@ -218,7 +223,10 @@ class SourceSelectionTests(unittest.TestCase):
                 """Write a small master with the selected source identity."""
                 path.write_text(f"source_sha256,year_supplied\n{digest},2025\n", encoding="utf-8")
 
-            with patch("reconciliation.bank.statement.extract", return_value={}), patch("reconciliation.bank.statement.write_master", side_effect=write_fixture):
+            with (
+                patch("reconciliation.bank.statement.extract", return_value={}),
+                patch("reconciliation.bank.statement.write_master", side_effect=write_fixture),
+            ):
                 self.assertFalse(sources.prepare_bank(manifest, 2025)["existing"])
                 self.assertTrue(sources.prepare_bank(manifest, 2025)["existing"])
                 with self.assertRaisesRegex(ValueError, "not replaced"):

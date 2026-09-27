@@ -38,10 +38,15 @@ def execution_status(review):
     if status == "stopped":
         error = "Review stopped. Completed results are saved; run again to resume."
     started = getattr(review, "content_started", None)
-    return {"running": running, "active_processes": active, "stop_requested": requested,
-            "phase": getattr(review, "content_phase", ""),
-            "elapsed_seconds": int(monotonic() - started) if running and started is not None else 0,
-            "execution_status": status, "run_error": error}
+    return {
+        "running": running,
+        "active_processes": active,
+        "stop_requested": requested,
+        "phase": getattr(review, "content_phase", ""),
+        "elapsed_seconds": int(monotonic() - started) if running and started is not None else 0,
+        "execution_status": status,
+        "run_error": error,
+    }
 
 
 def prepare(review):
@@ -78,15 +83,20 @@ def start(review, *, regeneration_only=False):
         try:
             index, state = load(work)
             config = load_config(review.config_path)
-            engine = CodexReviewer(work, model=config["model"] or None,
-                                   max_calls=config["max_calls"], reasoning=config["reasoning"],
-                                   cancel_event=review.content_cancel)
+            engine = CodexReviewer(
+                work,
+                model=config["model"] or None,
+                max_calls=config["max_calls"],
+                reasoning=config["reasoning"],
+                cancel_event=review.content_cancel,
+            )
             review.content_engine = engine
             engine.stage_choices = stage_settings(config)
             review.content_phase = "Extracting supporting documents"
             if not regeneration_only:
                 run(work, index, state, engine)
             from dashboard.services import regeneration
+
             regeneration.drain(review, work, engine)
         except BudgetReached as error:
             review.content_error = str(error)
@@ -96,6 +106,7 @@ def start(review, *, regeneration_only=False):
             review.content_error = str(error)
         finally:
             from dashboard.services import regeneration
+
             regeneration.finish(review, review.content_error)
 
     review.content_thread = threading.Thread(target=worker, daemon=True)

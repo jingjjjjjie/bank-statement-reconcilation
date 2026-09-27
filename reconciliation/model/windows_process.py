@@ -1,4 +1,5 @@
 """Create Windows process trees atomically inside kill-on-close Job Objects."""
+
 import ctypes as C
 import msvcrt
 import subprocess
@@ -7,44 +8,80 @@ from ctypes import wintypes as W
 
 class StartupInfo(C.Structure):
     """Native STARTUPINFOW layout, including redirected standard handles."""
-    _fields_ = [("cb", W.DWORD), ("reserved", W.LPWSTR), ("desktop", W.LPWSTR),
-                ("title", W.LPWSTR), ("x", W.DWORD), ("y", W.DWORD),
-                ("width", W.DWORD), ("height", W.DWORD), ("chars_x", W.DWORD),
-                ("chars_y", W.DWORD), ("fill", W.DWORD), ("flags", W.DWORD),
-                ("show", W.WORD), ("reserved_size", W.WORD), ("reserved_ptr", C.c_void_p),
-                ("stdin", W.HANDLE), ("stdout", W.HANDLE), ("stderr", W.HANDLE)]
+
+    _fields_ = [
+        ("cb", W.DWORD),
+        ("reserved", W.LPWSTR),
+        ("desktop", W.LPWSTR),
+        ("title", W.LPWSTR),
+        ("x", W.DWORD),
+        ("y", W.DWORD),
+        ("width", W.DWORD),
+        ("height", W.DWORD),
+        ("chars_x", W.DWORD),
+        ("chars_y", W.DWORD),
+        ("fill", W.DWORD),
+        ("flags", W.DWORD),
+        ("show", W.WORD),
+        ("reserved_size", W.WORD),
+        ("reserved_ptr", C.c_void_p),
+        ("stdin", W.HANDLE),
+        ("stdout", W.HANDLE),
+        ("stderr", W.HANDLE),
+    ]
 
 
 class StartupInfoEx(C.Structure):
     """Extended startup layout for atomic job assignment and handle allowlists."""
+
     _fields_ = [("startup", StartupInfo), ("attributes", C.c_void_p)]
 
 
 class ProcessInfo(C.Structure):
     """Handles and IDs returned by CreateProcessW."""
-    _fields_ = [("process", W.HANDLE), ("thread", W.HANDLE),
-                ("pid", W.DWORD), ("tid", W.DWORD)]
+
+    _fields_ = [("process", W.HANDLE), ("thread", W.HANDLE), ("pid", W.DWORD), ("tid", W.DWORD)]
 
 
 class BasicLimits(C.Structure):
     """Job limit layout used by JOBOBJECT_EXTENDED_LIMIT_INFORMATION."""
-    _fields_ = [("process_time", C.c_int64), ("job_time", C.c_int64), ("flags", W.DWORD),
-                ("min_working_set", C.c_size_t), ("max_working_set", C.c_size_t),
-                ("active_limit", W.DWORD), ("affinity", C.c_size_t),
-                ("priority", W.DWORD), ("scheduling", W.DWORD)]
+
+    _fields_ = [
+        ("process_time", C.c_int64),
+        ("job_time", C.c_int64),
+        ("flags", W.DWORD),
+        ("min_working_set", C.c_size_t),
+        ("max_working_set", C.c_size_t),
+        ("active_limit", W.DWORD),
+        ("affinity", C.c_size_t),
+        ("priority", W.DWORD),
+        ("scheduling", W.DWORD),
+    ]
 
 
 class ExtendedLimits(C.Structure):
     """Extended job limits; only KILL_ON_JOB_CLOSE is enabled."""
-    _fields_ = [("basic", BasicLimits), ("io_counters", C.c_uint64 * 6),
-                ("process_memory", C.c_size_t), ("job_memory", C.c_size_t),
-                ("peak_process_memory", C.c_size_t), ("peak_job_memory", C.c_size_t)]
+
+    _fields_ = [
+        ("basic", BasicLimits),
+        ("io_counters", C.c_uint64 * 6),
+        ("process_memory", C.c_size_t),
+        ("job_memory", C.c_size_t),
+        ("peak_process_memory", C.c_size_t),
+        ("peak_job_memory", C.c_size_t),
+    ]
 
 
 class Accounting(C.Structure):
     """Job accounting exposes the number of processes still running."""
-    _fields_ = [("times", C.c_int64 * 4), ("page_faults", W.DWORD),
-                ("total", W.DWORD), ("active", W.DWORD), ("terminated", W.DWORD)]
+
+    _fields_ = [
+        ("times", C.c_int64 * 4),
+        ("page_faults", W.DWORD),
+        ("total", W.DWORD),
+        ("active", W.DWORD),
+        ("terminated", W.DWORD),
+    ]
 
 
 def api(name, result, *arguments):
@@ -59,16 +96,26 @@ set_job = api("SetInformationJobObject", W.BOOL, W.HANDLE, C.c_int, C.c_void_p, 
 query_job = api("QueryInformationJobObject", W.BOOL, W.HANDLE, C.c_int, C.c_void_p, W.DWORD, C.c_void_p)
 terminate_job = api("TerminateJobObject", W.BOOL, W.HANDLE, W.UINT)
 close_handle = api("CloseHandle", W.BOOL, W.HANDLE)
-duplicate = api("DuplicateHandle", W.BOOL, W.HANDLE, W.HANDLE, W.HANDLE,
-                C.POINTER(W.HANDLE), W.DWORD, W.BOOL, W.DWORD)
-initialize = api("InitializeProcThreadAttributeList", W.BOOL, C.c_void_p, W.DWORD,
-                 W.DWORD, C.POINTER(C.c_size_t))
-update = api("UpdateProcThreadAttribute", W.BOOL, C.c_void_p, W.DWORD, C.c_size_t,
-             C.c_void_p, C.c_size_t, C.c_void_p, C.c_void_p)
+duplicate = api("DuplicateHandle", W.BOOL, W.HANDLE, W.HANDLE, W.HANDLE, C.POINTER(W.HANDLE), W.DWORD, W.BOOL, W.DWORD)
+initialize = api("InitializeProcThreadAttributeList", W.BOOL, C.c_void_p, W.DWORD, W.DWORD, C.POINTER(C.c_size_t))
+update = api(
+    "UpdateProcThreadAttribute", W.BOOL, C.c_void_p, W.DWORD, C.c_size_t, C.c_void_p, C.c_size_t, C.c_void_p, C.c_void_p
+)
 delete = api("DeleteProcThreadAttributeList", None, C.c_void_p)
-create_process = api("CreateProcessW", W.BOOL, W.LPCWSTR, W.LPWSTR, C.c_void_p,
-                     C.c_void_p, W.BOOL, W.DWORD, C.c_void_p, W.LPCWSTR,
-                     C.POINTER(StartupInfoEx), C.POINTER(ProcessInfo))
+create_process = api(
+    "CreateProcessW",
+    W.BOOL,
+    W.LPCWSTR,
+    W.LPWSTR,
+    C.c_void_p,
+    C.c_void_p,
+    W.BOOL,
+    W.DWORD,
+    C.c_void_p,
+    W.LPCWSTR,
+    C.POINTER(StartupInfoEx),
+    C.POINTER(ProcessInfo),
+)
 wait = api("WaitForSingleObject", W.DWORD, W.HANDLE, W.DWORD)
 exit_code = api("GetExitCodeProcess", W.BOOL, W.HANDLE, C.POINTER(W.DWORD))
 
@@ -94,8 +141,11 @@ class WindowsProcess:
             checked(set_job(self.job, 9, C.byref(limits), C.sizeof(limits)))
             for stream in (stdin, stdout, stderr):
                 handle = W.HANDLE()
-                checked(duplicate(W.HANDLE(-1), msvcrt.get_osfhandle(stream.fileno()),
-                                  W.HANDLE(-1), C.byref(handle), 0, True, 2))
+                checked(
+                    duplicate(
+                        W.HANDLE(-1), msvcrt.get_osfhandle(stream.fileno()), W.HANDLE(-1), C.byref(handle), 0, True, 2
+                    )
+                )
                 handles.append(handle.value)
             size = C.c_size_t()
             initialize(None, 2, 0, C.byref(size))
@@ -113,9 +163,20 @@ class WindowsProcess:
             startup.attributes = C.cast(buffer, C.c_void_p)
             info = ProcessInfo()
             command_line = C.create_unicode_buffer(subprocess.list2cmdline([str(arg) for arg in command]))
-            checked(create_process(None, command_line, None, None, True,
-                                   0x08080000, None, str(cwd) if cwd else None,
-                                   C.byref(startup), C.byref(info)))
+            checked(
+                create_process(
+                    None,
+                    command_line,
+                    None,
+                    None,
+                    True,
+                    0x08080000,
+                    None,
+                    str(cwd) if cwd else None,
+                    C.byref(startup),
+                    C.byref(info),
+                )
+            )
             self.handle, self.pid = info.process, info.pid
             close_handle(info.thread)
         except BaseException:

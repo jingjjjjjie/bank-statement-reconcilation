@@ -1,4 +1,5 @@
 """Browser smoke test for settings and keep/undo using temporary fixtures."""
+
 import tempfile
 import threading
 from pathlib import Path
@@ -18,7 +19,9 @@ from tests.http_server import TestServer
 def main():
     # Use installed Chrome, avoiding a separate browser download.
     with sync_playwright() as playwright:
-        browser = playwright.chromium.launch(executable_path=r"C:\Program Files\Google\Chrome\Application\chrome.exe", headless=True)
+        browser = playwright.chromium.launch(
+            executable_path=r"C:\Program Files\Google\Chrome\Application\chrome.exe", headless=True
+        )
         page = browser.new_page(viewport={"width": 1440, "height": 1080}, device_scale_factor=1)
         errors = []
         page.on("pageerror", lambda error: errors.append(str(error)))

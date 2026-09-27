@@ -1,4 +1,5 @@
 """Exercise manual receipt boundaries with real dashboard controls."""
+
 import json
 import threading
 import unittest
@@ -29,8 +30,14 @@ class ReceiptAssemblyBrowserTests(unittest.TestCase):
         (fixture.work / "index.json").write_text(json.dumps(fixture.index))
         fixture.state["index_sha256"] = fingerprint(fixture.work / "index.json")
         fixture.state["units"][fixture.digest + ":1"] = fixture.state["units"][fixture.key]
-        fixture.state["assemblies"] = {fixture.digest: {"receipts": [piece([1]), piece([2])],
-            "reviewed_units": [1, 2], "limitations": [], "input_revision": input_revision(document, fixture.state)}}
+        fixture.state["assemblies"] = {
+            fixture.digest: {
+                "receipts": [piece([1]), piece([2])],
+                "reviewed_units": [1, 2],
+                "limitations": [],
+                "input_revision": input_revision(document, fixture.state),
+            }
+        }
         fixture.review.data = fixture.base / "dashboard-data"
         fixture.review.data.mkdir()
         fixture.review.root = fixture.base

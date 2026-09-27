@@ -1,4 +1,5 @@
 """Fixture: offline model fakes, mocked codex processes and a prepared two-image review folder."""
+
 from contextlib import contextmanager
 from unittest.mock import patch
 
@@ -8,6 +9,7 @@ from reconciliation.model.processes import ReviewCancelled
 @contextmanager
 def mock_codex(fake_run):
     """Intercept login and managed processes so tests never start a real CLI."""
+
     def run(manager, command, **kwargs):
         """Mock the process boundary; real containment has separate OS tests."""
         if manager.cancelled.is_set():
@@ -26,16 +28,30 @@ class FakeReviewer:
 
     Subclass and override `ask` to record calls or simulate failures.
     """
+
     model = "fixture"
 
     def ask(self, prompt, schema, images=()):
         """Return a deterministic legacy-shaped extraction; tests check orchestration, not accuracy."""
-        return {"receipts": [], "readable": True, "supporting_evidence_status": "potential_support",
-                "supporting_evidence_reason": "Visible transaction details", "document_type": "receipt",
-                "receipt_status": "receipt", "invoice_numbers": ["TEST-1"], "company": [],
-                "brief_description": "fixture", "references": ["TEST-1"], "parties": [], "dates": [],
-                "amounts_and_currencies": ["MYR 1"], "money": [{"amount": "1.00", "currency": "MYR", "role": "grand_total"}],
-                "details": "fixture", "annotations_and_signatures": "none", "limitations": []}
+        return {
+            "receipts": [],
+            "readable": True,
+            "supporting_evidence_status": "potential_support",
+            "supporting_evidence_reason": "Visible transaction details",
+            "document_type": "receipt",
+            "receipt_status": "receipt",
+            "invoice_numbers": ["TEST-1"],
+            "company": [],
+            "brief_description": "fixture",
+            "references": ["TEST-1"],
+            "parties": [],
+            "dates": [],
+            "amounts_and_currencies": ["MYR 1"],
+            "money": [{"amount": "1.00", "currency": "MYR", "role": "grand_total"}],
+            "details": "fixture",
+            "annotations_and_signatures": "none",
+            "limitations": [],
+        }
 
 
 class ReviewFolder:
@@ -51,6 +67,7 @@ class ReviewFolder:
         from pathlib import Path
 
         from PIL import Image
+
         temp = tempfile.TemporaryDirectory()
         add_cleanup(temp.cleanup)
         self.base = Path(temp.name)
@@ -65,6 +82,7 @@ class ReviewFolder:
         """Organize exact copies, prepare the review and return `(index, state)`."""
         from reconciliation.extraction import workflow
         from reconciliation.intake.duplicates import organize
+
         if duplicate:
             (self.root / "copy.png").write_bytes((self.root / "a.png").read_bytes())
         organize(self.root, self.manifest)
@@ -79,7 +97,11 @@ class ReviewFixture:
         """Create the folder for this test."""
         self.folder = ReviewFolder(self.addCleanup)
         self.base, self.root, self.work, self.manifest = (
-            self.folder.base, self.folder.root, self.folder.work, self.folder.manifest)
+            self.folder.base,
+            self.folder.root,
+            self.folder.work,
+            self.folder.manifest,
+        )
 
     def prepared(self, duplicate=False):
         """Prepare the review; see `ReviewFolder.prepared`."""

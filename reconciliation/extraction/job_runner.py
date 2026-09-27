@@ -1,4 +1,5 @@
 """Run model jobs on a bounded worker pool, checkpointing each result as it lands."""
+
 from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 from contextlib import nullcontext
 
@@ -18,6 +19,7 @@ def run_jobs(jobs, apply, workers, refill=None, acceptance=nullcontext):
         return
     pending, remaining, error = {}, iter(jobs), None
     with ThreadPoolExecutor(max_workers=workers) as pool:
+
         def submit_one():
             """Keep only one queued job per available worker."""
             nonlocal remaining

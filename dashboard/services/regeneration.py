@@ -1,4 +1,5 @@
 """Persist document regeneration requests for the shared extraction worker."""
+
 import json
 from datetime import datetime, timezone
 from pathlib import Path
@@ -63,8 +64,13 @@ def enqueue(review, digest):
             raise ValueError("Enable Codex in Settings before regenerating")
         current_inventory(index, state)
         document = index["documents"][digest]
-        if (digest in removal_plan(state) or document["error"] or not document.get("accepted", True)
-                or not document["units"] or any(unit.get("blocked") for unit in document["units"])):
+        if (
+            digest in removal_plan(state)
+            or document["error"]
+            or not document.get("accepted", True)
+            or not document["units"]
+            or any(unit.get("blocked") for unit in document["units"])
+        ):
             raise ValueError("Resolve document preparation problems before regenerating")
         running = extraction_runs.execution_status(review)
         if running["running"] and (running["stop_requested"] or not getattr(review, "content_accepting", False)):
@@ -76,8 +82,13 @@ def enqueue(review, digest):
         previous = data["jobs"].get(digest)
         if previous:
             data["history"].append(previous)
-        data["jobs"][digest] = {"id": uuid4().hex, "document_id": digest, "status": "queued",
-                                "requested_at": datetime.now(timezone.utc).isoformat(), "error": ""}
+        data["jobs"][digest] = {
+            "id": uuid4().hex,
+            "document_id": digest,
+            "status": "queued",
+            "requested_at": datetime.now(timezone.utc).isoformat(),
+            "error": "",
+        }
         write_json(queue_path(review), data)
         if not running["running"]:
             try:
@@ -97,19 +108,28 @@ def drain(review, work, engine):
         with review.lock:
             if review.content_cancel.is_set():
                 return {}
-            return {digest: job["id"] for digest, job in read_queue(review)["jobs"].items()
-                    if job["status"] == "queued"}
+            return {
+                digest: job["id"] for digest, job in read_queue(review)["jobs"].items() if job["status"] == "queued"
+            }
 
     while True:
         with review.lock:
-            batch = {digest: job["id"] for digest, job in read_queue(review)["jobs"].items()
-                     if job["status"] == "queued"}
+            batch = {
+                digest: job["id"] for digest, job in read_queue(review)["jobs"].items() if job["status"] == "queued"
+            }
             if not batch or review.content_cancel.is_set():
                 review.content_accepting = False
                 return
         index, state = load(work)
-        run(work, index, state, engine, regeneration=batch,
-            progress=lambda digest, status: update(review, digest, status), queued_regenerations=queued)
+        run(
+            work,
+            index,
+            state,
+            engine,
+            regeneration=batch,
+            progress=lambda digest, status: update(review, digest, status),
+            queued_regenerations=queued,
+        )
         for digest in batch:
             with review.lock:
                 job = read_queue(review)["jobs"][digest]

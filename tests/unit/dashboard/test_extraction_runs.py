@@ -18,7 +18,6 @@ from tests.http_server import TestServer
 
 
 class ContentPageTests(ExtractionRunsFixture):
-
     def test_prepare_endpoint_requires_token_and_prepares_locally(self):
         """Prepare is an authenticated action and makes no model calls."""
         server = TestServer(("127.0.0.1", 0), create_app(self.review, "test-token"))
@@ -29,7 +28,9 @@ class ContentPageTests(ExtractionRunsFixture):
         with self.assertRaises(urllib.error.HTTPError) as error:
             urllib.request.urlopen(urllib.request.Request(url, b"{}"))
         self.assertEqual(error.exception.code, 403)
-        request = urllib.request.Request(url, b"{}", {"X-Review-Token": "test-token", "Content-Type": "application/json"})
+        request = urllib.request.Request(
+            url, b"{}", {"X-Review-Token": "test-token", "Content-Type": "application/json"}
+        )
         with urllib.request.urlopen(request) as response:
             self.assertTrue(json.load(response)["prepared"])
         index, state = load(self.manifest.parent / "review")
@@ -47,7 +48,9 @@ class ContentPageTests(ExtractionRunsFixture):
     def test_run_button_resumes_review_in_background(self):
         """Dashboard runs extract evidence without duplicate screening or comparison."""
         extraction_runs.prepare(self.review)
-        with patch("dashboard.services.extraction_runs.CodexReviewer", side_effect=lambda *args, **kwargs: FixtureReviewer()):
+        with patch(
+            "dashboard.services.extraction_runs.CodexReviewer", side_effect=lambda *args, **kwargs: FixtureReviewer()
+        ):
             extraction_runs.start(self.review)
             self.review.content_thread.join(timeout=5)
         self.assertFalse(self.review.content_thread.is_alive())
@@ -87,7 +90,9 @@ class ContentPageTests(ExtractionRunsFixture):
                     with lock:
                         active[0] -= 1
 
-        with patch("dashboard.services.extraction_runs.CodexReviewer", side_effect=lambda *args, **kwargs: ParallelReviewer()):
+        with patch(
+            "dashboard.services.extraction_runs.CodexReviewer", side_effect=lambda *args, **kwargs: ParallelReviewer()
+        ):
             extraction_runs.start(self.review)
             try:
                 self.assertTrue(started.wait(timeout=5))
@@ -120,7 +125,9 @@ class ContentPageTests(ExtractionRunsFixture):
                 """Fail without returning a fabricated extraction."""
                 raise RuntimeError("Fixture model failure")
 
-        with patch("dashboard.services.extraction_runs.CodexReviewer", side_effect=lambda *args, **kwargs: FailedReviewer()):
+        with patch(
+            "dashboard.services.extraction_runs.CodexReviewer", side_effect=lambda *args, **kwargs: FailedReviewer()
+        ):
             regeneration.enqueue(self.review, digest)
             self.review.content_thread.join(timeout=5)
         self.assertEqual(load(work)[1]["units"], before)
@@ -129,7 +136,9 @@ class ContentPageTests(ExtractionRunsFixture):
         self.assertIn("Fixture model failure", job["error"])
         data = receipt_review.snapshot(self.review)
         with self.assertRaisesRegex(ValueError, "Finish regeneration"):
-            receipt_review.accept_extraction(self.review, {"revision": data["revision"], "key": digest + ":0", "receipts": []})
+            receipt_review.accept_extraction(
+                self.review, {"revision": data["revision"], "key": digest + ":0", "receipts": []}
+            )
 
     def test_new_regeneration_uses_idle_parallel_slot(self):
         """A second click starts before the first model call finishes."""
@@ -157,7 +166,9 @@ class ContentPageTests(ExtractionRunsFixture):
                     raise AssertionError("Parallel slot was not filled")
                 return super().ask(prompt, schema, images)
 
-        with patch("dashboard.services.extraction_runs.CodexReviewer", side_effect=lambda *args, **kwargs: BlockingReviewer()):
+        with patch(
+            "dashboard.services.extraction_runs.CodexReviewer", side_effect=lambda *args, **kwargs: BlockingReviewer()
+        ):
             digests = list(index["documents"])
             regeneration.enqueue(self.review, digests[0])
             try:
@@ -178,8 +189,12 @@ class ContentPageTests(ExtractionRunsFixture):
         run(work, index, state, FixtureReviewer())
         digest = next(iter(index["documents"]))
         data = receipt_review.snapshot(self.review)
-        receipt_review.accept_extraction(self.review, {"revision": data["revision"], "key": digest + ":0", "receipts": []})
-        with patch("dashboard.services.extraction_runs.CodexReviewer", side_effect=lambda *args, **kwargs: FixtureReviewer()):
+        receipt_review.accept_extraction(
+            self.review, {"revision": data["revision"], "key": digest + ":0", "receipts": []}
+        )
+        with patch(
+            "dashboard.services.extraction_runs.CodexReviewer", side_effect=lambda *args, **kwargs: FixtureReviewer()
+        ):
             regeneration.enqueue(self.review, digest)
             self.review.content_thread.join(timeout=5)
         unit = next(unit for unit in receipt_review.snapshot(self.review)["units"] if unit["document_id"] == digest)
@@ -190,8 +205,10 @@ class ContentPageTests(ExtractionRunsFixture):
     def test_interrupted_regeneration_is_unresolved(self):
         """Restarted servers expose unfinished durable jobs as retryable failures."""
         extraction_runs.prepare(self.review)
-        regeneration.queue_path(self.review).write_text(json.dumps({"jobs": {
-            "fixture": {"id": "attempt", "status": "running", "error": ""}}, "history": []}), encoding="utf-8")
+        regeneration.queue_path(self.review).write_text(
+            json.dumps({"jobs": {"fixture": {"id": "attempt", "status": "running", "error": ""}}, "history": []}),
+            encoding="utf-8",
+        )
         self.assertEqual(regeneration.snapshot(self.review)["fixture"]["status"], "failed")
 
     def test_stop_marks_running_regeneration_unresolved(self):
@@ -214,7 +231,9 @@ class ContentPageTests(ExtractionRunsFixture):
                 """Release the waiting fixture call."""
                 cancelled.set()
 
-        with patch("dashboard.services.extraction_runs.CodexReviewer", side_effect=lambda *args, **kwargs: CancelReviewer()):
+        with patch(
+            "dashboard.services.extraction_runs.CodexReviewer", side_effect=lambda *args, **kwargs: CancelReviewer()
+        ):
             digest = next(iter(index["documents"]))
             regeneration.enqueue(self.review, digest)
             self.assertTrue(started.wait(timeout=5))
@@ -238,7 +257,9 @@ class ContentPageTests(ExtractionRunsFixture):
             def cancel(self):
                 cancelled.set()
 
-        with patch("dashboard.services.extraction_runs.CodexReviewer", side_effect=lambda *args, **kwargs: BlockingReviewer()):
+        with patch(
+            "dashboard.services.extraction_runs.CodexReviewer", side_effect=lambda *args, **kwargs: BlockingReviewer()
+        ):
             extraction_runs.start(self.review)
             self.assertTrue(started.wait(timeout=5))
             self.assertTrue(extraction_runs.stop(self.review)["stop_requested"])

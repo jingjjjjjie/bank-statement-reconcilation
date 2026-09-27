@@ -1,4 +1,5 @@
 """Prepare, run, check and report a supporting-document extraction review."""
+
 import argparse
 import json
 import os
@@ -15,8 +16,14 @@ from reconciliation.core import development_cache
 from reconciliation.core.money import normalize_currencies
 from reconciliation.core.paths import WORKSPACE
 from reconciliation.core.settings import (
-    CONFIG_PATH, config_for_manifest, content_settings, load_config, model_settings, revision, stage_settings,
-    validate as validate_config
+    CONFIG_PATH,
+    config_for_manifest,
+    content_settings,
+    load_config,
+    model_settings,
+    revision,
+    stage_settings,
+    validate as validate_config,
 )
 from reconciliation.extraction import pdf_routing, pieces
 from reconciliation.extraction.assembly import ASSEMBLY, current_assembly
@@ -97,6 +104,7 @@ def prepare(manifest_path, work, config_path=None, refresh=False):
             raise ValueError("Prepared review exists; use prepare --refresh after settings changes")
         # Preserve existing decisions and reports before preparing different inputs.
         import shutil
+
         history = work / "history" / datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%f")
         history.mkdir(parents=True)
         for name in ("index.json", "state.json", "report.md", "report.json"):
@@ -104,8 +112,10 @@ def prepare(manifest_path, work, config_path=None, refresh=False):
                 shutil.copy2(work / name, history / name)
     config = load_config(config_path)
     assets = work / "assets" / revision(content_settings(config))[:12]
-    jobs = [(digest, paths, [r["OriginalPath"] for r in manifest["Files"] if r["SHA256"] == digest], assets, config)
-            for digest, paths in sorted(inventory(root, manifest_path).items())]
+    jobs = [
+        (digest, paths, [r["OriginalPath"] for r in manifest["Files"] if r["SHA256"] == digest], assets, config)
+        for digest, paths in sorted(inventory(root, manifest_path).items())
+    ]
     # Rendering is CPU-bound, so separate processes read several documents at once.
     workers = min(MAX_PREPARE_WORKERS, os.cpu_count() or 1, len(jobs)) or 1
     documents = {}
@@ -113,8 +123,13 @@ def prepare(manifest_path, work, config_path=None, refresh=False):
         for number, item in enumerate(pool.map(prepare_document, jobs), 1):
             documents[item["id"]] = item
             print(f"Prepared {number}: {Path(item['paths'][0]).name}", flush=True)
-    index = {"root": str(root), "manifest": str(manifest_path.resolve()), "documents": documents,
-             "config": config, "config_path": str(config_path.resolve()) if config_path else None}
+    index = {
+        "root": str(root),
+        "manifest": str(manifest_path.resolve()),
+        "documents": documents,
+        "config": config,
+        "config_path": str(config_path.resolve()) if config_path else None,
+    }
     save(index_path, index)
     save(work / "state.json", {"index_sha256": fingerprint(index_path), "units": {}, "decisions": {}, "model": None})
     report(work, index, read(work / "state.json"))
@@ -125,8 +140,14 @@ def prepare_document(job):
     """Read one document into units and fingerprint its images; errors stay on the item."""
     digest, paths, originals, assets, config = job
     # Preserve original claim associations even after copies have been moved.
-    item = {"id": digest, "paths": paths, "original_paths": originals,
-            "units": [], "error": None, "accepted": Path(paths[0]).suffix.lower() in ACCEPTED_SUFFIXES}
+    item = {
+        "id": digest,
+        "paths": paths,
+        "original_paths": originals,
+        "units": [],
+        "error": None,
+        "accepted": Path(paths[0]).suffix.lower() in ACCEPTED_SUFFIXES,
+    }
     if item["accepted"]:
         try:
             item["units"] = extract(Path(paths[0]), assets / digest, config)
@@ -193,7 +214,9 @@ def current_inventory(index, state):
     unknown = set(current) - set(index["documents"])
     missing = set(index["documents"]) - set(current) - set(removed)
     if unknown or missing:
-        raise ValueError(f"Sources changed: {len(unknown)} new/modified, {len(missing)} unapproved missing; prepare a new review")
+        raise ValueError(
+            f"Sources changed: {len(unknown)} new/modified, {len(missing)} unapproved missing; prepare a new review"
+        )
     return current, removed
 
 
@@ -210,8 +233,13 @@ def lock_stage_models(state, reviewer, config):
     choices = getattr(reviewer, "stage_choices", stage_settings(config))
     previous = state.get("stage_models")
     if previous is None and state.get("model"):
-        previous = {stage: {"model": "" if state["model"] == "codex-default" else state["model"],
-                            "reasoning": state.get("reasoning", "default")} for stage in choices}
+        previous = {
+            stage: {
+                "model": "" if state["model"] == "codex-default" else state["model"],
+                "reasoning": state.get("reasoning", "default"),
+            }
+            for stage in choices
+        }
     if previous is not None and previous != choices:
         raise ReviewPending("Model or reasoning changed; run prepare --refresh to avoid mixing reviews")
     state["stage_models"] = choices
@@ -227,6 +255,7 @@ def model_gate(index, config, state, reviewer, choices, parallel):
     model schemas and stored legacy records, and invalidates cached answers that
     fail `verify`.
     """
+
     def ask(prompt, schema, images=(), stage="comparison", verify=None):
         """Make one model call for a stage, re-reading settings first so switching Codex off stops the next call."""
         current = active_config(index)
@@ -244,8 +273,13 @@ def model_gate(index, config, state, reviewer, choices, parallel):
         worker.model = choice["model"] or None
         worker.reasoning = choice["reasoning"]
         worker.stage = stage
-        model_schema = (pieces.model_schema("extraction") if schema is EXTRACTION else
-                        pieces.model_schema("receipt_assembly") if schema is ASSEMBLY else schema)
+        model_schema = (
+            pieces.model_schema("extraction")
+            if schema is EXTRACTION
+            else pieces.model_schema("receipt_assembly")
+            if schema is ASSEMBLY
+            else schema
+        )
         result = normalize_currencies(worker.ask(prompt, model_schema, images))
         if schema is EXTRACTION:
             result = pieces.legacy_result(pieces.clean_result(result))
@@ -253,7 +287,8 @@ def model_gate(index, config, state, reviewer, choices, parallel):
             result = pieces.clean_result(result)
             result = {k: v for k, v in result.items() if k != "pieces"} | {
                 "receipts": [pieces.legacy_piece(p) for p in result["pieces"]],
-                "limitations": result.get("limitations", [])}
+                "limitations": result.get("limitations", []),
+            }
         if verify is not None:
             try:
                 verify(result)
@@ -261,6 +296,7 @@ def model_gate(index, config, state, reviewer, choices, parallel):
                 invalidate(worker)
                 raise
         return result
+
     return ask
 
 
@@ -290,10 +326,16 @@ def run(work, index: Index, state: State, reviewer, *, regeneration=None, progre
     documents = index["documents"]
     workers = config["max_parallel"] if supports_parallel(reviewer) else 1
     ctx = RunContext(
-        work=work, config=config, state=state, documents=documents, regeneration=regeneration,
+        work=work,
+        config=config,
+        state=state,
+        documents=documents,
+        regeneration=regeneration,
         selected={key: value for key, value in documents.items() if not regeneration or key in regeneration},
         ask=model_gate(index, config, state, reviewer, choices, parallel=workers > 1),
-        checkpoint=lambda: save(work / "state.json", state), progress=progress)
+        checkpoint=lambda: save(work / "state.json", state),
+        progress=progress,
+    )
     stages = [UnitExtraction(ctx, queued_regenerations), ReceiptAssembly(ctx)]
     try:
         for stage in stages:
@@ -322,7 +364,9 @@ def active_config(index):
     config = load_config(path)
     previous = index.get("config", {"pdf_mode": "vision", "pictures_enabled": True})
     if content_settings(config) != content_settings(previous):
-        raise ReviewPending("Extraction settings changed; run `python -m reconciliation.extraction.workflow prepare --refresh`")
+        raise ReviewPending(
+            "Extraction settings changed; run `python -m reconciliation.extraction.workflow prepare --refresh`"
+        )
     return config
 
 
@@ -382,7 +426,10 @@ def report(work, index, state):
         problems = [str(error)]
     usage = token_summary(work / "token-usage.jsonl")
     (work / "report.md").write_text(render_report(index, state, problems, usage), encoding="utf-8")
-    save(work / "report.json", {"documents": index["documents"], "state": state, "problems": problems, "token_usage": usage})
+    save(
+        work / "report.json",
+        {"documents": index["documents"], "state": state, "problems": problems, "token_usage": usage},
+    )
     try:
         removed = removal_plan(state)
     except ValueError:
@@ -405,7 +452,9 @@ def main(argv=None):
     parser.add_argument("--reasoning")
     parser.add_argument("--max-calls", type=int)
     parser.add_argument("--config", type=Path, default=CONFIG_PATH)
-    parser.add_argument("--refresh", action="store_true", help="Archive existing review metadata and re-extract using saved settings")
+    parser.add_argument(
+        "--refresh", action="store_true", help="Archive existing review metadata and re-extract using saved settings"
+    )
     parser.add_argument("--timeout", type=int, default=DEFAULT_CALL_TIMEOUT)
     args = parser.parse_args(argv)
     try:
@@ -418,21 +467,28 @@ def main(argv=None):
             max_calls = args.max_calls if args.max_calls is not None else config["max_calls"]
             choices = stage_settings(config)
             if args.model is not None or args.reasoning is not None:
-                choices = {stage: {"model": args.model if args.model is not None else choice["model"],
-                                   "reasoning": args.reasoning if args.reasoning is not None else choice["reasoning"]}
-                           for stage, choice in choices.items()}
+                choices = {
+                    stage: {
+                        "model": args.model if args.model is not None else choice["model"],
+                        "reasoning": args.reasoning if args.reasoning is not None else choice["reasoning"],
+                    }
+                    for stage, choice in choices.items()
+                }
                 validate_config({**config, "stages": choices})
             if max_calls < 1 or args.timeout < 1:
                 raise ValueError("Call limit and timeout must be positive")
-            engine = CodexReviewer(args.work.resolve(), args.codex, config["model"] or None,
-                                   max_calls, args.timeout, config["reasoning"])
+            engine = CodexReviewer(
+                args.work.resolve(), args.codex, config["model"] or None, max_calls, args.timeout, config["reasoning"]
+            )
             engine.stage_choices = choices
             try:
                 run(args.work, index, state, engine)
             except BudgetReached as error:
                 print(error)
         problems = report(args.work, index, state)
-        print(f"{'PENDING' if problems else 'COMPLETE'}: {len(problems)} outstanding checks. See {args.work / 'report.md'}")
+        print(
+            f"{'PENDING' if problems else 'COMPLETE'}: {len(problems)} outstanding checks. See {args.work / 'report.md'}"
+        )
         return 2 if problems else 0
     except ReviewPending as error:
         print(f"PENDING: {error}")

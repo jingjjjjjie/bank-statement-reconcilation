@@ -1,4 +1,5 @@
 """Optional workspace-wide testing cache with immutable output snapshots."""
+
 import hashlib
 import json
 import shutil
@@ -87,9 +88,14 @@ def capture(manifest, stage, extra=()):
     for directory in ("review", "bank-output", "dashboard-data"):
         parent = base / directory
         if parent.exists():
-            paths.extend(p for p in parent.rglob("*") if p.is_file()
-                         and not {"model-cache", "history", "recovery"}.intersection(p.relative_to(parent).parts)
-                         and p.suffix != ".tmp" and not p.name.startswith("."))
+            paths.extend(
+                p
+                for p in parent.rglob("*")
+                if p.is_file()
+                and not {"model-cache", "history", "recovery"}.intersection(p.relative_to(parent).parts)
+                and p.suffix != ".tmp"
+                and not p.name.startswith(".")
+            )
     paths.extend(Path(p) for p in extra)
     artifacts = {}
     for path in paths:

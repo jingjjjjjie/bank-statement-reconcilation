@@ -1,4 +1,5 @@
 """Exercise real process trees without Codex calls or customer documents."""
+
 import os
 import subprocess
 import sys
@@ -24,6 +25,7 @@ def alive(pid):
     """Check actual process exit using an OS handle or Linux process state."""
     if os.name == "nt":
         from reconciliation.model.windows_process import W, api, close_handle, wait
+
         open_process = api("OpenProcess", W.HANDLE, W.DWORD, W.BOOL, W.DWORD)
         handle = open_process(0x100000, False, pid)
         if not handle:
@@ -60,8 +62,9 @@ class ProcessManagerTests(unittest.TestCase):
         """Preserve Unicode input, argument quoting, output, and exit status."""
         audit = {}
         code = "import sys; print(sys.stdin.read()); print(sys.argv[1], file=sys.stderr); sys.exit(7)"
-        result = self.manager.run([sys.executable, "-X", "utf8", "-c", code, 'space and "quote"'],
-                                  input="receipt \u4e16\u754c", audit=audit)
+        result = self.manager.run(
+            [sys.executable, "-X", "utf8", "-c", code, 'space and "quote"'], input="receipt \u4e16\u754c", audit=audit
+        )
         self.assertEqual(result.returncode, 7)
         self.assertIn("receipt \u4e16\u754c", result.stdout)
         self.assertIn('space and "quote"', result.stderr)
@@ -75,9 +78,15 @@ class ProcessManagerTests(unittest.TestCase):
             with ThreadPoolExecutor(max_workers=4) as pool:
                 audits = [{} for _ in range(4)]
                 markers = [self.folder / f"child-{n}" for n in range(4)]
-                futures = [pool.submit(self.manager.run, [sys.executable, "-c", TREE, str(path), CHILD],
-                                       input="x" * 1000000, audit=audit)
-                           for path, audit in zip(markers, audits)]
+                futures = [
+                    pool.submit(
+                        self.manager.run,
+                        [sys.executable, "-c", TREE, str(path), CHILD],
+                        input="x" * 1000000,
+                        audit=audit,
+                    )
+                    for path, audit in zip(markers, audits)
+                ]
                 try:
                     children = [self.wait_file(path) for path in markers]
                     self.assertEqual(self.manager.active_count, 4)
@@ -139,8 +148,10 @@ class ProcessManagerTests(unittest.TestCase):
 
     def test_failed_verification_remains_tracked(self):
         """Never report zero active processes when termination cannot be verified."""
+
         class RefusesToStop:
             """Represent an operating-system termination failure."""
+
             pid = 123
 
             def poll(self):
@@ -164,7 +175,8 @@ class ProcessManagerTests(unittest.TestCase):
         marker, audit = self.folder / "child", {}
         ignore = "import signal; signal.signal(signal.SIGTERM, signal.SIG_IGN); "
         with self.assertRaises(subprocess.TimeoutExpired):
-            self.manager.run([sys.executable, "-c", ignore + TREE, str(marker), ignore + CHILD],
-                             timeout=1.5, audit=audit)
+            self.manager.run(
+                [sys.executable, "-c", ignore + TREE, str(marker), ignore + CHILD], timeout=1.5, audit=audit
+            )
         self.assertTrue(audit["exit_verified"])
         self.assertFalse(alive(self.wait_file(marker)))

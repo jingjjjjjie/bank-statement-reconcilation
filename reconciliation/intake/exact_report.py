@@ -1,4 +1,5 @@
 """Create a deterministic exact-duplicate report without removing input files."""
+
 import json
 import shutil
 import tempfile
@@ -48,8 +49,12 @@ def restore_legacy(root, manifest_path, manifest):
             raise ValueError("Original path escaped the documents folder")
         source = Path(record["OrganizedPath"])
         if not source.is_file():
-            candidates = [Path(move["archive"]) for action in actions for move in action["moves"]
-                          if move.get("source") == str(source)]
+            candidates = [
+                Path(move["archive"])
+                for action in actions
+                for move in action["moves"]
+                if move.get("source") == str(source)
+            ]
             source = next((path for path in candidates if path.is_file()), source)
         if original.is_file():
             if fingerprint(original) != record["SHA256"]:
@@ -71,17 +76,31 @@ def prepare(root, manifest_path):
         restore_legacy(root, manifest_path, previous)
     files = supporting_files(root)
     groups = duplicate_groups(files)
-    records = [{"Group": f"group-{number:03d}", "SHA256": digest,
-                "OriginalPath": str(source),
-                "OrganizedPath": str(destination / f"group-{number:03d}" / f"{copy:02d}__{source.name}")}
-               for number, (digest, members) in enumerate(groups, 1)
-               for copy, source in enumerate(members, 1)]
-    manifest = {"Mode": "exact_report", "SupportingRoot": str(root), "DuplicateRoot": str(destination),
-                "Files": records, "SourceHashes": {str(path): fingerprint(path) for path in files},
-                "Summary": {"files": len(files), "groups": len(groups), "copies": len(records),
-                            "extra_copies": len(records) - len(groups),
-                            "unique_documents": len(files) - len(records) + len(groups)},
-                "OrganizationComplete": False}
+    records = [
+        {
+            "Group": f"group-{number:03d}",
+            "SHA256": digest,
+            "OriginalPath": str(source),
+            "OrganizedPath": str(destination / f"group-{number:03d}" / f"{copy:02d}__{source.name}"),
+        }
+        for number, (digest, members) in enumerate(groups, 1)
+        for copy, source in enumerate(members, 1)
+    ]
+    manifest = {
+        "Mode": "exact_report",
+        "SupportingRoot": str(root),
+        "DuplicateRoot": str(destination),
+        "Files": records,
+        "SourceHashes": {str(path): fingerprint(path) for path in files},
+        "Summary": {
+            "files": len(files),
+            "groups": len(groups),
+            "copies": len(records),
+            "extra_copies": len(records) - len(groups),
+            "unique_documents": len(files) - len(records) + len(groups),
+        },
+        "OrganizationComplete": False,
+    }
     report_path = destination / "report.json"
     if destination.exists():
         if not report_path.is_file():

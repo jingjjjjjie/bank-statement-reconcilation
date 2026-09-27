@@ -1,4 +1,5 @@
 """Smoke test the bank page against temporary data in a real browser."""
+
 import tempfile
 import threading
 import unittest
@@ -28,7 +29,8 @@ class BankBrowserTests(unittest.TestCase):
             (bank / "master_statement.csv").write_text(
                 "account,currency,opening_balance,closing_balance,total_money_in,total_money_out,balance_checks,transaction_id,date,page,direction,money_in,money_out,balance,counterparty,counterparty_role,narration,matching_status\n"
                 "8866,MYR,100.00,110.00,10.00,0.00,passed,tx-1,2025-12-01,2,in,10.00,0.00,110.00,Payer,payer,Unique transfer,pending\n",
-                encoding="utf-8")
+                encoding="utf-8",
+            )
             review = Review(manifest, base / "dashboard-data")
             server = TestServer(("127.0.0.1", 0), create_app(review, "test-token"))
             threading.Thread(target=server.serve_forever, daemon=True).start()

@@ -1,4 +1,5 @@
 """Verify automatic duplicate reports preserve sources and unblock content review."""
+
 import json
 import tempfile
 import unittest
@@ -31,8 +32,9 @@ class ExactReportTests(unittest.TestCase):
     def test_report_groups_all_copies_and_deduplicates_model_inputs(self):
         """Report exact copies without manual decisions or changing original bytes."""
         manifest = prepare(self.root, self.manifest)
-        self.assertEqual(manifest["Summary"], {"files": 3, "groups": 1, "copies": 2,
-                                               "extra_copies": 1, "unique_documents": 2})
+        self.assertEqual(
+            manifest["Summary"], {"files": 3, "groups": 1, "copies": 2, "extra_copies": 1, "unique_documents": 2}
+        )
         self.assertEqual(len(list((self.work / "output/duplicates/group-001").iterdir())), 2)
         self.assertEqual(len(list(self.root.iterdir())), 3)
         self.assertEqual(check(self.root, manifest, self.manifest), [])
@@ -57,7 +59,9 @@ class ExactReportTests(unittest.TestCase):
         self.assertEqual(result["Summary"]["copies"], 2)
         self.assertEqual(len(list(self.root.iterdir())), 3)
         self.assertTrue(all(path.is_file() for path in recovery))
-        self.assertEqual(json.loads((self.project / "legacy-duplicate-manifest.json").read_text())["Files"], old["Files"])
+        self.assertEqual(
+            json.loads((self.project / "legacy-duplicate-manifest.json").read_text())["Files"], old["Files"]
+        )
 
     def test_workspace_start_uses_report_and_preserves_statement(self):
         """The workspace entry point creates the automatic report on Proceed."""

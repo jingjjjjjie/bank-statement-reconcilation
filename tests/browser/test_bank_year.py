@@ -1,4 +1,5 @@
 """Check statement year validation before sending extraction requests."""
+
 import threading
 import unittest
 
@@ -17,6 +18,7 @@ class BankYearTests(unittest.TestCase):
         self.addCleanup(server.server_close)
         self.addCleanup(server.shutdown)
         requests = []
+
         def respond(route):
             """Provide isolated bank-page responses without processing real inputs."""
             path = route.request.url.split('/api/')[1]
@@ -24,12 +26,20 @@ class BankYearTests(unittest.TestCase):
                 requests.append(route.request.post_data_json)
                 route.fulfill(json={'existing': False})
                 return
-            data = {'session': {'active': True, 'review_id': 'fixture', 'token': 'fixture'},
-                'workspace': {'name': 'Fixture', 'period': ''}, 'workflow-checks': {'steps': []},
-                'development-mode': {'enabled': False}, 'bank-statement': {'available': False},
-                'source': {'active': '/fixture/documents', 'selected': {'path': '/fixture/documents'},
-                    'bank': {'path': '/fixture/statement.pdf'}}}.get(path, {})
+            data = {
+                'session': {'active': True, 'review_id': 'fixture', 'token': 'fixture'},
+                'workspace': {'name': 'Fixture', 'period': ''},
+                'workflow-checks': {'steps': []},
+                'development-mode': {'enabled': False},
+                'bank-statement': {'available': False},
+                'source': {
+                    'active': '/fixture/documents',
+                    'selected': {'path': '/fixture/documents'},
+                    'bank': {'path': '/fixture/statement.pdf'},
+                },
+            }.get(path, {})
             route.fulfill(json=data)
+
         with sync_playwright() as p:
             browser = p.chromium.launch(**browser_options())
             page = browser.new_page()

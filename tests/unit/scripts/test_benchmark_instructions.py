@@ -1,4 +1,5 @@
 """Check benchmark isolation and order-independent field comparisons offline."""
+
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
@@ -46,8 +47,10 @@ class InstructionBenchmarkTests(unittest.TestCase):
 
     def test_numeric_formatting_and_app_currency_alias_are_equivalent(self):
         """Do not score decimal formatting or the app's RM alias as factual errors."""
-        self.assertEqual(facts([{'amount': '25.00', 'currency': 'RM'}], ['amount', 'currency']),
-                         facts([{'amount': '25', 'currency': 'MYR'}], ['amount', 'currency']))
+        self.assertEqual(
+            facts([{'amount': '25.00', 'currency': 'RM'}], ['amount', 'currency']),
+            facts([{'amount': '25', 'currency': 'MYR'}], ['amount', 'currency']),
+        )
 
     def test_page_coverage_rejects_duplicate_or_unknown_source_units(self):
         """A schema-valid response must still bind pieces to real source pages."""

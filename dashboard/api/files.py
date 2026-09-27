@@ -1,4 +1,5 @@
 """Resolve previews through existing evidence checks before returning source bytes."""
+
 import json
 import mimetypes
 from pathlib import Path
@@ -17,7 +18,9 @@ router = APIRouter(prefix="/api")
 
 def file_response(path, mime=None):
     """Read a validated source while the review lock protects its location."""
-    return Response(path.read_bytes(), media_type=mime or mimetypes.guess_type(path.name)[0] or "application/octet-stream")
+    return Response(
+        path.read_bytes(), media_type=mime or mimetypes.guess_type(path.name)[0] or "application/octet-stream"
+    )
 
 
 def matching_source(kind: str, id: str, request: Request):
@@ -75,6 +78,7 @@ def extraction_image(page: int = Query(0, ge=0), path=Depends(extraction_source)
     """Render the requested original source page."""
     if page == 0 and path.suffix.lower() in {".jpg", ".jpeg", ".png", ".webp"}:
         from PIL import Image
+
         with Image.open(path) as picture:
             if getattr(picture, "n_frames", 1) == 1 and picture.format in {"JPEG", "PNG", "WEBP"}:
                 return file_response(path, Image.MIME[picture.format])
@@ -110,8 +114,9 @@ def document(id: str | None = None, content_id: str | None = None, state=Depends
 
 
 @router.get("/office-view")
-def office(id: str | None = None, content_id: str | None = None,
-           page: int = Query(0, ge=0), state=Depends(active_context)):
+def office(
+    id: str | None = None, content_id: str | None = None, page: int = Query(0, ge=0), state=Depends(active_context)
+):
     """Render structured Office data from an authorized source."""
     if content_id is None and id is None:
         raise HTTPException(422, "A document ID is required")
@@ -131,10 +136,13 @@ def preview(id: str, page: int = Query(0, ge=0), state=Depends(active_context)):
     path = state.review.file_path(id)
     if path.suffix.lower() == ".pdf":
         import pymupdf
+
         with pymupdf.open(path) as pdf:
             return Response(pdf[page].get_pixmap(dpi=110, alpha=False).tobytes("png"), media_type="image/png")
     metadata = state.review.document(id)
     if metadata["kind"] == "office":
-        units = json.loads((state.review.data / "previews" / fingerprint(path) / "units.json").read_text(encoding="utf-8"))
+        units = json.loads(
+            (state.review.data / "previews" / fingerprint(path) / "units.json").read_text(encoding="utf-8")
+        )
         path = Path(units[page]["image"])
     return file_response(path)

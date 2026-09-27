@@ -1,4 +1,5 @@
 """Fresh Codex homes must support offline work without weakening catalog checks."""
+
 import tempfile
 import unittest
 from pathlib import Path
@@ -31,8 +32,11 @@ class ModelCatalogTests(unittest.TestCase):
     def test_missing_catalog_rejects_unverified_overrides(self):
         """The fallback permits neither invented models nor reasoning overrides."""
         with patch("reconciliation.core.settings.model_catalog", return_value=[]):
-            for choice in ({"model": "unknown"}, {"reasoning": "high"},
-                           {"stages": {"images": {"model": "unknown", "reasoning": "default"}}}):
+            for choice in (
+                {"model": "unknown"},
+                {"reasoning": "high"},
+                {"stages": {"images": {"model": "unknown", "reasoning": "default"}}},
+            ):
                 with self.subTest(choice=choice), self.assertRaises(ValueError):
                     validate({**DEFAULTS, **choice})
 

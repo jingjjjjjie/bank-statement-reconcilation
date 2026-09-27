@@ -1,4 +1,5 @@
 """Browser checks for token settings and gated completion display."""
+
 import json
 import tempfile
 import threading
@@ -54,21 +55,49 @@ class TokenBrowserTests(unittest.TestCase):
                     expect(page.locator("#save-state")).to_have_text("All settings saved")
                     page.reload()
                     expect(page.locator("#max-parallel")).to_have_value("2")
-                    page.route("**/api/config", lambda route: route.fulfill(status=200, content_type="application/json",
-                               body=json.dumps({key: value for key, value in route.fetch().json().items() if key != "token_usage"})))
+                    page.route(
+                        "**/api/config",
+                        lambda route: route.fulfill(
+                            status=200,
+                            content_type="application/json",
+                            body=json.dumps(
+                                {key: value for key, value in route.fetch().json().items() if key != "token_usage"}
+                            ),
+                        ),
+                    )
                     page.reload()
                     expect(page.locator("#token-usage")).to_contain_text("server is restarted")
                     page.goto(url + "/complete")
                     expect(page.locator("#completion-title")).to_have_text("Workflow in progress.")
                     expect(page.locator("#final-usage")).to_be_hidden()
-                    page.route("**/api/completion", lambda route: route.fulfill(status=200, content_type="application/json",
-                               body=json.dumps({"exact_done": True, "content_done": True, "bank_done": True,
-                                                "complete": True, "token_usage": {"totals": {
-                                                    "input_tokens": 100, "cached_input_tokens": 40,
-                                                    "output_tokens": 25, "reasoning_output_tokens": 5},
-                                                    "attempts": 1, "unknown_attempts": 0, "cache_hits": 0,
-                                                    "by_stage": {"pdf": {"input_tokens": 100, "output_tokens": 25}},
-                                                    "by_model": {"test": {"input_tokens": 100, "output_tokens": 25}}}})))
+                    page.route(
+                        "**/api/completion",
+                        lambda route: route.fulfill(
+                            status=200,
+                            content_type="application/json",
+                            body=json.dumps(
+                                {
+                                    "exact_done": True,
+                                    "content_done": True,
+                                    "bank_done": True,
+                                    "complete": True,
+                                    "token_usage": {
+                                        "totals": {
+                                            "input_tokens": 100,
+                                            "cached_input_tokens": 40,
+                                            "output_tokens": 25,
+                                            "reasoning_output_tokens": 5,
+                                        },
+                                        "attempts": 1,
+                                        "unknown_attempts": 0,
+                                        "cache_hits": 0,
+                                        "by_stage": {"pdf": {"input_tokens": 100, "output_tokens": 25}},
+                                        "by_model": {"test": {"input_tokens": 100, "output_tokens": 25}},
+                                    },
+                                }
+                            ),
+                        ),
+                    )
                     page.reload()
                     expect(page.locator("#final-total")).to_have_text("125 tokens")
                     expect(page.locator("#final-usage")).to_be_visible()

@@ -1,28 +1,44 @@
 """Assemble receipt boundaries across a document while retaining source evidence."""
+
 from jsonschema import validate
 
 from reconciliation.core.revision import revision
 from reconciliation.extraction.pieces import TOTALS
 from reconciliation.extraction.schemas import RECEIPT, TEXT, TEXTS, object_schema
 
-ASSEMBLED_RECEIPT = object_schema({**RECEIPT["properties"],
-    "source_units": {"type": "array", "items": {"type": "integer", "minimum": 1}, "minItems": 1},
-    "needs_review": {"type": "boolean"},
-})
-ASSEMBLED_RECEIPT['required'] = [*RECEIPT['required'], 'source_units']  # Old records may retain an ignored needs_review flag.
-ASSEMBLY = object_schema({
-    "receipts": {"type": "array", "items": ASSEMBLED_RECEIPT},
-    "reviewed_units": {"type": "array", "items": {"type": "integer", "minimum": 1}},
-    "limitations": TEXTS,
-})
-ASSEMBLY['properties'].update({'summary': TEXT, 'description': TEXT, 'totals': TOTALS, 'document_type': TEXT,
-                               'readable': {'type': 'boolean'}, 'review_warnings': TEXTS})
+ASSEMBLED_RECEIPT = object_schema(
+    {
+        **RECEIPT["properties"],
+        "source_units": {"type": "array", "items": {"type": "integer", "minimum": 1}, "minItems": 1},
+        "needs_review": {"type": "boolean"},
+    }
+)
+ASSEMBLED_RECEIPT['required'] = [
+    *RECEIPT['required'],
+    'source_units',
+]  # Old records may retain an ignored needs_review flag.
+ASSEMBLY = object_schema(
+    {
+        "receipts": {"type": "array", "items": ASSEMBLED_RECEIPT},
+        "reviewed_units": {"type": "array", "items": {"type": "integer", "minimum": 1}},
+        "limitations": TEXTS,
+    }
+)
+ASSEMBLY['properties'].update(
+    {
+        'summary': TEXT,
+        'description': TEXT,
+        'totals': TOTALS,
+        'document_type': TEXT,
+        'readable': {'type': 'boolean'},
+        'review_warnings': TEXTS,
+    }
+)
 
 
 def input_revision(document, state):
     """Bind assembly to every page result and original preparation record."""
-    return revision([document, [state["units"].get(f"{document['id']}:{n}")
-                               for n in range(len(document["units"]))]])
+    return revision([document, [state["units"].get(f"{document['id']}:{n}") for n in range(len(document["units"]))]])
 
 
 def validate_assembly(value, count, *, source_units=None):

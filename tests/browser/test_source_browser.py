@@ -1,4 +1,5 @@
 """Exercise both source selectors in a real browser."""
+
 import os
 import tempfile
 import threading
@@ -31,8 +32,11 @@ class SourceBrowserTests(unittest.TestCase):
             try:
                 with sync_playwright() as playwright:
                     browser = playwright.chromium.launch(
-                        executable_path=r"C:\Program Files\Google\Chrome\Application\chrome.exe" if os.name == "nt" else None,
-                        headless=True)
+                        executable_path=r"C:\Program Files\Google\Chrome\Application\chrome.exe"
+                        if os.name == "nt"
+                        else None,
+                        headless=True,
+                    )
                     try:
                         page = browser.new_page()
                         page.goto(f"http://127.0.0.1:{server.server_port}/review")
@@ -67,8 +71,11 @@ class SourceBrowserTests(unittest.TestCase):
             try:
                 with sync_playwright() as playwright:
                     browser = playwright.chromium.launch(
-                        executable_path=r"C:\Program Files\Google\Chrome\Application\chrome.exe" if os.name == "nt" else None,
-                        headless=True)
+                        executable_path=r"C:\Program Files\Google\Chrome\Application\chrome.exe"
+                        if os.name == "nt"
+                        else None,
+                        headless=True,
+                    )
                     try:
                         page = browser.new_page()
                         page.goto(f"http://127.0.0.1:{server.server_port}/")

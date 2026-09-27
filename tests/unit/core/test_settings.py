@@ -1,4 +1,5 @@
 """Configuration checks use synthetic PDFs, images and temporary JSON files."""
+
 import json
 import tempfile
 import unittest
@@ -10,7 +11,13 @@ import pymupdf
 from PIL import Image
 
 from reconciliation.core.settings import (
-    DEFAULTS, config_for_manifest, load_config, revision, save_config, stage_settings, validate
+    DEFAULTS,
+    config_for_manifest,
+    load_config,
+    revision,
+    save_config,
+    stage_settings,
+    validate,
 )
 from reconciliation.extraction.reader import extract
 from reconciliation.extraction.workflow import ReviewPending, active_config, run
@@ -67,11 +74,21 @@ class SettingsTests(unittest.TestCase):
             save_config(self.path, DEFAULTS, before)
 
     def test_invalid_settings_do_not_get_saved(self):
-        for change in ({"codex_enabled": "false"}, {"max_calls": True}, {"max_calls": 0}, {"max_calls": 1001},
-                       {"max_parallel": True}, {"max_parallel": 0}, {"max_parallel": 9},
-                       {"pdf_whole_document_max_pages": True}, {"pdf_whole_document_max_pages": 0},
-                       {"pdf_whole_document_max_pages": 41}, {"pdf_whole_document_max_pages": 2.5},
-                       {"pdf_mode": "typo"}, {"unknown": True}):
+        for change in (
+            {"codex_enabled": "false"},
+            {"max_calls": True},
+            {"max_calls": 0},
+            {"max_calls": 1001},
+            {"max_parallel": True},
+            {"max_parallel": 0},
+            {"max_parallel": 9},
+            {"pdf_whole_document_max_pages": True},
+            {"pdf_whole_document_max_pages": 0},
+            {"pdf_whole_document_max_pages": 41},
+            {"pdf_whole_document_max_pages": 2.5},
+            {"pdf_mode": "typo"},
+            {"unknown": True},
+        ):
             with self.subTest(change=change), self.assertRaises(ValueError):
                 validate({**DEFAULTS, **change})
         self.assertFalse(self.path.exists())
@@ -81,7 +98,9 @@ class SettingsTests(unittest.TestCase):
         old = {key: value for key, value in DEFAULTS.items() if key != 'pdf_whole_document_max_pages'}
         self.assertEqual(validate(old)['pdf_whole_document_max_pages'], 5)
         self.path.write_text(json.dumps({**DEFAULTS, 'pdf_whole_document_max_pages': 8}))
-        self.assertEqual(active_config({'config_path': str(self.path), 'config': old})['pdf_whole_document_max_pages'], 8)
+        self.assertEqual(
+            active_config({'config_path': str(self.path), 'config': old})['pdf_whole_document_max_pages'], 8
+        )
 
     def test_codex_off_stops_before_any_model_work(self):
         self.config["codex_enabled"] = False
@@ -114,12 +133,14 @@ class SettingsTests(unittest.TestCase):
     def test_codex_receives_model_reasoning_and_caches_them_separately(self):
         # Inspect subprocess arguments with no live model calls.
         commands = []
+
         def fake_run(command, **kwargs):
             if command[1:3] == ["login", "status"]:
                 return SimpleNamespace(returncode=0, stdout="Logged in using ChatGPT", stderr="")
             commands.append(command)
             Path(command[command.index("--output-last-message") + 1]).write_text('{"ok": true}')
             return SimpleNamespace(returncode=0)
+
         schema = object_schema({"ok": {"type": "boolean"}})
         with mock_codex(fake_run):
             for effort in ("low", "high", "low"):
@@ -130,26 +151,37 @@ class SettingsTests(unittest.TestCase):
         self.assertEqual(commands[1][commands[1].index("--model") + 1], "gpt-5.6-sol")
 
     def test_stage_validation_and_legacy_fallback(self):
-        models = [{"id": "text", "reasoning": ["low"], "vision": False},
-                  {"id": "vision", "reasoning": ["high"], "vision": True}]
+        models = [
+            {"id": "text", "reasoning": ["low"], "vision": False},
+            {"id": "vision", "reasoning": ["high"], "vision": True},
+        ]
         with patch("reconciliation.core.settings.model_catalog", return_value=models):
             legacy = validate({**DEFAULTS, "model": "vision", "reasoning": "high"})
             self.assertTrue(all(c["model"] == "vision" for c in stage_settings(legacy).values()))
-            config = {**DEFAULTS, "pdf_mode": "text_only", "model": "vision", "stages": {"pdf": {"model": "text", "reasoning": "low"}}}
+            config = {
+                **DEFAULTS,
+                "pdf_mode": "text_only",
+                "model": "vision",
+                "stages": {"pdf": {"model": "text", "reasoning": "low"}},
+            }
             self.assertEqual(stage_settings(validate(config))["pdf"]["model"], "text")
-            for change in ({"pdf_mode": "vision"},
-                           {"stages": {"images": {"model": "text", "reasoning": "low"}}},
-                           {"stages": {"typo": {"model": "", "reasoning": "default"}}}):
+            for change in (
+                {"pdf_mode": "vision"},
+                {"stages": {"images": {"model": "text", "reasoning": "low"}}},
+                {"stages": {"typo": {"model": "", "reasoning": "default"}}},
+            ):
                 with self.assertRaises(ValueError):
                     validate({**config, **change})
 
     def test_switching_models_shares_budget_and_preserves_cache(self):
         from reconciliation.model.codex import BudgetReached
+
         def fake_run(command, **kwargs):
             if command[1:3] == ["login", "status"]:
                 return SimpleNamespace(returncode=0, stdout="ChatGPT", stderr="")
             Path(command[command.index("--output-last-message") + 1]).write_text('{"ok": true}')
             return SimpleNamespace(returncode=0)
+
         schema = object_schema({"ok": {"type": "boolean"}})
         engine = CodexReviewer(self.base, executable="codex", model="first", max_calls=1)
         with mock_codex(fake_run):
@@ -187,6 +219,7 @@ if __name__ == "__main__":
     def test_missing_explicit_config_fails_before_preparation(self):
         """Do not prepare default evidence linked to a nonexistent settings file."""
         from reconciliation.extraction.workflow import prepare
+
         with self.assertRaisesRegex(ValueError, "configuration is missing"):
             prepare(self.base / "manifest.json", self.base / "review", self.base / "missing.json")
         self.assertFalse((self.base / "review").exists())

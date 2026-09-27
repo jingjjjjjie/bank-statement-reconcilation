@@ -1,4 +1,5 @@
 """Check the document status page against saved review checkpoints."""
+
 import json
 import tempfile
 import threading
@@ -31,8 +32,20 @@ class DocumentStatusTests(unittest.TestCase):
             Image.new("RGB", (20, 20), "black").save(source / "second.png")
             manifest = base / "manifest.json"
             organize(source, manifest)
-            (base / "review_config.json").write_text(json.dumps({"pdf_mode": "auto", "pictures_enabled": True,
-                "codex_enabled": True, "max_calls": 20, "model": "", "reasoning": "default", "stages": {}}), encoding="utf-8")
+            (base / "review_config.json").write_text(
+                json.dumps(
+                    {
+                        "pdf_mode": "auto",
+                        "pictures_enabled": True,
+                        "codex_enabled": True,
+                        "max_calls": 20,
+                        "model": "",
+                        "reasoning": "default",
+                        "stages": {},
+                    }
+                ),
+                encoding="utf-8",
+            )
             review = Review(manifest, base / "data")
             work = base / "review"
             prepare(manifest, work, review.config_path)
@@ -63,8 +76,11 @@ class DocumentStatusTests(unittest.TestCase):
                     for filename in ("first.png", "second.png"):
                         page.locator("#document-search").fill(filename)
                         page.locator("#document-rows").get_by_role("link", name="Review results", exact=True).click()
-                        digest = next(key for key, document in index["documents"].items()
-                                      if Path(document["paths"][0]).name == filename)
+                        digest = next(
+                            key
+                            for key, document in index["documents"].items()
+                            if Path(document["paths"][0]).name == filename
+                        )
                         expect(page.locator("#receipt-unit")).to_have_value(digest + ":0")
                         page.get_by_role("link", name="Back to document status").click()
                     self.assertFalse(errors)

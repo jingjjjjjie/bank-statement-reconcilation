@@ -8,6 +8,7 @@ A stage is any object with:
 `extraction.workflow.run` runs its stages in order on the shared job runner, so a
 stage can be replaced or added without touching the others.
 """
+
 import json
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -30,6 +31,7 @@ class ReviewPending(ValueError):
 @dataclass
 class RunContext:
     """Everything a stage needs from the current run; stages share no other state."""
+
     work: Path
     config: dict
     state: dict
@@ -44,7 +46,9 @@ class RunContext:
 
     def with_regeneration(self, digest, prompt):
         """Append an explicit regeneration request so it bypasses earlier cached answers."""
-        return prompt + "\nRegeneration request: " + self.regeneration[digest] if digest in self.regeneration else prompt
+        return (
+            prompt + "\nRegeneration request: " + self.regeneration[digest] if digest in self.regeneration else prompt
+        )
 
     def report(self, digest, status):
         """Forward per-document progress to the dashboard, if it is listening."""
@@ -56,8 +60,14 @@ def pack(document):
     """Return every unit's text and images; never silently truncate an original."""
     text, images = [], []
     for unit in document["units"]:
-        text.append({"document_id": document["id"], "location": unit["label"], "text": unit["text"],
-                     "limitation": unit.get("limitation", "")})
+        text.append(
+            {
+                "document_id": document["id"],
+                "location": unit["label"],
+                "text": unit["text"],
+                "limitation": unit.get("limitation", ""),
+            }
+        )
         if unit["image"]:
             images.append(unit["image"])
             text[-1]["image_number"] = len(images)
@@ -104,20 +114,34 @@ class UnitExtraction:
 
     def _whole_job(self, digest, document, prompt, images):
         """Read all PDF pages and establish piece boundaries in one model call."""
+
         def job():
             self.ctx.report(digest, "running")
-            value = self.ctx.ask(self.ctx.with_regeneration(digest, prompt), ASSEMBLY, images, stage="pdf_document",
-                                 verify=lambda result: validate_assembly(result, len(document["units"])))
+            value = self.ctx.ask(
+                self.ctx.with_regeneration(digest, prompt),
+                ASSEMBLY,
+                images,
+                stage="pdf_document",
+                verify=lambda result: validate_assembly(result, len(document["units"])),
+            )
             return None, digest, "whole PDF", value
+
         return job
 
     def _chunk_job(self, digest, numbers, prompt, images):
         """Extract one page group while keeping original document-wide unit numbers."""
+
         def job():
             self.ctx.report(digest, "running")
-            value = self.ctx.ask(self.ctx.with_regeneration(digest, prompt), ASSEMBLY, images, stage="pdf_chunk",
-                                 verify=lambda result: validate_assembly(result, len(numbers), source_units=numbers))
+            value = self.ctx.ask(
+                self.ctx.with_regeneration(digest, prompt),
+                ASSEMBLY,
+                images,
+                stage="pdf_chunk",
+                verify=lambda result: validate_assembly(result, len(numbers), source_units=numbers),
+            )
             return numbers, digest, f"PDF units {numbers[0]}-{numbers[-1]}", value
+
         return job
 
     def _unit_job(self, digest, document, unit, key):
@@ -132,14 +156,25 @@ class UnitExtraction:
             ctx.report(digest, "running")
             stage = document_stage(document["paths"][0])
             if stage == "pdf" and ctx.config["pdf_mode"] in pdf_routing.MODES:
-                value = pdf_routing.extract_unit(unit, ask, ctx.config["pdf_mode"],
-                                                 ctx.work / "pdf-routing" / (key.replace(":", "-") + ".json"))
+                value = pdf_routing.extract_unit(
+                    unit, ask, ctx.config["pdf_mode"], ctx.work / "pdf-routing" / (key.replace(":", "-") + ".json")
+                )
                 return key, digest, unit["label"], value
-            prompt = extraction_prompt() + "\n" + json.dumps({
-                "location": unit["label"], "text": unit["text"], "limitation": unit.get("limitation", "")},
-                ensure_ascii=False)
-            return key, digest, unit["label"], ask(prompt, EXTRACTION, [unit["image"]] if unit["image"] else [],
-                                                   stage=stage)
+            prompt = (
+                extraction_prompt()
+                + "\n"
+                + json.dumps(
+                    {"location": unit["label"], "text": unit["text"], "limitation": unit.get("limitation", "")},
+                    ensure_ascii=False,
+                )
+            )
+            return (
+                key,
+                digest,
+                unit["label"],
+                ask(prompt, EXTRACTION, [unit["image"]] if unit["image"] else [], stage=stage),
+            )
+
         return job
 
     def apply(self, result):
@@ -182,11 +217,17 @@ class ReceiptAssembly:
         """Yield one assembly per complete, not-yet-assembled multi-unit document."""
         ctx = self.ctx
         for digest, document in ctx.selected.items():
-            if (digest in ctx.whole_completed or not is_pending(document) or len(document["units"]) < 2
-                    or (digest not in ctx.regeneration and current_assembly(document, ctx.state))):
+            if (
+                digest in ctx.whole_completed
+                or not is_pending(document)
+                or len(document["units"]) < 2
+                or (digest not in ctx.regeneration and current_assembly(document, ctx.state))
+            ):
                 continue
-            if any(unit.get("blocked") or f"{digest}:{n}" not in ctx.state["units"]
-                   for n, unit in enumerate(document["units"])):
+            if any(
+                unit.get("blocked") or f"{digest}:{n}" not in ctx.state["units"]
+                for n, unit in enumerate(document["units"])
+            ):
                 continue
             yield lambda digest=digest, document=document: self._assemble(digest, document)
 
@@ -195,7 +236,9 @@ class ReceiptAssembly:
         config = self.ctx.config
         path = Path(document["paths"][0])
         if path.suffix.lower() == ".pdf" and config["pictures_enabled"] and config["pdf_mode"] not in pdf_routing.MODES:
-            units = extract(path, self.ctx.work / "assets" / "receipt-assembly" / digest, {**config, "pdf_mode": "vision"})
+            units = extract(
+                path, self.ctx.work / "assets" / "receipt-assembly" / digest, {**config, "pdf_mode": "vision"}
+            )
             return {**document, "units": units}
         return document
 
@@ -203,14 +246,27 @@ class ReceiptAssembly:
         """Inspect all source units before proposing document receipt boundaries."""
         ctx = self.ctx
         originals, images = pack(self._evidence(digest, document))
-        payload = [{"source_unit": n + 1, "original": original, "extraction": ctx.state["units"][f"{digest}:{n}"]}
-                   for n, original in enumerate(originals)]
-        prompt = ctx.with_regeneration(digest, extraction_prompt() + "\n\n" + load_prompt("extraction/receipt_assembly")
-                                       + "\n" + json.dumps(payload, ensure_ascii=False))
+        payload = [
+            {"source_unit": n + 1, "original": original, "extraction": ctx.state["units"][f"{digest}:{n}"]}
+            for n, original in enumerate(originals)
+        ]
+        prompt = ctx.with_regeneration(
+            digest,
+            extraction_prompt()
+            + "\n\n"
+            + load_prompt("extraction/receipt_assembly")
+            + "\n"
+            + json.dumps(payload, ensure_ascii=False),
+        )
         if len(images) > MAX_IMAGES or len(prompt) > MAX_PROMPT:
             raise ReviewPending("Document too large for receipt assembly; boundaries remain unresolved")
-        value = ctx.ask(prompt, ASSEMBLY, images, stage=document_stage(document["paths"][0]),
-                        verify=lambda result: validate_assembly(result, len(document["units"])))
+        value = ctx.ask(
+            prompt,
+            ASSEMBLY,
+            images,
+            stage=document_stage(document["paths"][0]),
+            verify=lambda result: validate_assembly(result, len(document["units"])),
+        )
         return digest, {**value, "input_revision": input_revision(document, ctx.state)}
 
     def apply(self, result):

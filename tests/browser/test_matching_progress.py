@@ -1,4 +1,5 @@
 """Verify matching progress states without launching subscription calls."""
+
 import threading
 import unittest
 from types import SimpleNamespace
@@ -29,18 +30,21 @@ class MatchingProgressTests(unittest.TestCase):
             page = browser.new_page(viewport={'width': 1440, 'height': 1000})
             state = {'running': False}
             held = []
+
             def snapshot(route):
                 """Expose fixture evidence as a live piece workflow."""
                 response = route.fetch()
                 data = response.json()
                 data['live_pieces'] = True
                 route.fulfill(response=response, json=data)
+
             def progress(route):
                 """Hold startup to verify immediate feedback and duplicate-click protection."""
                 if route.request.method == 'POST':
                     held.append(route)
                 else:
                     route.fulfill(json=state)
+
             page.route('**/api/matching', snapshot)
             page.route('**/api/matching-run', progress)
             page.route('**/api/matching-stop', lambda route: route.fulfill(json={**state, 'stop_requested': True}))

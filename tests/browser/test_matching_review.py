@@ -1,4 +1,5 @@
 """Review one bank transaction against several supporting candidates in Playwright."""
+
 import threading
 import unittest
 from pathlib import Path
@@ -38,14 +39,18 @@ class MatchingReviewBrowserTests(unittest.TestCase):
                 for decision in ['all', 'pending', 'approved', 'denied']:
                     page.locator('#confidence-filter').select_option(confidence)
                     page.locator('#bank-filter').select_option(decision)
-                    expected = [bank for bank in banks
-                                if (confidence == 'all' or (bank['confidence'].get('level') or 'none') == confidence)
-                                and (decision == 'all' or bank['review_status'] == decision)]
+                    expected = [
+                        bank
+                        for bank in banks
+                        if (confidence == 'all' or (bank['confidence'].get('level') or 'none') == confidence)
+                        and (decision == 'all' or bank['review_status'] == decision)
+                    ]
                     expect(page.locator('#queue-count')).to_have_text(f'{len(expected)} transactions')
                     if expected:
                         for number, bank in enumerate(expected, 1):
                             expect(page.locator(f'[data-bank-id="{bank["id"]}"]')).to_have_attribute(
-                                'aria-label', f'Transaction {number}, {bank["review_status"]}')
+                                'aria-label', f'Transaction {number}, {bank["review_status"]}'
+                            )
                         current = page.locator('.transaction-number[aria-current]').get_attribute('data-bank-id')
                         self.assertIn(current, [bank['id'] for bank in expected])
                         expect(page.locator('#bank-view')).to_be_visible()
@@ -75,12 +80,28 @@ class MatchingReviewBrowserTests(unittest.TestCase):
             data = final_review.snapshot(fixture.review)
             data['items'][0]['amount_location'] = 'Sheet1!B45:D45'
             page.route('**/api/matching', lambda route: route.fulfill(json=data))
-            page.route('**/api/matching-preview?*', lambda route: route.fulfill(json={
-                'kind': 'spreadsheet', 'pages': 2, 'office_pages': 2,
-                'labels': ['Sheet1 \u00b7 rows 1\u201340', 'Sheet1 \u00b7 rows 41\u201380']}))
-            page.route('**/api/matching-office?*', lambda route: route.fulfill(json={
-                'kind': 'spreadsheet', 'sheet': 'Sheet1', 'start': 41,
-                'rows': [[{'text': str(c)} for c in range(5)] for _ in range(10)]}))
+            page.route(
+                '**/api/matching-preview?*',
+                lambda route: route.fulfill(
+                    json={
+                        'kind': 'spreadsheet',
+                        'pages': 2,
+                        'office_pages': 2,
+                        'labels': ['Sheet1 \u00b7 rows 1\u201340', 'Sheet1 \u00b7 rows 41\u201380'],
+                    }
+                ),
+            )
+            page.route(
+                '**/api/matching-office?*',
+                lambda route: route.fulfill(
+                    json={
+                        'kind': 'spreadsheet',
+                        'sheet': 'Sheet1',
+                        'start': 41,
+                        'rows': [[{'text': str(c)} for c in range(5)] for _ in range(10)],
+                    }
+                ),
+            )
             page.goto(f'http://127.0.0.1:{server.server_port}/matching')
             card = page.locator('#selected-candidates .candidate-card').first
             card.locator('summary').first.click()
@@ -89,8 +110,12 @@ class MatchingReviewBrowserTests(unittest.TestCase):
             expect(page.locator('[data-source-row="45"] .source-cell-highlight')).to_have_count(3)
             data['items'][0]['amount_location'] = 'page 3'
             page.unroute('**/api/matching-preview?*')
-            page.route('**/api/matching-preview?*', lambda route: route.fulfill(json={
-                'kind': 'pdf', 'pages': 4, 'labels': ['Page 1', 'Page 2', 'Page 3', 'Page 4']}))
+            page.route(
+                '**/api/matching-preview?*',
+                lambda route: route.fulfill(
+                    json={'kind': 'pdf', 'pages': 4, 'labels': ['Page 1', 'Page 2', 'Page 3', 'Page 4']}
+                ),
+            )
             page.route('**/api/matching-image?*', lambda route: route.fulfill(status=404))
             page.reload()
             page.locator('#selected-candidates summary').first.click()
@@ -116,8 +141,10 @@ class MatchingReviewBrowserTests(unittest.TestCase):
         facts['items'].extend(dict(facts['items'][1], id=f'D{i}', parties=[f'Candidate {i}']) for i in range(3, 9))
         fixture.write(fixture.cache / 'facts.json', facts)
         (fixture.cache / 'matching').mkdir()
-        fixture.write(fixture.cache / 'matching/input-candidates.json', {'banks': [
-            {'id': f'B{i}', 'candidate_ids': [f'D{j}' for j in range(1, 9)]} for i in range(1, 14)]})
+        fixture.write(
+            fixture.cache / 'matching/input-candidates.json',
+            {'banks': [{'id': f'B{i}', 'candidate_ids': [f'D{j}' for j in range(1, 9)]} for i in range(1, 14)]},
+        )
         suggestions = final_review.read(fixture.cache / 'decisions.json')
         suggestions[0]['assessment'] = 'strong'
         suggestions[2]['allocations'] = []

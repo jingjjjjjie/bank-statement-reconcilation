@@ -6,6 +6,7 @@ a rendered JPEG the model can look at. The source file is never modified.
 To support a new file type, write `reader(path, config, units)` that calls
 `units.add(...)` once per unit, and add it to `READERS` at the bottom of this file.
 """
+
 import io
 import json
 import zipfile
@@ -51,10 +52,19 @@ class UnitWriter:
             whole_text: Keep text in one unit (for spreadsheets, whose rows belong together).
         """
         keep_whole = whole_text or pdf_probe is not None
-        chunks = [text] if keep_whole else [text[i:i + TEXT_PART_CHARS] for i in range(0, len(text), TEXT_PART_CHARS)] or [""]
+        chunks = (
+            [text]
+            if keep_whole
+            else [text[i : i + TEXT_PART_CHARS] for i in range(0, len(text), TEXT_PART_CHARS)] or [""]
+        )
         for part, chunk in enumerate(chunks, 1):
-            unit = {"label": label if whole_text else f"{label} / part {part}", "text": chunk, "image": None,
-                    "limitation": limitation, "blocked": blocked}
+            unit = {
+                "label": label if whole_text else f"{label} / part {part}",
+                "text": chunk,
+                "image": None,
+                "limitation": limitation,
+                "blocked": blocked,
+            }
             if pdf_probe is not None:
                 unit["pdf_probe"] = pdf_probe
             if image is not None and (part == 1 or pdf_probe is not None):
@@ -113,9 +123,17 @@ def read_pdf(path, config, units):
                 blocked = "PDF vision requested but picture processing is off"
             elif sparse:
                 blocked = "PDF page has insufficient extractable text; enable PDF fallback/full vision and pictures"
-            limitation = "" if picture else "PDF text only: images, handwriting, signatures and visual layout were not inspected"
-            units.add(f"page {number}", text, picture, limitation, blocked,
-                      pdf_probe=inspect_page(page) if experimental else None)
+            limitation = (
+                "" if picture else "PDF text only: images, handwriting, signatures and visual layout were not inspected"
+            )
+            units.add(
+                f"page {number}",
+                text,
+                picture,
+                limitation,
+                blocked,
+                pdf_probe=inspect_page(page) if experimental else None,
+            )
 
 
 def read_image(path, config, units):

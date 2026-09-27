@@ -1,4 +1,5 @@
 """Record and summarize Codex token usage for the document-review workflow."""
+
 import json
 import os
 from datetime import datetime, timezone
@@ -18,6 +19,7 @@ def record(path, entry):
         os.fsync(log.fileno())
     if path.name == 'token-usage.jsonl':
         from reconciliation.model.workspace_usage import persist
+
         persist(path, event)
 
 
@@ -74,5 +76,11 @@ def summarize(events):
             totals[key] += usage[key]
             stage[key] += usage[key]
             model[key] += usage[key]
-    return {"totals": totals, "by_stage": by_stage, "by_model": by_model, "attempts": len(attempts),
-            "unknown_attempts": unknown, "cache_hits": cache_hits}
+    return {
+        "totals": totals,
+        "by_stage": by_stage,
+        "by_model": by_model,
+        "attempts": len(attempts),
+        "unknown_attempts": unknown,
+        "cache_hits": cache_hits,
+    }

@@ -1,4 +1,5 @@
 """Check selection and responsive editing in a long extraction result."""
+
 import json
 import threading
 import unittest
@@ -24,8 +25,10 @@ class ReviewLayoutTests(unittest.TestCase):
         digest = fingerprint(fixture.source)
         fixture.index['documents'][digest] = fixture.index['documents'].pop(fixture.digest)
         raw = fixture.state['units'].pop(fixture.key)
-        raw['receipts'] = [{**fixture.pieces[0], 'payee': f'Merchant {n + 1}',
-                            'brief_description': f'Receipt {n + 1}'} for n in range(21)]
+        raw['receipts'] = [
+            {**fixture.pieces[0], 'payee': f'Merchant {n + 1}', 'brief_description': f'Receipt {n + 1}'}
+            for n in range(21)
+        ]
         fixture.state['units'][digest + ':0'] = raw
         (fixture.work / 'index.json').write_text(json.dumps(fixture.index))
         fixture.state['index_sha256'] = fingerprint(fixture.work / 'index.json')
@@ -83,7 +86,8 @@ class ReviewLayoutTests(unittest.TestCase):
                 expect(page.get_by_role('heading', name='Review results', exact=True)).to_be_visible()
                 self.assertTrue(page.evaluate('document.documentElement.scrollWidth <= innerWidth'))
                 centers = header.locator(':scope > *').evaluate_all(
-                    '(els) => els.map(el => { const r = el.getBoundingClientRect(); return r.y + r.height / 2; })')
+                    '(els) => els.map(el => { const r = el.getBoundingClientRect(); return r.y + r.height / 2; })'
+                )
                 self.assertLess(max(centers) - min(centers), 2)
                 if width < 650:
                     page.locator('#accept-receipts').scroll_into_view_if_needed()

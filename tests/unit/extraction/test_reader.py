@@ -1,4 +1,5 @@
 """Verify extraction boundaries using small, local document fixtures."""
+
 import io
 import tempfile
 import unittest
@@ -46,8 +47,7 @@ class DocumentReaderTests(unittest.TestCase):
     def test_multiframe_image_keeps_each_frame(self):
         """A TIFF produces one numbered evidence unit for each frame."""
         source = self.base / "receipt.tiff"
-        Image.new("RGB", (8, 6), "white").save(
-            source, save_all=True, append_images=[Image.new("RGB", (8, 6), "black")])
+        Image.new("RGB", (8, 6), "white").save(source, save_all=True, append_images=[Image.new("RGB", (8, 6), "black")])
         units = extract(source, self.output)
         self.assertEqual([unit["label"] for unit in units], ["image 1 / part 1", "image 2 / part 1"])
         self.assertTrue(all(Path(unit["image"]).is_file() for unit in units))

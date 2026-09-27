@@ -1,4 +1,5 @@
 """Verify cumulative progress and priority Stop in the built document view."""
+
 import threading
 import unittest
 
@@ -14,12 +15,27 @@ class ExtractionProgressTests(unittest.TestCase):
         """Keep Stop clickable during Start, and never reset progress for assembly."""
         server = TestServer(("127.0.0.1", 0), create_app(token="fixture"))
         threading.Thread(target=server.serve_forever, daemon=True).start()
-        execution = {"running": False, "stop_requested": False, "active_processes": 0,
-                     "execution_status": "idle", "run_error": ""}
-        rows = [{"id": str(n), "name": f"receipt-{n}.pdf", "path": f"/fixture/{n}.pdf",
-                 "status": "Needs review" if n == 1 else "Queued", "extracted": n == 1,
-                 "units_read": 1 if n == 1 else 0, "units_total": n,
-                 "assembly_done": 0, "assembly_total": n - 1} for n in (1, 2)]
+        execution = {
+            "running": False,
+            "stop_requested": False,
+            "active_processes": 0,
+            "execution_status": "idle",
+            "run_error": "",
+        }
+        rows = [
+            {
+                "id": str(n),
+                "name": f"receipt-{n}.pdf",
+                "path": f"/fixture/{n}.pdf",
+                "status": "Needs review" if n == 1 else "Queued",
+                "extracted": n == 1,
+                "units_read": 1 if n == 1 else 0,
+                "units_total": n,
+                "assembly_done": 0,
+                "assembly_total": n - 1,
+            }
+            for n in (1, 2)
+        ]
         starts, stops, errors = [], [], []
         fail_start = [False]
         prepared, preparations = [False], []
@@ -40,11 +56,15 @@ class ExtractionProgressTests(unittest.TestCase):
             if path == "content/stop":
                 stops.append(True)
                 execution.update(stop_requested=True, execution_status="stopping")
-            data = {"session": {"active": True, "review_id": "fixture", "token": "fixture"},
-                    "workspace": {"name": "Fixture", "period": ""}, "workflow-checks": {"steps": []},
-                    "development-mode": {"enabled": False},
-                    "document-status": {"prepared": prepared[0], "documents": rows if prepared[0] else [], **execution},
-                    "content/execution": execution, "content/stop": execution}.get(path, {})
+            data = {
+                "session": {"active": True, "review_id": "fixture", "token": "fixture"},
+                "workspace": {"name": "Fixture", "period": ""},
+                "workflow-checks": {"steps": []},
+                "development-mode": {"enabled": False},
+                "document-status": {"prepared": prepared[0], "documents": rows if prepared[0] else [], **execution},
+                "content/execution": execution,
+                "content/stop": execution,
+            }.get(path, {})
             route.fulfill(json=data)
 
         try:
@@ -75,8 +95,12 @@ class ExtractionProgressTests(unittest.TestCase):
                 # Deliver an old Start reply after Stop: it must not undo cancellation.
                 starts.pop().fulfill(json={"running": True, "stop_requested": False})
                 expect(page.locator('#document-run-status')).to_contain_text('3 active processes')
-                execution.update(running=False, active_processes=0, execution_status="stopped",
-                                 run_error="Review stopped. Completed results are saved; run again to resume.")
+                execution.update(
+                    running=False,
+                    active_processes=0,
+                    execution_status="stopped",
+                    run_error="Review stopped. Completed results are saved; run again to resume.",
+                )
                 expect(page.locator('#document-run-status')).to_contain_text('Review stopped.')
                 rows[1]['units_read'] = 2
                 expect(page.locator('#document-progress-count')).to_have_text('3 / 4 steps (75%)')

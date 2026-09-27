@@ -1,4 +1,5 @@
 """Compare fresh native-text and vision calls without changing customer review state."""
+
 import argparse
 import hashlib
 import json
@@ -44,17 +45,31 @@ def main():
                 (risky if probe['reasons'] else eligible).append((path, n, digest))
     # Prefer distinct documents to avoid filling the sample from one long PDF.
     native = list(dict((str(p), (p, n, d)) for p, n, d in reversed(eligible)).values())
-    selected = (native[:max(1, args.pages - 2)] + risky[:2])[:args.pages]
-    write_json(args.output / 'plan.json', {'eligible_pages': len(eligible), 'risky_pages': len(risky),
-        'reasons': dict(reasons), 'sample': [(str(p), n + 1, d) for p, n, d in selected],
-        'model': 'gpt-5.6-sol', 'cache': 'local results fresh; shared cache disabled; provider caching still applies',
-        'code_hashes': {str(p): hashlib.sha256(p.read_bytes()).hexdigest()
-                        for root in ('reconciliation', 'prompts') for p in Path(root).glob('*') if p.is_file()},
-        'scope': 'Page extraction only. No assembly, matching, acceptance or source modifications.'})
+    selected = (native[: max(1, args.pages - 2)] + risky[:2])[: args.pages]
+    write_json(
+        args.output / 'plan.json',
+        {
+            'eligible_pages': len(eligible),
+            'risky_pages': len(risky),
+            'reasons': dict(reasons),
+            'sample': [(str(p), n + 1, d) for p, n, d in selected],
+            'model': 'gpt-5.6-sol',
+            'cache': 'local results fresh; shared cache disabled; provider caching still applies',
+            'code_hashes': {
+                str(p): hashlib.sha256(p.read_bytes()).hexdigest()
+                for root in ('reconciliation', 'prompts')
+                for p in Path(root).glob('*')
+                if p.is_file()
+            },
+            'scope': 'Page extraction only. No assembly, matching, acceptance or source modifications.',
+        },
+    )
     engine = CodexReviewer(args.output, model='gpt-5.6-sol', max_calls=2 * len(selected), timeout=240)
     rows = []
-    with patch('reconciliation.core.development_cache.root_for', return_value=None), \
-         patch('reconciliation.extraction.pdf_routing.mode', return_value={'enabled': True}):
+    with (
+        patch('reconciliation.core.development_cache.root_for', return_value=None),
+        patch('reconciliation.extraction.pdf_routing.mode', return_value={'enabled': True}),
+    ):
         for i, (path, number, digest) in enumerate(selected):
             start = time.perf_counter()
             # Extract the original PDF normally; choose precisely the sampled page.
@@ -87,8 +102,15 @@ def main():
             row.update(seconds=time.perf_counter() - start, route_seconds=timings, route_usage=route_usage)
             rows.append(row)
             usage = summary(args.output / 'token-usage.jsonl')
-            write_json(args.output / 'report.json', {'pages': rows, 'usage': usage,
-                'usage_complete': usage['unknown_attempts'] == 0, 'human_verified_accuracy': None})
+            write_json(
+                args.output / 'report.json',
+                {
+                    'pages': rows,
+                    'usage': usage,
+                    'usage_complete': usage['unknown_attempts'] == 0,
+                    'human_verified_accuracy': None,
+                },
+            )
             print(json.dumps(row), flush=True)
 
 

@@ -1,4 +1,5 @@
 """Review state and explicit human actions; business validation stays in Python workflows."""
+
 import json
 
 from fastapi import APIRouter, Depends, Request
@@ -17,30 +18,36 @@ router = APIRouter(prefix="/api")
 
 class GroupChoice(BaseModel):
     """An explicit group selection or undo."""
+
     group: str
     id: str = ""
 
 
 class SettingsChoice(BaseModel):
     """Settings validated by the existing revision-aware configuration module."""
+
     config: dict
     revision: str
 
 
 class ModeChoice(BaseModel):
     """Require a real boolean for development-mode changes."""
+
     enabled: StrictBool
 
 
 class Reviewer(BaseModel):
     """The person explicitly replaying saved decisions."""
+
     reviewer: str
 
 
 @router.get("/workspace")
 def workspace(state=Depends(context)):
     """Describe the current project for shared navigation."""
-    return state.review.workspace() if state.review else {"name": "No active review", "period": "Choose a source folder"}
+    return (
+        state.review.workspace() if state.review else {"name": "No active review", "period": "Choose a source folder"}
+    )
 
 
 @router.get("/workflow-checks")
@@ -176,8 +183,9 @@ def receipts(state=Depends(context)):
 def ground_truth(state=Depends(active_context)):
     """Download saved extraction reviews as a benchmark answer key."""
     body = json.dumps(receipt_review.ground_truth(state.review), ensure_ascii=False, indent=2)
-    return Response(body, media_type="application/json",
-                    headers={"Content-Disposition": 'attachment; filename="ground-truth.json"'})
+    return Response(
+        body, media_type="application/json", headers={"Content-Disposition": 'attachment; filename="ground-truth.json"'}
+    )
 
 
 @router.post("/receipts/reset-original")
@@ -190,6 +198,7 @@ def reset_original_receipts(body: dict, state=Depends(active_context)):
 def merge_receipts(body: dict, state=Depends(active_context)):
     """Preview a merged draft; persistence still requires explicit acceptance."""
     from reconciliation.extraction.pieces import merge_all
+
     receipt_review.require_current(state.review, body['revision'])
     return {'receipt': merge_all(body['receipts'])}
 
@@ -216,6 +225,7 @@ def accept_all_receipts(body: dict, state=Depends(active_context)):
 def regenerate_receipts(body: dict, state=Depends(active_context)):
     """Queue a document on the shared background extraction worker."""
     from dashboard.services import regeneration
+
     return {"jobs": regeneration.enqueue(state.review, body["document_id"])}
 
 
@@ -229,6 +239,7 @@ def classify_receipts(body: dict, state=Depends(active_context)):
 def regeneration_status(state=Depends(active_context)):
     """Poll regeneration progress without rebuilding document previews."""
     from dashboard.services import regeneration
+
     return {"jobs": regeneration.snapshot(state.review)}
 
 
@@ -248,6 +259,7 @@ def matching_decide(body: dict, state=Depends(active_context)):
 def matching_pieces(body: dict, state=Depends(active_context)):
     """Switch to reviewed pieces while preserving previous decisions as history."""
     from dashboard.services.piece_matching import activate
+
     return activate(state.review)
 
 
@@ -255,6 +267,7 @@ def matching_pieces(body: dict, state=Depends(active_context)):
 def matching_run(body: dict, state=Depends(active_context)):
     """Generate proposals from complete documents without approving allocations."""
     from dashboard.services.piece_match_jobs import start
+
     return start(state.review)
 
 
@@ -262,6 +275,7 @@ def matching_run(body: dict, state=Depends(active_context)):
 def matching_run_status(review=Depends(interrupt_context)):
     """Keep matching progress available while the background pool is working."""
     from dashboard.services.piece_match_jobs import status
+
     return status(review)
 
 
@@ -269,6 +283,7 @@ def matching_run_status(review=Depends(interrupt_context)):
 def matching_stop(body: dict, review=Depends(interrupt_context)):
     """Allow cancellation without waiting behind other review requests."""
     from dashboard.services.piece_match_jobs import stop
+
     return stop(review)
 
 

@@ -1,4 +1,5 @@
 """Verify background regeneration controls against real local endpoints."""
+
 import threading
 import unittest
 from pathlib import Path
@@ -39,7 +40,10 @@ class RegenerationBrowserTests(unittest.TestCase):
         threading.Thread(target=server.serve_forever, daemon=True).start()
         self.addCleanup(server.server_close)
         self.addCleanup(server.shutdown)
-        with patch("dashboard.services.extraction_runs.CodexReviewer", side_effect=lambda *args, **kwargs: Reviewer()), sync_playwright() as playwright:
+        with (
+            patch("dashboard.services.extraction_runs.CodexReviewer", side_effect=lambda *args, **kwargs: Reviewer()),
+            sync_playwright() as playwright,
+        ):
             browser = playwright.chromium.launch(**browser_options())
             try:
                 page = browser.new_page(viewport={"width": 1440, "height": 900})

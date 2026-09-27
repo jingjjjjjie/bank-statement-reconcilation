@@ -1,4 +1,5 @@
 """Workspace selection and bank statement endpoints."""
+
 import secrets
 import tempfile
 from pathlib import Path
@@ -18,21 +19,25 @@ router = APIRouter(prefix="/api")
 
 class PathChoice(BaseModel):
     """A user-selected local input path."""
+
     path: str = Field(min_length=1)
 
 
 class StartChoice(BaseModel):
     """The exact preview the user explicitly chose to proceed with."""
+
     preview: str = Field(min_length=1)
 
 
 class BankYear(BaseModel):
     """Require an explicit four-digit statement year."""
+
     year: StrictInt = Field(ge=STATEMENT_YEARS[0], le=STATEMENT_YEARS[1])
 
 
 class ExportChoice(BaseModel):
     """Company heading used by the existing workbook exporter."""
+
     company: str
 
 
@@ -40,10 +45,12 @@ class ExportChoice(BaseModel):
 def selected(state=Depends(context)):
     """Describe selected inputs and the active supporting review."""
     source, bank = state.sources.selected(), state.sources.selected_bank()
-    return {"active": str(state.review.root) if state.review else None,
-            "workspace": state.sources.selected_workspace(),
-            "selected": state.sources.inspect(source) if source else None,
-            "bank": state.sources.inspect_bank(bank) if bank else None}
+    return {
+        "active": str(state.review.root) if state.review else None,
+        "workspace": state.sources.selected_workspace(),
+        "selected": state.sources.inspect(source) if source else None,
+        "bank": state.sources.inspect_bank(bank) if bank else None,
+    }
 
 
 @router.get("/source/browse")
@@ -91,8 +98,11 @@ def prepare_bank(body: BankYear, state=Depends(active_context)):
 @router.get("/bank-statement")
 def bank_statement(state=Depends(context)):
     """Read saved transactions without invoking extraction."""
-    return state.review.bank_statement() if state.review else {
-        "available": False, "transactions": [], "workbook_available": False}
+    return (
+        state.review.bank_statement()
+        if state.review
+        else {"available": False, "transactions": [], "workbook_available": False}
+    )
 
 
 @router.get("/bank-export-defaults")
@@ -105,8 +115,14 @@ def export_defaults(state=Depends(active_context)):
 def export_bank(body: ExportChoice, state=Depends(active_context)):
     """Generate the bank-only workbook without changing the master."""
     from reconciliation.bank.excel import export
+
     with tempfile.TemporaryDirectory() as temporary:
-        output = export(state.review.manifest_path.parent / "bank-output/master_statement.csv",
-                        body.company, Path(temporary) / "answer_statement_bank_only.xlsx")
+        output = export(
+            state.review.manifest_path.parent / "bank-output/master_statement.csv",
+            body.company,
+            Path(temporary) / "answer_statement_bank_only.xlsx",
+        )
         development_cache.capture(state.review.manifest_path, "bank-export", [output])
-        return Response(output.read_bytes(), media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        return Response(
+            output.read_bytes(), media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )

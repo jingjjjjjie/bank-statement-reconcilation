@@ -1,4 +1,5 @@
 """Check visibility metadata against saved human duplicate decisions."""
+
 import tempfile
 import unittest
 from pathlib import Path
@@ -26,16 +27,26 @@ class DocumentStatusTests(unittest.TestCase):
             copy.write_text('left')
             documents['left']['original_paths'] = [str(base / 'left.txt'), str(copy)]
             index = {"manifest": str(review.manifest_path), "documents": documents}
-            state = {"units": {}, "screens": {"left:right": {"candidate": True}},
-                     "pairs": {"left:right": {"classification": "same_document"}}, "decisions": {}}
+            state = {
+                "units": {},
+                "screens": {"left:right": {"candidate": True}},
+                "pairs": {"left:right": {"classification": "same_document"}},
+                "decisions": {},
+            }
             with patch("dashboard.services.document_status.load", return_value=(index, state)):
-                for verdict, expected in ((None, set()), ("keep_left", {"right"}),
-                                          ("keep_right", {"left"}), ("keep_both", set()), (None, set())):
+                for verdict, expected in (
+                    (None, set()),
+                    ("keep_left", {"right"}),
+                    ("keep_right", {"left"}),
+                    ("keep_both", set()),
+                    (None, set()),
+                ):
                     state["decisions"] = {"left:right": {"verdict": verdict}} if verdict else {}
                     rows = snapshot(review)["documents"]
                     self.assertEqual(len(rows), 2)
-                    self.assertEqual(next(row['paths'] for row in rows if row['id'] == 'left'),
-                                     [str(base / 'left.txt'), str(copy)])
+                    self.assertEqual(
+                        next(row['paths'] for row in rows if row['id'] == 'left'), [str(base / 'left.txt'), str(copy)]
+                    )
                     self.assertEqual({row["id"] for row in rows if row["approved_duplicate"]}, expected)
             for digest in documents:
                 self.assertEqual((base / (digest + ".txt")).read_text(), digest)

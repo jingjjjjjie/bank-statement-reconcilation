@@ -1,4 +1,5 @@
 """Keep display acceleration separate from fresh action validation."""
+
 import os
 import subprocess
 import tempfile
@@ -52,8 +53,7 @@ class DashboardLoadingTests(unittest.TestCase):
         link = self.source / "junction"
         target = self.base / "outside"
         target.mkdir()
-        subprocess.run(["cmd", "/c", "mklink", "/J", str(link), str(target)],
-                       check=True, capture_output=True)
+        subprocess.run(["cmd", "/c", "mklink", "/J", str(link), str(target)], check=True, capture_output=True)
         try:
             with self.assertRaisesRegex(ValueError, "Linked paths"):
                 supporting_files(self.source)
@@ -64,6 +64,7 @@ class DashboardLoadingTests(unittest.TestCase):
         """A blocked review read cannot stall page assets or session loading."""
         from dashboard.routes import create_app
         from dashboard.services.review import Review
+
         manifest = self.base / "manifest.json"
         organize(self.source, manifest)
         review = Review(manifest, self.base / "data")
