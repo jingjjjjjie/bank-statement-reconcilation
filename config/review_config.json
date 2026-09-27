@@ -3,7 +3,7 @@
   "pictures_enabled": true,
   "codex_enabled": true,
   "max_calls": 1000,
-  "max_parallel": 6,
+  "max_parallel": 8,
   "model": "gpt-6-sol",
   "reasoning": "default",
   "stages": {
