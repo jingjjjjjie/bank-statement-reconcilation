@@ -166,6 +166,7 @@ function renderReviewState() {
   button.classList.toggle('secondary', undo);
   button.classList.toggle('dark', !undo);
   button.disabled = !unit || !!pending || failed;
+  if ($('#reset-original-pieces')) $('#reset-original-pieces').disabled = !unit || !!pending || failed || !!unit.trash;
   $('#discard-document').textContent = unit?.trash ? 'Undo discard' : hasNext ? 'Discard & next' : 'Discard';
   $('#discard-document').classList.toggle('restore-document', !!unit?.trash);
 
@@ -237,6 +238,15 @@ function readReceiptPieces() {
 if ($('#receipt-unit')) $('#receipt-unit').onchange = showReceiptUnit;
 if ($('#add-receipt')) $('#add-receipt').onclick = () => addReceiptPiece();
 if ($('#reload-receipts')) $('#reload-receipts').onclick = () => receiptAction(loadReceiptResults);
+if ($('#reset-original-pieces')) $('#reset-original-pieces').onclick = () => receiptAction(async () => {
+  /* Reset edits and merges to the latest original extraction without accepting it. */
+  const result = await saveReceiptDecision('/api/receipts/reset-original',
+    {revision: receiptData.revision, key: $('#receipt-unit').value}, $('#reset-original-pieces'));
+  $('#receipt-pieces').replaceChildren();
+  result.receipts.forEach(addReceiptPiece);
+  hooks.changed?.();
+  toast('Original extraction restored. Accept to save.');
+});
 if ($('#merge-all-pieces')) $('#merge-all-pieces').onclick = () => receiptAction(async () => {
   /* Replace only the draft; ordinary acceptance saves the new piece with its lineage. */
   const result = await saveReceiptDecision('/api/receipts/merge-all',

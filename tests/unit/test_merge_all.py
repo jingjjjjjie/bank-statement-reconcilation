@@ -42,3 +42,26 @@ class MergeAllTests(unittest.TestCase):
         entry = after['units'][0]['receipts'][0]
         self.assertEqual(entry['parent_piece_ids'], [row['piece_id'] for row in rows])
         self.assertNotIn(entry['piece_id'], entry['parent_piece_ids'])
+
+    def test_reset_restores_original_after_accepted_merge(self):
+        """Reset restores model entries as a draft, with fresh IDs on acceptance."""
+        fixture = fixtures.ReceiptMatchingTests()
+        fixture.setUp()
+        self.addCleanup(fixture.doCleanups)
+        before = receipt_review.snapshot(fixture.review)
+        original = before['units'][0]['receipts']
+        merged = merge_all(original)
+        merged['total'] = '123.45'
+        accepted = receipt_review.accept_extraction(fixture.review, {
+            'revision': before['revision'], 'key': fixture.key, 'receipts': [merged]})
+        with self.assertRaisesRegex(ValueError, 'changed'):
+            receipt_review.original_extraction(fixture.review, {'revision': before['revision'], 'key': fixture.key})
+        draft = receipt_review.original_extraction(fixture.review, {
+            'revision': accepted['revision'], 'key': fixture.key})
+        self.assertEqual([p['total'] for p in draft['receipts']], [p['total'] for p in original])
+        self.assertEqual(len(receipt_review.snapshot(fixture.review)['units'][0]['receipts']), 1)
+        restored = receipt_review.accept_extraction(fixture.review, {
+            'revision': accepted['revision'], 'key': fixture.key, 'receipts': draft['receipts']})
+        self.assertEqual(len(restored['units'][0]['receipts']), 2)
+        previous_id = accepted['units'][0]['receipts'][0]['piece_id']
+        self.assertTrue(all(p['parent_piece_ids'] == [previous_id] for p in restored['units'][0]['receipts']))

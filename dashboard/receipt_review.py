@@ -1,4 +1,5 @@
 """Persist receipt-level extraction approvals and human bank allocations."""
+from copy import deepcopy
 from concurrent.futures import ThreadPoolExecutor
 import csv
 import json
@@ -182,6 +183,31 @@ def record(path, saved, action, reviewer, before, after):
                              "action": action, "before": before, "after": after})
     path.parent.mkdir(parents=True, exist_ok=True)
     write_json(path, saved)
+
+
+def original_extraction(review, body):
+    """Return an unsaved reset draft from model output, never from accepted edits."""
+    _, _, units, _, _ = require_current(review, body['revision'])
+    unit = units[body['key']]
+    verify_source(unit)
+    if unit['trash'] or unit['assembly_pending'] or (unit.get('regeneration') or {}).get('status') in {'queued', 'running'}:
+        raise ValueError('Restore the document and finish extraction before resetting')
+    index, state = load_index(work_path(review))
+    document = index['documents'][unit['document_id']]
+    raw = current_assembly(document, state) if unit['assembled'] else state['units'].get(unit['key'])
+    if not raw or 'receipts' not in raw:
+        raise ValueError('No original extraction is available')
+    binding = [state['index_sha256'], raw, unit['document_id']]
+    if unit.get('regeneration'):
+        binding.append(unit['regeneration']['id'])
+    if revision(binding) != unit['source_revision']:
+        raise ValueError('Extraction changed; reload before resetting')
+    parents = [piece['piece_id'] for piece in unit['receipts']]
+    originals = deepcopy(raw['receipts'])
+    for piece in originals:
+        piece.pop('piece_id', None)
+        piece['parent_piece_ids'] = parents
+    return {'receipts': normalize_currencies(originals)}
 
 
 def accept_extraction(review, body):

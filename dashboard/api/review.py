@@ -205,6 +205,12 @@ def ground_truth(state=Depends(active_context)):
                     headers={"Content-Disposition": 'attachment; filename="ground-truth.json"'})
 
 
+@router.post("/receipts/reset-original")
+def reset_original_receipts(body: dict, state=Depends(active_context)):
+    """Restore original model fields to the draft without changing saved approvals."""
+    return receipt_review.original_extraction(state.review, body)
+
+
 @router.post("/receipts/merge-all")
 def merge_receipts(body: dict, state=Depends(active_context)):
     """Preview a merged draft; persistence still requires explicit acceptance."""

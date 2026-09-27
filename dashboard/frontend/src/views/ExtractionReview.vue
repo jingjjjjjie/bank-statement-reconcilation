@@ -33,6 +33,7 @@ usePage(root, initialize);
             <span id="piece-count" class="piece-count" role="status">0 entries</span>
             <span id="document-total" role="status" title="Sum of the displayed entry amounts, grouped by currency"></span>
             <button id="add-receipt" class="button secondary" type="button">+ Add entry</button>
+            <button id="reset-original-pieces" class="button secondary" type="button">Reset to original</button>
             <button id="merge-all-pieces" class="button secondary" type="button" disabled>Merge all</button>
             <button id="remove-piece" class="button secondary" type="button" aria-label="Remove this piece from extraction">Remove</button>
             <div id="piece-tabs" hidden></div>
