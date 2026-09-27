@@ -188,8 +188,8 @@
 #receipt-pieces .piece-row :is(input,select):focus{background:white}
 #receipt-pieces [data-field=payee],#receipt-pieces [data-field=total]{font-weight:600;color:#203831}
 #receipt-pieces .piece-row label:has([data-field=brief_description]){grid-column:2;grid-row:2}
-#receipt-pieces .piece-row label:has([data-field=document_number]){grid-column:4/6;grid-row:2}
-.piece-card-actions{grid-column:3;grid-row:2;display:flex;gap:6px;align-items:center;min-height:34px}
+#receipt-pieces .piece-row label:has([data-field=document_number]){grid-column:3;grid-row:2}
+.piece-card-actions{grid-column:4/6;grid-row:2;display:flex;gap:6px;align-items:center;justify-content:flex-end;min-height:34px}
 .piece-card-actions button{min-height:28px;padding:4px 9px;border:1px solid #cbd8cf;border-radius:5px;background:#f1f6f2;color:#315c40;font:inherit;font-size:12px;cursor:pointer}
 .piece-card-actions .remove-entry{background:white;border-color:#e7cec8;color:#963d31}
 .piece-card-actions button:hover{background:#e6eee8}.piece-card-actions .remove-entry:hover{background:#fbece8}
