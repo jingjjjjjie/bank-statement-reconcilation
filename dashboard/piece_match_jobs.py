@@ -48,6 +48,27 @@ def validate_result(result, keys, allowed, banks, items):
     return rows
 
 
+def checked_rows(result, keys, allowed, banks, items):
+    """Validate each line on its own so one invalid answer cannot discard a whole batch."""
+    returned = {}
+    for row in result.get('decisions', []):
+        if row.get('bank_id') in keys and row['bank_id'] not in returned:
+            returned[row['bank_id']] = row
+    rows = []
+    for key in keys:
+        row = returned.get(key)
+        if row is None:
+            rows.append({'bank_id': key, 'assessment': 'tentative', 'allocations': [],
+                         'reason': 'Matching unresolved: the model did not return this line.'})
+            continue
+        try:
+            rows.append(validate_result({'decisions': [row]}, [key], allowed, banks, items)[0])
+        except ValueError as error:
+            rows.append({'bank_id': key, 'assessment': 'tentative', 'allocations': [],
+                         'reason': f'Matching unresolved: {error}. Model said: {row.get("reason", "")}'})
+    return rows
+
+
 def status(review):
     """Report current work and retain failures instead of implying completion."""
     worker = getattr(review, 'piece_match_thread', None)
@@ -187,7 +208,7 @@ def run_matching(review, binding, banks, items, index, facts, config):
             worker = engine.fork()
             result = worker.ask(prompt, SCHEMA, [])
             try:
-                for row in validate_result(result, part, allowed, banks, items):
+                for row in checked_rows(result, part, allowed, banks, items):
                     reasons = retrieval[row['bank_id']].get('reasons', {})
                     # A folder or file name can find evidence but never makes a match strong on its own.
                     if row['assessment'] == 'strong' and row['allocations'] and all(

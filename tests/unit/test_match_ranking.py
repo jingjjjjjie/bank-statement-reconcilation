@@ -72,5 +72,22 @@ class BatchTests(unittest.TestCase):
         self.assertTrue(all(row["assessment"] == "tentative" for row in rows))
 
 
+class CheckedRowsTests(unittest.TestCase):
+    def test_one_invalid_answer_keeps_the_rest_of_the_batch(self):
+        """A bad allocation or a skipped line becomes tentative; valid lines are kept."""
+        from dashboard.piece_match_jobs import checked_rows
+        banks = {key: {"amount": "90", "currency": "MYR"} for key in ("B1", "B2", "B3")}
+        items = {"p1": {"amount": "90", "currency": "MYR"}, "p2": {"amount": "90", "currency": ""}}
+        allowed = {"B1": ["p1"], "B2": ["p2"], "B3": ["p1"]}
+        result = {"decisions": [
+            {"bank_id": "B1", "assessment": "strong", "allocations": [{"item_id": "p1", "amount": "90"}], "reason": "Same payee"},
+            {"bank_id": "B2", "assessment": "strong", "allocations": [{"item_id": "p2", "amount": "90"}], "reason": "Guess"}]}
+        rows = {row["bank_id"]: row for row in checked_rows(result, ["B1", "B2", "B3"], allowed, banks, items)}
+        self.assertEqual(rows["B1"]["assessment"], "strong")
+        self.assertEqual(rows["B2"]["assessment"], "tentative")
+        self.assertIn("currencies", rows["B2"]["reason"])
+        self.assertIn("did not return", rows["B3"]["reason"])
+
+
 if __name__ == "__main__":
     unittest.main()
