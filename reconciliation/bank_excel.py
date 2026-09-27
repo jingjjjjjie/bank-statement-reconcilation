@@ -11,7 +11,7 @@ from reconciliation.bank_statement import read_master
 from reconciliation.workbook_style import WorkbookStyle
 
 
-STYLE_PATH = WORKSPACE / "prompts" / "styles" / "bank_statement.xml"
+STYLE_PATH = WORKSPACE / "prompts" / "excel" / "bank_statement.xml"
 
 
 FIELDS = ("date", "ledger", "sql", "sales_type", "voucher", "counterparty",

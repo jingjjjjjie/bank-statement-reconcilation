@@ -144,7 +144,7 @@ def request(task):
     unit = task['units'][0]
     payload = {k: unit.get(k, '') for k in ('text', 'limitation')}
     payload['location'] = unit['label']
-    return load_prompt('extraction') + '\n' + json.dumps(payload, ensure_ascii=False), EXTRACTION, [unit['image']] if unit.get('image') else []
+    return load_prompt('extraction/extraction') + '\n' + json.dumps(payload, ensure_ascii=False), EXTRACTION, [unit['image']] if unit.get('image') else []
 
 
 def no_shared_cache(path):

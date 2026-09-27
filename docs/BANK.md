@@ -29,6 +29,6 @@ source to verify the master rows, dates, text, IDs, account, currency and totals
 This catches later CSV changes but cannot independently detect a mistake repeated
 by the same extractor. The automated bank checks are in `tests/unit/test_bank_statement.py`; they are not independent visual verification of a new statement.
 The year is supplied explicitly because the PDF date header
-contains overlapping text. Formatting is loaded from `prompts/styles/bank_statement.xml` and documented in
+contains overlapping text. Formatting is loaded from `prompts/excel/bank_statement.xml` and documented in
 [workbook style](style.md). Use `--style path/to/style.xml` to select another compatible style;
 the original sample workbook is not required.

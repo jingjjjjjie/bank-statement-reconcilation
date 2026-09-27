@@ -32,8 +32,8 @@ omitting redundant metadata; source images/text are not truncated. Existing size
 limits still leave oversized requests unresolved. Token costs therefore include
 full source context, not merely the compact JSON estimates.
 
-The editable shared instructions are `prompts/matching_policy.md`; the full-document
-piece contract remains in `prompts/piece_matching.md`. Related bank context includes
+The editable shared instructions are `prompts/matching/matching_policy.md`; the full-document
+piece contract remains in `prompts/matching/piece_matching.md`. Related bank context includes
 other payments whose selected evidence intersects these parent documents. Final
 human allocation checks still enforce remaining balances globally.
 

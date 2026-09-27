@@ -32,7 +32,7 @@ DISABLED_FEATURES = (
     "code_mode", "code_mode_host", "skill_search", "memories", "hooks",
 )
 TEXTS = {"type": "array", "items": TEXT}
-EXTRACTION = load_schema("extraction.legacy")
+EXTRACTION = load_schema("extraction/extraction.legacy")
 MONEY = EXTRACTION["properties"]["money"]["items"]
 RECEIPT = EXTRACTION["properties"]["receipts"]["items"]
 from reconciliation.pieces import FACTS, TOTALS
@@ -121,7 +121,7 @@ class CodexReviewer:
         # Content-addressed requests are resumable without repeating successful calls.
         if self._cancelled.is_set():
             raise ReviewCancelled("Review stopped by user")
-        prompt = load_prompt("styles") + "\n\n" + prompt
+        prompt = load_prompt("shared/styles") + "\n\n" + prompt
         profile = ["builtin-instructions", DISABLED_FEATURES, "skip_host_skill_discovery",
                    "web_search=disabled", "project_doc_max_bytes=0"]
         digest = hashlib.sha256(json.dumps([prompt, schema, self.model, self.reasoning, profile], sort_keys=True).encode())

@@ -1,9 +1,9 @@
 # Bank reconciliation workbook style
 
-Runtime definition: `prompts/styles/bank_statement.xml`. This file captures the
+Runtime definition: `prompts/excel/bank_statement.xml`. This file captures the
 approved sample's December formatting and theme without its customer data or
 formulas. Exports load this definition directly; no sample workbook is required.
-Edit it using the instructions in `prompts/styles/README.md`.
+Edit it using the instructions in `prompts/excel/README.md`.
 
 ## Layout
 

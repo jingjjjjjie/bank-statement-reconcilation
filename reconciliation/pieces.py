@@ -6,8 +6,8 @@ from reconciliation.receipt_matching import revision
 from reconciliation.prompts import load_schema
 
 TEXT = {'type': 'string'}
-EXTRACTION = load_schema('extraction')
-ASSEMBLY = load_schema('receipt_assembly')
+EXTRACTION = load_schema('extraction/extraction')
+ASSEMBLY = load_schema('extraction/receipt_assembly')
 PIECE = EXTRACTION['properties']['pieces']['items']
 FACTS = PIECE['properties']['references']
 TOTALS = EXTRACTION['properties']['totals']

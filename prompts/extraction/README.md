@@ -1,6 +1,7 @@
 # Extraction prompt files
 
-- `styles.md`: shared instructions prepended to model requests.
+- `../shared/styles.md`: shared instructions prepended to every model request.
+- `drafts/`: the next extraction prompt under evaluation (core rules, document kinds, decision log); not loaded by the app.
 - `extraction.md`: active page/image/sheet extraction instructions.
 - `extraction.schema.json`: editable JSON output schema loaded by Python and
   supplied to Codex through `--output-schema`. It is also used to validate results.

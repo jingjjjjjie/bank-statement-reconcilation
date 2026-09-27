@@ -139,9 +139,9 @@ Request-count and integration checks use simulated structured responses, with no
 
 ## Implementation references
 
-- [Extraction prompt](../prompts/extraction.md) and [schema](../prompts/extraction.schema.json)
-- [Whole-PDF prompt](../prompts/pdf_document.md) and [routing/checkpoint implementation](../reconciliation/pdf_document.py)
-- [Assembly prompt](../prompts/receipt_assembly.md) and [schema](../prompts/receipt_assembly.schema.json)
+- [Extraction prompt](../prompts/extraction/extraction.md) and [schema](../prompts/extraction/extraction.schema.json)
+- [Whole-PDF prompt](../prompts/extraction/pdf_document.md) and [routing/checkpoint implementation](../reconciliation/pdf_document.py)
+- [Assembly prompt](../prompts/extraction/receipt_assembly.md) and [schema](../prompts/extraction/receipt_assembly.schema.json)
 - [Extraction and assembly orchestration](../reconciliation/vision_workflow.py)
 - [Live piece pipeline review](PIECE_PIPELINE_REVIEW.md)
 - [Candidate retrieval rules](MATCHING_RETRIEVAL.md)

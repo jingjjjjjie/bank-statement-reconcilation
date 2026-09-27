@@ -1,33 +1,21 @@
-# Editable styles and prompts
+# Editable prompts
 
-Edit these UTF-8 Markdown files to change the instructions sent to Codex:
+Edit these UTF-8 files to change what is sent to Codex. Python reads them for each new
+request, so no restart is needed. Document data is appended as JSON and images are attached
+separately. Missing or empty files fail the request instead of falling back to hidden text.
 
-| File | Purpose |
-| --- | --- |
-| `styles.md` | Shared review style and rules prepended to every request. |
-| `extraction.md` | Extract one page, sheet, or image. |
-| `pdf_text.md` | Extract eligible PDF text with native word evidence in experimental routing. |
-| `receipt_assembly.md` | Assemble receipt boundaries across a document's extracted units and original pages. |
-| `screening.md` | Historical duplicate-summary screening; not used by normal extraction-only runs. |
-| `comparison.md` | Historical duplicate comparison of complete originals; not final bank pairing. |
-| `connection_test.md` | Read the synthetic receipt in the live connection test. |
+| Folder | Files | Used for |
+| --- | --- | --- |
+| `shared/` | `styles.md`, `connection_test.md` | Rules prepended to every request; the live connection test. |
+| `extraction/` | `extraction.md` + schema, `pdf_document.md`, `pdf_text.md`, `receipt_assembly.md` + schema | Reading documents into pieces. See [extraction/README.md](extraction/README.md). |
+| `extraction/drafts/` | `extraction_core.md`, `document_kinds.md`, `DECISIONS.md` | Next extraction prompt under evaluation; not loaded by the app. |
+| `matching/` | `matching_policy.md`, `piece_matching.md` | Generate matches in Final review. See `docs/MATCHING_RETRIEVAL.md`. |
+| `legacy/` | `screening.md`, `comparison.md` | Historical duplicate comparison; not used by normal runs. |
+| `excel/` | `bank_statement.xml` | Bank-only Excel formatting; never sent to the model. See [excel/README.md](excel/README.md). |
 
-Python reads these files when building each new request; no server restart is
-needed. Document data is appended as JSON, and images are attached separately.
-These files contain instructions only: no placeholders or Python expressions
-are required. Missing or empty files fail the request rather than falling back
-to hidden instructions. Keep requested output fields compatible with the JSON
-active `extraction.schema.json` and `receipt_assembly.schema.json` contracts in this folder.
+Keep output fields compatible with the schemas in `extraction/`. Changed text gets a new cache
+key; unchanged requests reuse cached responses. Each request's full prompt is saved in its
+`model-cache/<hash>/prompt.txt`.
 
-Normal dashboard and CLI runs use extraction and assembly; retained duplicate prompts do not imply a second vision duplicate pass. Final pairing experiment prompts live in `scripts/test_statement_matching.py`; the final-review/report pages read saved proposals; the explicit Generate matches action uses `matching_policy.md` plus `piece_matching.md` to generate fresh proposals from current pieces and complete document context. The selection policy and limits are documented in `docs/MATCHING_RETRIEVAL.md`.
-
-Stop an active review before editing. To apply edits to already completed units
-or comparisons, run the existing `prepare --refresh` workflow before reviewing
-again. Refresh archives prior state and decisions. Resume alone retains completed
-work. The dashboard's Regenerate document action can request fresh extraction/assembly for one document and requires fresh acceptance. Changed request text gets a different cache key; unchanged requests can
-still reuse cached responses. Each executed request's full prompt remains saved
-in its `model-cache/<hash>/prompt.txt` for auditing.
-
-`styles.md` controls model instructions. `styles/bank_statement.xml` controls
-Excel formatting deterministically; it is never sent to the model. See
-[workbook style instructions](styles/README.md) for editing it.
+Stop an active review before editing. To apply edits to completed documents, use Regenerate
+document in the dashboard or `prepare --refresh`; both require fresh acceptance.

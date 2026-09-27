@@ -115,7 +115,7 @@ def run_matching(review, binding, banks, items, index, facts, config):
             return {'bank_id': key, 'assessment': 'none', 'allocations': [], 'reason': 'No indexed candidate; manual piece search remains available.'}
         supplied, images, allowed = piece_matching.model_payload(
             banks, items, index, facts, choices, [key], retrieval, include_images=False)
-        prompt = load_prompt('matching_policy') + '\n\n' + load_prompt('piece_matching') + '\n' + json.dumps(supplied, ensure_ascii=False, separators=(',', ':'))
+        prompt = load_prompt('matching/matching_policy') + '\n\n' + load_prompt('matching/piece_matching') + '\n' + json.dumps(supplied, ensure_ascii=False, separators=(',', ':'))
         if len(prompt) > 180000:
             raise ValueError('Complete document context exceeds the matching limit; review manually')
         if not active_config(index)['codex_enabled']:

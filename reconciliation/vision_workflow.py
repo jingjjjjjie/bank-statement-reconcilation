@@ -341,7 +341,7 @@ def run(work, index, state, reviewer, *, extraction_only=False, regeneration=Non
                             value = pdf_routing.extract_unit(unit, extract_ask, config["pdf_mode"],
                                 work / "pdf-routing" / (key.replace(":", "-") + ".json"))
                             return key, digest, unit["label"], value
-                        prompt = load_prompt("extraction") + "\n" + json.dumps({
+                        prompt = load_prompt("extraction/extraction") + "\n" + json.dumps({
                             "location": unit["label"], "text": unit["text"],
                             "limitation": unit.get("limitation", "")}, ensure_ascii=False)
                         return key, digest, unit["label"], extract_ask(prompt, EXTRACTION,
@@ -397,7 +397,7 @@ def run(work, index, state, reviewer, *, extraction_only=False, regeneration=Non
                     payload = [{"source_unit": n + 1, "original": original,
                                 "extraction": state["units"][f"{digest}:{n}"]}
                                for n, original in enumerate(originals)]
-                    prompt = load_prompt("receipt_assembly") + "\n" + json.dumps(payload, ensure_ascii=False)
+                    prompt = load_prompt("extraction/receipt_assembly") + "\n" + json.dumps(payload, ensure_ascii=False)
                     if digest in regeneration:
                         prompt += "\nRegeneration request: " + regeneration[digest]
                     if len(images) > 40 or len(prompt) > 100000:
@@ -448,7 +448,7 @@ def run(work, index, state, reviewer, *, extraction_only=False, regeneration=Non
 
                     def job(left=left, batch=batch):
                         """Screen one batch and reject incomplete model coverage."""
-                        prompt = load_prompt("screening") + "\n" + json.dumps({
+                        prompt = load_prompt("legacy/screening") + "\n" + json.dumps({
                             "left": summaries[left], "right": {r: summaries[r] for r in batch}},
                             ensure_ascii=False)
                         if len(prompt) > 100000:
@@ -490,7 +490,7 @@ def run(work, index, state, reviewer, *, extraction_only=False, regeneration=Non
                     for item in right_text:
                         if "image_number" in item:
                             item["image_number"] += len(left_images)
-                    prompt = load_prompt("comparison") + "\n" + json.dumps(
+                    prompt = load_prompt("legacy/comparison") + "\n" + json.dumps(
                         {"left": left_text, "right": right_text}, ensure_ascii=False)
                     images = left_images + right_images
                     if len(images) > 40 or len(prompt) > 100000:

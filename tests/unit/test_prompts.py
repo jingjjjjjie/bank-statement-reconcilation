@@ -16,8 +16,10 @@ class PromptTests(unittest.TestCase):
         """Reload task and style edits without restarting an existing reviewer."""
         with tempfile.TemporaryDirectory() as temporary:
             folder = Path(temporary)
-            (folder / "styles.md").write_text("Original rules\n", encoding="utf-8")
-            (folder / "extraction.md").write_text("Original task\n", encoding="utf-8")
+            (folder / "shared").mkdir()
+            (folder / "extraction").mkdir()
+            (folder / "shared/styles.md").write_text("Original rules\n", encoding="utf-8")
+            (folder / "extraction/extraction.md").write_text("Original task\n", encoding="utf-8")
             received = []
 
             def fake_run(command, **kwargs):
@@ -32,12 +34,12 @@ class PromptTests(unittest.TestCase):
             reviewer = CodexReviewer(folder / "review", executable="codex")
             schema = object_schema({"ok": {"type": "boolean"}})
             with patch("reconciliation.prompts.PROMPTS", folder), mock_codex(fake_run):
-                reviewer.ask(load_prompt("extraction"), schema)
-                reviewer.ask(load_prompt("extraction"), schema)
-                (folder / "extraction.md").write_text("Edited task", encoding="utf-8")
-                reviewer.ask(load_prompt("extraction"), schema)
-                (folder / "styles.md").write_text("Edited rules", encoding="utf-8-sig")
-                reviewer.ask(load_prompt("extraction"), schema)
+                reviewer.ask(load_prompt("extraction/extraction"), schema)
+                reviewer.ask(load_prompt("extraction/extraction"), schema)
+                (folder / "extraction/extraction.md").write_text("Edited task", encoding="utf-8")
+                reviewer.ask(load_prompt("extraction/extraction"), schema)
+                (folder / "shared/styles.md").write_text("Edited rules", encoding="utf-8-sig")
+                reviewer.ask(load_prompt("extraction/extraction"), schema)
             self.assertEqual(received, ["Original rules\n\nOriginal task",
                                         "Original rules\n\nEdited task",
                                         "Edited rules\n\nEdited task"])
@@ -51,10 +53,11 @@ class PromptTests(unittest.TestCase):
             folder = Path(temporary)
             with patch("reconciliation.prompts.PROMPTS", folder):
                 with self.assertRaises(FileNotFoundError):
-                    load_prompt("extraction")
-                (folder / "extraction.md").write_text(" \n", encoding="utf-8")
+                    load_prompt("extraction/extraction")
+                (folder / "extraction").mkdir()
+                (folder / "extraction/extraction.md").write_text(" \n", encoding="utf-8")
                 with self.assertRaisesRegex(ValueError, "Prompt file is empty"):
-                    load_prompt("extraction")
+                    load_prompt("extraction/extraction")
 
     def test_non_receipt_support_allows_empty_factual_fields(self):
         """A claim can be potential evidence without fabricated invoice details."""

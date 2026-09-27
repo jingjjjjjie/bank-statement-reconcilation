@@ -34,7 +34,7 @@ def main():
     reviewer = CodexReviewer(work, model=args.model, reasoning=args.reasoning, max_calls=1)
     reviewer.stage = "pdf_connection_test" if args.pdf else "image_connection_test"
     result = reviewer.ask(
-        load_prompt("connection_test"),
+        load_prompt("shared/connection_test"),
         EXTRACTION, [image])
     assert result["readable"], result
     assert "123.45" in json.dumps(result), result

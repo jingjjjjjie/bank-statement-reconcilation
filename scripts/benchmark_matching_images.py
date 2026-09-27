@@ -245,7 +245,7 @@ def prepare_cases(output):
     for number, (key, group) in enumerate(selected, 1):
         payload, images, allowed = model_payload(banks, items, evidence['index'], evidence['facts'], choices, [key], retrieval)
         # Both prompts truthfully describe optional images; all accounting rules stay identical.
-        instructions = load_prompt('matching_policy') + '\n\n' + load_prompt('piece_matching')
+        instructions = load_prompt('matching/matching_policy') + '\n\n' + load_prompt('matching/piece_matching')
         instructions = instructions.replace('supplied complete supporting documents and their pieces',
             'supplied extracted supporting-document facts and their pieces')
         instructions += ('\nEvidence mode is stated in the payload. Use attached images only when supplied. '

@@ -17,7 +17,7 @@ search, matching context, allocation decisions, and final CSV/report output.
 
 | Area | Implementation | Downstream use |
 | --- | --- | --- |
-| Model output | `prompts/extraction.schema.json`: readable, summary, labelled totals, pieces | Extraction and experimental PDF routing |
+| Model output | `prompts/extraction/extraction.schema.json`: readable, summary, labelled totals, pieces | Extraction and experimental PDF routing |
 | Piece facts | Type, payee, description, typed references/dates, amount, currency, amount basis, source locations | Editor, search, candidate retrieval, matching |
 | Assembly | `receipt_assembly.schema.json` adds complete unit coverage | Joins continuation pages without multiplying totals |
 | Identity | Python assigns persistent IDs; edits/reordering retain IDs; split/merge creates fresh IDs and parent lineage | Search and ledger allocations |

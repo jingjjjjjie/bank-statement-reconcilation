@@ -113,11 +113,11 @@ def extract_unit(unit, ask, selected_mode, audit_path, allowlist=None):
              "text_schema_valid": False}
     write_json(audit_path, audit)
     payload = {"location": unit["label"], "text": "" if "long_page" in reasons else unit["text"], "limitation": ""}
-    prompt = load_prompt("extraction") + "\n" + json.dumps(payload, ensure_ascii=False)
+    prompt = load_prompt("extraction/extraction") + "\n" + json.dumps(payload, ensure_ascii=False)
     try:
         if not reasons:
             try:
-                candidate = ask(prompt + "\n" + load_prompt("pdf_text"), EXTRACTION, (), stage="pdf_text")
+                candidate = ask(prompt + "\n" + load_prompt("extraction/pdf_text"), EXTRACTION, (), stage="pdf_text")
                 audit["text_result"] = candidate
                 failures, audit["evidence"] = evidence_errors(candidate, probe)
                 audit["text_schema_valid"] = True

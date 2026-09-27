@@ -80,7 +80,7 @@ def run_level(output, tasks, workers):
     folder = output / f'workers-{workers}'
     folder.mkdir(exist_ok=False)
     engine = CodexReviewer(folder, model='gpt-5.6-sol', max_calls=len(tasks), timeout=240)
-    prompt = load_prompt('extraction')
+    prompt = load_prompt('extraction/extraction')
     results = []
     started = time.perf_counter()
     save(folder / 'progress.json', {'status': 'running', 'workers': workers, 'total': len(tasks), 'completed': 0})

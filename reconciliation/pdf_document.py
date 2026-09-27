@@ -28,7 +28,7 @@ def whole_request(document, config, state, regenerate=False):
             images.append(unit['image'])
             source['image_number'] = len(images)
         payload.append(source)
-    prompt = load_prompt('extraction') + '\n' + load_prompt('pdf_document') + '\n' + json.dumps(payload, ensure_ascii=False)
+    prompt = load_prompt('extraction/extraction') + '\n' + load_prompt('extraction/pdf_document') + '\n' + json.dumps(payload, ensure_ascii=False)
     return (prompt, images) if len(images) <= 40 and len(prompt) <= 100000 else None
 
 
