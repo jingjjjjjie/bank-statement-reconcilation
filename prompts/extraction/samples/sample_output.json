@@ -1,0 +1,83 @@
+{
+  "readable": true,
+  "description": "Creator payments",
+  "totals": [
+    {
+      "label": "Total",
+      "amount": "660",
+      "currency": "MYR",
+      "location": "Sheet1!H10"
+    }
+  ],
+  "pieces": [
+    {
+      "piece_type": "Payout or payment schedule",
+      "payer": "",
+      "payee": "Aina Binti Rahman",
+      "other_names": [
+        "sample.creator"
+      ],
+      "amount": "120",
+      "amount_location": "Sheet1!H7",
+      "currency": "MYR",
+      "date": "2026-01-05",
+      "document_number": "",
+      "references": [
+        {
+          "type": "bank_account",
+          "value": "1000000000001"
+        },
+        {
+          "type": "project",
+          "value": "DEMO-PR"
+        }
+      ]
+    },
+    {
+      "piece_type": "Payout or payment schedule",
+      "payer": "",
+      "payee": "Robert Tan Wei Ming",
+      "other_names": [
+        "bakerbob"
+      ],
+      "amount": "90",
+      "amount_location": "Sheet1!H8",
+      "currency": "MYR",
+      "date": "2026-01-05",
+      "document_number": "",
+      "references": [
+        {
+          "type": "bank_account",
+          "value": "1000000000002"
+        },
+        {
+          "type": "project",
+          "value": "DEMO-PR"
+        }
+      ]
+    },
+    {
+      "piece_type": "Payout or payment schedule",
+      "payer": "",
+      "payee": "Mei Ling Enterprise",
+      "other_names": [
+        "cookwithmei"
+      ],
+      "amount": "450",
+      "amount_location": "Sheet1!H9",
+      "currency": "MYR",
+      "date": "2026-01-05",
+      "document_number": "",
+      "references": [
+        {
+          "type": "bank_account",
+          "value": "1000000000003"
+        },
+        {
+          "type": "project",
+          "value": "DEMO-TSP"
+        }
+      ]
+    }
+  ]
+}

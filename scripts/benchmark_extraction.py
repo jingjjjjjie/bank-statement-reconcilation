@@ -73,14 +73,14 @@ def prepare(root, work, output):
 def run_level(output, tasks, workers):
     """Run every unit with uncached responses and the production Codex wrapper."""
     from reconciliation.codex_reviewer import CodexReviewer, EXTRACTION
-    from reconciliation.prompts import load_prompt
+    from reconciliation.prompts import extraction_prompt
     from reconciliation.review_settings import document_stage
     from reconciliation.token_usage import summary
 
     folder = output / f'workers-{workers}'
     folder.mkdir(exist_ok=False)
     engine = CodexReviewer(folder, model='gpt-5.6-sol', max_calls=len(tasks), timeout=240)
-    prompt = load_prompt('extraction/extraction')
+    prompt = extraction_prompt()
     results = []
     started = time.perf_counter()
     save(folder / 'progress.json', {'status': 'running', 'workers': workers, 'total': len(tasks), 'completed': 0})

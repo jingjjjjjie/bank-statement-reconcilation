@@ -38,11 +38,16 @@ def current(review):
     for receipt in receipts.values():
         facts = canonical(receipt)
         key = receipt['piece_id']
+        # The document number is the strongest exact reference for retrieval.
+        typed = facts['references'] + ([{'type': 'document', 'value': facts['document_number']}]
+                                       if facts['document_number'] else [])
         items[key] = {**facts, 'id': key, 'piece_id': key, 'document': receipt['document_id'],
             'unit': receipt['unit'], 'source_path': receipt['source_path'],
-            'filename': Path(receipt['source_path']).name, 'parties': [facts['payee']] if facts['payee'] else [],
-            'references': [r['value'] for r in facts['references']], 'typed_references': facts['references'],
-            'date': '', 'location': receipt.get('location', ''), 'direction': '',
+            'filename': Path(receipt['source_path']).name,
+            'parties': list(dict.fromkeys(n for n in [facts['payee'], facts['payer'], *facts['other_names']] if n)),
+            'description': facts['description'] or facts['piece_type'],
+            'references': [r['value'] for r in typed], 'typed_references': typed,
+            'date': facts['date'], 'location': receipt.get('location', ''), 'direction': '',
             'source_cells': [], 'claim_group': '', 'expense_id': '',
             'accepted': receipt['accepted'], 'excluded': False,
             'boundary_unresolved': False,  # Live pieces use the normal human extraction review.
@@ -174,7 +179,8 @@ def model_payload(banks, items, index, facts, choices, selected, retrieval=None,
             sources.append(source)
         context[digest] = {**facts['documents'][digest], 'sources': sources,
             'pieces': [{k: v for k, v in item.items() if k in {
-                'id', 'piece_type', 'payee', 'description', 'typed_references', 'dates',
+                'id', 'piece_type', 'payer', 'payee', 'other_names', 'description', 'typed_references', 'date', 'dates',
+                'document_number', 'amount_location', 'currency_default',
                 'amount', 'currency', 'amount_basis', 'source_locations',
                 'claim_group', 'expense_id'} and (v or k in {'amount', 'currency'})}
                 for item in facts['documents'][digest]['pieces']]}

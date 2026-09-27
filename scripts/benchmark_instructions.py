@@ -131,7 +131,7 @@ class InstructionProcess:
 
 def request(task):
     """Build the production single-unit or bounded whole-PDF extraction request."""
-    from reconciliation.prompts import load_prompt
+    from reconciliation.prompts import extraction_prompt
     from reconciliation.pieces import EXTRACTION, ASSEMBLY
     from reconciliation.pdf_document import whole_request
     if len(task['units']) > 1:
@@ -144,7 +144,7 @@ def request(task):
     unit = task['units'][0]
     payload = {k: unit.get(k, '') for k in ('text', 'limitation')}
     payload['location'] = unit['label']
-    return load_prompt('extraction/extraction') + '\n' + json.dumps(payload, ensure_ascii=False), EXTRACTION, [unit['image']] if unit.get('image') else []
+    return extraction_prompt() + '\n' + json.dumps(payload, ensure_ascii=False), EXTRACTION, [unit['image']] if unit.get('image') else []
 
 
 def no_shared_cache(path):

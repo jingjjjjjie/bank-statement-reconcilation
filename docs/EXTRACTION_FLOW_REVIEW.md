@@ -53,33 +53,38 @@ Python handles hashing, exact duplicates, file preparation, bank extraction, can
 
 ## 3. Fields extracted now
 
+Updated 27 September 2026. The prompt is `prompts/extraction/core.md` (fixed rules) joined with
+`prompts/extraction/document_kinds.md` (customer-editable kinds; each heading is an allowed piece type).
+A piece is one amount paid, or to be paid, to one recipient.
+
 ### Document context
 
 | Field | Purpose |
 | --- | --- |
 | Readable | Whether key supplied content can reliably be read |
-| Summary | Short document context |
-| Labelled totals | Explicit total label, amount, currency and source location |
-
-Document-level `document_type` and document/piece `limitations` have been removed from the active extraction and assembly schemas. Existing saved results remain compatible. Long-running application processes need to reload the schemas before using the change.
+| Description | At most 20 characters; shown in review and given to matching |
+| Labelled totals | Explicit total label, amount, currency and location; context, never a piece |
 
 ### Each payable piece
 
 | Field | Purpose |
 | --- | --- |
-| Piece type | Receipt, invoice, claim, recipient row, etc. |
-| Payee | Explicitly identified recipient, employee or merchant |
-| Description | What the expense or payment relates to |
-| References | Typed invoice, receipt, claim, payment or other identifiers |
-| Dates | Typed invoice date, payment date, claim period or other date |
-| Amount | Supported payable total |
-| Currency | Explicit currency code, such as MYR, USD, SGD or EUR; blank when unknown |
-| Amount basis | Meaning of the amount, such as invoice total or net salary |
-| Source locations | Page, image region, row or cell |
+| Type | One of the kinds headings, e.g. Receipt or invoice, Payroll, Claim |
+| Payer / Payee | Fullest name printed for each party; empty when not printed |
+| Other names | Handles or nicknames printed for the same party |
+| Amount | Number only; Python stores positive cents |
+| Amount at | `page 3`, `Sheet1!H7` or `image 1`; review can jump there |
+| Currency | Three-letter code inferred from anywhere in the document; Python fills MYR when empty and flags it as the default |
+| Date | One date, payment date first; Python turns a month into its last day |
+| Document number | The invoice, receipt, bill, order, claim or transaction number |
+| References | Other identifiers: contract, project, bank account, other |
 
-Whole-document extraction and assembly both record reviewed source units and each piece's source units. The user checks all pieces against the original before accepting; no `needs_review` flag or boundary checkbox is used. Python assigns piece identities; the model does not assign approvals.
+Zero amounts are skipped with a review warning. Older extractions keep their fields (description, amount basis,
+typed dates) and remain editable where they hold a value. Matching compares bank names with payee, payer and other
+names, and treats the document number as an exact reference.
 
-Python normalizes RM to MYR in new extraction results, accepted edits and read-only displays/comparisons. Other currency codes remain allowed, and amounts are never converted. No MYR-only prompt or schema restriction is used. Historical saved evidence is not rewritten automatically. Unknown facts stay empty. Purchase line items, taxes and subtotals within one receipt do not become separate payable pieces. Document totals provide context and do not add payable capacity.
+The currency default amends the earlier "unknown currency stays empty" rule at the user's request (27 September 2026);
+the default remains visible as "Currency (default)" in review.
 
 ## 4. Why assembly currently exists
 
@@ -139,7 +144,7 @@ Request-count and integration checks use simulated structured responses, with no
 
 ## Implementation references
 
-- [Extraction prompt](../prompts/extraction/extraction.md) and [schema](../prompts/extraction/extraction.schema.json)
+- [Extraction rules](../prompts/extraction/core.md), [document kinds](../prompts/extraction/document_kinds.md) and [schema](../prompts/extraction/extraction.schema.json)
 - [Whole-PDF prompt](../prompts/extraction/pdf_document.md) and [routing/checkpoint implementation](../reconciliation/pdf_document.py)
 - [Assembly prompt](../prompts/extraction/receipt_assembly.md) and [schema](../prompts/extraction/receipt_assembly.schema.json)
 - [Extraction and assembly orchestration](../reconciliation/vision_workflow.py)

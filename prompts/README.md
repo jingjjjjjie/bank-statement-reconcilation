@@ -7,10 +7,9 @@ separately. Missing or empty files fail the request instead of falling back to h
 | Folder | Files | Used for |
 | --- | --- | --- |
 | `shared/` | `styles.md`, `connection_test.md` | Rules prepended to every request; the live connection test. |
-| `extraction/` | `extraction.md` + schema, `pdf_document.md`, `pdf_text.md`, `receipt_assembly.md` + schema | Reading documents into pieces. See [extraction/README.md](extraction/README.md). |
-| `extraction/drafts/` | `extraction_core.md`, `document_kinds.md`, `DECISIONS.md` | Next extraction prompt under evaluation; not loaded by the app. |
+| `extraction/` | `core.md`, `document_kinds.md`, schemas, `pdf_document.md`, `receipt_assembly.md`, `samples/` | Reading documents into pieces. See [extraction/README.md](extraction/README.md). |
 | `matching/` | `matching_policy.md`, `piece_matching.md` | Generate matches in Final review. See `docs/MATCHING_RETRIEVAL.md`. |
-| `legacy/` | `screening.md`, `comparison.md` | Historical duplicate comparison; not used by normal runs. |
+| `legacy/` | `screening.md`, `comparison.md`, `extraction.md` | Historical duplicate comparison and the previous extraction prompt; not used by normal runs. |
 | `excel/` | `bank_statement.xml` | Bank-only Excel formatting; never sent to the model. See [excel/README.md](excel/README.md). |
 
 Keep output fields compatible with the schemas in `extraction/`. Changed text gets a new cache

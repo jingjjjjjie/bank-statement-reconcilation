@@ -79,6 +79,7 @@ def context(review, *, include_banks=True, prepared=None):
                               "accepted": bool(accepted) and accepted.get("accepted", True) and not trash, "trash": trash,
                               "needs_refresh": "receipts" not in raw,
                               "receipts": pieces, "readable": raw.get("readable", assembled),
+                              "description": raw.get("description", raw.get("summary", raw.get("brief_description", ""))),
                               "assembled": assembled, "assembly_pending": assembled and assembly is None,
                               "review_warnings": list(dict.fromkeys(warning
                                   for n in range(len(document["units"]))

@@ -16,7 +16,8 @@ ASSEMBLY = object_schema({
     "limitations": TEXTS,
 })
 from reconciliation.pieces import TOTALS, TEXT
-ASSEMBLY['properties'].update({'summary': TEXT, 'totals': TOTALS, 'document_type': TEXT, 'readable': {'type': 'boolean'}})
+ASSEMBLY['properties'].update({'summary': TEXT, 'description': TEXT, 'totals': TOTALS, 'document_type': TEXT,
+                               'readable': {'type': 'boolean'}, 'review_warnings': TEXTS})
 
 
 def input_revision(document, state):

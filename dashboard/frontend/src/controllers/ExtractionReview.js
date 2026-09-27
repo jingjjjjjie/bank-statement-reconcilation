@@ -98,15 +98,18 @@ function renderPieceNavigation() {
       select.type = 'button'; row.append(select);
       const details = node('details', 'piece-details'), detailFields = node('div', 'piece-detail-fields');
       details.append(node('summary', '', 'Details'));
-      for (const key of ['payee', 'brief_description', 'total', 'currency']) {
+      for (const key of ['payee', 'payer', 'total', 'currency', 'date', 'document_number']) {
         const field = card.querySelector(`[data-field="${key}"]`);
-        if (field) {
-          const label = field.closest('label');
-          label.firstChild.textContent = {payee:'Payee', brief_description:'Description', total:'Amount', currency:'Currency'}[key];
-          row.append(label);
-        }
+        if (field) row.append(field.closest('label'));
       }
       for (const label of [...card.querySelectorAll(':scope > label')]) detailFields.append(label);
+      const location = card.querySelector('[data-field="amount_location"]');
+      if (location) {
+        const show = node('button', 'button secondary', 'Show');
+        show.type = 'button'; show.title = 'Show where this amount is in the original';
+        show.onclick = () => showLocation(location.value);
+        location.closest('label').append(show);
+      }
       details.append(detailFields);
       card.append(row, details);
       card.addEventListener('focusin', () => {
@@ -191,6 +194,27 @@ async function showOriginal(unit) {
   const embedded = info.labels.findIndex(label => label.startsWith('Embedded image: ') && unit.label.startsWith(label.slice(16)));
   if (embedded >= 0) $('#original-page').value = String(embedded);
   await renderOriginal();
+}
+
+function showLocation(text) {
+  /* Jump the preview to where an amount was read: "page 3", "Sheet1!H7" or "image 1". */
+  if (!originalInfo) return;
+  const labels = originalInfo.labels, value = (text || '').trim();
+  let page = -1;
+  const cell = /^(.+)!\$?[A-Z]+\$?(\d+)$/i.exec(value);
+  const number = /(?:page|image)\s*(\d+)/i.exec(value);
+  if (cell) {
+    const row = Number(cell[2]);
+    page = labels.findIndex(label => {
+      const range = new RegExp(`^${cell[1].replace(/[.*+?^${}()|[\]\\]/g, '\\$&')} · rows (\\d+)–(\\d+)$`).exec(label);
+      return range && row >= Number(range[1]) && row <= Number(range[2]);
+    });
+  } else if (number) {
+    page = Math.min(Number(number[1]) - 1, labels.length - 1);
+  }
+  if (page < 0) { $('#original-status').textContent = `Location not found: ${value || 'none recorded'}`; return; }
+  $('#original-page').value = String(page);
+  renderOriginal().catch(receipts.error);
 }
 
 async function renderOriginal() {

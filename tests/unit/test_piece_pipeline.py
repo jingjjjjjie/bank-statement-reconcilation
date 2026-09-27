@@ -15,6 +15,15 @@ from reconciliation.duplicate_workflow import fingerprint
 from tests.unit import test_receipt_matching as fixtures
 
 
+
+def as_model(record):
+    """Project an old stored piece onto the current model output schema."""
+    facts = pieces.canonical(record)
+    return {'piece_type': 'Receipt or invoice', 'payer': facts['payer'], 'payee': facts['payee'], 'other_names': [],
+            'amount': facts['amount'], 'amount_location': facts['amount_location'], 'currency': facts['currency'],
+            'date': facts['date'], 'document_number': facts['document_number'],
+            'references': [r for r in facts['references'] if r['type'] in ('contract', 'project', 'bank_account', 'other')]}
+
 class PiecePipelineTests(unittest.TestCase):
     def setUp(self):
         """Use isolated two-receipt evidence and three bank payments."""
@@ -154,19 +163,27 @@ class PiecePipelineTests(unittest.TestCase):
 
     def test_canonical_schema_and_legacy_adapter(self):
         """The model emits only document context and pieces, preserving typed facts."""
-        piece = pieces.canonical({**self.fixture.pieces[0], 'payee': 'Merchant',
-            'references': [{'type': 'receipt', 'value': '000123'}]})
-        result = {'readable': True, 'summary': 'Two receipts',
-            'totals': [], 'pieces': [piece, pieces.canonical(self.fixture.pieces[1])]}
-        for piece in result['pieces']:
-            piece.pop('limitations', None)
+        base = {'piece_type': 'Receipt or invoice', 'payer': '', 'other_names': [], 'amount_location': 'image 1',
+                'date': '2025-11', 'references': []}
+        result = {'readable': True, 'description': 'Two receipts', 'totals': [], 'pieces': [
+            {**base, 'payee': 'Merchant', 'amount': '-45', 'currency': 'RM', 'document_number': '000123',
+             'references': [{'type': 'other', 'value': 'REF-9'}]},
+            {**base, 'payee': 'Other shop', 'amount': '15.004', 'currency': '', 'document_number': ''},
+            {**base, 'payee': 'Zero row', 'amount': '0', 'currency': 'MYR', 'document_number': ''}]}
         validate(result, pieces.EXTRACTION)
-        adapted = pieces.legacy_result(result)
-        self.assertEqual(adapted['receipts'][0]['references'][0]['value'], '000123')
-        self.assertEqual(adapted['receipts'][0]['invoice_numbers'], [])
+        adapted = pieces.legacy_result(pieces.clean_result(result))
+        first, second = adapted['receipts']
+        self.assertEqual((first['document_number'], first['invoice_numbers']), ('000123', ['000123']))
+        self.assertEqual(first['references'][0]['value'], 'REF-9')
+        # Python clean-ups: positive cents, month to last day, RM to MYR, default currency, zero skipped.
+        self.assertEqual((first['total'], first['date'], first['currency'], first['currency_default']),
+                         ('45.00', '2025-11-30', 'MYR', False))
+        self.assertEqual((second['total'], second['currency'], second['currency_default']), ('15.00', 'MYR', True))
+        self.assertIn('Skipped 1 zero-amount piece(s).', adapted['review_warnings'])
+        self.assertEqual(adapted['brief_description'], 'Two receipts')
         self.assertNotIn('pieces', adapted)
         self.assertNotIn('money', pieces.EXTRACTION['properties'])
-        self.assertEqual(len(adapted['receipts']), 2)
+        self.assertIn('Receipt or invoice', pieces.EXTRACTION['properties']['pieces']['items']['properties']['piece_type']['enum'])
 
     def test_outdated_and_failed_proposals_remain_visible(self):
         """A stale run retains saved evidence and failures instead of becoming no-match rows."""
@@ -231,15 +248,13 @@ class PiecePipelineTests(unittest.TestCase):
         """Equal amounts and shared project codes keep distinct recipient identities."""
         from dashboard.piece_match_jobs import SCHEMA
         amounts = ['150', '150', '90', '90', '750', '200', '600']
-        rows = [pieces.canonical({**self.fixture.pieces[0], 'payee': f'Recipient {n}',
+        rows = [as_model({**self.fixture.pieces[0], 'payee': f'Recipient {n}',
             'total': value, 'references': [{'type': 'other', 'value': 'shared-project'}],
             'dates': [{'type': 'other', 'value': '26/11/2025'}],
             'location': f'Sheet1 row {n + 9}'}) for n, value in enumerate(amounts)]
-        result = {'readable': True, 'summary': 'Seven recipients',
+        result = {'readable': True, 'description': 'Seven recipients',
             'totals': [{'label': 'Grand total', 'amount': '2030', 'currency': 'MYR', 'location': 'Sheet1 I16'}],
             'pieces': rows}
-        for piece in result['pieces']:
-            piece.pop('limitations', None)
         validate(result, pieces.EXTRACTION)
         self.fixture.state['units'][self.fixture.key] = pieces.legacy_result(result)
         self.fixture.save_state()
@@ -380,10 +395,8 @@ class PiecePipelineTests(unittest.TestCase):
         fixture.setUp()
         self.addCleanup(fixture.doCleanups)
         index, state = fixture.prepared()
-        supplied = {'readable': True, 'summary': 'Two receipts',
-            'totals': [], 'pieces': [pieces.canonical(p) for p in self.fixture.pieces]}
-        for piece in supplied['pieces']:
-            piece.pop('limitations', None)
+        supplied = {'readable': True, 'description': 'Two receipts',
+            'totals': [], 'pieces': [as_model(p) for p in self.fixture.pieces]}
         supplied['pieces'][0]['payee'] = 'Merchant A'
         calls = []
 

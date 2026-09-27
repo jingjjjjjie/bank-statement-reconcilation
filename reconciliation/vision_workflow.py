@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from reconciliation.paths import WORKSPACE
 from reconciliation import development_cache
-from reconciliation.prompts import load_prompt
+from reconciliation.prompts import extraction_prompt, load_prompt
 from reconciliation import pdf_routing
 from reconciliation.currencies import normalize_currencies
 from time import sleep
@@ -279,11 +279,13 @@ def run(work, index, state, reviewer, *, extraction_only=False, regeneration=Non
         worker.reasoning = choice["reasoning"]
         worker.stage = stage
         from reconciliation import pieces
-        model_schema = pieces.EXTRACTION if schema is EXTRACTION else pieces.ASSEMBLY if schema is ASSEMBLY else schema
+        model_schema = (pieces.model_schema('extraction') if schema is EXTRACTION else
+                        pieces.model_schema('receipt_assembly') if schema is ASSEMBLY else schema)
         result = normalize_currencies(worker.ask(prompt, model_schema, images))
         if schema is EXTRACTION:
-            result = pieces.legacy_result(result)
+            result = pieces.legacy_result(pieces.clean_result(result))
         elif schema is ASSEMBLY and 'pieces' in result:
+            result = pieces.clean_result(result)
             result = {k: v for k, v in result.items() if k != 'pieces'} | {
                 'receipts': [pieces.legacy_piece(p) for p in result['pieces']],
                 'limitations': result.get('limitations', [])}
@@ -341,7 +343,7 @@ def run(work, index, state, reviewer, *, extraction_only=False, regeneration=Non
                             value = pdf_routing.extract_unit(unit, extract_ask, config["pdf_mode"],
                                 work / "pdf-routing" / (key.replace(":", "-") + ".json"))
                             return key, digest, unit["label"], value
-                        prompt = load_prompt("extraction/extraction") + "\n" + json.dumps({
+                        prompt = extraction_prompt() + "\n" + json.dumps({
                             "location": unit["label"], "text": unit["text"],
                             "limitation": unit.get("limitation", "")}, ensure_ascii=False)
                         return key, digest, unit["label"], extract_ask(prompt, EXTRACTION,
@@ -397,7 +399,8 @@ def run(work, index, state, reviewer, *, extraction_only=False, regeneration=Non
                     payload = [{"source_unit": n + 1, "original": original,
                                 "extraction": state["units"][f"{digest}:{n}"]}
                                for n, original in enumerate(originals)]
-                    prompt = load_prompt("extraction/receipt_assembly") + "\n" + json.dumps(payload, ensure_ascii=False)
+                    prompt = (extraction_prompt() + "\n\n" + load_prompt("extraction/receipt_assembly")
+                              + "\n" + json.dumps(payload, ensure_ascii=False))
                     if digest in regeneration:
                         prompt += "\nRegeneration request: " + regeneration[digest]
                     if len(images) > 40 or len(prompt) > 100000:

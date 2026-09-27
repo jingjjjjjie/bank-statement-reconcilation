@@ -29,11 +29,10 @@ class Reviewer:
         self.calls.append({'stage': self.stage, 'prompt': prompt, 'images': list(images)})
         if self.fail:
             raise ValueError('Model request failed')
-        piece = {'piece_type': 'invoice', 'payee': 'Supplier', 'description': 'Supplies',
-            'references': [{'type': 'invoice', 'value': 'INV-001'}], 'dates': [],
-            'amount': '45.00', 'currency': 'RM', 'amount_basis': 'invoice total',
-            'source_locations': ['pages 1 through ' + str(self.pages)]}
-        result = {'readable': True, 'summary': 'Invoice', 'totals': [
+        piece = {'piece_type': 'Receipt or invoice', 'payer': '', 'payee': 'Supplier', 'other_names': [],
+            'amount': '45.00', 'amount_location': 'page ' + str(self.pages), 'currency': 'RM', 'date': '',
+            'document_number': 'INV-001', 'references': []}
+        result = {'readable': True, 'description': 'Invoice', 'totals': [
             {'label': 'Invoice total', 'amount': '45.00', 'currency': 'RM', 'location': 'last page'}],
             'pieces': [piece]}
         if schema == pieces.ASSEMBLY:

@@ -32,14 +32,18 @@ DISABLED_FEATURES = (
     "code_mode", "code_mode_host", "skill_search", "memories", "hooks",
 )
 TEXTS = {"type": "array", "items": TEXT}
+# Codex settings that change responses are part of every cache key.
+CACHE_PROFILE = ["builtin-instructions", DISABLED_FEATURES, "skip_host_skill_discovery",
+                 "web_search=disabled", "project_doc_max_bytes=0"]
 EXTRACTION = load_schema("extraction/extraction.legacy")
 MONEY = EXTRACTION["properties"]["money"]["items"]
 RECEIPT = EXTRACTION["properties"]["receipts"]["items"]
 from reconciliation.pieces import FACTS, TOTALS
 # Old saved receipts remain valid; the model uses the lean canonical schema.
 RECEIPT['properties'].update({'payee': TEXT, 'references': FACTS, 'dates': FACTS, 'amount_basis': TEXT,
-    'piece_id': TEXT, 'parent_piece_ids': TEXTS})
-EXTRACTION['properties'].update({'summary': TEXT, 'totals': TOTALS, 'review_warnings': TEXTS})
+    'piece_id': TEXT, 'parent_piece_ids': TEXTS, 'payer': TEXT, 'other_names': TEXTS, 'date': TEXT,
+    'document_number': TEXT, 'amount_location': TEXT, 'currency_default': {'type': 'boolean'}})
+EXTRACTION['properties'].update({'summary': TEXT, 'description': TEXT, 'totals': TOTALS, 'review_warnings': TEXTS})
 SCREEN = object_schema({"comparisons": {"type": "array", "items": object_schema({
     "right_id": TEXT, "candidate": {"type": "boolean"}, "reason": TEXT,
 })}})
@@ -122,9 +126,7 @@ class CodexReviewer:
         if self._cancelled.is_set():
             raise ReviewCancelled("Review stopped by user")
         prompt = load_prompt("shared/styles") + "\n\n" + prompt
-        profile = ["builtin-instructions", DISABLED_FEATURES, "skip_host_skill_discovery",
-                   "web_search=disabled", "project_doc_max_bytes=0"]
-        digest = hashlib.sha256(json.dumps([prompt, schema, self.model, self.reasoning, profile], sort_keys=True).encode())
+        digest = hashlib.sha256(json.dumps([prompt, schema, self.model, self.reasoning, CACHE_PROFILE], sort_keys=True).encode())
         for image in images:
             digest.update(Path(image).read_bytes())
         folder = self.cache / digest.hexdigest()

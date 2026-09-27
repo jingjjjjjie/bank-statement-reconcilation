@@ -1,16 +1,31 @@
 {
   "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "readable",
+    "description",
+    "totals",
+    "pieces",
+    "reviewed_units"
+  ],
   "properties": {
     "readable": {
       "type": "boolean"
     },
-    "summary": {
+    "description": {
       "type": "string"
     },
     "totals": {
       "type": "array",
       "items": {
         "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "label",
+          "amount",
+          "currency",
+          "location"
+        ],
         "properties": {
           "label": {
             "type": "string"
@@ -24,81 +39,81 @@
           "location": {
             "type": "string"
           }
-        },
-        "required": [
-          "label",
-          "amount",
-          "currency",
-          "location"
-        ],
-        "additionalProperties": false
+        }
       }
     },
     "pieces": {
       "type": "array",
       "items": {
         "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "piece_type",
+          "payer",
+          "payee",
+          "other_names",
+          "amount",
+          "amount_location",
+          "currency",
+          "date",
+          "document_number",
+          "references",
+          "source_units"
+        ],
         "properties": {
           "piece_type": {
+            "type": "string"
+          },
+          "payer": {
             "type": "string"
           },
           "payee": {
             "type": "string"
           },
-          "description": {
+          "other_names": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "amount": {
+            "type": "string"
+          },
+          "amount_location": {
+            "type": "string"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "date": {
+            "type": "string"
+          },
+          "document_number": {
             "type": "string"
           },
           "references": {
             "type": "array",
             "items": {
               "type": "object",
-              "properties": {
-                "type": {
-                  "type": "string"
-                },
-                "value": {
-                  "type": "string"
-                }
-              },
+              "additionalProperties": false,
               "required": [
                 "type",
                 "value"
               ],
-              "additionalProperties": false
-            }
-          },
-          "dates": {
-            "type": "array",
-            "items": {
-              "type": "object",
               "properties": {
                 "type": {
-                  "type": "string"
+                  "type": "string",
+                  "enum": [
+                    "contract",
+                    "project",
+                    "bank_account",
+                    "other"
+                  ]
                 },
                 "value": {
                   "type": "string"
                 }
-              },
-              "required": [
-                "type",
-                "value"
-              ],
-              "additionalProperties": false
-            }
-          },
-          "amount": {
-            "type": "string"
-          },
-          "currency": {
-            "type": "string"
-          },
-          "amount_basis": {
-            "type": "string"
-          },
-          "source_locations": {
-            "type": "array",
-            "items": {
-              "type": "string"
+              }
             }
           },
           "source_units": {
@@ -109,20 +124,7 @@
             },
             "minItems": 1
           }
-        },
-        "required": [
-          "piece_type",
-          "payee",
-          "description",
-          "references",
-          "dates",
-          "amount",
-          "currency",
-          "amount_basis",
-          "source_locations",
-          "source_units"
-        ],
-        "additionalProperties": false
+        }
       }
     },
     "reviewed_units": {
@@ -132,13 +134,5 @@
         "minimum": 1
       }
     }
-  },
-  "required": [
-    "readable",
-    "summary",
-    "totals",
-    "pieces",
-    "reviewed_units"
-  ],
-  "additionalProperties": false
+  }
 }

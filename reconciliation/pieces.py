@@ -2,36 +2,95 @@
 from copy import deepcopy
 from uuid import uuid4
 
+import calendar
+import re
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
+
 from reconciliation.receipt_matching import revision
-from reconciliation.prompts import load_schema
+from reconciliation.prompts import load_schema, piece_types
 
 TEXT = {'type': 'string'}
-EXTRACTION = load_schema('extraction/extraction')
-ASSEMBLY = load_schema('extraction/receipt_assembly')
+DEFAULT_CURRENCY = 'MYR'
+
+
+def model_schema(name):
+    """Load a model schema fresh, restricting piece_type to the current kinds headings."""
+    schema = load_schema(f'extraction/{name}')
+    schema['properties']['pieces']['items']['properties']['piece_type'] = {'type': 'string', 'enum': piece_types()}
+    return schema
+
+
+EXTRACTION = model_schema('extraction')
+ASSEMBLY = model_schema('receipt_assembly')
 PIECE = EXTRACTION['properties']['pieces']['items']
-FACTS = PIECE['properties']['references']
+# Stored typed facts keep any type so older records (invoice, claim_period...) stay valid.
+FACTS = {'type': 'array', 'items': {'type': 'object', 'additionalProperties': False, 'required': ['type', 'value'],
+                                    'properties': {'type': TEXT, 'value': TEXT}}}
 TOTALS = EXTRACTION['properties']['totals']
+
+
+def clean_piece(piece):
+    """Apply deterministic clean-ups: positive cents, full dates, default currency."""
+    piece = dict(piece)
+    try:
+        value = Decimal(piece.get('amount', '').replace(',', '').strip())
+        piece['amount'] = str(abs(value).quantize(Decimal('0.01'), ROUND_HALF_UP))
+    except (InvalidOperation, AttributeError):
+        pass  # Non-numeric amounts stay visible for review rather than being guessed.
+    month = re.fullmatch(r'(\d{4})-(\d{2})', piece.get('date', ''))
+    if month and 1 <= int(month[2]) <= 12:
+        year, number = int(month[1]), int(month[2])
+        piece['date'] = f'{year:04d}-{number:02d}-{calendar.monthrange(year, number)[1]:02d}'
+    currency = piece.get('currency', '').strip().upper()
+    piece['currency'] = 'MYR' if currency == 'RM' else currency or DEFAULT_CURRENCY
+    piece['currency_default'] = not currency
+    return piece
+
+
+def clean_result(result):
+    """Clean every piece and drop zero amounts, noting how many were skipped."""
+    if 'pieces' not in result:
+        return result
+    kept = [clean_piece(p) for p in result.get('pieces', [])]
+    zero = [p for p in kept if p['amount'] in ('0.00',)]
+    result = {**result, 'pieces': [p for p in kept if p not in zero]}
+    if zero:
+        result['review_warnings'] = [*result.get('review_warnings', []), f'Skipped {len(zero)} zero-amount piece(s).']
+    return result
 
 
 def canonical(piece):
     """Read new facts or old receipt records without inventing payees or dates."""
+    references = deepcopy(piece.get('references', [{'type': 'invoice', 'value': v} for v in piece.get('invoice_numbers', [])]))
+    dates = deepcopy(piece.get('dates', []))
+    old_number = next((r['value'] for r in references if r.get('type') == 'invoice'), '')
     return {'piece_type': piece.get('piece_type', piece.get('document_type', '')),
-        'payee': piece.get('payee', ''), 'description': piece.get('description', piece.get('brief_description', '')),
-        'references': deepcopy(piece.get('references', [{'type': 'invoice', 'value': v} for v in piece.get('invoice_numbers', [])])),
-        'dates': deepcopy(piece.get('dates', [])), 'amount': piece.get('amount', piece.get('total', '')),
-        'currency': piece.get('currency', ''), 'amount_basis': piece.get('amount_basis', ''),
+        'payer': piece.get('payer', ''), 'payee': piece.get('payee', ''), 'other_names': list(piece.get('other_names', [])),
+        'amount': piece.get('amount', piece.get('total', '')), 'currency': piece.get('currency', ''),
+        'currency_default': bool(piece.get('currency_default', False)),
+        'date': piece.get('date', dates[0]['value'] if dates and isinstance(dates[0], dict) else ''),
+        'document_number': piece.get('document_number', old_number),
+        'amount_location': piece.get('amount_location', piece.get('location', '')),
+        'references': references, 'dates': dates,
+        'description': piece.get('description', piece.get('brief_description', '')),
+        'amount_basis': piece.get('amount_basis', ''),
         'source_locations': piece.get('source_locations', [piece['location']] if piece.get('location') else []),
         'limitations': piece.get('limitations', [])}
 
 
 def legacy_piece(piece):
-    """Adapt canonical facts to the existing editor while keeping typed metadata."""
+    """Store canonical facts in the editor's record, keeping old accessors for existing consumers."""
     facts = canonical(piece)
-    result = {'location': ' | '.join(facts['source_locations']), 'document_type': facts['piece_type'],
-        'invoice_numbers': [r['value'] for r in facts['references'] if r['type'] == 'invoice'],
+    dates = facts['dates'] or ([{'type': 'date', 'value': facts['date']}] if facts['date'] else [])
+    result = {'location': facts['amount_location'] or ' | '.join(facts['source_locations']),
+        'document_type': facts['piece_type'],
+        'invoice_numbers': [facts['document_number']] if facts['document_number'] else
+                           [r['value'] for r in facts['references'] if r['type'] == 'invoice'],
         'brief_description': facts['description'], 'total': facts['amount'], 'currency': facts['currency'],
         'limitations': facts['limitations'], 'payee': facts['payee'], 'references': facts['references'],
-        'dates': facts['dates'], 'amount_basis': facts['amount_basis']}
+        'dates': dates, 'amount_basis': facts['amount_basis'], 'payer': facts['payer'],
+        'other_names': facts['other_names'], 'date': facts['date'], 'document_number': facts['document_number'],
+        'amount_location': facts['amount_location'], 'currency_default': facts['currency_default']}
     for field in ('piece_id', 'source_units', 'needs_review', 'parent_piece_ids'):
         if field in piece:
             result[field] = deepcopy(piece[field])
@@ -43,12 +102,14 @@ def legacy_result(result):
     if 'pieces' not in result:
         return result
     pieces = [legacy_piece(p) for p in result['pieces']]
-    return {**{k: v for k, v in result.items() if k != 'pieces'}, 'receipts': pieces, 'brief_description': result['summary'], 'details': '',
+    description = result.get('description', result.get('summary', ''))
+    return {**{k: v for k, v in result.items() if k != 'pieces'}, 'receipts': pieces, 'brief_description': description,
+        'summary': description, 'details': '',
         'document_type': result.get('document_type', ''), 'limitations': result.get('limitations', []),
         'receipt_status': 'receipt' if result.get('document_type') == 'receipt' else 'unsure',
         'supporting_evidence_status': 'potential_support' if pieces else 'uncertain',
         'supporting_evidence_reason': '', 'company': [],
-        'parties': list(dict.fromkeys(p['payee'] for p in pieces if p['payee'])),
+        'parties': list(dict.fromkeys(n for p in pieces for n in [p['payee'], p['payer'], *p['other_names']] if n)),
         'invoice_numbers': list(dict.fromkeys(v for p in pieces for v in p['invoice_numbers'])),
         'references': list(dict.fromkeys(r['value'] for p in pieces for r in p['references'])),
         'dates': list(dict.fromkeys(d['value'] for p in pieces for d in p['dates'])),

@@ -10,7 +10,7 @@ from reconciliation.candidates import number, specific_name, truncated_name
 
 STOP = {'fund', 'transfer', 'debit', 'credit', 'payment', 'receipt', 'invoice', 'fee',
         'sdn', 'bhd', 'ltd', 'pty', 'the', 'and', 'myr', 'rm', 'bank'}
-REFERENCE_TYPES = {'invoice', 'receipt', 'payment', 'transaction', 'booking', 'order', 'claim'}
+REFERENCE_TYPES = {'invoice', 'receipt', 'payment', 'transaction', 'booking', 'order', 'claim', 'document'}
 
 
 def words(text):

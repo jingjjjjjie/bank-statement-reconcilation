@@ -8,7 +8,7 @@ from jsonschema import ValidationError, validate
 from reconciliation.codex_reviewer import EXTRACTION
 from reconciliation.development_cache import mode, write_json
 from reconciliation.paths import WORKSPACE
-from reconciliation.prompts import load_prompt
+from reconciliation.prompts import extraction_prompt, load_prompt
 
 MODES = {"hybrid", "compare"}
 DISAGREEMENT_WARNING = "Text and vision disagree; verify receipt boundaries and fields against the original."
@@ -113,7 +113,7 @@ def extract_unit(unit, ask, selected_mode, audit_path, allowlist=None):
              "text_schema_valid": False}
     write_json(audit_path, audit)
     payload = {"location": unit["label"], "text": "" if "long_page" in reasons else unit["text"], "limitation": ""}
-    prompt = load_prompt("extraction/extraction") + "\n" + json.dumps(payload, ensure_ascii=False)
+    prompt = extraction_prompt() + "\n" + json.dumps(payload, ensure_ascii=False)
     try:
         if not reasons:
             try:

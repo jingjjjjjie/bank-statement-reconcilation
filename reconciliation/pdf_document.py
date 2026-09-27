@@ -5,7 +5,7 @@ from pathlib import Path
 
 from reconciliation import pdf_routing
 from reconciliation.pieces import canonical, legacy_result
-from reconciliation.prompts import load_prompt
+from reconciliation.prompts import extraction_prompt, load_prompt
 from reconciliation.receipt_assembly import input_revision
 
 
@@ -28,7 +28,7 @@ def whole_request(document, config, state, regenerate=False):
             images.append(unit['image'])
             source['image_number'] = len(images)
         payload.append(source)
-    prompt = load_prompt('extraction/extraction') + '\n' + load_prompt('extraction/pdf_document') + '\n' + json.dumps(payload, ensure_ascii=False)
+    prompt = extraction_prompt() + '\n\n' + load_prompt('extraction/pdf_document') + '\n' + json.dumps(payload, ensure_ascii=False)
     return (prompt, images) if len(images) <= 40 and len(prompt) <= 100000 else None
 
 
@@ -41,7 +41,7 @@ def save_result(document, state, result):
         pieces = [canonical(piece) for piece in result['receipts'] if min(piece['source_units']) == number + 1]
         state['units'][f'{digest}:{number}'] = legacy_result({
             'readable': result.get('readable', True),
-            'summary': result.get('summary', '') if number == 0 else '',
+            'description': result.get('description', result.get('summary', '')) if number == 0 else '',
             'totals': result.get('totals', []) if number == 0 else [], 'pieces': pieces})
     state.setdefault('assemblies', {})[digest] = {**result, 'extraction_mode': 'whole_pdf',
         'input_revision': input_revision(document, state)}

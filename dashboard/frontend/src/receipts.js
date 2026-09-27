@@ -12,7 +12,8 @@ if ($('#regeneration-status')) {
   const evidence = node('div'); evidence.id = 'supporting-evidence';
   $('#receipt-unit-status').after(evidence);
 }
-const emptyPiece = () => ({location:'', document_type:'', invoice_numbers:[], payee:'', references:[], dates:[], amount_basis:'', brief_description:'', total:'', currency:'', limitations:[]});
+const emptyPiece = () => ({location:'', document_type:'', invoice_numbers:[], payee:'', payer:'', other_names:[], references:[], dates:[],
+  date:'', document_number:'', amount_location:'', amount_basis:'', brief_description:'', total:'', currency:'', limitations:[]});
 
 function receiptError(error) {
   /* Keep action failures visible without discarding edited fields. */
@@ -88,15 +89,20 @@ function addReceiptPiece(piece=emptyPiece()) {
     receiptField(card, 'Source unit numbers (one per line; see page labels above)', 'source_units', piece.source_units || [], true);
   }
   card.append(node('legend', '', 'Separate receipt / supporting piece'));
-  receiptField(card, 'Location in image or page', 'location', piece.location);
-  receiptField(card, 'Piece type', 'document_type', piece.document_type);
   receiptField(card, 'Payee', 'payee', piece.payee || '');
+  receiptField(card, 'Payer', 'payer', piece.payer || '');
+  receiptField(card, 'Amount', 'total', piece.total);
+  receiptField(card, piece.currency_default ? 'Currency (default)' : 'Currency', 'currency', piece.currency);
+  receiptField(card, 'Date (YYYY-MM-DD)', 'date', piece.date || '');
+  receiptField(card, 'Document no.', 'document_number', piece.document_number || '');
+  receiptField(card, 'Type', 'document_type', piece.document_type);
+  receiptField(card, 'Other names (one per line)', 'other_names', piece.other_names || [], true);
   receiptField(card, 'References (type: value)', 'references', (piece.references || (piece.invoice_numbers || []).map(value => ({type:'invoice', value}))).map(r => `${r.type}: ${r.value}`), true);
-  receiptField(card, 'Dates / periods (type: value)', 'dates', (piece.dates || []).map(r => `${r.type}: ${r.value}`), true);
-  receiptField(card, 'Short description', 'brief_description', piece.brief_description);
-  receiptField(card, 'Printed total', 'total', piece.total);
-  receiptField(card, 'Amount basis', 'amount_basis', piece.amount_basis || '');
-  receiptField(card, 'Currency', 'currency', piece.currency);
+  receiptField(card, 'Amount at', 'amount_location', piece.amount_location || piece.location || '');
+  // Older extractions keep their fields editable only where they hold something.
+  if (piece.brief_description) receiptField(card, 'Description (older extraction)', 'brief_description', piece.brief_description);
+  if (piece.amount_basis) receiptField(card, 'Amount basis (older extraction)', 'amount_basis', piece.amount_basis);
+  if (!piece.date && piece.dates?.length) receiptField(card, 'Dates (older extraction, type: value)', 'dates', piece.dates.map(r => `${r.type}: ${r.value}`), true);
   $('#receipt-pieces').append(card);
 }
 
@@ -112,9 +118,10 @@ function showReceiptUnit() {
   if (!unit) { if (hooks.clearOriginal) hooks.clearOriginal(); $('#receipt-unit-status').textContent = 'No extracted receipt units yet. Run documents, then load the results.'; return; }
   $('#receipt-original').href = `/api/content-file?id=${encodeURIComponent(unit.document_id)}`;
   if ($('#receipt-original').hasAttribute('download')) $('#receipt-original').download = unit.source_path.split(/[\\/]/).pop();
-  $('#receipt-unit-status').textContent = unit.accepted ? ($('#document-review-status') ? '' : 'Extraction accepted.') : unit.needs_refresh
+  const status = unit.accepted ? ($('#document-review-status') ? '' : 'Extraction accepted.') : unit.needs_refresh
     ? 'Older extraction has no separate receipt records. Re-extract or enter pieces after checking the original.'
     : '';
+  $('#receipt-unit-status').textContent = [unit.description, status].filter(Boolean).join(' · ');
   if (unit.assembled) {
     $('#receipt-unit-status').textContent += ' ' + unit.source_units.map(source => `${source.number}: ${source.label}`).join(' | ');
     if (unit.assembly_pending) $('#receipt-unit-status').textContent = 'Waiting for document receipt assembly. Run documents to continue.';
@@ -211,10 +218,15 @@ function readReceiptPieces() {
         continue;
       }
       if (key === 'source_units') { piece[key] = input.value.split(/[\s,]+/).filter(Boolean).map(Number); continue; }
+      if (key === 'other_names') { piece[key] = input.value.split('\n').map(value => value.trim()).filter(Boolean); continue; }
       piece[key] = Array.isArray(piece[key]) ? input.value.split('\n').map(value => value.trim()).filter(Boolean) : input.value.trim();
     }
     const assembled = receiptData?.units.find(unit => unit.key === $('#receipt-unit').value)?.assembled;
-    if (piece.references) piece.invoice_numbers = piece.references.filter(r => r.type === 'invoice').map(r => r.value);
+    if (piece.references) piece.invoice_numbers = piece.document_number ? [piece.document_number] : piece.references.filter(r => r.type === 'invoice').map(r => r.value);
+    piece.location = piece.amount_location || piece.location || '';
+    if (piece.date) piece.dates = [{type:'date', value:piece.date}];
+    // An edited currency is no longer the automatic default.
+    if (piece.currency !== (card.receiptPiece?.currency || '')) piece.currency_default = false;
     delete piece.needs_review;
     if (!assembled) delete piece.source_units;
     return piece;
