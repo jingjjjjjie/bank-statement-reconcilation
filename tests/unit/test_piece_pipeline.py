@@ -307,6 +307,54 @@ class PiecePipelineTests(unittest.TestCase):
         self.assertTrue(all(len(next(iter(c['documents'].values()))['pieces']) == 2 for c in calls))
         self.assertTrue(all(not b['decision'] for b in matching_review.snapshot(self.review)['banks']))
 
+    def test_matching_omits_images_above_old_limit_and_preserves_context(self):
+        """Forty-one source pages reach matching as complete text without image attachments."""
+        from dashboard import piece_match_jobs
+        from reconciliation.review_settings import DEFAULTS
+        self.accept()
+        banks, items, index, facts = piece_matching.current(self.review)
+        preview = self.fixture.base / 'preview.png'
+        preview.write_bytes(b'preview fixture; no vision call is made')
+        index['documents'][self.fixture.digest]['units'] = [
+            {'label': f'page {n}', 'text': f'Native page {n}', 'image': str(preview),
+             'image_sha256': fingerprint(preview)} for n in range(1, 42)]
+        calls = []
+
+        class Reviewer:
+            def __init__(self, work, **options):
+                """Keep model calls local to this regression fixture."""
+                pass
+
+            def fork(self):
+                """Reuse the deterministic request recorder."""
+                return self
+
+            def ask(self, prompt, schema, images):
+                """Capture the actual production request without invoking Codex."""
+                payload = json.loads(prompt.rsplit('\n', 1)[1])
+                calls.append((payload, images))
+                return {'decisions': [{'bank_id': payload['banks'][0]['id'], 'assessment': 'tentative',
+                                       'allocations': [], 'reason': 'Review source evidence'}]}
+
+        config = {**DEFAULTS, 'codex_enabled': True, 'max_parallel': 1}
+        self.review.piece_match_cancel = threading.Event()
+        with patch.object(piece_match_jobs, 'CodexReviewer', Reviewer), \
+                patch.object(piece_match_jobs, 'active_config', return_value=config):
+            piece_match_jobs.run_matching(self.review, 'fixture', banks, items, index, facts, config)
+        self.assertEqual(self.review.piece_match_status['failed'], 0)
+        self.assertTrue(calls)
+        for payload, images in calls:
+            self.assertEqual(images, [])
+            self.assertIn('no page images attached', payload['evidence_mode'])
+            document = payload['documents'][self.fixture.digest]
+            self.assertEqual(len(document['pieces']), 2)
+            self.assertEqual(len(document['sources']), 41)
+            self.assertEqual(document['sources'][-1]['text'], 'Native page 41')
+            self.assertTrue(all('image_number' not in source for source in document['sources']))
+        preview.write_bytes(b'changed preview')
+        with self.assertRaisesRegex(ValueError, 'Supporting preview changed'):
+            piece_matching.model_payload(banks, items, index, facts, {'B1': list(items)}, ['B1'], include_images=False)
+
     def test_verified_bank_import_survives_activation(self):
         """An existing verified bank branch remains usable after the cache is disconnected."""
         self.accept()

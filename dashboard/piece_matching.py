@@ -152,8 +152,8 @@ def suggestions(review, banks, items):
     return choices, result
 
 
-def model_payload(banks, items, index, facts, choices, selected, retrieval=None):
-    """Attach every page and piece of each shortlisted document exactly once per batch."""
+def model_payload(banks, items, index, facts, choices, selected, retrieval=None, *, include_images=True):
+    """Supply complete extracted context, optionally attaching verified source images."""
     from reconciliation.duplicate_workflow import fingerprint
     documents = {items[key]['document'] for bank in selected for key in choices[bank]}
     context, images = {}, []
@@ -168,8 +168,9 @@ def model_payload(banks, items, index, facts, choices, selected, retrieval=None)
             if unit.get('image'):
                 if fingerprint(Path(unit['image'])) != unit['image_sha256']:
                     raise ValueError('Supporting preview changed before matching')
-                images.append(unit['image'])
-                source['image_number'] = len(images)
+                if include_images:
+                    images.append(unit['image'])
+                    source['image_number'] = len(images)
             sources.append(source)
         context[digest] = {**facts['documents'][digest], 'sources': sources,
             'pieces': [{k: v for k, v in item.items() if k in {
@@ -185,7 +186,9 @@ def model_payload(banks, items, index, facts, choices, selected, retrieval=None)
     clean_banks = {key: {field: bank[field] for field in bank_fields if bank.get(field)} for key, bank in banks.items()}
     related = [key for key in banks if key not in selected and
                any(items[item]['document'] in documents for item in choices.get(key, []))]
-    payload = {'banks': [{**clean_banks[key], 'candidate_ids': allowed[key]} for key in selected],
+    payload = {'evidence_mode': ('extracted facts plus attached page images' if include_images else
+                                'extracted facts and native text only; no page images attached'),
+        'banks': [{**clean_banks[key], 'candidate_ids': allowed[key]} for key in selected],
         'documents': context, 'related_bank_entries': [clean_banks[key] for key in related],
         'retrieval': {key: retrieval[key] for key in selected} if retrieval else {}}
     return normalize_currencies(payload), images, allowed

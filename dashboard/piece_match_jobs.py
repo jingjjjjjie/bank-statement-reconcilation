@@ -110,12 +110,13 @@ def run_matching(review, binding, banks, items, index, facts, config):
     results, errors = [], []
 
     def job(key):
-        """Provide full shortlisted documents; never silently truncate source evidence."""
+        """Provide all shortlisted document facts and native text without image attachments."""
         if not choices[key]:
             return {'bank_id': key, 'assessment': 'none', 'allocations': [], 'reason': 'No indexed candidate; manual piece search remains available.'}
-        supplied, images, allowed = piece_matching.model_payload(banks, items, index, facts, choices, [key], retrieval)
+        supplied, images, allowed = piece_matching.model_payload(
+            banks, items, index, facts, choices, [key], retrieval, include_images=False)
         prompt = load_prompt('matching_policy') + '\n\n' + load_prompt('piece_matching') + '\n' + json.dumps(supplied, ensure_ascii=False, separators=(',', ':'))
-        if len(images) > 40 or len(prompt) > 180000:
+        if len(prompt) > 180000:
             raise ValueError('Complete document context exceeds the matching limit; review manually')
         if not active_config(index)['codex_enabled']:
             raise ValueError('Codex disabled during matching')

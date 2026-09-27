@@ -2,6 +2,14 @@
 
 ## Live piece pipeline (2026-09-19)
 
+As agreed on 2026-09-27 after the paired benchmark, Generate matches now supplies
+extracted facts and complete native text from shortlisted documents without image
+attachments. Vision extraction and original source previews remain enabled.
+Missing or conflicting facts require tentative/context-only proposals and source
+review or extraction correction; there is no automatic image retry. Source and
+preview hashes, allocation validation, the text-size limit and the approval ledger
+remain enforced. Existing proposals are preserved until explicitly regenerated.
+
 Live candidate retrieval now reserves exact references, merges up to 20 name and
 20 amount matches, and tops up to 10 using meaningful BM25 description matches if
 needed. The final allocation shortlist is capped at 40 IDs; other pieces in complete
@@ -9,7 +17,7 @@ parent documents remain context only. This supersedes earlier permission to allo
 any contextual piece automatically. Omitted candidates remain explicitly unresolved.
 See [retrieval rules and prompt](MATCHING_RETRIEVAL.md).
 
-The user authorized consolidating extraction, piece review/search, and matching. The active implementation supports a reversible migration via **Use reviewed pieces**. It uses current edited pieces, with persistent piece IDs, rather than freezing new matching to the historical benchmark cache. Generate matches supplies complete shortlisted documents and all their pieces to the subscription model. Models only propose allocations; final decisions stay in `final-review/decisions.json`.
+The user authorized consolidating extraction, piece review/search, and matching. The active implementation supports a reversible migration via **Use reviewed pieces**. It uses current edited pieces, with persistent piece IDs, rather than freezing new matching to the historical benchmark cache. Generate matches supplies extracted facts and native text for complete shortlisted documents and all their pieces to the subscription model. Models only propose allocations; final decisions stay in `final-review/decisions.json`.
 
 Two separate receipts are two pieces, even for one payee; two payees in a schedule are two pieces; multiple purchased items on one receipt are one piece. Continuation pages and repeated totals do not create extra payable capacity. Document totals remain context. Add, split, merge, edit and search work at piece level. Split/merge creates fresh IDs with parent lineage; edits and reordering preserve identity.
 
