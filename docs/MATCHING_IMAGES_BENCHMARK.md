@@ -38,3 +38,14 @@ successes. Agreement between arms or with old suggestions is not accuracy: neith
 is independent ground truth. Source inspection is needed to assess disagreements.
 Extraction costs are shared preprocessing and must be reported separately from
 the two matching arms. Subscription usage must not be presented as an API bill.
+
+After `match` finishes, generate the measured report without further model calls:
+
+```powershell
+python -m scripts.report_matching_images review/matching-images-benchmark
+```
+
+The report compares both all-case and common-attempted usage. Allocation agreement
+normalizes decimal formatting and ignores ordering. Cost estimates account for
+reported cache writes and long-context rates; missing usage stays explicitly
+incomplete. The report does not certify extraction or matching accuracy.
