@@ -172,8 +172,15 @@ class MatchingReviewBrowserTests(unittest.TestCase):
             page.once('dialog', lambda dialog: dialog.dismiss())
             page.locator('[data-bank-id="B2"]').click()
             expect(page.locator('.transaction-number[aria-current]')).to_have_attribute('data-bank-id', 'B1')
+            page.wait_for_load_state('networkidle')
+            save_requests = []
+            page.on('request', lambda request: save_requests.append(request.url))
             page.locator('#approve-match').click()
             expect(page.locator('#save-status')).to_contain_text('Saved')
+            page.wait_for_load_state('networkidle')
+            self.assertEqual([url.split('/api/', 1)[1] for url in save_requests if '/api/' in url],
+                             ['matching-decide'])
+            expect(page.locator('#evidence-content')).to_contain_text('Original receipt 2')
             saved = matching_review.snapshot(fixture.review)['banks'][0]
             self.assertEqual(saved['decision']['allocations'][0]['item_id'], 'D2')
             self.assertEqual(saved['support_status'], 'Supporting')

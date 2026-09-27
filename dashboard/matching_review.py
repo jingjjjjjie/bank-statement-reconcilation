@@ -299,8 +299,51 @@ def decide(review, body):
                              'reviewer':reviewer,'at':at,'note':note,'before':before,'after':after})
     state['version'] += 1
     path.parent.mkdir(parents=True,exist_ok=True)
+    result = decision_update(review, state, bank_id, banks, items, facts, before)
     write_json(path,state)
-    return {'saved':True,'version':state['version']}
+    return result
+
+
+def decision_update(review, state, bank_id, banks, items, facts, before):
+    """Return the saved decision and changed balances without rebuilding the whole review."""
+    bank, decision = banks[bank_id], state['decisions'].get(bank_id)
+    if facts.get('live_pieces'):
+        path = review.manifest_path.parent / 'final-review/piece-suggestions.json'
+        saved = read(path) if path.exists() else {}
+        suggestion = next((dict(row, saved=True, outdated=saved.get('binding') != state['binding'],
+                                failed=row.get('reason', '').startswith('Matching unresolved:'))
+                           for row in saved.get('decisions', []) if row['bank_id'] == bank_id),
+                          {'assessment': 'none', 'allocations': []})
+    else:
+        suggestion = next(row for row in read(CACHE / 'decisions.json') if row['bank_id'] == bank_id)
+    relevant = {a['item_id'] for entry in (before, decision, suggestion) if entry
+                for a in entry.get('allocations', [])}
+    hashes = {}
+    relevant.intersection_update(items)
+    for key in relevant:
+        item = items[key]
+        source = item['source_path']
+        if source not in hashes:
+            hashes[source] = source_hash(source)
+        item['stale'] = item.get('retired', False) or hashes[source] != item['document']
+    stale_source = source_hash(bank['source']) != bank.get('source_sha256', facts.get('statement_hash', '')).upper()
+    stale_source = stale_source or bool(decision and any(
+        items[a['item_id']]['stale'] or items[a['item_id']]['excluded'] or
+        (facts.get('live_pieces') and a.get('evidence_revision') != items[a['item_id']].get('evidence_revision'))
+        for a in decision['allocations']))
+    if decision and facts.get('live_pieces'):
+        stale_source = stale_source or decision.get('bank_revision') != bank.get('evidence_revision')
+    support = bool(decision and decision['status'] == 'approved' and not stale_source
+                   and decision['difference'] == '0' and not decision['context_only'])
+    used = reservations(state)
+    balances = [{'id': key, 'used': str(used.get(key, Decimal(0))),
+                 'remaining': str(money(items[key]['amount']) - used.get(key, Decimal(0)))
+                 if money(items[key]['amount']) is not None else ''} for key in relevant]
+    return {'saved': True, 'version': state['version'], 'binding': state['binding'], 'items': balances,
+            'bank': {'id': bank_id, 'decision': decision, 'review_status': decision['status'] if decision else 'pending',
+                     'support_status': 'Supporting' if support else 'No supporting', 'stale': stale_source,
+                     'confidence': pairing_confidence(bank, suggestion, items, decision, stale_source),
+                     'history': [row for row in state['history'] if row['bank_id'] == bank_id]}}
 
 
 def evidence(review, kind, key):

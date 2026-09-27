@@ -112,7 +112,7 @@ function requestBank(id) {
   if (activeId && draftSnapshot() !== savedDraft && !window.confirm('Leave this transaction and discard unsaved changes?')) return;
   chooseBank(id);
 }
-function chooseBank(id, addItem) {
+function chooseBank(id, addItem, preservePreview = false) {
   /* Start a draft from this transaction's saved choice, or its cached proposal. */
   if (saving) return;
   activeId = id; selected.clear(); error();
@@ -150,7 +150,7 @@ function chooseBank(id, addItem) {
   renderQueue(); renderCandidates(); updateSummary(); remember('active', id);
   savedDraft = draftSnapshot(); updateSummary();
   const first = addItem || selected.keys().next().value;
-  if (first) showEvidence('item', first); else showEvidence('bank', id);
+  if (!preservePreview) { if (first) showEvidence('item', first); else showEvidence('bank', id); }
 }
 function available(item) {
   /* Editing a saved approval may reuse its own currently reserved allocation. */
@@ -277,11 +277,15 @@ async function saveDecision(action) {
   let persisted = false;
   root.querySelectorAll('.decision-actions button').forEach(b => b.disabled = true);
   try {
-    await api('/api/matching-decide', {bank_id:activeId,action,note:bank().decision?.note || '',
+    const result = await api('/api/matching-decide', {bank_id:activeId,action,note:bank().decision?.note || '',
       binding:reviewData.binding,version:reviewData.version,
       allocations:[...selected].map(([item_id, amount]) => ({item_id,amount}))});
     persisted = true;
-    await refresh(); saving = false; chooseBank(activeId);
+    reviewData.version = result.version; reviewData.binding = result.binding;
+    Object.assign(bank(), result.bank);
+    result.items.forEach(item => Object.assign(itemById.get(item.id), item));
+    saving = false; chooseBank(activeId, undefined, true);
+    renderBankPicker(); renderUnmatched();
     toast(action === 'undo' ? 'Decision undone. Amounts are available again.' : 'Decision saved.');
   } catch (e) { error(e.message); $('#save-status').textContent = persisted ? 'Decision saved, but refresh failed. Reload to see the latest state.' : 'Decision was not saved. Your draft is still here.'; }
   finally { saving = false; root.querySelectorAll('.decision-actions button').forEach(b => b.disabled = false); updateSummary(); renderQueue(); }

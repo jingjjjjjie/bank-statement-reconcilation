@@ -204,6 +204,23 @@ class MatchingReviewTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,'migrated or undone'):
             matching.context(self.review)
 
+    def test_save_response_matches_snapshot_without_reloading_context(self):
+        """Save deltas cover approval, replacement and undo with correct balances."""
+        for action, allocations in [('approve', [{'item_id': 'D1', 'amount': '10'}]),
+                                    ('approve', [{'item_id': 'D2', 'amount': '10'}]), ('undo', [])]:
+            request = self.request(action=action, allocations=allocations)
+            with patch.object(matching, 'context', wraps=matching.context) as contexts:
+                result = matching.decide(self.review, request)
+                self.assertEqual(contexts.call_count, 1)
+            snapshot = matching.snapshot(self.review)
+            bank = next(row for row in snapshot['banks'] if row['id'] == 'B1')
+            for key, value in result['bank'].items():
+                self.assertEqual(value, bank[key], key)
+            for updated in result['items']:
+                item = next(row for row in snapshot['items'] if row['id'] == updated['id'])
+                self.assertEqual(updated['remaining'], item['remaining'])
+                self.assertEqual(updated['used'], item['used'])
+
 
 if __name__=='__main__':
     unittest.main()

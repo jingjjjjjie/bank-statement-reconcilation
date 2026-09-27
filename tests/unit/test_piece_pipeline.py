@@ -45,6 +45,23 @@ class PiecePipelineTests(unittest.TestCase):
         return {'binding': view['binding'], 'version': view['version'], 'bank_id': bank, 'action': action,
             'allocations': allocations or [], 'reviewer': 'Test', 'note': 'Checked separate receipts', 'acknowledged': True}
 
+    def test_live_save_delta_matches_full_snapshot(self):
+        """Live approvals, rejections and undo return authoritative status and balances."""
+        view = self.accept()
+        ids = [p['piece_id'] for p in view['units'][0]['receipts']]
+        piece_matching.activate(self.review)
+        for action in ('approve', 'deny', 'undo'):
+            result = matching_review.decide(self.review, self.decision(action=action, allocations=[
+                {'item_id': ids[0], 'amount': '45'}, {'item_id': ids[1], 'amount': '15'}]))
+            snapshot = matching_review.snapshot(self.review)
+            bank = next(row for row in snapshot['banks'] if row['id'] == 'B1')
+            for key, value in result['bank'].items():
+                self.assertEqual(value, bank[key], key)
+            for updated in result['items']:
+                item = next(row for row in snapshot['items'] if row['id'] == updated['id'])
+                self.assertEqual(updated['remaining'], item['remaining'])
+                self.assertEqual(updated['used'], item['used'])
+
     def test_ids_survive_edits_reordering_and_new_pieces(self):
         """Editing and reordering never reassign another piece's identity."""
         view = self.accept()
