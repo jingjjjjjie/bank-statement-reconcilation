@@ -38,7 +38,7 @@ Conservative interim export rule for the still-open partial-support question: on
 
 Reconcile bank transactions against supporting evidence, preserving links to the actual sources. Input one is the verbose bank master CSV, with transaction IDs, amounts, dates, parties, narration and source locations. Input two is the supporting-document processor's results, with stable document IDs, source paths/hashes, extracted content and duplicate decisions.
 
-Actual bank statement and receipt/document content is the evidence. Filenames and folder names must not establish amounts, dates, parties or a match. Extraction can be wrong; source previews must remain available for review. The unrelated sample workbook supplies style only.
+Actual bank statement and receipt/document content is the evidence. Folder and file names may find candidates for matching (labelled "found by filename"); they never establish amounts, dates or parties, and a filename-only link is at most tentative (agreed 27 September 2026). Extraction can be wrong; source previews must remain available for review. The unrelated sample workbook supplies style only.
 
 ## Confirmed decisions
 
@@ -151,4 +151,4 @@ Final review omits optional Add a note and Decision history controls. Comments a
 Flagged approvals still require evidence confirmation; stored notes and the ledger
 audit history remain intact.
 
-Final review shows bank payment narration immediately beneath Pay to/Pay from, amount, date and one review status. Why suggested discloses model confidence and reasoning separately from bank evidence. Candidate names use two compact lines; expansion shows every party. Warnings and explicit confirmation remain visible.
+Final review shows bank payment narration immediately beneath Pay to/Pay from, amount, date and one review status. Suggested candidate cards have a static rainbow border and a Suggested label. Their expanded Why suggested section discloses model confidence and reasoning separately from bank evidence. Selection and approval remain independent of the suggestion highlight. Candidate names use two compact lines; expansion shows every party. Warnings and explicit confirmation remain visible.
