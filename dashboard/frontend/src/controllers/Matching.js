@@ -52,21 +52,15 @@ async function refresh() {
   itemById.clear(); reviewData.items.forEach(i => itemById.set(i.id, i));
   $('#use-pieces').hidden = !!reviewData.live_pieces;
   $('#generate-matches').hidden = !reviewData.live_pieces;
-  $('#matching-workspace').textContent = reviewData.workspace;
-  const counts = $('#matching-counts');
-  const approved = reviewData.banks.filter(b => b.review_status === 'approved').length;
-  const denied = reviewData.banks.filter(b => b.review_status === 'denied').length;
-  counts.textContent = `${approved + denied} of ${reviewData.banks.length} reviewed`;
   $('#matching-outdated').hidden = !reviewData.banks.some(b => b.suggestion.outdated);
   renderQueue(); renderBankPicker(); renderUnmatched();
 }
 function visibleBanks() {
   /* Filter confidence separately from the saved human decision. */
-  const query = $('#bank-query').value.trim().toLowerCase(), filter = $('#bank-filter').value;
   const confidence = $('#confidence-filter').value;
-  return reviewData.banks.filter(b => (filter === 'all' || b.review_status === filter) &&
-    (confidence === 'all' || (b.confidence.level || 'none') === confidence) &&
-    `${b.id} ${b.date} ${b.parties.join(' ')} ${b.amount} ${b.description}`.toLowerCase().includes(query));
+  const decision = $('#bank-filter').value;
+  return reviewData.banks.filter(b => (decision === 'all' || b.review_status === decision) &&
+    (confidence === 'all' || (b.confidence.level || 'none') === confidence));
 }
 function renderQueue() {
   /* Navigate one bank transaction at a time; candidate navigation is independent. */
@@ -316,6 +310,7 @@ function applyZoom() {
 }
 function changeTab(documents) {
   /* Both views read the same ledger and remaining balances. */
+  $('#matching-options').hidePopover();
   $('#transaction-toolbar').hidden = documents;
   $('#bank-view').hidden = documents; $('#document-view').hidden = !documents;
   $('#bank-tab').classList.toggle('selected', !documents); $('#document-tab').classList.toggle('selected', documents);
@@ -346,12 +341,10 @@ function renderBankPicker() {
 }
 async function initialize() {
   /* Restore display preferences, then fetch the saved corpus and session token. */
-  const previous = preference('filter', 'all');
-  $('#bank-filter').value = previous;
+  $('#bank-filter').value = preference('filter', 'all');
   if (!$('#bank-filter').value) $('#bank-filter').value = 'all';
-  $('#confidence-filter').value = preference('confidence', {strong:'high', tentative:'low', none:'none'}[previous] || 'all');
+  $('#confidence-filter').value = preference('confidence', 'all');
   if (!$('#confidence-filter').value) $('#confidence-filter').value = 'all';
-  $('#bank-query').value = preference('query', '');
   try {
     token = (await api('/api/session')).token; await refresh();
     const rows = visibleBanks(), remembered = preference('active', '');
@@ -359,7 +352,6 @@ async function initialize() {
     if (initial) chooseBank(initial.id);
   } catch (e) { error(e.message); }
 }
-$('#bank-query').oninput = () => { remember('query', $('#bank-query').value); transactionPage = 0; renderQueue(); };
 $('#bank-filter').onchange = () => { remember('filter', $('#bank-filter').value); transactionPage = 0; renderQueue(); };
 $('#confidence-filter').onchange = () => { remember('confidence', $('#confidence-filter').value); transactionPage = 0; renderQueue(); };
 $('#previous-transactions').onclick = () => { transactionPage--; renderQueue(); };

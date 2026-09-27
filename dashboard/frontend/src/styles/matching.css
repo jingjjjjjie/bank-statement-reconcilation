@@ -60,7 +60,12 @@
 .candidate-name{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .candidate-parties{font-size:12px;line-height:1.5;overflow-wrap:anywhere;margin:8px 0;font-weight:600}
 
-.candidate-card.suggested{border:1px solid transparent;background:linear-gradient(white,white) padding-box,linear-gradient(110deg,#e36a74,#eab454,#74b77a,#5ca6d8,#a77ad6) border-box}
-.candidate-card.suggested.selected{background:linear-gradient(#f6faf4,#f6faf4) padding-box,linear-gradient(110deg,#e36a74,#eab454,#74b77a,#5ca6d8,#a77ad6) border-box}
+.candidate-card.suggested{border:1px solid transparent;background:linear-gradient(110deg,#ffe1e8 0%,#fff0d5 22%,#e7f4d9 43%,#dff3f8 65%,#e8e0fa 84%,#f5dff2 100%) padding-box,linear-gradient(110deg,#e36a74,#eab454,#74b77a,#5ca6d8,#a77ad6) border-box}
+.candidate-card.suggested.selected{background:linear-gradient(110deg,#ffe1e8 0%,#fff0d5 22%,#e7f4d9 43%,#dff3f8 65%,#e8e0fa 84%,#f5dff2 100%) padding-box,linear-gradient(110deg,#e36a74,#eab454,#74b77a,#5ca6d8,#a77ad6) border-box}
 .suggested-label{display:inline-block;font-size:9px;color:#7354a0;font-weight:700;margin-right:5px;text-transform:uppercase;letter-spacing:.3px}
 .suggestion-explanation{padding:10px;margin:5px 0 10px;border-radius:5px;background:#f4f0fa;font-size:12px;line-height:1.5;color:#443755}.suggestion-explanation p{margin:6px 0 0}.suggestion-confidence{display:block;font-size:11px;color:#68577c}
+
+.queue-controls .page-title{flex-wrap:nowrap;white-space:nowrap}.queue-controls h1{font-size:17px;margin:0}
+.confidence-controls{display:flex;align-items:center;gap:12px;flex:1}.confidence-controls #queue-count{margin-left:auto}
+#matching-options{border:1px solid var(--line);border-radius:8px;padding:16px;box-shadow:0 8px 30px #20383126;max-width:calc(100vw - 32px)}
+#matching-options .review-tabs{margin-bottom:12px}

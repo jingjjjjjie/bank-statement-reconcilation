@@ -11,20 +11,20 @@ usePage(root, initialize);
 <template>
   <div ref="root" class="page-view">
 <main class="matching-main">
-    <header class="matching-header">
-      <div class="page-title"><h1>Final review</h1><PageHelp page="Matching" /></div>
-      <span id="matching-workspace" class="subtle"></span>
-      <div class="review-tabs"><button id="bank-tab" class="selected" type="button">Transactions</button><button id="document-tab" type="button">Unmatched pieces</button></div>
-      <span id="matching-counts" class="review-progress" aria-live="polite"></span>
-      <button id="use-pieces" type="button" class="button secondary">Use reviewed pieces</button><button id="generate-matches" type="button" class="button secondary" hidden>Generate matches</button><button id="stop-matches" type="button" class="button secondary" hidden>Stop</button>
-    </header>
-    <section id="transaction-toolbar" aria-label="Transaction filters and selection">
+    <section aria-label="Review controls">
       <div class="queue-controls">
-        <label class="sr-only" for="bank-query">Find a transaction</label><input id="bank-query" type="search" placeholder="Name, amount, reference…">
+        <div class="page-title"><h1>Final review</h1><PageHelp page="Matching" /></div>
+        <button type="button" class="button secondary" popovertarget="matching-options" aria-label="Review options">Options</button>
+        <div id="matching-options" popover>
+          <div class="review-tabs"><button id="bank-tab" class="selected" type="button">Transactions</button><button id="document-tab" type="button">Unmatched pieces</button></div>
+          <button id="use-pieces" type="button" class="button secondary">Use reviewed pieces</button><button id="generate-matches" type="button" class="button secondary" hidden>Generate matches</button><button id="stop-matches" type="button" class="button secondary" hidden>Stop</button>
+        </div>
+        <div id="transaction-toolbar" class="confidence-controls">
         <label class="sr-only" for="bank-filter">Decision</label><select id="bank-filter"><option value="all">All decisions</option><option value="pending">Pending</option><option value="approved">Approved</option><option value="denied">Rejected</option></select>
-        <label class="sr-only" for="confidence-filter">Pairing confidence</label><select id="confidence-filter"><option value="all">All confidence levels</option><option value="high">High confidence</option><option value="low">Low confidence</option><option value="none">No match</option><option value="unresolved">Unresolved</option><option value="failed">Failed</option><option value="outdated">Outdated</option></select>
+        <label class="sr-only" for="confidence-filter">Pairing confidence</label><select id="confidence-filter"><option value="all">All confidence levels</option><option value="high">High confidence</option><option value="low">Low confidence</option><option value="none">No match</option></select>
         <span id="queue-count" class="subtle" role="status"></span>
         <div class="transaction-navigation"><button id="previous-transactions" type="button" aria-label="Previous ten transactions">&larr;</button><div id="transaction-pages" role="group" aria-label="Transaction pages"></div><button id="next-transactions" type="button" aria-label="Next ten transactions">&rarr;</button></div>
+        </div>
       </div>
     </section>
     <section id="matching-progress" class="matching-progress" hidden aria-label="Matching progress">
