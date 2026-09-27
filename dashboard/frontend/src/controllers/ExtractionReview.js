@@ -119,6 +119,19 @@ function renderPieceNavigation() {
         const field = card.querySelector(`[data-field="${key}"]`);
         if (field) row.append(field.closest('label'));
       }
+      const actions = node('div', 'piece-card-actions');
+      const showPiece = node('button', 'show-piece', 'Show');
+      showPiece.type = 'button'; showPiece.title = 'Show this piece in the original';
+      showPiece.onclick = () => {
+        const location = card.querySelector('[data-field="amount_location"]')?.value;
+        const source = card.querySelector('[data-field="source_units"]')?.value.trim().split(/\s+/)[0];
+        showLocation(originalInfo?.labels.length === 1 ? 'page 1' : location || (source ? `page ${source}` : ''));
+        $('#original-viewport').scrollIntoView({block:'nearest'});
+      };
+      const remove = node('button', 'remove-entry', 'Remove');
+      remove.type = 'button'; remove.title = 'Remove this entry from extraction';
+      remove.onclick = () => removePiece(card);
+      actions.append(showPiece, remove); row.append(actions);
       for (const label of [...card.querySelectorAll(':scope > label')]) detailFields.append(label);
       const location = detailFields.querySelector('[data-field="amount_location"]');
       if (location) {
@@ -141,7 +154,17 @@ function renderPieceNavigation() {
     select.setAttribute('aria-label', `Select piece ${number + 1}`);
     select.setAttribute('aria-pressed', String(number === activePiece));
     select.onclick = () => { activePiece = number; renderPieceNavigation(); };
+    card.querySelector('.show-piece').setAttribute('aria-label', `Show original for piece ${number + 1}`);
+    card.querySelector('.remove-entry').setAttribute('aria-label', `Remove piece ${number + 1}`);
   });
+}
+
+function removePiece(card) {
+  /* Remove only this draft entry and keep keyboard focus on a remaining piece. */
+  if (!card) return;
+  extractionDirty = true; card.remove(); receipts.refreshReview();
+  renderPieceNavigation();
+  ($('#receipt-pieces .active-piece .piece-number') || $('#add-receipt')).focus();
 }
 
 function updateReviewNavigation() {
@@ -286,15 +309,15 @@ $('#next-review-document').onclick = () => {
 $('#remove-piece').onclick = () => {
   /* Remove only the selected extraction piece, never the source file. */
   const card = $('#receipt-pieces').children[activePiece];
-  if (card) { extractionDirty = true; card.remove(); receipts.refreshReview(); }
+  removePiece(card);
 };
-page.observe(new MutationObserver(renderPieceNavigation), $('#receipt-pieces'), {childList:true});
 // Close secondary actions after use; native popover also supports Escape and outside clicks.
 $('#extraction-options').onclick = event => {
   if (event.target.closest('button, a')) $('#extraction-options').hidePopover();
 };
+page.observe(new MutationObserver(renderPieceNavigation), $('#receipt-pieces'), {childList:true});
 root.addEventListener('input', event => { if (event.target.closest('#receipt-pieces')) { extractionDirty = true; renderDocumentTotal(); receipts.refreshReview(); } });
-root.addEventListener('click', event => { if (event.target.closest('#receipt-pieces button:not(.piece-number), #add-receipt')) { extractionDirty = true; receipts.refreshReview(); } });
+root.addEventListener('click', event => { if (event.target.closest('#add-receipt')) { extractionDirty = true; receipts.refreshReview(); } });
 root.addEventListener('change', event => {
   if (event.target.id !== 'receipt-unit' || !extractionDirty) return;
   if (!confirm('Discard unsaved extraction changes?')) {
