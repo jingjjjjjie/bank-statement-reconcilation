@@ -20,6 +20,7 @@ usePage(root, initialize);
       <button id="prepare-bank" class="button dark" type="button">Extract bank statement</button>
       <p id="bank-result" role="status"></p>
     </section>
+    <div class="stage-actions"><button id="load-final-matching" class="button dark" type="button">Load for final matching</button><p id="final-matching-ready" role="status"></p></div>
     <section id="bank-content" hidden>
       <section class="stats bank-stats"><div><span>Transactions</span><strong id="bank-count"></strong><small id="bank-account"></small></div><div><span>Opening balance</span><strong id="bank-opening"></strong></div><div><span>Money in / out</span><strong id="bank-flow"></strong></div><div><span>Closing balance</span><strong id="bank-closing"></strong><small id="bank-checks"></small></div></section>
       <div class="stage-actions"><button id="check-bank" class="button secondary" type="button">Check bank extraction</button><p id="bank-step-note" role="status"></p></div>

@@ -50,8 +50,8 @@ async function refresh() {
   reviewData = await api('/api/matching');
   error('');
   itemById.clear(); reviewData.items.forEach(i => itemById.set(i.id, i));
-  $('#use-pieces').hidden = !!reviewData.live_pieces;
-  $('#generate-matches').hidden = !reviewData.live_pieces;
+  $('#generate-matches').disabled = !reviewData.live_pieces || matchingStarting || matchingWasRunning;
+  $('#matching-load-note').hidden = !!reviewData.live_pieces;
   $('#matching-outdated').hidden = !reviewData.banks.some(b => b.suggestion.outdated);
   renderQueue(); renderBankPicker(); renderUnmatched();
 }
@@ -424,14 +424,6 @@ $('#unmatched-bank-query').oninput = renderBankPicker;
 initialize();
 
 
-$('#use-pieces').onclick = async () => {
-  try {
-    await api('/api/matching-pieces', {}); await refresh();
-    const target = reviewData.banks.find(b => b.id === activeId) || reviewData.banks[0];
-    if (target) chooseBank(target.id);
-  }
-  catch (e) { error(e.message); }
-};
 let matchingWasRunning = false, matchingStarting = false;
 function renderMatchingProgress(state) {
   /* Display real processed counts; failures and stopped work never imply successful completion. */
@@ -443,7 +435,7 @@ function renderMatchingProgress(state) {
   panel.dataset.running = String(running);
   panel.dataset.error = String(!!state.error);
   panel.setAttribute('aria-busy', String(running));
-  $('#generate-matches').disabled = running;
+  $('#generate-matches').disabled = running || !reviewData?.live_pieces;
   $('#stop-matches').hidden = !running || matchingStarting;
   $('#stop-matches').disabled = stopping;
   $('#matching-run-status').textContent = running
@@ -470,7 +462,7 @@ async function matchingProgress() {
   matchingWasRunning = !!state.running;
 }
 $('#generate-matches').onclick = async () => {
-  if (matchingStarting) return;
+  if (matchingStarting || !reviewData?.live_pieces) return;
   matchingStarting = true;
   renderMatchingProgress({running:true});
   try {
@@ -492,5 +484,5 @@ $('#stop-matches').onclick = async () => {
   catch (e) { $('#stop-matches').disabled = false; error(e.message); }
 };
 pollVisible(matchingProgress, 2000);
-page.onRefresh(refresh, ['/api/matching-decide', '/api/receipts/', '/api/content/']);
+page.onRefresh(refresh, ['/api/matching-decide', '/api/matching-pieces', '/api/receipts/', '/api/content/']);
 }

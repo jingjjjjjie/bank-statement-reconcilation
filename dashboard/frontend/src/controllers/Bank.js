@@ -72,6 +72,32 @@ async function exportWorkbook() {
     $('#export-error').hidden = false;
   } finally { button.disabled = false; }
 }
+async function loadMatchingReadiness() {
+  /* Show whether the current bank and extracted pieces are ready for matching. */
+  try {
+    const data = await api('/api/matching');
+    $('#load-final-matching').disabled = !!data.live_pieces;
+    $('#final-matching-ready').textContent = data.live_pieces
+      ? 'Loaded. Generate matches on Final review.' : 'Load the current bank statement and extracted pieces for final matching.';
+  } catch (error) {
+    $('#final-matching-ready').textContent = 'Prepare the bank statement and supporting documents before loading.';
+  }
+}
+$('#load-final-matching').onclick = async () => {
+  /* Activate the existing migration without starting model calls or approving matches. */
+  const button = $('#load-final-matching');
+  button.disabled = true;
+  $('#final-matching-ready').textContent = 'Loading current data...';
+  try {
+    await api('/api/matching-pieces', {});
+    await loadMatchingReadiness();
+  } catch (error) {
+    button.disabled = false;
+    $('#final-matching-ready').textContent = error.message;
+  }
+};
+loadMatchingReadiness();
+
 $('#bank-search').addEventListener('input', renderRows);
 $('#check-bank').onclick = async () => {
   const button = $('#check-bank'); button.disabled = true;
@@ -112,5 +138,5 @@ $('#prepare-bank').onclick = async () => {
 loadBank();
 
 
-page.onRefresh(loadBank, ['/api/source/bank-prepare']);
+page.onRefresh(async () => { await loadBank(); await loadMatchingReadiness(); }, ['/api/source/bank-prepare', '/api/matching-pieces', '/api/receipts/']);
 }
