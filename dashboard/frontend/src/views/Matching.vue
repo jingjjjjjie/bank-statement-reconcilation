@@ -44,8 +44,8 @@ usePage(root, initialize);
         <section id="support-group" class="candidate-tray" aria-labelledby="support-heading">
           <div class="section-heading"><h2 id="support-heading">Available candidates</h2><button id="toggle-candidate-search" class="text-button" type="button" aria-expanded="false" aria-controls="candidate-search">Search</button><span id="support-status" class="sr-only" aria-live="polite"></span></div>
           <div id="candidate-search" class="candidate-controls" hidden><label class="sr-only" for="candidate-query">Search all supporting pieces</label><input id="candidate-query" type="search" placeholder="Search all pieces"><button id="restore-suggestion" class="text-button" type="button">Reset to suggestion</button></div>
-          <div class="candidate-paging"><span id="candidate-count" class="subtle" role="status"></span><button id="candidate-prev" type="button" aria-label="Previous 5 candidates">&larr;</button><button id="candidate-next" type="button" aria-label="Next 5 candidates">&rarr;</button></div>
-          <div id="candidate-list"></div>
+          <div class="candidate-paging"><span id="candidate-count" class="subtle" role="status"></span></div>
+          <div id="candidate-list" tabindex="0" role="region" aria-label="Supporting candidate results"></div>
         </section>
         <div class="selection-summary" id="selection-summary" aria-live="polite"></div>
       </div></div><div class="decision-footer"><div id="footer-summary" class="subtle"></div><div class="decision-actions"><button id="approve-match" class="button dark" type="button" disabled>Confirm supporting</button><button id="deny-match" class="button secondary" type="button" disabled>Reject suggestion</button><button id="undo-match" class="text-button" type="button" hidden>Undo decision</button><button id="next-review-transaction" class="button secondary" type="button" disabled>Next &rarr;</button></div><p id="save-status" class="subtle" role="status"></p></div></section>

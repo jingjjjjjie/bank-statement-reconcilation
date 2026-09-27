@@ -7,7 +7,7 @@ const { root, $, api, toast, pollVisible, showDevelopmentMode, navigate, routeQu
 let token;
 /* Present cached evidence; Python validates and persists every human decision. */
 let reviewData, activeId, saving = false, previewSerial = 0, previewState;
-let savedDraft = '', candidatePage = 0, transactionPage = 0;
+let savedDraft = '', transactionPage = 0;
 const expandedCandidates = new Set(), returnedCandidates = new Set();
 const selected = new Map();
 function draftSnapshot() {
@@ -117,7 +117,7 @@ function chooseBank(id, addItem) {
   /* Start a draft from this transaction's saved choice, or its cached proposal. */
   if (saving) return;
   activeId = id; selected.clear(); error();
-  candidatePage = 0; expandedCandidates.clear(); returnedCandidates.clear();
+  expandedCandidates.clear(); returnedCandidates.clear();
   const b = bank(), source = b.decision ? b.decision.allocations : b.suggestion.allocations;
   source.forEach(a => { if (itemById.has(a.item_id)) selected.set(a.item_id, a.amount); });
   if (addItem) selected.set(addItem, defaultAllocation(itemById.get(addItem)));
@@ -139,12 +139,11 @@ function chooseBank(id, addItem) {
   const meta = node('div', 'bank-meta');
   meta.title = b.id;
   const status = {pending: 'Awaiting review', approved: 'Approved', denied: 'Rejected'}[b.review_status] || b.review_status;
-  meta.append(node('span', 'payment-tag payment-date', `Payment date: ${b.date || 'Not provided'}`),
+  meta.append(node('span', 'payment-date', `Payment date: ${b.date || 'Not provided'}`),
     node('span', `payment-tag review-state ${b.review_status}`, status));
-  const reference = node('div', 'payment-tag payment-reference', `Reference: ${(b.references || []).join(' / ') || 'Not provided'}`);
   const narration = node('p', 'payment-description', b.description || 'Payment description unavailable');
   narration.setAttribute('aria-label', 'Payment details');
-  detail.append(header, meta, reference, narration);
+  detail.append(header, meta, narration);
   if (b.suggestion.outdated) detail.append(node('p', 'warning', 'Saved proposal is outdated. Recheck current evidence or generate matches again.'));
   if (b.suggestion.failed) detail.append(node('p', 'warning', b.suggestion.reason));
   if (b.stale) detail.append(node('p', 'warning', 'Original evidence changed. This transaction cannot be treated as supported until rechecked.'));
@@ -165,7 +164,7 @@ function defaultAllocation(item) {
   return (Math.max(0, Math.min(available(item), cents(bank().amount))) / 100).toFixed(2);
 }
 function renderCandidates() {
-  /* Compare shortlisted supporting pieces openly, five compact cards at a time. */
+  /* Render matching supporting pieces in one scrollable list. */
   const b = bank(), query = $('#candidate-query').value.trim().toLowerCase(), list = $('#candidate-list');
   list.replaceChildren();
   const tray = $('#selected-candidates'); tray.replaceChildren();
@@ -176,12 +175,8 @@ function renderCandidates() {
   const items = reviewData.items.filter(i => !selected.has(i.id) && !i.excluded && (!$('#candidate-search').hidden || keys.has(i.id)) &&
     ( `${i.id} ${i.filename} ${i.amount} ${i.description} ${i.parties.join(' ')} ${(i.references || []).join(' ')}`.toLowerCase().includes(query)));
   items.sort((a, c) => Number(returnedCandidates.has(c.id)) - Number(returnedCandidates.has(a.id)) || Number(suggested.has(c.id)) - Number(suggested.has(a.id)));
-  candidatePage = Math.max(0, Math.min(candidatePage, Math.ceil(items.length / 5) - 1));
-  const start = candidatePage * 5;
-  $('#candidate-count').textContent = items.length ? `${start + 1}–${Math.min(start + 5, items.length)} of ${items.length} candidates` : 'No candidates';
-  $('#candidate-prev').disabled = candidatePage === 0;
-  $('#candidate-next').disabled = start + 5 >= items.length;
-  for (const item of [...selected.keys()].map(id => itemById.get(id)).filter(Boolean).concat(items.slice(start, start + 5))) {
+  $('#candidate-count').textContent = items.length ? `${items.length} candidates` : 'No candidates';
+  for (const item of [...selected.keys()].map(id => itemById.get(id)).filter(Boolean).concat(items)) {
     const card = node('article', `candidate-card ${selected.has(item.id) ? 'selected' : ''}`);
     card.classList.toggle('suggested', suggested.has(item.id));
     card.dataset.itemId = item.id;
@@ -190,7 +185,7 @@ function renderCandidates() {
     const isSelected = selected.has(item.id);
     const control = isSelected ? button('\u00d7', () => {
       selected.delete(item.id); returnedCandidates.add(item.id);
-      $('#candidate-query').value = ''; candidatePage = 0;
+      $('#candidate-query').value = '';
       renderCandidates(); updateSummary();
       [...list.querySelectorAll('.candidate-card')].find(c => c.dataset.itemId === item.id)?.querySelector('input').focus();
     }, 'remove-candidate') : node('input');
@@ -402,8 +397,6 @@ $('#next-review-transaction').onclick = () => {
   const rows = visibleBanks(), index = rows.findIndex(b => b.id === activeId);
   if (rows[index + 1]) requestBank(rows[index + 1].id);
 };
-$('#candidate-prev').onclick = () => { candidatePage--; renderCandidates(); };
-$('#candidate-next').onclick = () => { candidatePage++; renderCandidates(); };
 $('#preview-source').onchange = () => {
   const id = $('#preview-source').value;
   showEvidence(id === '__bank__' ? 'bank' : 'item', id === '__bank__' ? activeId : id);
@@ -416,12 +409,12 @@ function toggleCandidateSearch() {
   control.setAttribute('aria-expanded', String(!panel.hidden));
   control.textContent = panel.hidden ? 'Search' : 'Close search';
   if (panel.hidden) $('#candidate-query').value = '';
-  candidatePage = 0; renderCandidates();
+  renderCandidates();
   (panel.hidden ? control : $('#candidate-query')).focus();
 }
 $('#toggle-candidate-search').onclick = toggleCandidateSearch;
 $('#candidate-query').onkeydown = event => { if (event.key === 'Escape') { event.preventDefault(); toggleCandidateSearch(); } };
-$('#candidate-query').oninput = () => { candidatePage = 0; renderCandidates(); };
+$('#candidate-query').oninput = () => { renderCandidates(); $('#candidate-list').scrollTop = 0; };
 $('#restore-suggestion').onclick = () => { selected.clear(); bank().suggestion.allocations.forEach(a => selected.set(a.item_id, a.amount)); renderCandidates(); updateSummary(); };
 $('#approve-match').onclick = () => saveDecision('approve'); $('#deny-match').onclick = () => saveDecision('deny'); $('#undo-match').onclick = () => saveDecision('undo');
 $('#preview-bank').onclick = () => { if (activeId) showEvidence('bank', activeId); };

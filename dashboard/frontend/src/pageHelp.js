@@ -33,7 +33,7 @@ export const pageHelp = {
   ]],
   Matching: ['Final review', [
     'Review one bank transaction at a time. Use the transaction selector, filters or Next to move to another payment.',
-    'Compare supporting candidates on the left, five per page. Expand a card for its details and original preview on the right. Inspecting a candidate does not select or approve it.',
+    'Scroll through supporting candidates on the left. Expand a card for its details and original preview on the right. Inspecting a candidate does not select or approve it.',
     'Use only this candidate replaces the draft selection. Checkboxes let you combine separate expenses. Confirm supporting saves your decision; incomplete coverage remains No supporting.',
     'Search all pieces broadens the shortlist. Check original parties, amounts and receipt boundaries; equal amounts alone do not establish a match. Warnings and differences must be reviewed.',
     'Reject suggestion rejects the saved proposal; other evidence may exist. Undo decision releases its allocations. Unmatched pieces uses the same review ledger.',

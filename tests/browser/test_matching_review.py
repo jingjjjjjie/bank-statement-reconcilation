@@ -56,7 +56,7 @@ class MatchingReviewBrowserTests(unittest.TestCase):
             browser.close()
 
     def test_compare_candidates_then_save_transaction(self):
-        """Candidate paging and preview never change the bank or approve evidence."""
+        """Candidate scrolling and preview never change the bank or approve evidence."""
         fixture = fixtures.MatchingReviewTests()
         fixture.setUp()
         self.addCleanup(fixture.doCleanups)
@@ -135,8 +135,8 @@ class MatchingReviewBrowserTests(unittest.TestCase):
             expect(page.locator('#decision-note')).to_have_count(0)
             expect(page.get_by_text('Decision history', exact=True)).to_have_count(0)
             expect(page.locator('#acknowledge')).to_have_count(0)
-            expect(page.locator('#candidate-list .candidate-card')).to_have_count(5)
-            expect(page.locator('#candidate-count')).to_have_text('1\u20135 of 7 candidates')
+            expect(page.locator('#candidate-list .candidate-card')).to_have_count(7)
+            expect(page.locator('#candidate-count')).to_have_text('7 candidates')
             expect(page.locator('.proposal-card')).to_have_count(0)
             for card in page.locator('.candidate-card').all():
                 self.assertLess(card.bounding_box()['height'], 70)
@@ -146,11 +146,14 @@ class MatchingReviewBrowserTests(unittest.TestCase):
             self.assertAlmostEqual(left['width'], right['width'], delta=1)
             expect(page.locator('#evidence-content')).to_contain_text('Original receipt 1')
             page.screenshot(path=str(screenshots / '01-five-candidates.png'), full_page=True)
-            page.locator('#candidate-next').click()
-            expect(page.locator('#candidate-count')).to_have_text('6\u20137 of 7 candidates')
+            expect(page.locator('#candidate-next, #candidate-prev')).to_have_count(0)
+            page.set_viewport_size({'width': 1440, 'height': 600})
+            results = page.locator('#candidate-list')
+            results.evaluate('(element) => element.scrollTop = element.scrollHeight')
+            self.assertGreater(results.evaluate('(element) => element.scrollTop'), 0)
             expect(page.locator('.transaction-number[aria-current]')).to_have_attribute('data-bank-id', 'B1')
-            expect(page.locator('.transaction-title')).to_have_text('Person 1')
-            page.locator('#candidate-prev').click()
+            results.evaluate('(element) => element.scrollTop = 0')
+            page.set_viewport_size({'width': 1440, 'height': 960})
             candidate = page.get_by_role('article', name='Candidate D2', exact=True)
             candidate.locator('.candidate-summary').click()
             expect(page.locator('#evidence-content')).to_contain_text('Original receipt 2')
@@ -202,7 +205,7 @@ class MatchingReviewBrowserTests(unittest.TestCase):
             expect(page.locator('#save-status')).to_contain_text('Saved')
             page.locator('[data-bank-id="B3"]').click()
             expect(page.locator('#approve-match')).to_be_disabled()
-            expect(page.locator('#candidate-list .candidate-card')).to_have_count(5)
+            expect(page.locator('#candidate-list .candidate-card')).to_have_count(8)
             page.locator('#toggle-candidate-search').click()
             page.locator('#candidate-query').fill('E1')
             expect(page.locator('.candidate-card')).to_have_count(1)
