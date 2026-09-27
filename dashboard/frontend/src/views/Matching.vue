@@ -32,7 +32,7 @@ usePage(root, initialize);
       <progress id="matching-progress-bar" max="100" value="0" aria-labelledby="matching-run-status" aria-describedby="matching-progress-count"></progress>
       <span id="matching-progress-detail"></span>
     </section>
-    <p id="matching-result-summary" role="status"></p><p id="matching-outdated" class="warning" hidden>Saved proposals are outdated. Results remain visible; recheck current evidence or generate matches again.</p>
+    <p id="matching-outdated" class="warning" hidden>Saved proposals are outdated. Results remain visible; recheck current evidence or generate matches again.</p>
     <div id="matching-error" class="matching-error" role="alert" hidden></div>
     <section class="matching-layout" id="bank-view">
       <section class="decision-panel" aria-label="Candidate review"><div class="decision-scroll"><div id="transaction-detail"></div><div id="review-editor" hidden>

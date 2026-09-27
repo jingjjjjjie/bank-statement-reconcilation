@@ -57,8 +57,6 @@ async function refresh() {
   const approved = reviewData.banks.filter(b => b.review_status === 'approved').length;
   const denied = reviewData.banks.filter(b => b.review_status === 'denied').length;
   counts.textContent = `${approved + denied} of ${reviewData.banks.length} reviewed`;
-  const summary = reviewData.proposal_counts;
-  $('#matching-result-summary').textContent = summary ? Object.entries(summary).map(([key, count]) => `${count} ${confidenceLabel[key].toLowerCase()}`).join(' / ') : '';
   $('#matching-outdated').hidden = !reviewData.banks.some(b => b.suggestion.outdated);
   renderQueue(); renderBankPicker(); renderUnmatched();
 }
@@ -127,10 +125,6 @@ function chooseBank(id, addItem) {
   const narration = node('p', 'payment-description', b.description || 'Payment description unavailable');
   narration.setAttribute('aria-label', 'Payment details');
   detail.append(header, meta, narration);
-  const reason = node('details', 'transaction-notes');
-  reason.append(node('summary', '', 'Why suggested'),
-    node('p', 'subtle', confidenceLabel[b.confidence.level || 'none']), node('p', '', b.suggestion.reason));
-  detail.append(reason);
   if (b.suggestion.outdated) detail.append(node('p', 'warning', 'Saved proposal is outdated. Recheck current evidence or generate matches again.'));
   if (b.suggestion.failed) detail.append(node('p', 'warning', b.suggestion.reason));
   if (b.stale) detail.append(node('p', 'warning', 'Original evidence changed. This transaction cannot be treated as supported until rechecked.'));
@@ -166,6 +160,7 @@ function renderCandidates() {
   $('#candidate-next').disabled = start + 5 >= items.length;
   for (const item of items.slice(start, start + 5)) {
     const card = node('article', `candidate-card ${selected.has(item.id) ? 'selected' : ''}`);
+    card.classList.toggle('suggested', suggested.has(item.id));
     card.dataset.itemId = item.id;
     card.setAttribute('aria-label', `Candidate ${item.id}`);
     if (previewState?.kind === 'item' && previewState.id === item.id) card.classList.add('previewing');
@@ -180,6 +175,7 @@ function renderCandidates() {
     const summary = node('summary', 'candidate-summary');
     summary.setAttribute('aria-label', `Inspect ${item.id} ${item.filename}`);
     summary.append(node('span', 'candidate-name', item.parties.join(' / ') || 'Party unknown'), node('strong', 'candidate-amount', formatMoney(item.amount, item.currency)));
+    if (suggested.has(item.id)) summary.querySelector('.candidate-name').prepend(node('span', 'suggested-label', 'Suggested '));
     details.append(summary);
     details.ontoggle = () => {
       if (details.open) {
@@ -189,7 +185,14 @@ function renderCandidates() {
       } else expandedCandidates.delete(item.id);
     };
     const body = node('div', 'candidate-body');
-    if (suggested.has(item.id)) body.append(node('span', 'badge', 'Model suggestion'));
+    if (suggested.has(item.id)) {
+      const reason = node('section', 'suggestion-explanation');
+      reason.setAttribute('aria-label', 'Why suggested');
+      reason.append(node('strong', '', 'Why suggested'),
+        node('span', 'suggestion-confidence', confidenceLabel[b.confidence.level || 'none']),
+        node('p', '', b.suggestion.reason || 'No saved explanation available.'));
+      body.append(reason);
+    }
     body.append(node('p', 'candidate-parties', item.parties.join(' / ') || 'Party unknown'));
     body.append(node('p', 'candidate-description', item.description || 'Description unavailable'));
     const dates = item.dates?.length ? item.dates.map(d => typeof d === 'string' ? d : d.value).join(', ') : item.date || 'Date unknown';

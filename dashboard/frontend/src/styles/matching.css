@@ -16,7 +16,6 @@
 .queue-controls{position:relative;display:flex;align-items:center;gap:10px;padding:10px 24px;background:white;border-bottom:1px solid var(--line);overflow-x:auto}
 .queue-controls>*{flex:none}.queue-controls input{width:210px}.queue-controls #queue-count{margin-left:auto;white-space:nowrap}
 .transaction-navigation{display:flex;align-items:center;gap:6px}.transaction-navigation>button{border:1px solid #dce3dd;border-radius:5px;width:28px;height:28px;background:white;color:#52665a;font-size:11px;padding:0}#transaction-pages{display:flex;gap:5px}.transaction-number{position:relative;min-width:30px;height:30px;padding:0 5px;border:1px solid #dce3dd;border-radius:5px;background:white;color:#52665a;font-size:12px}.transaction-number.finished{background:#e5f1e9;color:#245b40}.transaction-number[aria-current]{outline:2px solid #527c5f;outline-offset:1px}.completion-tick{font-size:9px;margin-left:2px}
-#matching-result-summary{font-size:11px;color:#6d7d72;margin:0;padding:7px 24px;border-bottom:1px solid var(--line)}#matching-result-summary:empty{display:none}
 .matching-error{padding:12px 24px;background:#fff0ed;color:#a43724;font-size:13px}.warning{font-size:12px;color:#946026;line-height:1.6;overflow-wrap:anywhere}#matching-outdated{margin:0;padding:8px 24px;background:#fff6e8}
 .matching-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);flex:1;min-height:0;background:white}
 .decision-panel{display:flex;flex-direction:column;min-width:0;min-height:0;border-right:1px solid var(--line)}.decision-scroll{flex:1;min-height:0;overflow:auto;padding:16px 20px}
@@ -60,3 +59,8 @@
 .transaction-notes{margin:0;font-size:12px}.transaction-notes summary{font-size:11px}
 .candidate-name{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .candidate-parties{font-size:12px;line-height:1.5;overflow-wrap:anywhere;margin:8px 0;font-weight:600}
+
+.candidate-card.suggested{border:1px solid transparent;background:linear-gradient(white,white) padding-box,linear-gradient(110deg,#e36a74,#eab454,#74b77a,#5ca6d8,#a77ad6) border-box}
+.candidate-card.suggested.selected{background:linear-gradient(#f6faf4,#f6faf4) padding-box,linear-gradient(110deg,#e36a74,#eab454,#74b77a,#5ca6d8,#a77ad6) border-box}
+.suggested-label{display:inline-block;font-size:9px;color:#7354a0;font-weight:700;margin-right:5px;text-transform:uppercase;letter-spacing:.3px}
+.suggestion-explanation{padding:10px;margin:5px 0 10px;border-radius:5px;background:#f4f0fa;font-size:12px;line-height:1.5;color:#443755}.suggestion-explanation p{margin:6px 0 0}.suggestion-confidence{display:block;font-size:11px;color:#68577c}
