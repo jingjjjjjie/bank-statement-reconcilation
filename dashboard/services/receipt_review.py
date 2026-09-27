@@ -19,6 +19,9 @@ from reconciliation.extraction.schemas import RECEIPT
 from reconciliation.extraction.workflow import load_index, removal_plan
 from reconciliation.intake.duplicates import fingerprint
 
+#: Threads hashing source files in parallel when loading the review (I/O bound).
+HASH_WORKERS = 8
+
 
 def current_hash(path):
     """Keep missing or modified evidence visible as stale rather than hiding decisions."""
@@ -48,7 +51,7 @@ def context(review, *, include_banks=True, prepared=None):
                     if unit["image"]} if prepared is None else {}
         paths = sorted(originals | previews.keys())
         # Hash fresh bytes in parallel; never infer integrity from timestamps or cached hashes.
-        with ThreadPoolExecutor(max_workers=8) as pool:
+        with ThreadPoolExecutor(max_workers=HASH_WORKERS) as pool:
             hashes = dict(zip(paths, pool.map(current_hash, paths)))
         if any(hashes[path] != digest for path, digest in previews.items()):
             raise ValueError("Prepared image changed; create a new review")

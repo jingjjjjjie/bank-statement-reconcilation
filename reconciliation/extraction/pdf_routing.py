@@ -13,6 +13,15 @@ from reconciliation.extraction.schemas import EXTRACTION
 MODES = {"hybrid", "compare"}
 DISAGREEMENT_WARNING = "Text and vision disagree; verify receipt boundaries and fields against the original."
 
+#: Fewer letters/digits than this means the native text layer is too thin to trust.
+MIN_NATIVE_TEXT_CHARS = 40
+#: Longer pages go to vision rather than a single text-only request.
+LONG_PAGE_CHARS = 12000
+#: More vector drawings than this suggests tables or forms the text layer may misorder.
+MAX_VECTOR_DRAWINGS = 100
+#: Hybrid mode still sends 1 in this many text-passing pages to vision as a spot check.
+HYBRID_VISION_SAMPLE_RATE = 10
+
 
 def review_warnings(result):
     """Read system warnings, including the old storage location, without rewriting evidence."""
@@ -25,7 +34,7 @@ def inspect_page(page):
     words = page.get_text("words", sort=True)
     text = page.get_text()
     reasons = []
-    if sum(c.isalnum() for c in text) < 40:
+    if sum(c.isalnum() for c in text) < MIN_NATIVE_TEXT_CHARS:
         reasons.append("insufficient_native_text")
     if "\ufffd" in text or any(ord(c) < 32 and c not in "\n\r\t" for c in text):
         reasons.append("garbled_text")
@@ -37,9 +46,9 @@ def inspect_page(page):
         reasons.append("hidden_or_translucent_text")
     if any(tuple(t.get("dir", (1, 0))) != (1, 0) for t in traces):
         reasons.append("rotated_text")
-    if len(text) > 12000:
+    if len(text) > LONG_PAGE_CHARS:
         reasons.append("long_page")
-    if len(page.get_drawings()) > 100:
+    if len(page.get_drawings()) > MAX_VECTOR_DRAWINGS:
         reasons.append("complex_vector_layout")
     for i, word in enumerate(words):
         box = word[:4]
@@ -125,8 +134,8 @@ def extract_unit(unit, ask, selected_mode, audit_path, allowlist=None):
             except (ValueError, ValidationError, subprocess.TimeoutExpired) as error:
                 reasons.append("text_attempt_failed: " + str(error))
             write_json(audit_path, audit)
-        # Compare mode always retains vision; hybrid samples 10% of passing layouts.
-        sampled = int(hashlib.sha256(unit["text"].encode()).hexdigest()[:8], 16) % 10 == 0
+        # Compare mode always retains vision; hybrid spot-checks a fixed share of passing layouts.
+        sampled = int(hashlib.sha256(unit["text"].encode()).hexdigest()[:8], 16) % HYBRID_VISION_SAMPLE_RATE == 0
         use_vision = bool(reasons) or selected_mode == "compare" or sampled
         if use_vision:
             audit["route"] = "vision"

@@ -12,6 +12,10 @@ import pdfplumber
 
 # Keep money exact and retain the evidence needed for later matching.
 MONEY = re.compile(r"(?:\d{1,3}(?:,\d{3})+|\d+)\.\d{2}")
+#: AmBank digital statements are A4 portrait; column positions below assume this width (points).
+A4_WIDTH = 595.28
+#: Left edges (points) of each statement column; a column runs to the next edge.
+DATE_X, NARRATION_X, DEBIT_X, CREDIT_X, BALANCE_X = 0, 100, 310, 395, 480
 MASTER_FIELDS = ("transaction_id,source,source_sha256,page,sequence,account,currency,"
                  "year_supplied,date,direction,money_in,money_out,balance,"
                  "transaction_type,counterparty,counterparty_role,counterparty_raw,"
@@ -154,7 +158,7 @@ def extract(path, year):
                 if any(re.match(r"^\d{2}-[A-Za-z]{3}\s", line["text"]) for line in lines):
                     raise ValueError(f"Transaction-like page {page_number} has an unsupported header")
                 continue
-            if abs(page.width - 595.28) > 1:
+            if abs(page.width - A4_WIDTH) > 1:
                 raise ValueError("Unsupported page width for AmBank column positions")
             for line in lines[header + 1:]:
                 text = line["text"]
@@ -163,19 +167,19 @@ def extract(path, year):
                 if text.startswith("Balance Brought Fwd"):
                     if opening is not None:
                         raise ValueError("Multiple opening balances are unsupported")
-                    opening = amount(cell(line, 480, page.width))
+                    opening = amount(cell(line, BALANCE_X, page.width))
                     continue
                 if text.startswith("TOTAL / JUMLAH"):
-                    debit_total = amount(cell(line, 310, 395))
-                    credit_total = amount(cell(line, 395, 480))
+                    debit_total = amount(cell(line, DEBIT_X, CREDIT_X))
+                    credit_total = amount(cell(line, CREDIT_X, BALANCE_X))
                     break
 
                 # A date begins a transaction; subsequent lines extend its narration.
-                date_text = cell(line, 0, 100)
-                narration = cell(line, 100, 310)
-                debit = cell(line, 310, 395)
-                credit = cell(line, 395, 480)
-                balance = cell(line, 480, page.width)
+                date_text = cell(line, DATE_X, NARRATION_X)
+                narration = cell(line, NARRATION_X, DEBIT_X)
+                debit = cell(line, DEBIT_X, CREDIT_X)
+                credit = cell(line, CREDIT_X, BALANCE_X)
+                balance = cell(line, BALANCE_X, page.width)
                 if re.fullmatch(r"\d{2}-[A-Za-z]{3}", date_text):
                     if bool(debit) == bool(credit):
                         raise ValueError(f"Expected one debit or credit on page {page_number}")

@@ -10,6 +10,9 @@ from reconciliation.intake.duplicates import (
     duplicate_groups, fingerprint, finish_organization, organize, supporting_files
 )
 
+#: Statement years accepted when preparing a bank statement (inclusive).
+STATEMENT_YEARS = (1900, 2100)
+
 
 class SourceSelection:
     """Persist a pending source separately from the active review."""
@@ -126,7 +129,7 @@ class SourceSelection:
         if source is None:
             raise ValueError("Choose a bank statement PDF first")
         self.inspect_bank(source)
-        if not isinstance(year, int) or not 1900 <= year <= 2100:
+        if not isinstance(year, int) or not STATEMENT_YEARS[0] <= year <= STATEMENT_YEARS[1]:
             raise ValueError("Enter a valid statement year")
         output = Path(manifest).parent / "bank-output" / "master_statement.csv"
         digest = fingerprint(source).lower()

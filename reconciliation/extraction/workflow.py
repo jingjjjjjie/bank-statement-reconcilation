@@ -35,6 +35,15 @@ from reconciliation.model.token_usage import summary as token_summary
 DEFAULT_WORK = WORKSPACE / "review"
 ACCEPTED_SUFFIXES = SUPPORTED_SUFFIXES
 
+#: Windows briefly locks files that antivirus or indexers are reading; retry the checkpoint rename this often.
+SAVE_RETRIES = 15
+#: Seconds added to the wait before each further retry (linear backoff: 0.02, 0.04, ...).
+SAVE_RETRY_STEP = 0.02
+#: Upper bound on processes rendering documents in parallel during `prepare`.
+MAX_PREPARE_WORKERS = 8
+#: Default seconds one `codex exec` call may run from the command line.
+DEFAULT_CALL_TIMEOUT = 240
+
 
 def read(path):
     """Read JSON, accepting the BOM that Windows tools write into manifests."""
@@ -45,14 +54,14 @@ def save(path, value):
     """Atomically save a checkpoint, retrying brief Windows file locks."""
     temporary = path.with_suffix(".tmp")
     temporary.write_text(json.dumps(value, ensure_ascii=False, indent=2), encoding="utf-8")
-    for attempt in range(15):
+    for attempt in range(SAVE_RETRIES):
         try:
             temporary.replace(path)
             return
         except PermissionError:
-            if attempt == 14:
+            if attempt == SAVE_RETRIES - 1:
                 raise
-            sleep(0.02 * (attempt + 1))
+            sleep(SAVE_RETRY_STEP * (attempt + 1))
 
 
 def inventory(root, manifest_path):
@@ -98,7 +107,7 @@ def prepare(manifest_path, work, config_path=None, refresh=False):
     jobs = [(digest, paths, [r["OriginalPath"] for r in manifest["Files"] if r["SHA256"] == digest], assets, config)
             for digest, paths in sorted(inventory(root, manifest_path).items())]
     # Rendering is CPU-bound, so separate processes read several documents at once.
-    workers = min(8, os.cpu_count() or 1, len(jobs)) or 1
+    workers = min(MAX_PREPARE_WORKERS, os.cpu_count() or 1, len(jobs)) or 1
     documents = {}
     with ProcessPoolExecutor(workers) as pool:
         for number, item in enumerate(pool.map(prepare_document, jobs), 1):
@@ -397,7 +406,7 @@ def main(argv=None):
     parser.add_argument("--max-calls", type=int)
     parser.add_argument("--config", type=Path, default=CONFIG_PATH)
     parser.add_argument("--refresh", action="store_true", help="Archive existing review metadata and re-extract using saved settings")
-    parser.add_argument("--timeout", type=int, default=240)
+    parser.add_argument("--timeout", type=int, default=DEFAULT_CALL_TIMEOUT)
     args = parser.parse_args(argv)
     try:
         if args.action == "prepare":

@@ -21,6 +21,9 @@ SCHEMA = object_schema({'decisions': {'type': 'array', 'items': object_schema({
     'bank_id': TEXT, 'assessment': {'type': 'string', 'enum': ['strong', 'tentative', 'none']},
     'allocations': {'type': 'array', 'items': object_schema({'item_id': TEXT, 'amount': TEXT})}, 'reason': TEXT})}})
 
+#: Seconds one matching batch call may run; batches are larger than single-document extraction calls.
+MATCHING_CALL_TIMEOUT = 600
+
 
 def validate_result(result, keys, allowed, banks, items):
     """Reject fabricated IDs, repeated pieces, missing banks and unsupported allocations."""
@@ -192,7 +195,7 @@ def run_matching(review, binding, banks, items, index, facts, config):
     write_json(directory / 'piece-matching' / 'retrieval.json', retrieval)
     choice = stage_settings(config)['comparison']
     engine = CodexReviewer(directory / 'piece-matching', model=choice['model'], reasoning=choice['reasoning'],
-                           timeout=600, cancel_event=review.piece_match_cancel, max_calls=config['max_calls'])
+                           timeout=MATCHING_CALL_TIMEOUT, cancel_event=review.piece_match_cancel, max_calls=config['max_calls'])
     engine.stage = 'piece_matching'
     review.piece_match_engine = engine
     instructions = load_prompt('matching/matching')

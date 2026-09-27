@@ -7,6 +7,21 @@ from decimal import Decimal, InvalidOperation
 
 from reconciliation.core.money import normalize_currency
 
+#: Name words that do not identify a person or company (Malay honorifics, "bin", "berhad").
+IGNORED_NAME_WORDS = frozenset({"cik", "puan", "encik", "bin", "binti", "bt", "bint", "berhad"})
+#: Two names match when they share at least this share of the shorter name's words (and two or more words).
+NAME_OVERLAP_RATIO = .8
+#: Retrieval score weights; an exact amount outranks a name-only hit for retrieval, never for approval.
+REFERENCE_WEIGHT, NAME_WEIGHT, AMOUNT_WEIGHT, TRUNCATED_NAME_WEIGHT = 100, 30, 40, 20
+#: Claim groups larger than this are not searched for exact-sum subsets (combinations grow too fast).
+MAX_CLAIM_GROUP = 12
+#: Score for a claim-group subset that sums exactly to the bank amount.
+GROUP_MATCH_SCORE = 160
+#: A truncated bank name's last word must keep at least this many letters.
+MIN_TRUNCATED_WORD = 5
+#: Adaptive shortlists keep the top N scores, expanding ties up to the maximum.
+ADAPTIVE_TOP, ADAPTIVE_MAX = 5, 12
+
 
 def number(value):
     """Normalize known amounts while keeping missing values distinct from zero."""
@@ -24,14 +39,14 @@ def tokens(value):
 
 def specific_name(left, right):
     """Compare whole names, ignoring honorifics and spacing, rather than one shared word."""
-    ignored = {"cik", "puan", "encik", "bin", "binti", "bt", "bint", "berhad"}
+    ignored = IGNORED_NAME_WORDS
     for a in left:
         at = tokens(a) - ignored
         for b in right:
             bt = tokens(b) - ignored
             if not at or not bt:
                 continue
-            if at == bt or (len(at & bt) >= 2 and len(at & bt) / min(len(at), len(bt)) >= .8):
+            if at == bt or (len(at & bt) >= 2 and len(at & bt) / min(len(at), len(bt)) >= NAME_OVERLAP_RATIO):
                 return True
             if "".join(sorted(at)) == "".join(sorted(bt)):
                 return True
@@ -86,7 +101,7 @@ def build_candidates(banks, documents, grouped=True, specific=False):
                 continue
             # Reimbursements can name the claimant rather than the receipt merchant.
             # Exact amounts outrank name-only hits for retrieval, never for approval.
-            score = 100 * reference + 30 * name + 40 * exact + 20 * truncated
+            score = REFERENCE_WEIGHT * reference + NAME_WEIGHT * name + AMOUNT_WEIGHT * exact + TRUNCATED_NAME_WEIGHT * truncated
             ranked.append((score, key))
         if grouped:
             groups = defaultdict(list)
@@ -95,7 +110,7 @@ def build_candidates(banks, documents, grouped=True, specific=False):
                     groups[pool[key]["claim_group"]].append(key)
             for group, members in groups.items():
                 # Small explicit groups only; large groups require a dedicated reconciliation.
-                if len(members) > 12:
+                if len(members) > MAX_CLAIM_GROUP:
                     continue
                 for size in range(2, len(members) + 1):
                     for subset in itertools.combinations(sorted(members), size):
@@ -105,29 +120,29 @@ def build_candidates(banks, documents, grouped=True, specific=False):
                         pool[key] = {**pool[subset[0]], "id": key, "kind": "group",
                                      "amount": bank["amount"],
                                      "document_ids": [d for k in subset for d in pool[k]["document_ids"]]}
-                        ranked.append((160, key))
+                        ranked.append((GROUP_MATCH_SCORE, key))
         choices[bank["id"]] = sorted(set(ranked), key=lambda item: (-item[0], item[1]))
     return pool, choices, evaluations
 
 
 def truncated_name(bank_names, source_names):
     """Retrieve exact-amount rows with an anchored, truncated final bank-name token."""
-    ignored = {"cik", "puan", "encik", "bin", "binti", "bt", "bint", "berhad"}
+    ignored = IGNORED_NAME_WORDS
     for bank in bank_names:
         left = [word for word in re.findall(r"[\w]+", bank.casefold()) if word not in ignored]
         for source in source_names:
             right = [word for word in re.findall(r"[\w]+", source.casefold()) if word not in ignored]
             if (len(left) >= 2 and len(left) == len(right) and left[:-1] == right[:-1]
-                    and len(left[-1]) >= 5 and right[-1] != left[-1] and right[-1].startswith(left[-1])):
+                    and len(left[-1]) >= MIN_TRUNCATED_WORD and right[-1] != left[-1] and right[-1].startswith(left[-1])):
                 return True
     return False
 
 
 def shortlist(ranked, policy):
-    """Compare fixed cutoffs with tie-preserving expansion to at most twelve options."""
+    """Compare fixed cutoffs with tie-preserving expansion to at most `ADAPTIVE_MAX` options."""
     if policy != "adaptive":
         return ranked[:int(policy)]
-    if len(ranked) <= 5:
+    if len(ranked) <= ADAPTIVE_TOP:
         return ranked
-    cutoff = ranked[4][0]
-    return [item for item in ranked if item[0] >= cutoff][:12]
+    cutoff = ranked[ADAPTIVE_TOP - 1][0]
+    return [item for item in ranked if item[0] >= cutoff][:ADAPTIVE_MAX]

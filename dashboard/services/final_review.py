@@ -15,6 +15,9 @@ from reconciliation.intake.duplicates import fingerprint
 
 CACHE = WORKSPACE / 'duplicated/benchmarks/full-statement-240'
 
+#: Input limits for one Final review decision.
+MAX_REVIEWER_CHARS, MAX_NOTE_CHARS, MAX_ALLOCATIONS = 120, 4000, 50
+
 
 def read(path):
     """Read saved UTF-8 JSON without invoking a model."""
@@ -203,7 +206,7 @@ def decide(review, body):
         raise ValueError('Choose a valid transaction and action')
     reviewer = str(body.get('reviewer') or 'Local user').strip() or 'Local user'
     note = str(body.get('note','')).strip()
-    if len(reviewer)>120 or len(note)>4000:
+    if len(reviewer) > MAX_REVIEWER_CHARS or len(note) > MAX_NOTE_CHARS:
         raise ValueError('Keep the review note under 4,000 characters')
     bank = banks[bank_id]
     before = state['decisions'].get(bank_id)
@@ -215,7 +218,7 @@ def decide(review, body):
         if source_hash(bank['source'])!=bank.get('source_sha256', facts.get('statement_hash', '')).upper():
             raise ValueError('The bank statement changed or is unavailable')
         selected = body.get('allocations')
-        if not isinstance(selected,list) or not 1<=len(selected)<=50:
+        if not isinstance(selected,list) or not 1 <= len(selected) <= MAX_ALLOCATIONS:
             raise ValueError('Select at least one supporting item')
         used,seen,documents = reservations(state,bank_id),set(),{}
         for entry in selected:

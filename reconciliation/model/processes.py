@@ -8,6 +8,13 @@ from pathlib import Path
 from tempfile import TemporaryFile
 from time import monotonic, sleep
 
+#: Seconds between checks while waiting for a process tree to exit.
+EXIT_POLL_SECONDS = 0.02
+#: Seconds between checks for Stop while a process runs.
+CANCEL_POLL_SECONDS = 0.05
+#: Default seconds a managed process may run.
+DEFAULT_TIMEOUT = 240
+
 
 class ReviewCancelled(Exception):
     """A stopped review must not accept an interrupted model response."""
@@ -97,7 +104,7 @@ class ProcessManager:
                 return True
             if monotonic() >= deadline:
                 return False
-            sleep(0.02)
+            sleep(EXIT_POLL_SECONDS)
 
     def _cleanup(self, process):
         """Terminate leftovers, escalate, and retain unverified trees on failure."""
@@ -114,7 +121,7 @@ class ProcessManager:
         with self._lock:
             self._active.remove(process)
 
-    def run(self, command, *, input="", timeout=240, stdout=None, stderr=None, cwd=None, audit=None):
+    def run(self, command, *, input="", timeout=DEFAULT_TIMEOUT, stdout=None, stderr=None, cwd=None, audit=None):
         """Run with file-backed I/O so unread pipes cannot delay cancellation."""
         audit = audit if audit is not None else {}
         with ExitStack() as stack:
@@ -132,7 +139,7 @@ class ProcessManager:
             try:
                 deadline = monotonic() + timeout
                 while process.poll() is None:
-                    if self.cancelled.wait(0.05):
+                    if self.cancelled.wait(CANCEL_POLL_SECONDS):
                         raise ReviewCancelled("Review stopped by user")
                     if monotonic() >= deadline:
                         raise subprocess.TimeoutExpired(command, timeout)

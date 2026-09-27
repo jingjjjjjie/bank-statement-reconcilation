@@ -12,6 +12,13 @@ STOP = {'fund', 'transfer', 'debit', 'credit', 'payment', 'receipt', 'invoice', 
         'sdn', 'bhd', 'ltd', 'pty', 'the', 'and', 'myr', 'rm', 'bank'}
 REFERENCE_TYPES = {'invoice', 'receipt', 'payment', 'transaction', 'booking', 'order', 'claim', 'document'}
 
+#: Candidates kept per bank line: every exact reference, the best name and amount matches, then a text top-up.
+NAME_CANDIDATES, AMOUNT_CANDIDATES, MAX_CANDIDATES, TEXT_TOP_UP = 20, 20, 40, 10
+#: A usable reference has at least this many characters and one digit.
+MIN_REFERENCE_CHARS = 4
+#: Standard BM25 text-relevance parameters (term saturation k1, length normalization b).
+BM25_K1, BM25_B = 1.2, .75
+
 
 def words(text):
     """Tokenize literal source text without guessing translations or identities."""
@@ -36,7 +43,7 @@ def references(record):
                                  r'\s*(?:number|no\.?|id|reference|ref\.?)?\s*[:#]\s*(.+)', entry, re.I)
             value = match[2] if match else (entry if re.fullmatch(r'(?:INV|RCP|BKG|PAY|TXN)[-/]\S+', entry, re.I) else '')
         value = normalize_reference(value)
-        if len(value) >= 4 and any(c.isdigit() for c in value):
+        if len(value) >= MIN_REFERENCE_CHARS and any(c.isdigit() for c in value):
             result.add(value)
     return result
 
@@ -87,7 +94,7 @@ def retrieve(banks, items):
                 continue
             counts = corpus[key]
             score = sum(log(1 + (len(corpus) - frequency[w] + .5) / (frequency[w] + .5))
-                        * counts[w] * 2.2 / (counts[w] + 1.2 * (.25 + .75 * sum(counts.values()) / average))
+                        * counts[w] * (BM25_K1 + 1) / (counts[w] + BM25_K1 * (1 - BM25_B + BM25_B * sum(counts.values()) / average))
                         for w in query & counts.keys())
             same_amount = number(bank.get('amount')) is not None and number(bank['amount']) == number(item.get('amount'))
             name = specific_name(bank.get('parties', []), item.get('parties', []))
@@ -100,15 +107,15 @@ def retrieve(banks, items):
         refs = [k for k in ordered if rows[k]['exact_references']]
         names = [k for k in ordered if rows[k]['name'] and not rows[k]['conflict']]
         amounts = [k for k in ordered if rows[k]['amount'] and not rows[k]['conflict']]
-        primary = set(refs + names[:20] + amounts[:20])
-        selected = [k for k in ordered if k in primary][:40]
+        primary = set(refs + names[:NAME_CANDIDATES] + amounts[:AMOUNT_CANDIDATES])
+        selected = [k for k in ordered if k in primary][:MAX_CANDIDATES]
         fallback = [k for k in ordered if k not in primary and rows[k]['bm25'] > 0 and not rows[k]['conflict']]
-        selected += fallback[:max(0, 10-len(selected))]
+        selected += fallback[:max(0, TEXT_TOP_UP - len(selected))]
         eligible = set(refs + names + amounts + fallback)
         choices[bank['id']] = selected
         audit[bank['id']] = {'policy': 'references-20-name-20-amount-top-up-10-v1',
             'name_matches': len(names), 'amount_matches': len(amounts), 'reference_matches': len(refs),
             'selected': len(selected), 'eligible': len(eligible), 'omitted': len(eligible-set(selected)),
-            'search_incomplete': bool(eligible-set(selected)), 'reference_overflow': len(refs) > 40,
+            'search_incomplete': bool(eligible-set(selected)), 'reference_overflow': len(refs) > MAX_CANDIDATES,
             'reasons': {k: {field: value for field, value in rows[k].items() if field != 'order'} for k in selected}}
     return choices, audit

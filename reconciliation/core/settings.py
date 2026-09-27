@@ -12,6 +12,12 @@ DEFAULTS = {"pdf_whole_document_max_pages": 5, "pdf_mode": "vision", "pictures_e
             "max_calls": 1000, "max_parallel": 4, "model": DEFAULT_MODEL, "reasoning": "default", "stages": {}}
 STAGES = ("pdf", "images", "excel", "word", "comparison")
 
+#: Allowed ranges for numeric settings, as (lowest, highest) inclusive.
+WHOLE_PDF_PAGES_RANGE = (1, 40)
+MAX_CALLS_RANGE = (1, 1000)
+MAX_PARALLEL_RANGE = (1, 8)
+PDF_MODES = ("text_only", "auto", "vision", "hybrid", "compare")
+
 
 def config_for_manifest(manifest):
     """Use shared settings for managed reviews while preserving existing legacy overrides."""
@@ -42,18 +48,18 @@ def validate(config):
     if not isinstance(config, dict) or not required <= set(config) or set(config) - set(DEFAULTS):
         raise ValueError("Settings contain missing or unknown fields")
     config = {**DEFAULTS, **config}
-    if type(config["pdf_whole_document_max_pages"]) is not int or not 1 <= config["pdf_whole_document_max_pages"] <= 40:
-        raise ValueError("Whole-document PDF page limit must be an integer between 1 and 40")
-    if config["pdf_mode"] not in ("text_only", "auto", "vision", "hybrid", "compare"):
+    if type(config["pdf_whole_document_max_pages"]) is not int or not in_range(config["pdf_whole_document_max_pages"], WHOLE_PDF_PAGES_RANGE):
+        raise ValueError("Whole-document PDF page limit must be an integer between %d and %d" % WHOLE_PDF_PAGES_RANGE)
+    if config["pdf_mode"] not in PDF_MODES:
         raise ValueError("Unknown PDF processing mode")
     if config["pdf_mode"] in ("hybrid", "compare") and not config["pictures_enabled"]:
         raise ValueError("PDF fallback and comparison require pictures")
     if any(type(config[key]) is not bool for key in ("pictures_enabled", "codex_enabled")):
         raise ValueError("Picture and Codex switches must be true or false")
-    if type(config["max_calls"]) is not int or not 1 <= config["max_calls"] <= 1000:
-        raise ValueError("Call limit must be an integer between 1 and 1000")
-    if type(config["max_parallel"]) is not int or not 1 <= config["max_parallel"] <= 8:
-        raise ValueError("Parallel requests must be an integer between 1 and 8")
+    if type(config["max_calls"]) is not int or not in_range(config["max_calls"], MAX_CALLS_RANGE):
+        raise ValueError("Call limit must be an integer between %d and %d" % MAX_CALLS_RANGE)
+    if type(config["max_parallel"]) is not int or not in_range(config["max_parallel"], MAX_PARALLEL_RANGE):
+        raise ValueError("Parallel requests must be an integer between %d and %d" % MAX_PARALLEL_RANGE)
     if not isinstance(config["model"], str) or not isinstance(config["reasoning"], str):
         raise ValueError("Model and reasoning must be strings")
     if config["model"]:
@@ -135,3 +141,8 @@ def save_config(path, config, expected_revision):
     temporary.write_text(json.dumps(config, indent=2) + "\n", encoding="utf-8")
     temporary.replace(path)
     return config
+
+
+def in_range(value, bounds):
+    """True when `value` lies within inclusive `(lowest, highest)` bounds."""
+    return bounds[0] <= value <= bounds[1]

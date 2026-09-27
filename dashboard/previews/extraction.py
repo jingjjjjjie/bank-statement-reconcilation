@@ -7,6 +7,9 @@ from PIL import Image, ImageOps, UnidentifiedImageError
 
 from dashboard.previews import office as office_preview
 
+#: Resolution for rendering PDF pages in the review preview.
+PREVIEW_DPI = 150
+
 
 def embedded_images(path):
     """List Office picture parts without extracting archive paths onto disk."""
@@ -50,7 +53,7 @@ def image(path, page):
         with pymupdf.open(path) as document:
             if page >= len(document):
                 raise ValueError("Invalid preview page")
-            return document[page].get_pixmap(dpi=150, alpha=False).tobytes("png")
+            return document[page].get_pixmap(dpi=PREVIEW_DPI, alpha=False).tobytes("png")
     source = path
     if path.suffix.lower() in {".docx", ".xlsx"}:
         number = page - office_preview.describe(path)["pages"]

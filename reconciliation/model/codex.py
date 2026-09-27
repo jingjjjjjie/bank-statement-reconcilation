@@ -30,6 +30,13 @@ DISABLED_FEATURES = (
 CACHE_PROFILE = ["builtin-instructions", DISABLED_FEATURES, "skip_host_skill_discovery",
                  "web_search=disabled", "project_doc_max_bytes=0"]
 
+#: Default seconds one `codex exec` call may run before it is stopped.
+DEFAULT_TIMEOUT = 240
+#: Default cap on new model calls in one run; cached answers do not count.
+DEFAULT_MAX_CALLS = 1000
+#: Seconds allowed for `codex login status`.
+LOGIN_CHECK_TIMEOUT = 30
+
 
 def request_digest(prompt, schema, model, reasoning, images=()):
     """Content-address one request by prompt, schema, model settings and image bytes."""
@@ -66,7 +73,7 @@ class BudgetReached(Exception):
 class CodexReviewer:
     """Model client backed by `codex exec` and the ChatGPT subscription login (implements `reconciliation.model.client.ModelClient`)."""
 
-    def __init__(self, work, executable=None, model=None, max_calls=1000, timeout=240, reasoning="default", cancel_event=None):
+    def __init__(self, work, executable=None, model=None, max_calls=DEFAULT_MAX_CALLS, timeout=DEFAULT_TIMEOUT, reasoning="default", cancel_event=None):
         # Keep response caches scoped to model, prompt, schema and image bytes.
         bundled = Path(os.environ.get("LOCALAPPDATA", "")) / "Programs/OpenAI/Codex/bin/codex.exe"
         self.executable = executable or shutil.which("codex") or str(bundled)
@@ -160,7 +167,7 @@ class CodexReviewer:
         # Require subscription login; never silently select an API-key connection.
         with self._login_lock:
             if not self._login_checked[0]:
-                login = self.processes.run([self.executable, "login", "status"], timeout=30)
+                login = self.processes.run([self.executable, "login", "status"], timeout=LOGIN_CHECK_TIMEOUT)
                 if login.returncode or "chatgpt" not in (login.stdout + login.stderr).lower():
                     raise ValueError("Run codex login using ChatGPT before starting model review")
                 self._login_checked[0] = True

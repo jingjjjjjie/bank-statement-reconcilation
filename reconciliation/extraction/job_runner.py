@@ -2,6 +2,9 @@
 from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 from contextlib import nullcontext
 
+#: Seconds between checks for finished jobs; short so Stop and new work are noticed quickly.
+POLL_SECONDS = 0.2
+
 
 def run_jobs(jobs, apply, workers, refill=None, acceptance=nullcontext):
     """Run a bounded number of model jobs and checkpoint every finished result."""
@@ -39,7 +42,7 @@ def run_jobs(jobs, apply, workers, refill=None, acceptance=nullcontext):
             if error is None:
                 while len(pending) < workers and submit_one():
                     pass
-            completed, _ = wait(pending, timeout=0.2, return_when=FIRST_COMPLETED)
+            completed, _ = wait(pending, timeout=POLL_SECONDS, return_when=FIRST_COMPLETED)
             if not completed:
                 continue
             future = next(iter(completed))

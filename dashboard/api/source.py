@@ -11,6 +11,7 @@ from dashboard.routes import active_context, context
 from dashboard.services import extraction_runs
 from dashboard.services.review import Review
 from reconciliation.core import development_cache
+from reconciliation.intake.workspace import STATEMENT_YEARS
 
 router = APIRouter(prefix="/api")
 
@@ -27,7 +28,7 @@ class StartChoice(BaseModel):
 
 class BankYear(BaseModel):
     """Require an explicit four-digit statement year."""
-    year: StrictInt = Field(ge=1900, le=2100)
+    year: StrictInt = Field(ge=STATEMENT_YEARS[0], le=STATEMENT_YEARS[1])
 
 
 class ExportChoice(BaseModel):
