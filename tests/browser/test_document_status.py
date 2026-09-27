@@ -47,7 +47,7 @@ class DocumentStatusTests(unittest.TestCase):
                     errors = []
                     page.on("pageerror", lambda error: errors.append(str(error)))
                     page.goto(f"http://127.0.0.1:{server.server_port}/documents")
-                    expect(page.locator("#document-rows tr")).to_have_count(2)
+                    expect(page.locator("#document-rows .document-file")).to_have_count(2)
                     expect(page.locator("#document-rows .document-status").first).to_have_text("Queued")
                     index, state = load(work)
                     run(work, index, state, FixtureReviewer(), extraction_only=True)
@@ -58,7 +58,7 @@ class DocumentStatusTests(unittest.TestCase):
                     self.assertTrue(page.evaluate("document.documentElement.scrollWidth <= innerWidth"))
                     page.screenshot(path=".tools/documents-mobile.png", full_page=True)
                     page.locator("#document-search").fill("first.png")
-                    expect(page.locator("#document-rows tr")).to_have_count(1)
+                    expect(page.locator("#document-rows .document-file")).to_have_count(1)
                     for filename in ("first.png", "second.png"):
                         page.locator("#document-search").fill(filename)
                         page.locator("#document-rows").get_by_role("link", name="Review results", exact=True).click()

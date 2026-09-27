@@ -8,27 +8,71 @@ const { $, api, toast, pollVisible } = page;
 let documentState = {prepared: false, documents: []};
 let documentRequestMessage = "";
 let executionRevision = 0;
+const collapsedFolders = new Set();
+const filteredFolders = new Set();
+let folderFilter = '';
+let legacyLocations;
+
+function sourceFiles(rows) {
+  /* Display every original location while retaining one extraction record per hash. */
+  return rows.flatMap(item => (item.paths?.length ? item.paths : [item.path]).map((path, index) => ({
+    ...item, path: path.replaceAll('\\', '/'), name: path.split(/[\\/]/).pop(),
+    duplicate: item.approved_duplicate || index > 0,
+    duplicateLabel: item.approved_duplicate ? 'Approved duplicate' : index > 0 ? 'Exact duplicate' : '',
+  })));
+}
+
+function folderTree(files, allFiles) {
+  /* Build a stable folder hierarchy from original paths, independent of filtering. */
+  let rootPath = (documentState.source_root || '').replaceAll('\\', '/').replace(/\/$/, '');
+  if (!rootPath && allFiles.length) {
+    const common = allFiles[0].path.split('/').slice(0, -1);
+    for (const item of allFiles) {
+      const parts = item.path.split('/').slice(0, -1);
+      while (common.some((part, index) => part !== parts[index])) common.pop();
+    }
+    rootPath = common.join('/');
+  }
+  const tree = {name:rootPath.split('/').pop() || 'Documents', path:rootPath, folders:new Map(), files:[], count:0};
+  for (const item of files) {
+    const relative = item.path.startsWith(rootPath + '/') ? item.path.slice(rootPath.length + 1) : item.path;
+    const parts = relative.split('/').filter(Boolean); parts.pop();
+    let folder = tree; folder.count++;
+    for (const name of parts) {
+      if (!folder.folders.has(name)) folder.folders.set(name, {name, path:folder.path + '/' + name, folders:new Map(), files:[], count:0});
+      folder = folder.folders.get(name); folder.count++;
+    }
+    folder.files.push(item);
+  }
+  return tree;
+}
 
 function renderDocuments() {
   /* Filter the current saved snapshot without changing workflow state. */
   const rows = documentState.documents;
   const search = $('#document-search').value.trim().toLowerCase();
   const filter = $('#document-filter').value;
-  const visible = rows.filter(item => (filter === 'all' || item.status === filter) &&
+  const filterKey = JSON.stringify([search, filter]);
+  if (filterKey !== folderFilter) { filteredFolders.clear(); folderFilter = filterKey; }
+  const collapsed = search || filter !== 'all' ? filteredFolders : collapsedFolders;
+  const files = sourceFiles(rows);
+  const visible = files.filter(item => (filter === 'all' || (filter === 'duplicate' ? item.duplicate : item.status === filter)) &&
     `${item.name} ${item.path}`.toLowerCase().includes(search));
   $('#document-total').textContent = rows.length;
   $('#document-admin').textContent = rows.filter(item => item.status === 'Needs review').length;
   $('#document-complete').textContent = rows.filter(item => item.status === 'Complete').length;
   $('#document-summary').textContent = documentState.prepared ?
-    `${visible.length} of ${rows.length} documents` :
+    `${visible.length} of ${files.length} files · ${rows.length} unique documents` :
     'Run documents to prepare your files.';
   const body = $('#document-rows'); body.replaceChildren();
-  for (const item of visible) {
-    const tr = node('tr'), title = node('td');
+  function appendFile(item, depth) {
+    /* Keep duplicate evidence inspectable, but visually secondary to the retained copy. */
+    const tr = node('tr', `document-file${item.duplicate ? ' duplicate-file' : ''}`), title = node('td');
+    tr.style.setProperty('--folder-depth', depth);
     title.append(node('strong', '', item.name));
     title.title = item.path;
-    if (item.approved_duplicate) title.append(node('small', '', 'Approved duplicate'));
-    const status = node('span', `document-status ${item.status.toLowerCase().replaceAll(' ', '-')}`, item.status);
+    const label = item.duplicateLabel || item.status;
+    const status = node('span', `document-status ${item.duplicate ? 'duplicate' : item.status.toLowerCase().replaceAll(' ', '-')}`, label);
     const open = node('a', '', 'Open file');
     open.href = `/api/content-file?id=${encodeURIComponent(item.id)}`;
     open.target = '_blank'; open.rel = 'noopener';
@@ -40,6 +84,29 @@ function renderDocuments() {
     tr.children[1].append(status);
     body.append(tr);
   }
+  function appendFolder(folder, depth) {
+    /* Expand search results automatically; retain the user's ordinary collapsed folders. */
+    const expanded = !collapsed.has(folder.path);
+    const tr = node('tr', 'document-folder'), cell = node('td'), toggle = node('button', 'folder-toggle');
+    tr.style.setProperty('--folder-depth', depth); cell.colSpan = 3;
+    toggle.type = 'button'; toggle.dataset.folderPath = folder.path;
+    toggle.title = folder.path; toggle.setAttribute('aria-expanded', String(expanded));
+    toggle.setAttribute('aria-label', `${expanded ? 'Collapse' : 'Expand'} folder ${folder.name}`);
+    const arrow = node('span', 'folder-arrow', expanded ? '▾' : '▸'); arrow.setAttribute('aria-hidden', 'true');
+    toggle.append(arrow, $('#document-folder-icon svg').cloneNode(true), node('span', 'folder-name', folder.name),
+      node('small', 'folder-count', `${folder.count} ${folder.count === 1 ? 'file' : 'files'}`));
+    toggle.onclick = () => {
+      if (expanded) collapsed.add(folder.path); else collapsed.delete(folder.path);
+      renderDocuments();
+      [...body.querySelectorAll('.folder-toggle')].find(button => button.dataset.folderPath === folder.path)?.focus();
+    };
+    cell.append(toggle); tr.append(cell); body.append(tr);
+    if (!expanded) return;
+    const compare = (left, right) => left.name.localeCompare(right.name, undefined, {numeric:true});
+    [...folder.folders.values()].sort(compare).forEach(child => appendFolder(child, depth + 1));
+    folder.files.sort(compare).forEach(item => appendFile(item, depth + 1));
+  }
+  if (visible.length) appendFolder(folderTree(visible, files), 0);
   $('#document-empty').hidden = !!visible.length;
   $('#document-empty').textContent = documentState.prepared ? 'No documents match this filter.' : 'Click Extract documents to get started.';
 }
@@ -48,6 +115,14 @@ async function refreshDocuments() {
   /* Poll the checkpointed review while retaining search and filter choices. */
   const revision = executionRevision;
   const snapshot = await api('/api/document-status');
+  // Older running servers expose exact-copy locations through their existing report.
+  if (snapshot.prepared && snapshot.documents.some(item => !item.paths)) {
+    legacyLocations ||= api('/api/state').then(data => new Map((data.automatic ? data.groups : [])
+      .map(group => [group.hash, group.files.filter(file => file.valid).map(file => file.original)])))
+      .catch(() => new Map());
+    const locations = await legacyLocations;
+    snapshot.documents = snapshot.documents.map(item => ({...item, paths:locations.get(item.id)?.length ? locations.get(item.id) : [item.path]}));
+  }
   documentState = revision === executionRevision ? snapshot : {...snapshot, ...executionFields()};
   renderDocuments();
   renderDocumentProgress();

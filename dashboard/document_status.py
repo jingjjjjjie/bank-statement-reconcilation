@@ -47,9 +47,11 @@ def snapshot(review):
             status = "Complete"
         path = document["paths"][0]
         rows.append({"id": digest, "name": Path(path).name, "path": path, "status": status,
+                     "paths": list(dict.fromkeys(document.get("original_paths") or document["paths"])),
                      "approved_duplicate": digest in duplicates,
                      "extracted": bool(units) and status in {"Needs review", "Complete", "Trash"},
                      "assembly_total": int(len(units) > 1), "assembly_done": int(len(units) > 1 and bool(current_assembly(document, state))),
                      "units_read": read, "units_total": len(units)})
     rows.sort(key=lambda row: (row["name"].casefold(), row["path"].casefold()))
-    return {"prepared": True, "documents": rows, **execution_status(review)}
+    return {"prepared": True, "source_root": str(getattr(review, "root", "")),
+            "documents": rows, **execution_status(review)}
