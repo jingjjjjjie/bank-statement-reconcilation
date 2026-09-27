@@ -60,7 +60,16 @@ docker compose logs --tail 50 dashboard
 
 Rebuild after frontend or image changes. For a routine restart use `docker compose restart dashboard`; stop with `docker compose down`.
 
-The default `development` image includes Python 3.12, Node/npm, Codex, Git, ripgrep, build tools, pytest, debugpy and Python Playwright. Enter it with `docker compose exec dashboard bash`. The `app` user works in `/workspace`; edits reach the host repository. Use `DOCKER_TARGET=runtime` in `.env` for the smaller image. The pinned Codex CLI version is in `.env.example`; change `CODEX_VERSION` deliberately when upgrading.
+The default `development` image includes Python 3.12, Node/npm, Codex, Git, ripgrep, build tools, pytest, debugpy and Python Playwright. Enter it with `docker compose exec dashboard bash`. The `app` user works in `/workspace`; edits reach the host repository. Use `DOCKER_TARGET=runtime` in `.env` for the smaller image.
+
+To update the workflow's Codex CLI to the latest stable [OpenAI release](https://github.com/openai/codex/releases/latest), run on the host with Docker and the dashboard running:
+
+```console
+python scripts/update_codex.py --check
+python scripts/update_codex.py
+```
+
+The first command only checks. The second builds and replaces the dashboard container when an update is needed, verifies its Codex version, and synchronizes `.env`, `.env.example`, `compose.yaml` and `docker/Dockerfile`. It refuses to interrupt active workflow or Codex calls. The dashboard briefly restarts; its ChatGPT login volume and document/review data are retained. Builds also include the current frontend files. This updates the project's Docker CLI; the separate Windows Codex installation is not modified.
 
 Browser binaries are optional. After creating a development container, install them if running browser checks there:
 
@@ -80,7 +89,7 @@ Settings saves `config/review_config.json`. Saving settings does not start model
 - **Codex:** switching off prevents subsequent calls; use Stop to cancel active calls.
 - **Calls per run:** 1-1,000, default 1,000. The CLI uses the saved allowance unless `--max-calls` overrides it. A call is a new model invocation, including started failed/timed-out attempts. Local processing and cache hits do not consume the allowance. Rerun to resume with a fresh allowance.
 - **Parallel requests:** 1-8, default 4. Calls share one allowance, and completed responses are checkpointed.
-- **Model/reasoning:** defaults to `gpt-5.6-sol` and model-default reasoning. Supported choices come from the installed Codex catalog. All model calls use ChatGPT login and structured output; vision calls attach images.
+- **Model/reasoning:** defaults to `gpt-6-sol` and model-default reasoning. Supported choices come from the installed Codex catalog. All model calls use ChatGPT login and structured output; vision calls attach images.
 - **Workflow context:** calls keep the model's built-in instructions and run in a temporary directory with project instructions, host skill discovery, plugins, computer use, other unused agent tools, and web search disabled. Vision attachments and the image-viewing tool remain enabled; Python renders PDF pages for the model. Run `python -m scripts.check_codex_connection --pdf` to verify this path with a synthetic receipt. This profile is part of the response-cache identity; existing accepted results are not recomputed automatically. The CLI must support `skip_host_skill_discovery` (verified locally with 0.157.1).
 - **Token usage:** per-attempt records live in project `review/token-usage.jsonl`, with stage/model totals and zero new usage for cache hits. Missing usage is unknown, never estimated. Settings and review reports expose recorded totals; Completion's final totals depend on its older completion gates.
 - **Development mode:** optional local shared caches and explicit human-decision replay. See [development cache](docs/DEVELOPMENT_CACHE.md). It never makes human approval automatic.
