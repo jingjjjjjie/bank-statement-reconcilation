@@ -9,7 +9,6 @@ export const pageHelp = {
     'Load for final matching prepares the current bank statement and extracted supporting pieces. Generate matches starts matching here; Stop pauses it. The progress bar shows processed transactions and failures. Review the results on Final review. Loading alone does not start model calls.',
     'Enter the year printed on the statement, then extract it. Check the transactions and balances against the original PDF.',
     'Use Check bank extraction when ready. Search filters the statement rows.',
-    'Export Excel uses the saved style and company name. Bank fields are filled; PARTICULAR and accounting fields stay blank. Document matches start as PENDING.',
   ]],
   Documents: ['Documents', [
     'Run all documents to extract the remaining files. Progress is saved; Stop pauses new requests while active calls finish.',

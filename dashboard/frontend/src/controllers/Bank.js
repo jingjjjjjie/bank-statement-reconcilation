@@ -29,6 +29,7 @@ async function loadBank() {
     $('#bank-extraction').hidden = true;
     if (!data.available) {
       $('#bank-note').textContent = 'No prepared bank statement was found.';
+      $('#bank-note').hidden = false;
       const source = await api('/api/source');
       const ready = source.bank && source.selected && source.active === source.selected.path;
       $('#bank-extraction').hidden = !ready;
@@ -36,7 +37,7 @@ async function loadBank() {
       return;
     }
     transactions = data.transactions;
-    $('#bank-note').textContent = 'Extracted bank data for review. Supporting-document matching is still pending.';
+    $('#bank-note').hidden = true;
     $('#bank-count').textContent = data.count;
     $('#bank-account').textContent = `Account ${data.account} · ${data.currency}`;
     $('#bank-opening').textContent = money(data.opening_balance);
@@ -45,32 +46,9 @@ async function loadBank() {
     $('#bank-checks').textContent = data.balance_checks === 'passed' ? 'Bank balance checks passed' : 'Bank balance checks need review';
     $('#match-note').textContent = `${data.matched} of ${data.count} transactions matched to supporting documents`;
     $('#workbook').hidden = !data.workbook_available;
-    try {
-      const defaults = await api('/api/bank-export-defaults');
-      $('#export-company').value = defaults.company;
-    } catch (error) { $('#export-error').textContent = error.message; $('#export-error').hidden = false; }
     $('#bank-content').hidden = false;
     renderRows();
   } catch (error) { $('#bank-error').textContent = error.message; $('#bank-error').hidden = false; }
-}
-async function exportWorkbook() {
-  const button = $('#export-button');
-  $('#export-error').hidden = true;
-  button.disabled = true;
-  try {
-    token = (await api('/api/session')).token;
-    const response = await fetch('/api/bank-export', {method: 'POST',
-      headers: {'Content-Type': 'application/json', 'X-Review-Token': token, 'X-Review-Id': page.reviewId},
-      body: JSON.stringify({company: $('#export-company').value})});
-    if (!response.ok) throw Error((await response.json()).error || 'Export failed');
-    const url = URL.createObjectURL(await response.blob());
-    const link = node('a'); link.href = url; link.download = 'answer_statement_bank_only.xlsx';
-    document.body.append(link); link.click(); link.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 60000);
-  } catch (error) {
-    $('#export-error').textContent = error.message;
-    $('#export-error').hidden = false;
-  } finally { button.disabled = false; }
 }
 let matchingReady = false, matchingStarting = false;
 async function loadMatchingReadiness() {
@@ -176,7 +154,6 @@ $('#check-bank').onclick = async () => {
   } catch (error) { $('#bank-step-note').textContent = error.message; }
   finally { button.disabled = false; }
 };
-$('#export-button').addEventListener('click', exportWorkbook);
 $('#prepare-bank').onclick = async () => {
   const button = $('#prepare-bank');
   const yearField = $('#bank-year');

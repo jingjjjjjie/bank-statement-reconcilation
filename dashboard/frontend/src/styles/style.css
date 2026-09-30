@@ -948,11 +948,7 @@ a.nav-item:hover { background: #30483f; }
 .bank-table summary { color: var(--green); cursor: pointer; font-size: 11px; }
 .bank-table pre { white-space: pre-wrap; overflow-wrap: anywhere; font: 11px/1.5 Consolas, monospace; }
 .bank-row-count { margin: 16px 0 0; }
-.bank-export-fields { display: grid; grid-template-columns: 1fr 2fr; gap: 15px; margin: 18px 0; }
-.bank-export-fields label { font-size: 12px; font-weight: 600; }
-.bank-export-fields input { display: block; width: 100%; margin-top: 7px; padding: 10px; border: 1px solid var(--line); border-radius: 5px; }
 .breadcrumb .review-context { color: var(--ink); overflow-wrap: anywhere; }
-@media(max-width:760px) { .bank-export-fields { grid-template-columns: 1fr; } }
 @media(max-width:760px) { .bank-toolbar { display: block; } .bank-toolbar input { min-width: 0; width: 100%; margin-top: 15px; } }
 
 /* Shared horizontal navigation and source setup layout. */
