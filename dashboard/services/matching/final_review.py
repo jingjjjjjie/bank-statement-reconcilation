@@ -87,7 +87,10 @@ def frozen_context(review):
     banks = {
         b['id']: {
             **b,
-            **{field: bank_sources[b['id']].get(field, '') for field in ('money_in', 'money_out', 'balance')},
+            **{
+                field: bank_sources[b['id']].get(field, '')
+                for field in ('money_in', 'money_out', 'balance', 'account', 'opening_balance')
+            },
             'source': bank_sources[b['id']]['source'],
             'balance_checks': bank_sources[b['id']].get('balance_checks', ''),
             'page': int(bank_sources[b['id']]['page']) - 1,

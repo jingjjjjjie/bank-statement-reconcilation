@@ -171,13 +171,17 @@ Allocation warnings and differences use red styling. The explicit Confirm/Save b
 
 The payment header uses compact typography and inline-wrapped narration. The left panel and footer stay fixed; selected and available candidate lists scroll within their trays, preserving visible payment context and actions.
 
-## Final report CSV export (2026-09-30)
+## Final report Excel export (2026-09-30)
 
-Export CSV opens two choices: With supporting evidence paths and Without supporting
-evidence paths. Both export every bank transaction using the bank statement's column
-order, followed by review details (status, differences, flags and notes). The second
-choice omits the evidence-path column; it does not filter transactions. REMARK is OK
-only for current, fully supported approvals and blank otherwise. PARTICULAR uses
-current approved supporting descriptions; accounting classification fields stay blank.
-The path option includes saved approved allocation paths, with stale evidence flagged.
-CSV preserves column layout and values, not Excel styling.
+The user clarified that final export must use the actual formatted bank workbook,
+not CSV column order. Export Excel offers With supporting evidence paths and Without
+supporting evidence paths, both as .xlsx. The statement sheet reuses the bank-only
+export's style, headings, widths, colours, opening balance, totals and print layout.
+REMARK is OK only for current, fully supported approvals and blank otherwise.
+PARTICULAR uses current approved supporting descriptions; classification stays blank.
+Both options export every bank transaction. Review details (status, differences,
+flags and notes) occupy a separate sheet. Only the first option includes saved
+approved evidence paths on that sheet; changed evidence remains explicitly flagged.
+Older imports recover omitted layout fields only from their original hash-bound
+master. Missing balances stay blank with an explanatory comment. The legacy CSV
+endpoint remains available for compatibility; the final report UI downloads Excel.

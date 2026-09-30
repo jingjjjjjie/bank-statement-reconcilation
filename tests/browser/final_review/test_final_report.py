@@ -1,6 +1,7 @@
 """Verify the read-only report and modal against synthetic original evidence."""
 
 import csv
+import io
 import json
 import os
 import threading
@@ -9,6 +10,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pymupdf
+from openpyxl import load_workbook
 from playwright.sync_api import expect, sync_playwright
 
 from dashboard.routes import create_app
@@ -185,7 +187,7 @@ class FinalReportBrowserTests(unittest.TestCase):
             expect(trigger).to_be_focused()
             expect(page.get_by_label('Find a transaction')).to_have_value('Cedar')
             expect(page.locator('.report-table tbody tr')).to_have_count(1)
-            export_button = page.get_by_role('button', name='Export CSV', exact=True)
+            export_button = page.get_by_role('button', name='Export Excel', exact=True)
             for width in (1440, 390):
                 page.set_viewport_size({'width': width, 'height': 1000})
                 expect(page.get_by_role('navigation')).to_have_count(1)
@@ -196,7 +198,7 @@ class FinalReportBrowserTests(unittest.TestCase):
                 page.keyboard.press('Escape')
                 expect(help_button).to_have_attribute('aria-expanded', 'false')
                 export_button.click()
-                export_dialog = page.get_by_role('dialog', name='Export CSV')
+                export_dialog = page.get_by_role('dialog', name='Export Excel')
                 expect(export_dialog).to_be_visible()
                 expect(export_dialog.get_by_role('link')).to_have_count(2)
                 for _ in range(5):
@@ -212,10 +214,15 @@ class FinalReportBrowserTests(unittest.TestCase):
                     export_button.click()
                     with page.expect_download() as export:
                         export_dialog.get_by_role('link', name=label, exact=True).click()
-                    rows = list(csv.DictReader(Path(export.value.path()).read_text(encoding='utf-8-sig').splitlines()))
-                    self.assertEqual(len(rows), 3)
-                    self.assertEqual([row['REMARK'] for row in rows], ['OK', '', ''])
-                    self.assertEqual('Supporting evidence paths' in rows[0], has_paths)
+                    self.assertTrue(export.value.suggested_filename.endswith('.xlsx'))
+                    book = load_workbook(io.BytesIO(Path(export.value.path()).read_bytes()))
+                    self.assertEqual([book.active.cell(row, 11).value for row in (6, 7, 8)], ['OK', None, None])
+                    self.assertEqual(book.active.max_column, 11)
+                    self.assertEqual(book.active.page_setup.orientation, 'landscape')
+                    details = book['Review details']
+                    self.assertEqual(details.max_row, 4)
+                    self.assertEqual('Supporting evidence paths' in [cell.value for cell in details[1]], has_paths)
+                    book.close()
                     expect(export_dialog).not_to_be_visible()
                     expect(export_button).to_be_focused()
             page.set_viewport_size({'width': 390, 'height': 844})
@@ -267,7 +274,7 @@ class FinalReportBrowserTests(unittest.TestCase):
             )
             page.reload()
             expect(page.get_by_role('alert').filter(has_text='Saved matching snapshot')).to_be_visible()
-            expect(page.get_by_role('button', name='Export CSV', exact=True)).to_have_count(0)
+            expect(page.get_by_role('button', name='Export Excel', exact=True)).to_have_count(0)
             page.unroute('**/api/matching')
             page.get_by_role('button', name='Retry').click()
             expect(page.locator('.report-table tbody tr')).to_have_count(3)

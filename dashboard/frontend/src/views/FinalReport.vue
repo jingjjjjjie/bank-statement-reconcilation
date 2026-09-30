@@ -56,7 +56,7 @@ onDeactivated(() => { request++; loading.value = false; closeEvidence(); closeEx
 
 <template>
   <main class="final-report" :aria-busy="loading">
-    <header class="report-heading"><div><div class="page-title"><h1>Final report</h1><PageHelp page="FinalReport" /></div></div><button v-if="data" ref="exportButton" type="button" class="button dark" @click="exportDialog.showModal()">Export CSV</button></header>
+    <header class="report-heading"><div><div class="page-title"><h1>Final report</h1><PageHelp page="FinalReport" /></div></div><button v-if="data" ref="exportButton" type="button" class="button dark" @click="exportDialog.showModal()">Export Excel</button></header>
     <p v-if="loading && !data" role="status">Loading saved review decisions…</p>
     <div v-if="error" role="alert" class="report-notice">{{ error }} <button type="button" @click="refresh">Retry</button></div>
     <template v-if="data">
@@ -69,10 +69,10 @@ onDeactivated(() => { request++; loading.value = false; closeEvidence(); closeEx
       </tbody></table><p v-if="!rows.length" class="report-caption">No transactions match these filters.</p></div>
     </template>
     <dialog ref="exportDialog" class="report-export-dialog" aria-labelledby="report-export-title" @cancel.prevent="closeExport" @keydown="containFocus">
-      <header class="dialog-heading"><h2 id="report-export-title">Export CSV</h2><button type="button" class="dialog-close" aria-label="Close export" @click="closeExport">&times;</button></header>
+      <header class="dialog-heading"><h2 id="report-export-title">Export Excel</h2><button type="button" class="dialog-close" aria-label="Close export" @click="closeExport">&times;</button></header>
       <div class="report-export-options">
-        <a class="button dark" href="/api/matching-export?include_evidence_paths=true" download="reviewed-statement-with-paths.csv" @click="closeExport">With supporting evidence paths</a>
-        <a class="button secondary" href="/api/matching-export?include_evidence_paths=false" download="reviewed-statement.csv" @click="closeExport">Without supporting evidence paths</a>
+        <a class="button dark" href="/api/matching-workbook?include_evidence_paths=true" download="reviewed-statement-with-paths.xlsx" @click="closeExport">With supporting evidence paths</a>
+        <a class="button secondary" href="/api/matching-workbook?include_evidence_paths=false" download="reviewed-statement.xlsx" @click="closeExport">Without supporting evidence paths</a>
       </div>
     </dialog>
     <dialog ref="dialog" class="evidence-dialog" aria-labelledby="report-evidence-title" @cancel.prevent="closeEvidence" @keydown="containFocus">

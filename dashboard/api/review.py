@@ -293,3 +293,16 @@ def matching_stop(body: dict, review=Depends(interrupt_context)):
 def matching_export(include_evidence_paths: bool = True, state=Depends(active_context)):
     """Export every reviewed statement row under the existing export policy."""
     return Response(final_review.export_csv(state.review, include_evidence_paths), media_type="text/csv")
+
+
+@router.get('/matching-workbook')
+def matching_workbook(include_evidence_paths: bool = True, state=Depends(active_context)):
+    """Download the styled final statement with optional supporting evidence paths."""
+    from dashboard.services.matching.final_export import export_workbook
+
+    filename = 'reviewed-statement-with-paths.xlsx' if include_evidence_paths else 'reviewed-statement.xlsx'
+    return Response(
+        export_workbook(state.review, include_evidence_paths),
+        media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        headers={'Content-Disposition': f'attachment; filename="{filename}"'},
+    )

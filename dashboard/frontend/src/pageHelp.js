@@ -41,7 +41,7 @@ export const pageHelp = {
   ]],
   FinalReport: ['Final report', [
     'Search or filter transactions and use View evidence to compare original bank and approved supporting documents.',
-    'Export CSV downloads the saved review. Pending, rejected, or incompletely supported payments remain No supporting.',
+    'Export Excel uses the bank statement workbook format, with or without supporting evidence paths. Confirmed, fully supported matches show OK; other remarks stay blank.',
     'Return to Final review to change decisions. The report reflects the current saved ledger.',
   ]],
   Completion: ['Completion', [
