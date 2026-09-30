@@ -26,6 +26,27 @@ async function showCompletion() {
     $('#completion-title').textContent = 'Completion unavailable.';
   }
 }
+/* Download the prepared archive while keeping export failures on this page. */
+async function exportUnmatched() {
+  const button = $('#export-unmatched'), status = $('#unmatched-export-status');
+  button.disabled = true; status.textContent = 'Preparing ZIP...';
+  try {
+    const response = await fetch('/api/unmatched-documents-export');
+    if (!response.ok) {
+      const result = await response.json();
+      throw Error(result.error || 'Unable to export unmatched documents');
+    }
+    const url = URL.createObjectURL(await response.blob());
+    const link = document.createElement('a');
+    link.href = url; link.download = 'unmatched-documents.zip';
+    document.body.append(link); link.click(); link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    status.textContent = 'ZIP downloaded.';
+  } catch (error) {
+    status.textContent = error.message;
+  } finally { button.disabled = false; }
+}
+$('#export-unmatched').onclick = exportUnmatched;
 showCompletion();
 
 

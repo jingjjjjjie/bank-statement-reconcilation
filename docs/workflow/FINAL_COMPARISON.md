@@ -185,3 +185,16 @@ approved evidence paths on that sheet; changed evidence remains explicitly flagg
 Older imports recover omitted layout fields only from their original hash-bound
 master. Missing balances stay blank with an explanatory comment. The legacy CSV
 endpoint remains available for compatibility; the final report UI downloads Excel.
+
+
+## Unmatched document ZIP (2026-09-30)
+
+Completion offers Export unmatched documents. The archive contains an uploads/
+folder preserving the active supporting folder's relative paths. Keep one copy of
+exact byte duplicates and omit human-confirmed content duplicates when their kept
+original still exists. Restore legacy organized copies to their original relative
+locations inside the ZIP. Original files and review decisions are never modified.
+The user explicitly chose to exclude any document with a current approved match,
+including partially allocated or contextual links. Unapproved suggestions, rejected
+matches and stale approvals do not exclude originals. Discarded/unprocessed files
+remain included unless they are duplicates. An empty result is a valid uploads/ ZIP.

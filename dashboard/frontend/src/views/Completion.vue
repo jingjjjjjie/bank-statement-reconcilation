@@ -12,6 +12,7 @@ usePage(root, initialize);
   <div ref="root" class="page-view">
 <main>
     <section class="page-heading"><div><div class="page-title"><h1 id="completion-title">Checking completion…</h1><PageHelp page="Completion" /></div><p id="completion-note">Reading saved review and bank results.</p></div></section>
+    <section class="settings-card"><button id="export-unmatched" type="button" class="button dark">Export unmatched documents</button><p id="unmatched-export-status" role="status"></p></section>
     <section class="settings-card"><h2>Workflow checks</h2><p id="completion-steps"></p></section>
     <section class="settings-card" id="final-usage" hidden><h2>Total recorded Codex usage</h2><strong id="final-total"></strong><p id="final-details"></p><pre id="final-breakdown"></pre></section>
     <div id="completion-error" class="validation" role="alert" hidden></div>

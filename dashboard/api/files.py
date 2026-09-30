@@ -6,7 +6,8 @@ from pathlib import Path
 from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
-from fastapi.responses import Response
+from fastapi.responses import FileResponse, Response
+from starlette.background import BackgroundTask
 
 from dashboard.previews import extraction as extraction_preview, office as office_preview
 from dashboard.routes import active_context
@@ -147,3 +148,17 @@ def preview(id: str, page: int = Query(0, ge=0), state=Depends(active_context)):
         )
         path = Path(units[page]["image"])
     return file_response(path)
+
+
+@router.get('/unmatched-documents-export')
+def unmatched_documents_export(state=Depends(active_context)):
+    """Download unmatched originals in their folder structure and clean up the temporary ZIP."""
+    from dashboard.services.matching.unmatched_export import export_zip
+
+    path = export_zip(state.review)
+    return FileResponse(
+        path,
+        media_type='application/zip',
+        filename='unmatched-documents.zip',
+        background=BackgroundTask(path.unlink, missing_ok=True),
+    )
