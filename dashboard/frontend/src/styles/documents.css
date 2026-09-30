@@ -37,13 +37,12 @@
 .document-actions .receipt-review-link:hover { background: #edf2e9; }
 .document-status.processing { background: #e8eef8; color: #3b567d; }
 .document-table .document-folder td{padding:0;background:#f0f4ef}
-.folder-toggle{display:flex;align-items:center;gap:8px;width:100%;padding:11px 10px 11px calc(10px + var(--folder-depth,0)*18px);border:0;background:transparent;color:#334e3d;font:inherit;text-align:left;cursor:pointer}
-.folder-toggle:hover{background:#e5ede5}.folder-toggle:focus-visible{outline:2px solid #527b60;outline-offset:-2px}
-.folder-toggle svg{width:19px;height:19px;flex:none;color:#8b7136}.folder-arrow{width:10px;flex:none}.folder-name{font-weight:600;overflow-wrap:anywhere;min-width:0}
+.folder-heading{display:flex;align-items:center;gap:8px;width:100%;padding:11px 10px 11px calc(10px + var(--folder-depth,0)*18px);border:0;background:transparent;color:#334e3d;font:inherit;text-align:left}
+.folder-heading svg{width:19px;height:19px;flex:none;color:#8b7136}.folder-name{font-weight:600;overflow-wrap:anywhere;min-width:0}
 .document-table .folder-count{margin:0 0 0 auto;padding-left:8px;font-size:11px;font-weight:400;white-space:nowrap;color:#66746b}
 .document-table .document-file td:first-child{padding-left:calc(10px + var(--folder-depth,0)*18px)}
-.document-table .duplicate-file{background:#f4f4f3;color:#747a75}.document-table .duplicate-file a{color:#69716c}.document-status.duplicate{background:#e6e8e5;color:#646c67}
-@media(max-width:760px){.document-table .document-folder{display:block;padding:0}.document-table .document-file{padding:12px 0}.document-table .document-file td:first-child{padding-left:min(calc(var(--folder-depth,0)*12px),60px)}.folder-toggle{padding-left:min(calc(10px + var(--folder-depth,0)*12px),60px)}.document-table .document-file .document-actions{padding-left:12px}}
+.document-table .duplicate-file{background:#eeeeee;color:#737373}.document-table .duplicate-file strong,.document-table .duplicate-file a{color:#737373}.document-table .duplicate-file .receipt-review-link{border-color:#d4d4d4}.document-table .duplicate-file .receipt-review-link:hover{background:#e2e2e2}.document-status.duplicate{background:#dedede;color:#626262}
+@media(max-width:760px){.document-table .document-folder{display:block;padding:0}.document-table .document-file{padding:12px 0}.document-table .document-file td:first-child{padding-left:min(calc(var(--folder-depth,0)*12px),60px)}.folder-heading{padding-left:min(calc(10px + var(--folder-depth,0)*12px),60px)}.document-table .document-file .document-actions{padding-left:12px}}
 @keyframes document-progress-sweep { to { transform: translateX(100%); } }
 @keyframes document-progress-wait { from { transform: translateX(-110%); } to { transform: translateX(330%); } }
 @media (prefers-reduced-motion: reduce) { .progress-fill { transition: none; } .progress-track .progress-activity { animation: none; } .progress-track[data-busy="true"] .progress-activity { transform: translateX(60%); opacity: .6; } }

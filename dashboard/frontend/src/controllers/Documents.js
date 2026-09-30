@@ -8,9 +8,6 @@ const { $, api, toast, pollVisible } = page;
 let documentState = {prepared: false, documents: []};
 let documentRequestMessage = "";
 let executionRevision = 0;
-const collapsedFolders = new Set();
-const filteredFolders = new Set();
-let folderFilter = '';
 let legacyLocations;
 
 function sourceFiles(rows) {
@@ -52,9 +49,6 @@ function renderDocuments() {
   const rows = documentState.documents;
   const search = $('#document-search').value.trim().toLowerCase();
   const filter = $('#document-filter').value;
-  const filterKey = JSON.stringify([search, filter]);
-  if (filterKey !== folderFilter) { filteredFolders.clear(); folderFilter = filterKey; }
-  const collapsed = search || filter !== 'all' ? filteredFolders : collapsedFolders;
   const files = sourceFiles(rows);
   const visible = files.filter(item => (filter === 'all' || (filter === 'duplicate' ? item.duplicate : item.status === filter)) &&
     `${item.name} ${item.path}`.toLowerCase().includes(search));
@@ -85,23 +79,13 @@ function renderDocuments() {
     body.append(tr);
   }
   function appendFolder(folder, depth) {
-    /* Expand search results automatically; retain the user's ordinary collapsed folders. */
-    const expanded = !collapsed.has(folder.path);
-    const tr = node('tr', 'document-folder'), cell = node('td'), toggle = node('button', 'folder-toggle');
+    /* Keep folder headings and all matching files visible. */
+    const tr = node('tr', 'document-folder'), cell = node('td'), heading = node('div', 'folder-heading');
     tr.style.setProperty('--folder-depth', depth); cell.colSpan = 3;
-    toggle.type = 'button'; toggle.dataset.folderPath = folder.path;
-    toggle.title = folder.path; toggle.setAttribute('aria-expanded', String(expanded));
-    toggle.setAttribute('aria-label', `${expanded ? 'Collapse' : 'Expand'} folder ${folder.name}`);
-    const arrow = node('span', 'folder-arrow', expanded ? '▾' : '▸'); arrow.setAttribute('aria-hidden', 'true');
-    toggle.append(arrow, $('#document-folder-icon svg').cloneNode(true), node('span', 'folder-name', folder.name),
+    heading.title = folder.path;
+    heading.append($('#document-folder-icon svg').cloneNode(true), node('span', 'folder-name', folder.name),
       node('small', 'folder-count', `${folder.count} ${folder.count === 1 ? 'file' : 'files'}`));
-    toggle.onclick = () => {
-      if (expanded) collapsed.add(folder.path); else collapsed.delete(folder.path);
-      renderDocuments();
-      [...body.querySelectorAll('.folder-toggle')].find(button => button.dataset.folderPath === folder.path)?.focus();
-    };
-    cell.append(toggle); tr.append(cell); body.append(tr);
-    if (!expanded) return;
+    cell.append(heading); tr.append(cell); body.append(tr);
     const compare = (left, right) => left.name.localeCompare(right.name, undefined, {numeric:true});
     [...folder.folders.values()].sort(compare).forEach(child => appendFolder(child, depth + 1));
     folder.files.sort(compare).forEach(item => appendFile(item, depth + 1));
