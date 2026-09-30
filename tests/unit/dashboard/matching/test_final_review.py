@@ -125,6 +125,70 @@ class MatchingReviewTests(FinalReviewFixture):
         self.assertIn("'=not a formula", exported)
         self.assertEqual(len(list(csv.DictReader(exported.splitlines()))), 3)
 
+    def test_statement_export_options_and_match_marker(self):
+        """Both layouts retain every row; only full support gets OK and paths are optional."""
+        matching.decide(self.review, self.request())
+        matching.decide(self.review, self.request('B2', action='deny'))
+        with_paths = list(csv.DictReader(matching.export_csv(self.review).decode('utf-8-sig').splitlines()))
+        without_paths = list(csv.DictReader(matching.export_csv(self.review, False).decode('utf-8-sig').splitlines()))
+        self.assertEqual(
+            list(with_paths[0])[:11],
+            [
+                'DATE',
+                'LEDGER',
+                'SQL',
+                'SALES TYPE',
+                'PV/OR',
+                'PAY TO',
+                'PARTICULAR',
+                'DR',
+                'CR',
+                'TOTAL',
+                'REMARK',
+            ],
+        )
+        self.assertEqual([row['REMARK'] for row in with_paths], ['OK', '', ''])
+        self.assertEqual(with_paths[0]['CR'], '10')
+        self.assertEqual(with_paths[0]['DR'], '')
+        self.assertEqual(with_paths[0]['PARTICULAR'], 'Receipt')
+        self.assertEqual(with_paths[1]['PARTICULAR'], '')
+        self.assertEqual(with_paths[0]['Supporting evidence paths'], str(matching.evidence(self.review, 'item', 'D1')))
+        self.assertEqual([row['Supporting evidence paths'] for row in with_paths[1:]], ['', ''])
+        self.assertEqual(
+            without_paths,
+            [{key: value for key, value in row.items() if key != 'Supporting evidence paths'} for row in with_paths],
+        )
+        source = matching.evidence(self.review, 'item', 'D1')
+        source.write_text('Changed evidence', encoding='utf-8')
+        changed = list(csv.DictReader(matching.export_csv(self.review).decode('utf-8-sig').splitlines()))
+        self.assertEqual(changed[0]['REMARK'], '')
+        self.assertEqual(changed[0]['PARTICULAR'], '')
+        self.assertEqual(changed[0]['Stale evidence'], 'True')
+
+    def test_statement_export_preserves_bank_columns(self):
+        """Read debit, credit and balance from the bound master without recomputing totals."""
+        master = self.project / 'bank-output/master_statement.csv'
+        with master.open(newline='', encoding='utf-8') as stream:
+            rows = list(csv.DictReader(stream))
+        rows[0].update(money_in='0.00', money_out='10.00', balance='123.45')
+        with master.open('w', newline='', encoding='utf-8') as stream:
+            writer = csv.DictWriter(stream, fieldnames=list(rows[0]))
+            writer.writeheader()
+            writer.writerows(rows)
+        facts = matching.read(self.cache / 'facts.json')
+        facts['bank_hash'] = matching.source_hash(master)
+        self.write(self.cache / 'facts.json', facts)
+        exported = list(csv.DictReader(matching.export_csv(self.review).decode('utf-8-sig').splitlines()))
+        self.assertEqual([exported[0][field] for field in ('DR', 'CR', 'TOTAL')], ['0.00', '10.00', '123.45'])
+        self.assertEqual([exported[0][field] for field in ('LEDGER', 'SQL', 'SALES TYPE', 'PV/OR')], ['', '', '', ''])
+
+    def test_partial_approval_exports_blank_match(self):
+        """An approved allocation with a difference must not export OK."""
+        matching.decide(self.review, self.request(allocations=[{'item_id': 'D1', 'amount': '4'}]))
+        rows = list(csv.DictReader(matching.export_csv(self.review, False).decode('utf-8-sig').splitlines()))
+        self.assertEqual(rows[0]['REMARK'], '')
+        self.assertEqual(rows[0]['Difference'], '6')
+
     def test_cache_changes_and_workspace_changes_do_not_reuse_approvals(self):
         """The ledger is tied to one exact cache and workspace, not reusable sequence IDs."""
         matching.decide(self.review, self.request())

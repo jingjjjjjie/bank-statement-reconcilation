@@ -5,6 +5,7 @@ import { api } from '../api.js';
 import ReportEvidence from '../components/ReportEvidence.vue';
 import '../styles/final-report.css';
 const data = ref(null), error = ref(''), loading = ref(false), query = ref(''), filter = ref('all');
+const exportDialog = ref(null), exportButton = ref(null);
 const selected = ref(null), itemId = ref(''), dialog = ref(null);
 let opener, request = 0;
 const evidencePositions = new Map();
@@ -34,10 +35,15 @@ function closeEvidence() {
   if (selected.value && itemId.value) selectedItems.set(selected.value.id, itemId.value);
   dialog.value?.close(); selected.value = null; opener?.focus();
 }
+function closeExport() {
+  /* Restore focus to the export button after dismissal or download. */
+  if (!exportDialog.value?.open) return;
+  exportDialog.value.close(); exportButton.value?.focus();
+}
 function containFocus(event) {
   /* Wrap keyboard navigation within the popup, including Shift+Tab. */
   if (event.key !== 'Tab') return;
-  const controls = [...dialog.value.querySelectorAll('button:not(:disabled), a[href], select:not(:disabled)')].filter(el => el.getClientRects().length);
+  const controls = [...event.currentTarget.querySelectorAll('button:not(:disabled), a[href], select:not(:disabled)')].filter(el => el.getClientRects().length);
   const first = controls[0], last = controls.at(-1);
   if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
   else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
@@ -45,12 +51,12 @@ function containFocus(event) {
 function money(value, currency) { /* Format display values without recalculating allocations. */ return value === '' || value == null ? 'Not recorded' : `${currency || 'Currency unknown'} ${Number(value).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`; }
 function decisionLabel(value) { /* Use the same human decision wording as final review. */ return {approved: 'Approved', denied: 'Rejected', pending: 'Pending'}[value]; }
 onActivated(refresh);
-onDeactivated(() => { request++; loading.value = false; closeEvidence(); });
+onDeactivated(() => { request++; loading.value = false; closeEvidence(); closeExport(); });
 </script>
 
 <template>
   <main class="final-report" :aria-busy="loading">
-    <header class="report-heading"><div><div class="page-title"><h1>Final report</h1><PageHelp page="FinalReport" /></div></div><a v-if="data" class="button dark" href="/api/matching-export" download="reviewed-statement.csv">Export CSV</a></header>
+    <header class="report-heading"><div><div class="page-title"><h1>Final report</h1><PageHelp page="FinalReport" /></div></div><button v-if="data" ref="exportButton" type="button" class="button dark" @click="exportDialog.showModal()">Export CSV</button></header>
     <p v-if="loading && !data" role="status">Loading saved review decisions…</p>
     <div v-if="error" role="alert" class="report-notice">{{ error }} <button type="button" @click="refresh">Retry</button></div>
     <template v-if="data">
@@ -62,6 +68,13 @@ onDeactivated(() => { request++; loading.value = false; closeEvidence(); });
         <tr v-for="bank in rows" :key="bank.id"><td><strong>{{ bank.parties.join(' / ') }}</strong><span>{{ bank.description }}</span></td><td data-label="Bank amount">{{ money(bank.amount, bank.currency) }}</td><td data-label="Support"><span class="report-status" :class="{supported: bank.support_status === 'Supporting'}">{{ bank.support_status }}</span><small v-if="bank.stale">Evidence changed — recheck required</small></td><td data-label="Review">{{ decisionLabel(bank.review_status) }}</td><td><button type="button" class="text-button" :aria-label="`View evidence for ${bank.id}`" @click="openEvidence(bank, $event)">View evidence</button></td></tr>
       </tbody></table><p v-if="!rows.length" class="report-caption">No transactions match these filters.</p></div>
     </template>
+    <dialog ref="exportDialog" class="report-export-dialog" aria-labelledby="report-export-title" @cancel.prevent="closeExport" @keydown="containFocus">
+      <header class="dialog-heading"><h2 id="report-export-title">Export CSV</h2><button type="button" class="dialog-close" aria-label="Close export" @click="closeExport">&times;</button></header>
+      <div class="report-export-options">
+        <a class="button dark" href="/api/matching-export?include_evidence_paths=true" download="reviewed-statement-with-paths.csv" @click="closeExport">With supporting evidence paths</a>
+        <a class="button secondary" href="/api/matching-export?include_evidence_paths=false" download="reviewed-statement.csv" @click="closeExport">Without supporting evidence paths</a>
+      </div>
+    </dialog>
     <dialog ref="dialog" class="evidence-dialog" aria-labelledby="report-evidence-title" @cancel.prevent="closeEvidence" @keydown="containFocus">
       <template v-if="selected">
         <header class="dialog-heading"><div><h2 id="report-evidence-title">{{ selected.parties.join(' / ') }}</h2></div><button type="button" class="dialog-close" aria-label="Close evidence" autofocus @click="closeEvidence">×</button></header>

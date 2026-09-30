@@ -376,3 +376,16 @@ body:has(.evidence-dialog[open]) {
     width:100%;
   }
 }
+
+.report-export-dialog {
+  width:min(460px, calc(100vw - 32px));
+  max-width:calc(100vw - 32px);
+  padding:0;
+  border:1px solid #d3dcd1;
+  border-radius:16px;
+  color:#233329;
+  background:#fafbf8;
+}
+.report-export-dialog::backdrop { background:#13271dc4; }
+.report-export-options { display:grid; gap:12px; padding:20px; }
+.report-export-options .button { text-align:center; white-space:normal; }

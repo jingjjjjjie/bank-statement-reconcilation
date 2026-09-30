@@ -290,6 +290,6 @@ def matching_stop(body: dict, review=Depends(interrupt_context)):
 
 
 @router.get("/matching-export")
-def matching_export(state=Depends(active_context)):
+def matching_export(include_evidence_paths: bool = True, state=Depends(active_context)):
     """Export every reviewed statement row under the existing export policy."""
-    return Response(final_review.export_csv(state.review), media_type="text/csv")
+    return Response(final_review.export_csv(state.review, include_evidence_paths), media_type="text/csv")

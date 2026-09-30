@@ -156,7 +156,7 @@ class FinalReportBrowserTests(unittest.TestCase):
             page.get_by_label('Find a transaction').fill('Cedar')
             trigger = page.get_by_role('button', name='View evidence for B1')
             trigger.click()
-            dialog = page.get_by_role('dialog')
+            dialog = page.locator('.evidence-dialog')
             expect(dialog).to_be_visible()
             expect(dialog.locator('img')).to_have_count(2)
             for image in dialog.locator('img').all():
@@ -177,15 +177,47 @@ class FinalReportBrowserTests(unittest.TestCase):
             self.assertIn('demo-receipt-2.pdf', download.value.suggested_filename)
             for _ in range(18):
                 page.keyboard.press('Tab')
-                self.assertTrue(page.evaluate('document.querySelector("dialog").contains(document.activeElement)'))
+                self.assertTrue(
+                    page.evaluate('document.querySelector(".evidence-dialog").contains(document.activeElement)')
+                )
             page.keyboard.press('Escape')
             expect(dialog).not_to_be_visible()
             expect(trigger).to_be_focused()
             expect(page.get_by_label('Find a transaction')).to_have_value('Cedar')
             expect(page.locator('.report-table tbody tr')).to_have_count(1)
-            with page.expect_download() as export:
-                page.get_by_role('link', name='Export CSV').click()
-            self.assertIn('B3', Path(export.value.path()).read_text(encoding='utf-8-sig'))
+            export_button = page.get_by_role('button', name='Export CSV', exact=True)
+            for width in (1440, 390):
+                page.set_viewport_size({'width': width, 'height': 1000})
+                expect(page.get_by_role('navigation')).to_have_count(1)
+                help_button = page.get_by_role('button', name='How to use this page')
+                expect(help_button).to_have_count(1)
+                help_button.focus()
+                expect(help_button).to_have_attribute('aria-expanded', 'true')
+                page.keyboard.press('Escape')
+                expect(help_button).to_have_attribute('aria-expanded', 'false')
+                export_button.click()
+                export_dialog = page.get_by_role('dialog', name='Export CSV')
+                expect(export_dialog).to_be_visible()
+                expect(export_dialog.get_by_role('link')).to_have_count(2)
+                for _ in range(5):
+                    page.keyboard.press('Tab')
+                    self.assertTrue(export_dialog.evaluate('(el) => el.contains(document.activeElement)'))
+                self.assertLessEqual(export_dialog.evaluate('(el) => el.scrollWidth'), width)
+                page.keyboard.press('Escape')
+                expect(export_button).to_be_focused()
+                for label, has_paths in [
+                    ('With supporting evidence paths', True),
+                    ('Without supporting evidence paths', False),
+                ]:
+                    export_button.click()
+                    with page.expect_download() as export:
+                        export_dialog.get_by_role('link', name=label, exact=True).click()
+                    rows = list(csv.DictReader(Path(export.value.path()).read_text(encoding='utf-8-sig').splitlines()))
+                    self.assertEqual(len(rows), 3)
+                    self.assertEqual([row['REMARK'] for row in rows], ['OK', '', ''])
+                    self.assertEqual('Supporting evidence paths' in rows[0], has_paths)
+                    expect(export_dialog).not_to_be_visible()
+                    expect(export_button).to_be_focused()
             page.set_viewport_size({'width': 390, 'height': 844})
             trigger.click()
             expect(dialog).to_be_visible()
@@ -235,7 +267,7 @@ class FinalReportBrowserTests(unittest.TestCase):
             )
             page.reload()
             expect(page.get_by_role('alert').filter(has_text='Saved matching snapshot')).to_be_visible()
-            expect(page.get_by_role('link', name='Export CSV')).to_have_count(0)
+            expect(page.get_by_role('button', name='Export CSV', exact=True)).to_have_count(0)
             page.unroute('**/api/matching')
             page.get_by_role('button', name='Retry').click()
             expect(page.locator('.report-table tbody tr')).to_have_count(3)

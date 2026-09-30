@@ -170,3 +170,14 @@ Selected supporting pieces occupy the upper tray and stay visible across search 
 Allocation warnings and differences use red styling. The explicit Confirm/Save button is the review action; there is no extra acknowledgment checkbox. Monetary validation, over-allocation blocking, unresolved flags and audit records remain in force.
 
 The payment header uses compact typography and inline-wrapped narration. The left panel and footer stay fixed; selected and available candidate lists scroll within their trays, preserving visible payment context and actions.
+
+## Final report CSV export (2026-09-30)
+
+Export CSV opens two choices: With supporting evidence paths and Without supporting
+evidence paths. Both export every bank transaction using the bank statement's column
+order, followed by review details (status, differences, flags and notes). The second
+choice omits the evidence-path column; it does not filter transactions. REMARK is OK
+only for current, fully supported approvals and blank otherwise. PARTICULAR uses
+current approved supporting descriptions; accounting classification fields stay blank.
+The path option includes saved approved allocation paths, with stale evidence flagged.
+CSV preserves column layout and values, not Excel styling.

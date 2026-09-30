@@ -87,6 +87,7 @@ def frozen_context(review):
     banks = {
         b['id']: {
             **b,
+            **{field: bank_sources[b['id']].get(field, '') for field in ('money_in', 'money_out', 'balance')},
             'source': bank_sources[b['id']]['source'],
             'balance_checks': bank_sources[b['id']].get('balance_checks', ''),
             'page': int(bank_sources[b['id']]['page']) - 1,
@@ -526,51 +527,63 @@ def evidence(review, kind, key):
     return Path(source)
 
 
-def export_csv(review):
-    """Export every bank row with human status, discrepancies and source references."""
+def export_csv(review, include_evidence_paths=True):
+    """Export the statement layout and review outcomes, optionally including saved evidence paths."""
+    from reconciliation.bank.excel import FIELDS, STYLE_PATH
+    from reconciliation.bank.workbook_style import WorkbookStyle
+
     data = snapshot(review)
+    items = {item['id']: item for item in data['items']}
+    style = WorkbookStyle(STYLE_PATH, FIELDS)
     stream = io.StringIO(newline='')
     writer = csv.writer(stream)
-    writer.writerow(
-        [
-            'Bank ID',
-            'Transaction ID',
-            'Date',
-            'Party',
-            'Direction',
-            'Currency',
-            'Bank amount',
-            'Support status',
-            'Review status',
-            'Stale evidence',
-            'Allocated amount',
-            'Difference',
-            'Evidence',
-            'Flags',
-            'Reviewer',
-            'Notes',
-        ]
-    )
+    headings = [column['heading'] for column in style.columns]
+    headings += [
+        'Bank ID',
+        'Transaction ID',
+        'Currency',
+        'Support status',
+        'Review status',
+        'Stale evidence',
+        'Allocated amount',
+        'Difference',
+        'Flags',
+        'Reviewer',
+        'Notes',
+    ]
+    if include_evidence_paths:
+        headings.append('Supporting evidence paths')
+    writer.writerow(headings)
     for bank in data['banks']:
         decision = bank['decision'] or {}
-        values = [
+        approved = decision.get('allocations', []) if bank['review_status'] == 'approved' else []
+        descriptions = [items[a['item_id']].get('description', '') for a in approved] if not bank['stale'] else []
+        statement = dict.fromkeys(FIELDS, '')
+        statement.update(
+            date=bank['date'],
+            counterparty=' / '.join(bank['parties']).upper(),
+            particular=' | '.join(dict.fromkeys(text for text in descriptions if text)),
+            money_in=bank.get('money_in') or (bank['amount'] if bank['direction'] == 'in' else ''),
+            money_out=bank.get('money_out') or (bank['amount'] if bank['direction'] == 'out' else ''),
+            balance=bank.get('balance', ''),
+            status='OK' if bank['support_status'] == 'Supporting' else '',
+        )
+        values = [statement[column['field']] for column in style.columns]
+        values += [
             bank['id'],
             bank['transaction_id'],
-            bank['date'],
-            ' / '.join(bank['parties']),
-            bank['direction'],
             bank['currency'],
-            bank['amount'],
             bank['support_status'],
             bank['review_status'],
             str(bank['stale']),
             decision.get('allocated_total', '0'),
             decision.get('difference', bank['amount']),
-            json.dumps(decision.get('allocations', []), ensure_ascii=False),
             ' | '.join(decision.get('flags', [])),
             decision.get('reviewer', ''),
             decision.get('note', ''),
         ]
+        if include_evidence_paths:
+            values.append(' | '.join(dict.fromkeys(a['source_path'] for a in approved if a.get('source_path'))))
         writer.writerow(
             ["'" + v if isinstance(v, str) and v.startswith(('=', '+', '-', '@', '\t', '\r')) else v for v in values]
         )
