@@ -5,7 +5,7 @@ export const pageHelp = {
     'Resume workspace returns to your last page without restarting the review.',
     'Use Browse folders or enter the folder path, then select Proceed. Exact duplicates are copied to output/duplicates/; originals stay in place.',
   ]],
-  Bank: ['Bank statement', [
+  Bank: ['Bank Statement Extraction', [
     'Load for final matching prepares the current bank statement and extracted supporting pieces. Generate matches starts matching here; Stop pauses it. The progress bar shows processed transactions and failures. Review the results on Final review. Loading alone does not start model calls.',
     'Enter the year printed on the statement, then extract it. Check the transactions and balances against the original PDF.',
     'Use Check bank extraction when ready. Search filters the statement rows.',

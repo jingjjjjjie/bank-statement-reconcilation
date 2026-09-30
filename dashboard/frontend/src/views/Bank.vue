@@ -11,7 +11,7 @@ usePage(root, initialize);
 <template>
   <div ref="root" class="page-view">
 <main>
-    <section class="page-heading"><div><div class="page-title"><h1>Bank statement</h1><PageHelp page="Bank" /></div><p id="bank-note">Loading the extracted bank statement…</p></div><a id="workbook" class="button dark" href="/api/bank-workbook" download="answer_statement_bank_only.xlsx" hidden>Download bank-only workbook</a></section>
+    <section class="page-heading"><div><div class="page-title"><h1>Bank Statement Extraction</h1><PageHelp page="Bank" /></div><p id="bank-note">Loading the extracted bank statement…</p></div><a id="workbook" class="button dark" href="/api/bank-workbook" download="answer_statement_bank_only.xlsx" hidden>Download bank-only workbook</a></section>
     <div id="bank-error" class="validation" role="alert" hidden></div>
     <section id="bank-extraction" class="settings-card" hidden>
       <h2>Extract bank statement</h2><p id="statement-source"></p>
