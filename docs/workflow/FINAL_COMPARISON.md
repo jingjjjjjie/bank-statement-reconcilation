@@ -66,7 +66,7 @@ Actual bank statement and receipt/document content is the evidence. Folder and f
 
 `/final-report` is a read-only view of the same saved ledger, reached from Final review or navigation. It lists every transaction with Supporting / No supporting and the human decision, search and support filters, and CSV export. Pending rows remain visible with an explicit incomplete-review notice. It is a live report, not a locked archival snapshot.
 
-View evidence opens a modal with the original statement at the transaction page alongside approved supporting documents. Document switches show each saved allocation; page and zoom controls, original downloads, totals, differences, flags and notes remain available. Pending or rejected proposals are never shown as approved evidence. Changed sources are flagged and previews retain hash validation. Escape or Close restores focus and preserves filters; mobile uses a full-screen stacked pane and transaction cards. No new model calls or review writes occur.
+View evidence is available only for current confirmed allocations, including partial/contextual approvals. Pending, rejected and stale rows have no evidence button. The modal shows only the approved supporting documents, without the bank statement pane. Document switches show each saved allocation; page and zoom controls, original downloads, totals, differences, flags and notes remain available. Pending or rejected proposals are never shown as approved evidence. Changed sources are flagged and previews retain hash validation. Escape or Close restores focus and preserves filters; mobile uses a full-screen stacked pane and transaction cards. No new model calls or review writes occur.
 
 ## Two review views
 

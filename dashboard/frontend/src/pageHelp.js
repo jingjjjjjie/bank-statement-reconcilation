@@ -32,15 +32,16 @@ export const pageHelp = {
     'Export reviews downloads saved reviews as benchmark ground truth: accepted pieces, discarded documents, and pending documents without pieces. Unsaved edits are not included.',
   ]],
   Matching: ['Final review', [
+    'For each selected document, choose Counts toward amount or Supporting only. Supporting only contributes no money. Role and allocation edits are drafts until Confirm / Save; changing a role updates the total and difference immediately.',
     'Load for final matching on the Bank statement page prepares the current bank and extracted pieces. Generate matches, Stop and matching progress are also on the Bank statement page. Matching proposals still require your review.',
     'Review one bank transaction at a time. Use the transaction selector, filters or Next to move to another payment.',
     'Scroll through supporting candidates on the left. Expand a card for its details and original preview on the right. Inspecting a candidate does not select or approve it.',
-    'Use only this candidate replaces the draft selection. Checkboxes let you combine separate expenses. Confirm supporting saves your decision; incomplete coverage remains No supporting.',
+    'Show opens the original evidence. Use checkboxes to add candidates and Remove to deselect them. Confirm supporting saves your decision; incomplete coverage remains No supporting.',
     'Search all pieces broadens the shortlist. Check original parties, amounts and receipt boundaries; equal amounts alone do not establish a match. Warnings and differences must be reviewed.',
     'Reject suggestion rejects the saved proposal; other evidence may exist. Undo decision releases its allocations. Unmatched pieces uses the same review ledger.',
   ]],
   FinalReport: ['Final report', [
-    'Search or filter transactions and use View evidence to compare original bank and approved supporting documents.',
+    'Search or filter transactions and use View evidence to inspect confirmed supporting documents.',
     'Export Excel uses the bank statement workbook format, with or without supporting evidence paths. Confirmed, fully supported matches show OK; other remarks stay blank.',
     'Return to Final review to change decisions. The report reflects the current saved ledger.',
   ]],

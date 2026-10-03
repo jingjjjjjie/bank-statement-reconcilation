@@ -154,7 +154,7 @@
 }
 .evidence-columns {
   display:grid;
-  grid-template-columns:1fr 1fr;
+  grid-template-columns:1fr;
   gap:18px;
   padding:20px;
 }
