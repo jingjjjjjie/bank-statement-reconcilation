@@ -81,11 +81,14 @@ class FinalExportTests(FinalReviewFixture):
             for row in baseline.active:
                 for cell in row:
                     actual = sheet[cell.coordinate]
-                    self.assertEqual(actual._style, cell._style)
+                    if cell.coordinate != 'K6':
+                        self.assertEqual(actual._style, cell._style)
                     if not (cell.row in (6, 7, 8) and cell.column in (7, 11)):
                         self.assertEqual(actual.value, cell.value)
             self.assertEqual([sheet.cell(row, 11).value for row in (6, 7, 8)], ['OK', None, None])
-            self.assertEqual(sheet['G6'].value, 'Receipt')
+            self.assertEqual(sheet['G6'].value, 'Receipt : 10.00')
+            self.assertTrue(sheet['K6'].font.bold)
+            self.assertEqual(sheet['K6'].font.color.rgb, 'FFFF0000')
             self.assertEqual(sheet['J5'].value, 100)
             self.assertEqual(sheet['I10'].value, 25)
             details = book['Review details']
@@ -125,3 +128,21 @@ class FinalExportTests(FinalReviewFixture):
         master = self.project / 'bank-output/master_statement.csv'
         master.write_text(master.read_text() + '\n', encoding='utf-8')
         self.assertEqual(final_export.statement_banks(imported), imported)
+
+
+    def test_full_receipt_format_in_both_excel_options_and_csv(self):
+        """Use actual receipt facts in particulars and preserve red bold supported remarks."""
+        final_review.decide(self.review, self.request())
+        data = final_review.snapshot(self.review)
+        item = next(item for item in data['items'] if item['id'] == 'D1')
+        item.update(document_number='R-123', payee='Example Vendor', description='Office supplies', amount='10')
+        expected = 'RECEIPT NO R-123 : Example Vendor : Office supplies : 10.00'
+        with patch.object(final_review, 'snapshot', return_value=data):
+            for paths in (True, False):
+                book = self.workbook(paths)
+                self.assertEqual(book.active['G6'].value, expected)
+                self.assertEqual(book.active['K6'].value, 'OK')
+                self.assertTrue(book.active['K6'].font.bold)
+                self.assertEqual(book.active['K6'].font.color.rgb, 'FFFF0000')
+            rows = list(csv.DictReader(io.StringIO(final_review.export_csv(self.review).decode('utf-8-sig'))))
+            self.assertEqual(rows[0]['PARTICULAR'], expected)

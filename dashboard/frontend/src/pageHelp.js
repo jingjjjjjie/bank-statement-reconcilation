@@ -45,6 +45,8 @@ export const pageHelp = {
     'Return to Final review to change decisions. The report reflects the current saved ledger.',
   ]],
   Completion: ['Completion', [
+    'Export original documents preserves every source file, including duplicates. Export original project includes the original workspace inputs and folders, excluding generated output and review data. Changed or missing intake documents must be restored before exporting originals.',
+    'Export matched documents includes whole documents with current human-confirmed matches, including partial links, in their original folder structure. Suggestions and stale matches are excluded.',
     'Export unmatched documents downloads a ZIP with the uploads folder structure, excluding documents with any current approved match and confirmed duplicates. Partial matches exclude the whole document; unapproved and stale matches remain included.',
     'Check that each workflow step is complete. Return to the relevant page for any outstanding work.',
     'Token usage is cumulative. Cached input is included in input tokens; attempts with unknown usage make totals incomplete.',

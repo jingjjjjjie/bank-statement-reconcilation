@@ -198,3 +198,28 @@ The user explicitly chose to exclude any document with a current approved match,
 including partially allocated or contextual links. Unapproved suggestions, rejected
 matches and stale approvals do not exclude originals. Discarded/unprocessed files
 remain included unless they are duplicates. An empty result is a valid uploads/ ZIP.
+
+
+## Completion source exports and PARTICULAR (2026-10-03)
+
+Completion remains the last navigation page. It also offers original documents,
+original project inputs, and confirmed matched documents as ZIP downloads, with
+original bytes and relative folder structure. Original exports retain exact copies;
+the project archive contains the input workspace, excluding generated output,
+review, duplicated, bank-output, final-review and dashboard-data folders at its root.
+It is an input archive, not an application/review-state backup. Intake document
+hashes must still match; missing or changed originals fail explicitly instead of
+claiming to reproduce unavailable historical bytes. Matched exports include all
+original locations of documents with any current approved allocation, including
+partial/contextual links; suggestions, rejected and stale decisions are excluded.
+The existing unmatched export keeps its separate deduplication policy.
+
+PARTICULAR in final Excel and CSV exports uses each current approved receipt's
+available facts: `RECEIPT NO actual-number : payee : short description : amount`.
+Missing fields and their labels are omitted. No brackets or placeholder text are
+inserted, and generic parties are not guessed to be the payee. Amount is the source
+piece amount, not an invented or bank-derived total. Several receipts occupy
+separate lines; pending, rejected and stale matches leave PARTICULAR blank.
+
+REMARK displays bold red OK only for current, fully supported human approvals.
+Unapproved, stale and incomplete support keeps the remark blank.

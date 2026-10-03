@@ -162,3 +162,18 @@ def unmatched_documents_export(state=Depends(active_context)):
         filename='unmatched-documents.zip',
         background=BackgroundTask(path.unlink, missing_ok=True),
     )
+
+
+@router.get('/source-export')
+def source_export(kind: str, state=Depends(active_context)):
+    """Download original or confirmed-match inputs with temporary-file cleanup."""
+    from dashboard.services.source_export import export_zip
+
+    names = {'original': 'original-documents.zip', 'project': 'original-project.zip', 'matched': 'matched-documents.zip'}
+    if kind not in names:
+        raise HTTPException(400, 'Unknown document export option')
+    path = export_zip(state.review, kind)
+    return FileResponse(
+        path, media_type='application/zip', filename=names[kind],
+        background=BackgroundTask(path.unlink, missing_ok=True),
+    )

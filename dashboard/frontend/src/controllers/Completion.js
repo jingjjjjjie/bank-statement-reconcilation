@@ -27,18 +27,18 @@ async function showCompletion() {
   }
 }
 /* Download the prepared archive while keeping export failures on this page. */
-async function exportUnmatched() {
-  const button = $('#export-unmatched'), status = $('#unmatched-export-status');
+async function exportArchive(button, status, endpoint, filename) {
+  /* Download original bytes without updating any review decisions. */
   button.disabled = true; status.textContent = 'Preparing ZIP...';
   try {
-    const response = await fetch('/api/unmatched-documents-export');
+    const response = await fetch(endpoint);
     if (!response.ok) {
       const result = await response.json();
-      throw Error(result.error || 'Unable to export unmatched documents');
+      throw Error(result.error || 'Unable to export documents');
     }
     const url = URL.createObjectURL(await response.blob());
     const link = document.createElement('a');
-    link.href = url; link.download = 'unmatched-documents.zip';
+    link.href = url; link.download = filename;
     document.body.append(link); link.click(); link.remove();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
     status.textContent = 'ZIP downloaded.';
@@ -46,7 +46,11 @@ async function exportUnmatched() {
     status.textContent = error.message;
   } finally { button.disabled = false; }
 }
-$('#export-unmatched').onclick = exportUnmatched;
+$('#export-unmatched').onclick = () => exportArchive($('#export-unmatched'), $('#unmatched-export-status'), '/api/unmatched-documents-export', 'unmatched-documents.zip');
+for (const [kind, filename] of [['original', 'original-documents.zip'], ['project', 'original-project.zip'], ['matched', 'matched-documents.zip']]) {
+  const button = $('#export-' + kind);
+  button.onclick = () => exportArchive(button, $('#source-export-status'), '/api/source-export?kind=' + kind, filename);
+}
 showCompletion();
 
 

@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 from decimal import Decimal
 from pathlib import Path
 
+from dashboard.services.matching.particulars import confirmed_particular
 from dashboard.services.review import write_json
 from reconciliation.core.money import amount, normalize_currencies, normalize_currency
 from reconciliation.core.paths import WORKSPACE
@@ -560,12 +561,11 @@ def export_csv(review, include_evidence_paths=True):
     for bank in data['banks']:
         decision = bank['decision'] or {}
         approved = decision.get('allocations', []) if bank['review_status'] == 'approved' else []
-        descriptions = [items[a['item_id']].get('description', '') for a in approved] if not bank['stale'] else []
         statement = dict.fromkeys(FIELDS, '')
         statement.update(
             date=bank['date'],
             counterparty=' / '.join(bank['parties']).upper(),
-            particular=' | '.join(dict.fromkeys(text for text in descriptions if text)),
+            particular=confirmed_particular(bank, items),
             money_in=bank.get('money_in') or (bank['amount'] if bank['direction'] == 'in' else ''),
             money_out=bank.get('money_out') or (bank['amount'] if bank['direction'] == 'out' else ''),
             balance=bank.get('balance', ''),

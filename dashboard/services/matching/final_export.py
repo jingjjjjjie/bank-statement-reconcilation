@@ -2,6 +2,7 @@
 
 import csv
 import io
+from copy import copy
 from datetime import datetime
 from decimal import Decimal
 
@@ -10,6 +11,7 @@ from openpyxl.styles import Alignment, Font, PatternFill
 from openpyxl.utils import get_column_letter
 
 from dashboard.services.matching import final_review
+from dashboard.services.matching.particulars import confirmed_particular
 from reconciliation.bank.excel import statement_workbook
 
 
@@ -63,14 +65,13 @@ def export_workbook(review, include_evidence_paths=True):
     for bank in banks:
         decision = bank['decision'] or {}
         allocations = decision.get('allocations', []) if bank['review_status'] == 'approved' else []
-        descriptions = [items[a['item_id']].get('description', '') for a in allocations] if not bank['stale'] else []
         incoming = bank.get('money_in') or (bank['amount'] if bank['direction'] == 'in' else '0')
         outgoing = bank.get('money_out') or (bank['amount'] if bank['direction'] == 'out' else '0')
         rows.append(
             {
                 'date': datetime.fromisoformat(bank['date']),
                 'counterparty': ' / '.join(bank['parties']).upper(),
-                'particular': ' | '.join(dict.fromkeys(text for text in descriptions if text)),
+                'particular': confirmed_particular(bank, items),
                 'money_in': number(incoming) or None,
                 'money_out': number(outgoing) or None,
                 'balance': number(bank.get('balance')),
@@ -113,7 +114,21 @@ def export_workbook(review, include_evidence_paths=True):
             f"Allocated: {detail[6]} | Difference: {detail[7]}\n"
             f"Stale evidence: {bank['stale']}\n{detail[9]}\n{detail[11]}"
         )
-        style.cell(sheet, row, 'status').comment = Comment(text, 'Review')
+        remark = style.cell(sheet, row, 'status')
+        remark.comment = Comment(text, 'Review')
+        if remark.value == 'OK':
+            font = copy(remark.font)
+            font.bold = True
+            font.color = 'FFFF0000'
+            remark.font = font
+        particular = style.cell(sheet, row, 'particular')
+        if '\n' in (particular.value or ''):
+            alignment = copy(particular.alignment)
+            alignment.wrap_text = True
+            particular.alignment = alignment
+            sheet.row_dimensions[row].height = max(
+                sheet.row_dimensions[row].height or 15, 15 * len(particular.value.splitlines())
+            )
         if rows[row - 6]['balance'] is None:
             style.cell(sheet, row, 'balance').comment = Comment('Balance unavailable in saved bank evidence.', 'Source')
     headings = [

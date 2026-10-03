@@ -66,12 +66,17 @@ def archive_files(review):
 
 def export_zip(review):
     """Write a temporary ZIP, verifying every included file as it is copied."""
-    files = archive_files(review)
+    return write_zip(archive_files(review), ['uploads/'])
+
+
+def write_zip(files, directories):
+    """Copy verified bytes into a temporary ZIP and remove failed archives."""
     with tempfile.NamedTemporaryFile(suffix='.zip', delete=False) as temporary:
         path = Path(temporary.name)
     try:
         with ZipFile(path, 'w', compression=ZIP_DEFLATED, allowZip64=True) as archive:
-            archive.writestr('uploads/', b'')
+            for directory in sorted(set(directories)):
+                archive.writestr(directory, b'')
             for source, name, expected in files:
                 digest = hashlib.sha256()
                 with source.open('rb') as input_file, archive.open(name, 'w', force_zip64=True) as output:

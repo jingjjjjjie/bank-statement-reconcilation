@@ -44,6 +44,8 @@ class UnmatchedExportBrowserTests(unittest.TestCase):
         final_review.decide(fixture.review, fixture.request(allocations=[{'item_id': 'D1', 'amount': '4'}]))
         ledger_path = fixture.project / 'final-review/decisions.json'
         before = ledger_path.read_bytes()
+        (fixture.review.root.parent / 'statement').mkdir()
+        (fixture.review.root.parent / 'statement/bank.pdf').write_bytes(b'Original statement')
         server = TestServer(('127.0.0.1', 0), create_app(fixture.review, 'test-token', SimpleNamespace()))
         threading.Thread(target=server.serve_forever, daemon=True).start()
         self.addCleanup(server.server_close)
@@ -69,6 +71,18 @@ class UnmatchedExportBrowserTests(unittest.TestCase):
                 with ZipFile(io.BytesIO(Path(download.value.path()).read_bytes())) as archive:
                     self.assertEqual(archive.namelist(), ['uploads/', 'uploads/receipt-2.txt'])
                 expect(button).to_be_enabled()
+                for kind, filename, expected in [
+                    ('original', 'original-documents.zip', {'documents/receipt-1.txt', 'documents/receipt-2.txt'}),
+                    ('matched', 'matched-documents.zip', {'documents/receipt-1.txt'}),
+                    ('project', 'original-project.zip', {'uploads/documents/receipt-1.txt', 'uploads/documents/receipt-2.txt', 'uploads/statement/bank.pdf'}),
+                ]:
+                    with page.expect_download() as source_download:
+                        page.locator('#export-' + kind).click()
+                    self.assertEqual(source_download.value.suggested_filename, filename)
+                    with ZipFile(source_download.value.path()) as archive:
+                        self.assertEqual({name for name in archive.namelist() if not name.endswith('/')}, expected)
+                    expect(page.locator('#source-export-status')).to_have_text('ZIP downloaded.')
+                expect(page.locator('.header-links a').last).to_have_attribute('href', '/complete')
                 expect(page.locator('#unmatched-export-status')).to_have_text('ZIP downloaded.')
                 self.assertLessEqual(page.evaluate('document.documentElement.scrollWidth'), width)
             page.route(
