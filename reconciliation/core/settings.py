@@ -8,7 +8,7 @@ from pathlib import Path
 from reconciliation.core.paths import WORKSPACE
 
 CONFIG_PATH = WORKSPACE / "config" / "review_config.json"
-DEFAULT_MODEL = "gpt-6-sol"
+DEFAULT_MODEL = "gpt-6.1-sol"
 DEFAULTS = {
     "pdf_whole_document_max_pages": 5,
     "pdf_mode": "vision",
