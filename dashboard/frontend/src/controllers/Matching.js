@@ -10,10 +10,14 @@ let token;
 let reviewData, activeId, saving = false, previewSerial = 0, previewState;
 let savedDraft = '', transactionPage = 0;
 const expandedCandidates = new Set(), returnedCandidates = new Set();
-const selected = new Map();
+const selected = new Map(), allocationRoles = new Map(), allocationAmounts = new Map();
+function allocationRole(id) {
+  /* Preserve an explicit money role while its amount field is temporarily empty. */
+  return allocationRoles.get(id) || (selected.get(id) === '' ? 'support' : 'money');
+}
 function draftSnapshot() {
   /* Track unsaved allocations independently of display preferences. */
-  return JSON.stringify({allocations: [...selected]});
+  return JSON.stringify({allocations: [...selected].map(([id, amount]) => [id, amount, allocationRole(id)])});
 }
 page.dirty(() => !!activeId && draftSnapshot() !== savedDraft);
 const itemById = new Map();
@@ -97,7 +101,7 @@ function applyFilters(control, key) {
   $('#filtered-empty').hidden = !!rows.length;
   $('#bank-view').hidden = !rows.length;
   if (!rows.length) {
-    activeId = null; selected.clear(); savedDraft = draftSnapshot();
+    activeId = null; selected.clear(); allocationRoles.clear(); allocationAmounts.clear(); savedDraft = draftSnapshot();
     previewSerial++; previewState = null;
     $('#transaction-detail').replaceChildren();
     $('#review-editor').hidden = true;
@@ -116,7 +120,7 @@ function requestBank(id) {
 function chooseBank(id, addItem, preservePreview = false) {
   /* Start a draft from this transaction's saved choice, or its cached proposal. */
   if (saving) return;
-  activeId = id; selected.clear(); error();
+  activeId = id; selected.clear(); allocationRoles.clear(); allocationAmounts.clear(); error();
   expandedCandidates.clear(); returnedCandidates.clear();
   const b = bank(), source = b.decision ? b.decision.allocations : b.suggestion.allocations;
   source.forEach(a => { if (itemById.has(a.item_id)) selected.set(a.item_id, a.amount); });
@@ -184,8 +188,9 @@ function renderCandidates() {
     card.setAttribute('aria-label', `Candidate ${item.id}`);
     if (previewState?.kind === 'item' && previewState.id === item.id) card.classList.add('previewing');
     const isSelected = selected.has(item.id);
+    card.dataset.role = isSelected ? allocationRole(item.id) : b.suggestion.allocations.some(a => a.item_id === item.id && a.amount === '') ? 'support' : 'money';
     const control = isSelected ? button('\u00d7', () => {
-      selected.delete(item.id); returnedCandidates.add(item.id);
+      selected.delete(item.id); allocationRoles.delete(item.id); allocationAmounts.delete(item.id); returnedCandidates.add(item.id);
       $('#candidate-query').value = '';
       renderCandidates(); updateSummary();
       [...list.querySelectorAll('.candidate-card')].find(c => c.dataset.itemId === item.id)?.querySelector('input').focus();
@@ -205,7 +210,9 @@ function renderCandidates() {
     const details = node('details', 'candidate-details'); details.open = expandedCandidates.has(item.id);
     const summary = node('summary', 'candidate-summary');
     summary.setAttribute('aria-label', `Inspect ${item.id} ${item.filename}`);
-    summary.append(node('span', 'candidate-name', item.parties.join(' / ') || 'Party unknown'), node('strong', 'candidate-amount', formatMoney(item.amount, item.currency)));
+    const documentAmount = node('strong', 'candidate-amount', formatMoney(item.amount, item.currency));
+    documentAmount.prepend(node('small', 'document-amount-label', 'Document amount'));
+    summary.append(node('span', 'candidate-name', item.parties.join(' / ') || 'Party unknown'), documentAmount);
 
     details.append(summary);
     details.ontoggle = () => {
@@ -234,34 +241,63 @@ function renderCandidates() {
     if (item.stale) body.append(node('p', 'warning', 'Source changed or unavailable. Approval blocked.'));
     if (item.boundary_unresolved) body.append(node('p', 'warning', 'Check receipt boundaries against the original.'));
     const actions = node('div', 'candidate-bottom candidate-actions');
-    if (selected.has(item.id)) {
-      const label = node('label', 'allocation-label', `Allocation (${b.currency || 'currency unknown'})`);
-      const input = node('input'); input.type = 'text'; input.inputMode = 'decimal'; input.value = selected.get(item.id); input.placeholder = 'Evidence only';
-      input.disabled = !item.currency || item.currency !== b.currency || item.amount === '';
-      input.setAttribute('aria-label', `Allocation ${item.id}`);
-      input.oninput = () => { selected.set(item.id, input.value.trim()); updateSummary(); };
-      label.append(input); actions.append(label);
-    }
     actions.append(button('Show', () => showEvidence('item', item.id), 'candidate-preview show-evidence'));
     const use = button('Use only this', () => {
-      selected.clear(); selected.set(item.id, defaultAllocation(item));
+      selected.clear(); allocationRoles.clear(); allocationAmounts.clear(); selected.set(item.id, defaultAllocation(item));
       renderCandidates(); updateSummary(); showEvidence('item', item.id);
     }, 'candidate-preview');
     use.disabled = item.stale || item.excluded;
     if (selected.size !== 1 || !selected.has(item.id)) actions.append(use);
-    body.append(actions); details.append(body); card.append(control, details); (isSelected ? tray : list).append(card);
+    body.append(actions); details.append(body);
+    const content = node('div', 'candidate-content'); content.append(details);
+    const proposal = b.suggestion.allocations.find(a => a.item_id === item.id);
+    if (proposal) content.append(node('p', 'suggested-allocation', proposal.amount === ''
+      ? `Suggested: Supporting only (${formatMoney('0', b.currency)} allocated)`
+      : `Suggested allocation: ${formatMoney(proposal.amount, b.currency)}`));
+    if (isSelected) content.append(allocationControls(item));
+    card.append(control, content); (isSelected ? tray : list).append(card);
   }
   if (!items.length) list.append(node('p', 'empty-state', 'No candidates found. Search all pieces or change your search.'));
+}
+function allocationControls(item) {
+  /* Change the draft role explicitly; supporting evidence is serialized as an empty amount. */
+  const controls = node('div', 'allocation-controls');
+  const roleLabel = node('label', 'allocation-label', 'Use as'), role = node('select');
+  role.setAttribute('aria-label', `Use as ${item.id}`);
+  const monetary = node('option', '', 'Counts toward amount'); monetary.value = 'money';
+  monetary.disabled = !item.currency || item.currency !== bank().currency || !(cents(item.amount) > 0) || !(available(item) > 0);
+  const supporting = node('option', '', 'Supporting only'); supporting.value = 'support';
+  role.append(monetary, supporting); role.value = allocationRole(item.id); roleLabel.append(role);
+  const label = node('label', 'allocation-label', `Allocation (${bank().currency || 'currency unknown'})`);
+  const input = node('input'); input.type = 'text'; input.inputMode = 'decimal'; input.value = selected.get(item.id);
+  input.setAttribute('aria-label', `Allocation ${item.id}`);
+  label.hidden = role.value === 'support'; label.append(input);
+  const note = node('span', 'allocation-note', 'No amount allocated'); note.hidden = role.value !== 'support';
+  role.onchange = () => {
+    if (role.value === 'support') {
+      allocationAmounts.set(item.id, selected.get(item.id)); selected.set(item.id, '');
+    } else selected.set(item.id, allocationAmounts.get(item.id) ?? defaultAllocation(item));
+    allocationRoles.set(item.id, role.value);
+    input.value = selected.get(item.id); label.hidden = role.value === 'support'; note.hidden = !label.hidden;
+    updateSummary();
+  };
+  input.oninput = () => { selected.set(item.id, input.value.trim()); updateSummary(); };
+  controls.append(roleLabel, label, note);
+  return controls;
 }
 function updateSummary() {
   /* Make incomplete, excessive or invalid allocations visible before submitting. */
   const b = bank(), values = [...selected.values()], total = values.reduce((sum, v) => sum + (cents(v) || 0), 0), difference = cents(b.amount) - total;
+  root.querySelectorAll('.candidate-card').forEach(card => {
+    const id = card.dataset.itemId, proposal = b.suggestion.allocations.find(a => a.item_id === id);
+    card.dataset.role = selected.has(id) ? allocationRole(id) : proposal?.amount === '' ? 'support' : 'money';
+  });
   const summary = $('#selection-summary'); summary.replaceChildren();
   summary.append(node('strong', '', `${selected.size} selected · ${formatMoney((total / 100).toFixed(2), b.currency)} allocated`));
   summary.append(node('div', difference ? 'difference' : '', difference === 0 ? 'The allocation equals the bank payment.' : `Difference: ${formatMoney((difference / 100).toFixed(2), b.currency)}`));
-  if (values.some(v => v === '')) summary.append(node('div', 'warning', 'Blank allocations link contextual evidence only.'));
+  if ([...selected.keys()].some(id => allocationRole(id) === 'support')) summary.append(node('div', 'allocation-note', 'Supporting-only documents do not add to the allocated amount.'));
   if (values.some(v => v !== '' && cents(v) === null)) summary.append(node('div', 'warning', 'Enter valid amounts with up to two decimal places.'));
-  if (selected.size > 1) summary.append(node('div', 'warning', 'Check that the documents represent separate expenses, not an invoice and its payment proof.'));
+  if ([...selected.keys()].filter(id => allocationRole(id) === 'money').length > 1) summary.append(node('div', 'warning', 'Check that the documents represent separate expenses, not an invoice and its payment proof.'));
   const flagged = difference !== 0 || selected.size > 1 || [...selected].some(([id, value]) => value === '' || itemById.get(id).boundary_unresolved || (cents(value) !== null && cents(value) < cents(itemById.get(id).amount)));
   summary.hidden = !flagged || !selected.size;
   const unchanged = draftSnapshot() === savedDraft;
@@ -270,12 +306,16 @@ function updateSummary() {
     ? `${b.support_status}. ${b.review_status === 'denied' ? 'Suggestion rejected; other evidence may exist.' : 'Saved review decision.'}`
     : `${selected.size} selected · Not confirmed`;
   $('#approve-match').textContent = difference === 0 && values.some(v => v !== '') ? 'Confirm supporting' : 'Save partial / contextual evidence';
-  $('#approve-match').disabled = saving || !selected.size || b.stale || difference < 0 || values.some(v => v !== '' && (cents(v) === null || cents(v) <= 0));
+  const missingAmount = [...selected].some(([id, value]) => allocationRole(id) === 'money' && !value);
+  if (missingAmount) summary.append(node('div', 'warning', 'Enter an allocation amount or choose Supporting only.'));
+  root.querySelectorAll('.allocation-controls input, .allocation-controls select').forEach(control => control.disabled = saving);
+  $('#approve-match').disabled = missingAmount || saving || !selected.size || b.stale || difference < 0 || values.some(v => v !== '' && (cents(v) === null || cents(v) <= 0));
 }
 async function saveDecision(action) {
   /* Send explicit user intent, then reload the authoritative ledger and balances. */
   if (saving) return;
   saving = true; error(); $('#save-status').textContent = 'Saving your decision…';
+  updateSummary();
   const queue = visibleBanks(), position = queue.findIndex(row => row.id === activeId);
   const nextId = action === 'approve' ? queue[position + 1]?.id : null;
   let persisted = false;
@@ -422,7 +462,7 @@ function toggleCandidateSearch() {
 $('#toggle-candidate-search').onclick = toggleCandidateSearch;
 $('#candidate-query').onkeydown = event => { if (event.key === 'Escape') { event.preventDefault(); toggleCandidateSearch(); } };
 $('#candidate-query').oninput = () => { renderCandidates(); $('#candidate-list').scrollTop = 0; };
-$('#restore-suggestion').onclick = () => { selected.clear(); bank().suggestion.allocations.forEach(a => selected.set(a.item_id, a.amount)); renderCandidates(); updateSummary(); };
+$('#restore-suggestion').onclick = () => { selected.clear(); allocationRoles.clear(); allocationAmounts.clear(); bank().suggestion.allocations.forEach(a => selected.set(a.item_id, a.amount)); renderCandidates(); updateSummary(); };
 $('#approve-match').onclick = () => saveDecision('approve'); $('#deny-match').onclick = () => saveDecision('deny'); $('#undo-match').onclick = () => saveDecision('undo');
 $('#preview-bank').onclick = () => { if (activeId) showEvidence('bank', activeId); };
 $('#preview-page').onchange = () => renderEvidencePage();

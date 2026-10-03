@@ -209,7 +209,7 @@ class MatchingReviewBrowserTests(unittest.TestCase):
             expect(page.locator('#candidate-count')).to_have_text('7 candidates')
             expect(page.locator('.proposal-card')).to_have_count(0)
             for card in page.locator('.candidate-card').all():
-                self.assertLess(card.bounding_box()['height'], 70)
+                self.assertLess(card.bounding_box()['height'], 120 if 'selected' in card.get_attribute('class').split() else 70)
                 expect(card).to_be_in_viewport(ratio=1)
             left = page.locator('.decision-panel').bounding_box()
             right = page.locator('.evidence-panel').bounding_box()

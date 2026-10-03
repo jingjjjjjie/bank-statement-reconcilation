@@ -50,3 +50,5 @@ Shared help control: `dashboard/frontend/src/components/PageHelp.vue`.
 - Review results uses a compact header with secondary actions (Reload results, Export reviews, Accept all) in Options. Entry cards use readable 14px values, a clear selection marker, more width for the short description and a shorter document-number field. Keep document total, Add entry and Remove together in one compact toolbar; wrap fields on narrow screens.
 
 - All documents shows original folder names and icons in an always-visible hierarchy without expand/collapse controls. Show exact-copy locations as grey rows labelled Exact duplicate, and approved duplicate documents as grey rows labelled Approved duplicate. Search matches folder names as well as filenames. File counts include copies; extraction progress continues to count unique documents.
+
+- Final review selected cards show Use as: Counts toward amount or Supporting only outside Details. Supporting only saves an empty allocation, never zero. Changing role updates totals immediately but requires Confirm / Save; missing monetary facts cannot be assigned a money role.

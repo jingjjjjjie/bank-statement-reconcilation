@@ -115,3 +115,22 @@
 .show-evidence:hover{background:#1d4ed8;border-color:#1d4ed8}
 .show-evidence:focus-visible{outline:2px solid #2563eb;outline-offset:3px}
 #evidence-content .source-cell-highlight{background:#dbeafe!important;outline:2px solid #2563eb;outline-offset:-2px;color:#172554}
+
+/* Keep each selected document's allocation role visible while details are collapsed. */
+.candidate-content{flex:1;min-width:0}
+.allocation-controls{display:flex;flex-wrap:wrap;align-items:end;gap:10px;padding-bottom:10px}
+.allocation-controls .allocation-label{margin:0;gap:4px;font-size:10px;min-width:0}
+.allocation-controls select,.allocation-controls input{border:1px solid #cbdacf;border-radius:5px;background:white;padding:6px 8px;font:inherit;color:#243d30;max-width:100%}
+.allocation-controls select{width:165px;font-size:11px}.allocation-controls input{width:105px;font-size:12px}
+.allocation-note{font-size:11px;color:#52695b;line-height:1.5}
+.allocation-controls [hidden]{display:none}
+
+@media(max-width:700px){.allocation-controls{gap:8px}.allocation-controls select{width:150px}.allocation-controls input{width:80px}}
+
+/* Distinguish source values from proposed allocations; context-only evidence stays blue. */
+.document-amount-label{display:block;font-size:9px;font-weight:400;color:#62756a}
+.suggested-allocation{margin:0 0 8px;font-size:11px;line-height:1.4;color:#40594b}
+.candidate-card[data-role=support],.candidate-card.suggested[data-role=support]{background:#eff6ff;border-color:#93b5e5}
+.candidate-card.suggested[data-role=support]::before{display:none}
+.candidate-card[data-role=support] .allocation-controls select{background:#dbeafe;border-color:#93b5e5;color:#1e40af}
+.candidate-card[data-role=support] .allocation-note,.candidate-card[data-role=support] .suggested-allocation{color:#1e40af}
