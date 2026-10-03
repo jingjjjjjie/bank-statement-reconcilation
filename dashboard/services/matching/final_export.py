@@ -61,10 +61,15 @@ def export_workbook(review, include_evidence_paths=True):
     if not banks:
         raise ValueError('No bank transactions to export')
     items = {item['id']: item for item in data['items']}
-    rows, details = [], []
+    rows, details, evidence_paths = [], [], []
     for bank in banks:
         decision = bank['decision'] or {}
         allocations = decision.get('allocations', []) if bank['review_status'] == 'approved' else []
+        evidence_paths.append(
+            list(dict.fromkeys(a['source_path'] for a in allocations if a.get('source_path')))
+            if not bank['stale']
+            else []
+        )
         incoming = bank.get('money_in') or (bank['amount'] if bank['direction'] == 'in' else '0')
         outgoing = bank.get('money_out') or (bank['amount'] if bank['direction'] == 'out' else '0')
         rows.append(
@@ -108,6 +113,8 @@ def export_workbook(review, include_evidence_paths=True):
     company = defaults.get('company') or data['workspace']
     book, style = statement_workbook(company, metadata, rows)
     sheet = book.active
+    if include_evidence_paths:
+        add_evidence_paths(sheet, style, evidence_paths)
     for row, (bank, detail) in enumerate(zip(banks, details), 6):
         text = (
             f"{bank['id']} | {bank['review_status']} | {bank['support_status']}\n"
@@ -168,3 +175,22 @@ def export_workbook(review, include_evidence_paths=True):
     stream = io.BytesIO()
     book.save(stream)
     return stream.getvalue()
+
+
+def add_evidence_paths(sheet, style, paths_by_row):
+    """Place each confirmed document path in its own cell immediately after REMARK."""
+    remark_column = style.cell(sheet, 4, 'status').column
+    count = max(1, max(map(len, paths_by_row), default=0))
+    for offset in range(count):
+        column = remark_column + offset + 1
+        header = sheet.cell(4, column, f'SUPPORTING DOCUMENT PATH {offset + 1}')
+        header._style = copy(style.cell(sheet, 4, 'status')._style)
+        sheet.column_dimensions[get_column_letter(column)].width = 60
+        for row, paths in enumerate(paths_by_row, 6):
+            cell = sheet.cell(row, column)
+            cell._style = copy(style.cell(sheet, row, 'status')._style)
+            cell.alignment = Alignment(vertical='top', wrap_text=True)
+            if offset < len(paths):
+                cell.value = paths[offset]
+                cell.data_type = 's'
+    sheet.print_area = f'A1:{get_column_letter(remark_column + count)}{sheet.max_row}'

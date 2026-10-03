@@ -218,7 +218,7 @@ class FinalReportBrowserTests(unittest.TestCase):
                     self.assertTrue(export.value.suggested_filename.endswith('.xlsx'))
                     book = load_workbook(io.BytesIO(Path(export.value.path()).read_bytes()))
                     self.assertEqual([book.active.cell(row, 11).value for row in (6, 7, 8)], ['OK', None, None])
-                    self.assertEqual(book.active.max_column, 11)
+                    self.assertEqual(book.active.max_column, 13 if has_paths else 11)
                     self.assertEqual(book.active.page_setup.orientation, 'landscape')
                     details = book['Review details']
                     self.assertEqual(details.max_row, 4)

@@ -182,6 +182,10 @@ PARTICULAR uses current approved supporting descriptions; classification stays b
 Both options export every bank transaction. Review details (status, differences,
 flags and notes) occupy a separate sheet. Only the first option includes saved
 approved evidence paths on that sheet; changed evidence remains explicitly flagged.
+The with-paths option also places current confirmed document paths immediately
+after REMARK on the statement sheet, one path per cell across numbered columns.
+Repeated document paths appear once per transaction; stale approvals leave these
+cells blank. The without-paths statement retains its original columns.
 Older imports recover omitted layout fields only from their original hash-bound
 master. Missing balances stay blank with an explanatory comment. The legacy CSV
 endpoint remains available for compatibility; the final report UI downloads Excel.

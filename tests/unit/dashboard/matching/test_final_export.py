@@ -2,6 +2,7 @@
 
 import csv
 import io
+from copy import copy
 from unittest.mock import patch
 
 from openpyxl import load_workbook
@@ -45,7 +46,7 @@ class FinalExportTests(FinalReviewFixture):
         return book
 
     def test_same_bank_layout_and_optional_paths(self):
-        """The statement keeps its format, amounts and totals; paths belong on the details sheet."""
+        """Optional paths follow REMARK without changing existing statement cells or totals."""
         final_review.decide(self.review, self.request(note='=literal note'))
         banks = final_review.snapshot(self.review)['banks']
         data = {
@@ -74,15 +75,18 @@ class FinalExportTests(FinalReviewFixture):
         for paths in (True, False):
             book = self.workbook(paths)
             sheet = book.active
-            self.assertEqual(sheet.max_column, 11)
+            self.assertEqual(sheet.max_column, 12 if paths else 11)
             self.assertEqual(sheet.merged_cells, baseline.active.merged_cells)
-            self.assertEqual(sheet.print_area, baseline.active.print_area)
+            self.assertIn('$A$1:$L$12' if paths else '$A$1:$K$12', sheet.print_area)
             self.assertEqual(sheet.page_setup, baseline.active.page_setup)
             for row in baseline.active:
                 for cell in row:
                     actual = sheet[cell.coordinate]
                     if cell.coordinate != 'K6':
-                        self.assertEqual(actual._style, cell._style)
+                        for attribute in ('font', 'fill', 'border', 'alignment', 'number_format', 'protection'):
+                            self.assertEqual(
+                                copy(getattr(actual, attribute)), copy(getattr(cell, attribute)), cell.coordinate
+                            )
                     if not (cell.row in (6, 7, 8) and cell.column in (7, 11)):
                         self.assertEqual(actual.value, cell.value)
             self.assertEqual([sheet.cell(row, 11).value for row in (6, 7, 8)], ['OK', None, None])
@@ -97,6 +101,9 @@ class FinalExportTests(FinalReviewFixture):
             self.assertEqual(details['L2'].value, '=literal note')
             self.assertEqual(details['L2'].data_type, 's')
             if paths:
+                self.assertEqual(sheet['L4'].value, 'SUPPORTING DOCUMENT PATH 1')
+                self.assertEqual(sheet['L6'].value, str(final_review.evidence(self.review, 'item', 'D1')))
+                self.assertIsNone(sheet['L7'].value)
                 self.assertEqual(details['M2'].value, str(final_review.evidence(self.review, 'item', 'D1')))
                 self.assertIsNone(details['M3'].value)
             self.assertFalse(any(cell.data_type == 'f' for ws in book for row in ws for cell in row))
@@ -112,7 +119,33 @@ class FinalExportTests(FinalReviewFixture):
         book = self.workbook()
         self.assertIsNone(book.active['K6'].value)
         self.assertIsNone(book.active['G6'].value)
+        self.assertIsNone(book.active['L6'].value)
         self.assertTrue(book['Review details']['I2'].value)
+
+    def test_multiple_document_paths_use_separate_cells(self):
+        """Deduplicate document references and keep paths literal, even with formula-like names."""
+        final_review.decide(
+            self.review,
+            self.request(
+                allocations=[
+                    {'item_id': 'D1', 'amount': '4'},
+                    {'item_id': 'D2', 'amount': '6'},
+                    {'item_id': 'E1', 'amount': ''},
+                ]
+            ),
+        )
+        data = final_review.snapshot(self.review)
+        allocations = data['banks'][0]['decision']['allocations']
+        allocations[0]['source_path'] = '=literal-path.pdf'
+        with patch.object(final_review, 'snapshot', return_value=data):
+            sheet = self.workbook().active
+        self.assertEqual(sheet.max_column, 13)
+        self.assertEqual(sheet['L6'].value, '=literal-path.pdf')
+        self.assertEqual(sheet['L6'].data_type, 's')
+        self.assertEqual(sheet['M6'].value, allocations[1]['source_path'])
+        self.assertEqual(sheet['M4'].value, 'SUPPORTING DOCUMENT PATH 2')
+        self.assertIsNone(sheet['M7'].value)
+        self.assertIn('$A$1:$M$12', sheet.print_area)
 
     def test_old_import_recovers_only_hash_bound_layout_fields(self):
         """Historical imports can recover balances without accepting changed master bytes."""
@@ -128,7 +161,6 @@ class FinalExportTests(FinalReviewFixture):
         master = self.project / 'bank-output/master_statement.csv'
         master.write_text(master.read_text() + '\n', encoding='utf-8')
         self.assertEqual(final_export.statement_banks(imported), imported)
-
 
     def test_full_receipt_format_in_both_excel_options_and_csv(self):
         """Use actual receipt facts in particulars and preserve red bold supported remarks."""
