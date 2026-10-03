@@ -421,6 +421,15 @@ class Review:
 def workflow_guide(review):
     """Describe verified stage readiness and the next route for the dashboard."""
     exact, content, bank = review.workflow_checks() if review else (False, False, False)
+    reviewed = False
+    if review:
+        from dashboard.services.extraction.document_status import snapshot
+
+        try:
+            documents = [row for row in snapshot(review)["documents"] if not row["approved_duplicate"]]
+            reviewed = bool(documents) and all(row["status"] in {"Complete", "Trash"} for row in documents)
+        except (OSError, ValueError, KeyError):
+            pass
     complete = False
     if review and exact and content and bank:
         try:
@@ -431,6 +440,7 @@ def workflow_guide(review):
         ("Workspace", "/", bool(review)),
         ("Exact duplicates", "/review", exact),
         ("Documents", "/documents", content),
+        ("Review results", "/extraction-review", reviewed),
         ("Bank extraction", "/bank", bank),
         ("Completion", "/complete", complete),
     ]

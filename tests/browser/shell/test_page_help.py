@@ -81,7 +81,7 @@ class PageHelpTests(unittest.TestCase):
                             expect(
                                 page.locator('.app-header a[href="/source"] .header-step.complete svg')
                             ).to_have_count(1)
-                            expect(page.locator('.app-header a[href="/bank"] .header-step')).to_have_text('3')
+                            expect(page.locator('.app-header a[href="/bank"] .header-step')).to_have_text('4')
                             expect(page.locator('.app-header a[href="/review"]')).to_have_count(0)
                             expect(page.locator('#workflow-progress, .page-navigation')).to_have_count(0)
                             expect(page.get_by_role('link', name='View documents')).to_have_count(0)

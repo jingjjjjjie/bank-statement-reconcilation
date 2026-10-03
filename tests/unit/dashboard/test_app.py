@@ -50,7 +50,7 @@ class DashboardTests(unittest.TestCase):
         """Only verified steps turn green, and undo removes exact readiness."""
         self.assertFalse(any(step["checked"] for step in workflow_guide(None)["steps"]))
         self.assertEqual(
-            [step["checked"] for step in workflow_guide(self.review)["steps"]], [True, False, False, False, False]
+            [step["checked"] for step in workflow_guide(self.review)["steps"]], [True, False, False, False, False, False]
         )
         self.review.keep(self.group, self.ids[0])
         steps = workflow_guide(self.review)["steps"]
@@ -60,8 +60,8 @@ class DashboardTests(unittest.TestCase):
         bank.mkdir()
         (bank / "master_statement.csv").write_text("balance_checks,matching_status\npassed,pending\n", encoding="utf-8")
         steps = workflow_guide(self.review)["steps"]
-        self.assertTrue(steps[3]["checked"])
-        self.assertIsNone(steps[3]["next"])
+        self.assertTrue(steps[4]["checked"])
+        self.assertIsNone(steps[4]["next"])
         self.review.undo(self.group)
         self.assertFalse(workflow_guide(self.review)["steps"][1]["checked"])
 

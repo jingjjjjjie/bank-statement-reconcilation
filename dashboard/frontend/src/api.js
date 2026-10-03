@@ -52,8 +52,8 @@ export async function api(path, body, options = {}) {
     }
     if (path === '/api/source/start') await loadSession();
     if (path === '/api/development-mode') appState.development = data.enabled;
-    // Reviewing extracted fields does not change pipeline stage completion.
-    if (!['/api/receipts/accept', '/api/receipts/undo-accept', '/api/receipts/classify', '/api/matching-decide'].includes(path)) {
+    // Saved extraction decisions change the Review results completion tick.
+    if (path !== '/api/matching-decide') {
       refreshNavigation().catch(error => toast(error.message));
     }
   }

@@ -146,8 +146,8 @@ $('#check-bank').onclick = async () => {
   const button = $('#check-bank'); button.disabled = true;
   try {
     const status = await api('/api/workflow-checks');
-    const bank = status.steps[3];
-    const pending = status.steps.slice(1, 3).filter(step => !step.checked).map(step => step.name.toLowerCase());
+    const bank = status.steps.find(step => step.href === '/bank');
+    const pending = status.steps.filter(step => ['/review', '/documents', '/extraction-review'].includes(step.href) && !step.checked).map(step => step.name.toLowerCase());
     $('#bank-step-note').textContent = !bank.checked ? 'Bank balance checks need review.' :
       bank.next ? 'Bank extraction passed. Continue to the completion checks.' :
       `Bank extraction passed. Finish ${pending.join(' and ')} before continuing.`;
