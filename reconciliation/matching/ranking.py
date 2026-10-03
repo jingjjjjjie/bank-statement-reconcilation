@@ -4,6 +4,7 @@ import math
 import re
 import unicodedata
 from collections import Counter, defaultdict
+from datetime import date
 from decimal import Decimal
 from pathlib import PurePath
 
@@ -77,20 +78,42 @@ class NameIndex:
         return max((sum(v * right.get(g, 0) for g, v in left.items()) for left in query), default=0.0)
 
 
-def path_amounts(path):
-    """Amounts written in a relative folder or file name, e.g. '报销 1,316.18' or 'wing1-192.80'."""
-    found = set()
-    for part in PurePath(path).parts:
-        for token in re.findall(
-            r"(?<![\d.])\d{1,3}(?:,\d{3})+(?:\.\d{1,2})?|(?<![\d.])\d+\.\d{1,2}(?![\d])|(?<![\d.])\d+(?![\d.])", part
-        ):
-            value = number(token.replace(",", ""))
-            # Skip yyyymmdd dates and single digits such as the 1 in "wing1".
-            if re.fullmatch(r"20\d{6}", token) or (value is not None and value < 10 and "." not in token):
-                continue
-            if value is not None and value > 0:
-                found.add((value.quantize(Decimal("0.01")), part))
-    return found
+# Calendar dates in names (yyyymmdd, yyyy-mm-dd, dd.mm.yyyy, dd/mm/yy) with the year, month and day groups.
+DATE_SHAPES = [
+    (r"(?<!\d)((?:19|20)\d{2})(\d{2})(\d{2})(?!\d)", (1, 2, 3)),
+    (r"(?<![\d.,])((?:19|20)\d{2})([-./])(\d{1,2})\2(\d{1,2})(?!\d)", (1, 3, 4)),
+    (r"(?<![\d.,])(\d{1,2})([-./])(\d{1,2})\2((?:19|20)\d{2})(?!\d)", (4, 3, 1)),
+    (r"(?<![\d.,])(\d{2})([-./])(\d{2})\2(\d{2})(?!\d)(?![.,]\d)", (4, 3, 1)),
+]
+
+
+def blank_dates(text):
+    """Blank out real calendar dates so their digits are never read as amounts."""
+    for shape, (y, m, d) in DATE_SHAPES:
+
+        def blank(match, y=y, m=m, d=d):
+            """Blank the match only when it is a valid date."""
+            year = match[y] if len(match[y]) == 4 else "20" + match[y]
+            try:
+                date(int(year), int(match[m]), int(match[d]))
+            except ValueError:
+                return match[0]
+            return " " * len(match[0])
+
+        text = re.sub(shape, blank, text)
+    return text
+
+
+def amount_pattern(value):
+    """Match the usual written forms of an amount as a standalone number, e.g. 1316.18, 1,316.18, 192.8, 350.-."""
+    two, comma = f"{value:.2f}", f"{value:,.2f}"
+    forms = {two, comma}
+    if two.endswith("0"):
+        forms |= {two[:-1], comma[:-1]}
+    if two.endswith(".00") and value >= 10:  # Single digits such as the 1 in "wing1" are not amounts.
+        forms |= {two[:-3], comma[:-3], two[:-3] + ".-"}
+    alternatives = "|".join(re.escape(form) for form in sorted(forms, key=len, reverse=True))
+    return re.compile(rf"(?<!\d)(?<!\d[.,])(?:{alternatives})(?!\d)(?![.,]\d)")
 
 
 def rank(banks, items, documents, root=""):
@@ -112,16 +135,15 @@ def rank(banks, items, documents, root=""):
         printed = [(value, label) for value, label in printed if value is not None]
         pieces_sum = sum((number(live[k]["amount"]) or Decimal(0)) for k in keys)
         totals[digest] = printed or [(pieces_sum, "sum of pieces")]
-    # Filename amounts per document, from its path relative to the upload root.
-    in_path = defaultdict(list)
+    # Folder and file names per document, relative to the upload root, with dates blanked out.
+    names_in_path = {}
     for digest, keys in by_document.items():
         path = (
             str(PurePath(live[keys[0]]["source_path"]).relative_to(root))
             if root and live[keys[0]]["source_path"].startswith(root)
             else live[keys[0]]["source_path"]
         )
-        for value, part in path_amounts(path):
-            in_path[value].append((digest, part))
+        names_in_path[digest] = [(part, blank_dates(part)) for part in PurePath(path).parts]
     common = Counter(
         number(item["amount"]).quantize(Decimal("0.01")) for item in live.values() if number(item["amount"]) is not None
     )
@@ -204,28 +226,39 @@ def rank(banks, items, documents, root=""):
                     if item_id not in selected:
                         selected.append(item_id)
                         rows[item_id] = reason
-        # Up to ten further pieces found only through the amount in a folder or file name.
-        filename = []
-        if value is not None:
-            for digest, part in in_path.get(value.quantize(Decimal("0.01")), []):
+        # Up to ten further pieces found only through the bank amount written in a folder or file name.
+        filename, filename_omitted = [], 0
+        if value is not None and value > 0:
+            pattern = amount_pattern(value.quantize(Decimal("0.01")))
+            for digest, parts in names_in_path.items():
+                part = next((part for part, text in parts if pattern.search(text)), None)
+                if part is None:
+                    continue
                 for item_id in by_document[digest]:
+                    own = number(live[item_id]["amount"])
+                    # A piece showing the bank amount itself was already ranked; its filename must not undo the cut.
                     if (
-                        item_id not in selected
-                        and item_id not in filename
-                        and compatible(live[item_id])
-                        and len(filename) < FILENAME_SLOTS
+                        item_id in selected
+                        or item_id in filename
+                        or not compatible(live[item_id])
+                        or (own is not None and abs(value - own) <= TOLERANCE)
                     ):
+                        continue
+                    if len(filename) < FILENAME_SLOTS:
                         filename.append(item_id)
                         rows[item_id] = {"route": "found by filename", "filename": part}
+                    else:
+                        filename_omitted += 1
         choices[key] = selected + filename
         omitted = len(eligible - set(selected))
         audit[key] = {
-            "policy": "amount-then-name-30-plus-filename-10-v1",
+            "policy": "amount-then-name-30-plus-filename-10-v2",
             "route": "model" if choices[key] else "none",
             "amount_matches": sum(1 for _, _, r in units if r["route"] == "amount"),
             "document_totals": sum(1 for _, _, r in units if r["route"] == "document total"),
             "name_matches": sum(1 for _, _, r in units if r["route"] == "name"),
             "filename_matches": len(filename),
+            "filename_omitted": filename_omitted,
             "selected": len(choices[key]),
             "eligible": len(eligible) + len(filename),
             "omitted": omitted,

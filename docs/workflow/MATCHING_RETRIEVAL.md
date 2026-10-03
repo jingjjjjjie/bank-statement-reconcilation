@@ -20,8 +20,11 @@ Every candidate must match the amount, the name, or a filename. Nothing else qua
 3. Up to **30** content candidates are kept. Currency conflicts are excluded; unknown
    currencies stay eligible.
 4. **Up to 10 filename candidates** are added: pieces of documents whose folder or file
-   name shows the bank amount (dates and single digits ignored). They are labelled
-   "found by filename" and never make a match strong on their own.
+   name shows the bank amount as a standalone number (1316.18, 1,316.18, 192.8, 350, 350.-;
+   not inside a longer number, a calendar date or a single digit). Pieces whose own amount
+   already matches are left to the ranking, so a filename cannot restore pieces cut at 30.
+   They are labelled "found by filename" and never make a match strong on their own; pieces
+   beyond the ten are counted as `filename_omitted`.
 5. A line with no candidate is recorded as none found without a model call.
 
 ## Model requests

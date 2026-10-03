@@ -1,8 +1,9 @@
 """Check candidate ranking rules and batching used by Generate matches."""
 
 import unittest
+from decimal import Decimal
 
-from reconciliation.matching.ranking import path_amounts, rank
+from reconciliation.matching.ranking import amount_pattern, blank_dates, rank
 
 ROOT = "/uploads/work/documents"
 
@@ -67,10 +68,30 @@ class RankTests(unittest.TestCase):
         choices, audit = self.ranked("B5", "7777.77", "NOBODY")
         self.assertEqual((choices["B5"], audit["B5"]["route"]), ([], "none"))
 
-    def test_path_amounts_skip_dates_and_stray_digits(self):
-        """Dates and single digits in names are not amounts."""
-        values = {str(v) for v, _ in path_amounts("20251203 192.8wing/wing1-5aba.jpeg")}
-        self.assertEqual(values, {"192.80"})
+    def test_filename_does_not_restore_pieces_cut_by_amount_ranking(self):
+        """A piece already showing the bank amount is ranked on content, not re-added by its filename."""
+        self.items.update([piece("p7", "agreement", "90.00", "Seti Faezah", folder="agreement-90")])
+        choices, audit = self.ranked("B6", "90.00", "NORHIDAYAH BINTI NORIZ")
+        self.assertEqual(audit["B6"]["reasons"]["p7"]["route"], "amount")
+        self.assertEqual(audit["B6"]["filename_matches"], 0)
+
+    def test_amount_pattern_finds_standalone_amounts_outside_dates(self):
+        """Written forms match on their own; dates, longer numbers and single digits do not."""
+        cases = {
+            ("20251203 192.8wing报销", "192.80"): True,
+            ("报销  1,316.18", "1316.18"): True,
+            ("invoice 350.pdf", "350.00"): True,
+            ("RM45.jpg", "45.00"): True,
+            ("租金 2200.-.pdf", "2200.00"): True,
+            ("1,316.18", "316.18"): False,
+            ("20250305", "503.00"): False,
+            ("2025-12-03 invoice", "2025.00"): False,
+            ("03.12.2025 claim", "3.12"): False,
+            ("wing1", "1.00"): False,
+        }
+        for (name, amount), expected in cases.items():
+            found = bool(amount_pattern(Decimal(amount)).search(blank_dates(name)))
+            self.assertEqual(found, expected, (name, amount))
 
 
 class BatchTests(unittest.TestCase):
