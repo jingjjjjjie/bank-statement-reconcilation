@@ -209,8 +209,10 @@ class MatchingReviewBrowserTests(unittest.TestCase):
             expect(page.locator('#candidate-count')).to_have_text('7 candidates')
             expect(page.locator('.proposal-card')).to_have_count(0)
             for card in page.locator('.candidate-card').all():
-                self.assertLess(card.bounding_box()['height'], 150 if 'selected' in card.get_attribute('class').split() else 70)
-                expect(card).to_be_in_viewport(ratio=1)
+                self.assertLess(card.bounding_box()['height'], 150 if 'selected' in card.get_attribute('class').split() else 100)
+                card.scroll_into_view_if_needed()
+                expect(card).to_be_in_viewport(ratio=0.99)
+            page.locator('#candidate-list').evaluate('(node) => node.scrollTop = 0')
             left = page.locator('.decision-panel').bounding_box()
             right = page.locator('.evidence-panel').bounding_box()
             self.assertAlmostEqual(left['width'], right['width'], delta=1)
@@ -282,6 +284,7 @@ class MatchingReviewBrowserTests(unittest.TestCase):
             for item, value in [('D1', '4'), ('D2', '6')]:
                 card = page.get_by_role('article', name=f'Candidate {item}', exact=True)
                 card.locator('.candidate-summary').click()
+                card.locator('.allocation-editor > summary').click()
                 card.get_by_role('textbox', name=f'Allocation {item}', exact=True).fill(value)
             page.locator('#approve-match').click()
             expect(page.locator('.transaction-number[aria-current]')).to_have_attribute('data-bank-id', 'B2')

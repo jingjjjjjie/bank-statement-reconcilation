@@ -51,7 +51,7 @@ Shared help control: `dashboard/frontend/src/components/PageHelp.vue`.
 
 - All documents shows original folder names and icons in an always-visible hierarchy without expand/collapse controls. Show exact-copy locations as grey rows labelled Exact duplicate, and approved duplicate documents as grey rows labelled Approved duplicate. Search matches folder names as well as filenames. File counts include copies; extraction progress continues to count unique documents.
 
-- Final review selected cards show Use as: Counts toward amount or Supporting only outside Details. Supporting only saves an empty allocation, never zero. Changing role updates totals immediately but requires Confirm / Save; missing monetary facts cannot be assigned a money role.
+- Final review selected cards keep Use as and Allocation collapsed under Edit allocation until opened. Show stays visible at the bottom-right of every candidate card. Supporting only saves an empty allocation, never zero. Changing role updates totals immediately but requires Confirm / Save; missing monetary facts cannot be assigned a money role.
 
 - Final review allocation summaries use a green gradient for valid amounts that equal the bank payment; differences or invalid amounts remain red. Green indicates balanced amounts, not saved approval.
 

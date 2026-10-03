@@ -9,7 +9,7 @@ let token;
 /* Present cached evidence; Python validates and persists every human decision. */
 let reviewData, activeId, saving = false, previewSerial = 0, previewState;
 let savedDraft = '', transactionPage = 0;
-const expandedCandidates = new Set(), returnedCandidates = new Set();
+const expandedCandidates = new Set(), expandedAllocations = new Set(), returnedCandidates = new Set();
 const selected = new Map(), allocationRoles = new Map(), allocationAmounts = new Map();
 function allocationRole(id) {
   /* Preserve an explicit money role while its amount field is temporarily empty. */
@@ -121,7 +121,7 @@ function chooseBank(id, addItem, preservePreview = false) {
   /* Start a draft from this transaction's saved choice, or its cached proposal. */
   if (saving) return;
   activeId = id; selected.clear(); allocationRoles.clear(); allocationAmounts.clear(); error();
-  expandedCandidates.clear(); returnedCandidates.clear();
+  expandedCandidates.clear(); expandedAllocations.clear(); returnedCandidates.clear();
   const b = bank(), source = b.decision ? b.decision.allocations : b.suggestion.allocations;
   source.forEach(a => { if (itemById.has(a.item_id)) selected.set(a.item_id, a.amount); });
   if (addItem) selected.set(addItem, defaultAllocation(itemById.get(addItem)));
@@ -240,15 +240,22 @@ function renderCandidates() {
     if (item.used !== '0') body.append(node('p', 'warning', `Reserved: ${formatMoney(item.used, item.currency)} · Available here: ${available(item) === null ? 'unknown' : formatMoney((available(item) / 100).toFixed(2), item.currency)}`));
     if (item.stale) body.append(node('p', 'warning', 'Source changed or unavailable. Approval blocked.'));
     if (item.boundary_unresolved) body.append(node('p', 'warning', 'Check receipt boundaries against the original.'));
-    const actions = node('div', 'candidate-bottom candidate-actions');
-    actions.append(button('Show', () => showEvidence('item', item.id), 'candidate-preview show-evidence'));
-    body.append(actions); details.append(body);
+    details.append(body);
     const content = node('div', 'candidate-content'); content.append(details);
     const proposal = b.suggestion.allocations.find(a => a.item_id === item.id);
     if (proposal) content.append(node('p', 'suggested-allocation', proposal.amount === ''
       ? `Suggested: Supporting only (${formatMoney('0', b.currency)} allocated)`
       : `Suggested allocation: ${formatMoney(proposal.amount, b.currency)}`));
-    if (isSelected) content.append(allocationControls(item));
+    const actions = node('div', 'candidate-bottom candidate-actions');
+    if (isSelected) {
+      const editor = node('details', 'allocation-editor'), toggle = node('summary', '', 'Edit allocation');
+      toggle.setAttribute('aria-label', `Edit allocation ${item.id}`);
+      editor.open = expandedAllocations.has(item.id);
+      editor.ontoggle = () => { if (editor.open) expandedAllocations.add(item.id); else expandedAllocations.delete(item.id); };
+      editor.append(toggle, allocationControls(item)); actions.append(editor);
+    }
+    actions.append(button('Show', () => showEvidence('item', item.id), 'candidate-preview show-evidence'));
+    content.append(actions);
     card.append(control, content); (isSelected ? tray : list).append(card);
   }
   if (!items.length) list.append(node('p', 'empty-state', 'No candidates found. Search all pieces or change your search.'));

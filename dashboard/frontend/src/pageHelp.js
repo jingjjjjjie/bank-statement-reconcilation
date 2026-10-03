@@ -32,7 +32,7 @@ export const pageHelp = {
     'Export reviews downloads saved reviews as benchmark ground truth: accepted pieces, discarded documents, and pending documents without pieces. Unsaved edits are not included.',
   ]],
   Matching: ['Final review', [
-    'For each selected document, choose Counts toward amount or Supporting only. Supporting only contributes no money. Role and allocation edits are drafts until Confirm / Save; changing a role updates the total and difference immediately.',
+    'Open Edit allocation on a selected document to choose Counts toward amount or Supporting only. Supporting only contributes no money. Role and allocation edits are drafts until Confirm / Save; changing a role updates the total and difference immediately.',
     'Load for final matching on the Bank statement page prepares the current bank and extracted pieces. Generate matches, Stop and matching progress are also on the Bank statement page. Matching proposals still require your review.',
     'Review one bank transaction at a time. Use the transaction selector, filters or Next to move to another payment.',
     'Scroll through supporting candidates on the left. Expand a card for its details and original preview on the right. Inspecting a candidate does not select or approve it.',

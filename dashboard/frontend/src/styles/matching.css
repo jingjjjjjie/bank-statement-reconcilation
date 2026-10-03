@@ -138,3 +138,10 @@
 /* A balanced draft is green; differences and invalid allocations retain the red warning. */
 .selection-summary.balanced{background:linear-gradient(110deg,#e8f5e9,#d7eee2,#eff8df);border-color:#91bd9c;color:#24583b}
 .selection-summary.balanced .warning,.selection-summary.balanced .difference,.selection-summary.balanced .allocation-note{color:#24583b}
+
+/* Keep allocation editing collapsed and the preview action at the card's bottom right. */
+.candidate-actions{padding-bottom:10px;margin-top:0;align-items:flex-end}
+.candidate-actions .show-evidence{margin-left:auto;flex:none}
+.allocation-editor{flex:1;min-width:0}
+.allocation-editor>summary{cursor:pointer;font-size:11px;color:#40594b;padding:6px 0}
+.allocation-editor .allocation-controls{padding:8px 0 0}
