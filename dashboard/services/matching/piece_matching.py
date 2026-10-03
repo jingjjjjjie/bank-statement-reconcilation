@@ -231,6 +231,52 @@ def suggestions(review, banks, items, facts=None, index=None):
     return choices, result
 
 
+#: Piece fields shown to the matching model.
+PIECE_FIELDS = {
+    'id',
+    'piece_type',
+    'payer',
+    'payee',
+    'other_names',
+    'description',
+    'typed_references',
+    'date',
+    'dates',
+    'document_number',
+    'amount_location',
+    'currency_default',
+    'amount',
+    'currency',
+    'amount_basis',
+    'source_locations',
+    'claim_group',
+    'expense_id',
+}
+
+
+#: Bank fields shown to the matching model.
+BANK_FIELDS = ('id', 'amount', 'currency', 'direction', 'date', 'parties', 'references', 'description')
+
+
+def bank_view(bank):
+    """One bank line as the matching model sees it."""
+    return {field: bank[field] for field in BANK_FIELDS if bank.get(field)}
+
+
+def document_view(digest, index, facts):
+    """One document as the matching model sees it: extracted facts, native text per unit and its pieces."""
+    return {
+        **facts['documents'][digest],
+        'sources': [
+            {'location': unit['label'], 'text': unit.get('text', '')} for unit in index['documents'][digest]['units']
+        ],
+        'pieces': [
+            {k: v for k, v in item.items() if k in PIECE_FIELDS and (v or k in {'amount', 'currency'})}
+            for item in facts['documents'][digest]['pieces']
+        ],
+    }
+
+
 def model_payload(banks, items, index, facts, choices, selected, retrieval=None, *, include_images=True):
     """Supply complete extracted context, optionally attaching verified source images."""
     from reconciliation.intake.duplicates import fingerprint
@@ -242,49 +288,14 @@ def model_payload(banks, items, index, facts, choices, selected, retrieval=None,
         document = index['documents'][digest]
         if fingerprint(Path(document['paths'][0])) != digest:
             raise ValueError('Supporting original changed before matching')
-        sources = []
-        for unit in document['units']:
-            source = {'location': unit['label'], 'text': unit.get('text', '')}
+        context[digest] = document_view(digest, index, facts)
+        for unit, source in zip(document['units'], context[digest]['sources']):
             if unit.get('image'):
                 if fingerprint(Path(unit['image'])) != unit['image_sha256']:
                     raise ValueError('Supporting preview changed before matching')
                 if include_images:
                     images.append(unit['image'])
                     source['image_number'] = len(images)
-            sources.append(source)
-        context[digest] = {
-            **facts['documents'][digest],
-            'sources': sources,
-            'pieces': [
-                {
-                    k: v
-                    for k, v in item.items()
-                    if k
-                    in {
-                        'id',
-                        'piece_type',
-                        'payer',
-                        'payee',
-                        'other_names',
-                        'description',
-                        'typed_references',
-                        'date',
-                        'dates',
-                        'document_number',
-                        'amount_location',
-                        'currency_default',
-                        'amount',
-                        'currency',
-                        'amount_basis',
-                        'source_locations',
-                        'claim_group',
-                        'expense_id',
-                    }
-                    and (v or k in {'amount', 'currency'})
-                }
-                for item in facts['documents'][digest]['pieces']
-            ],
-        }
     for bank in selected:
         bank_documents = {items[key]['document'] for key in choices[bank]}
         allowed[bank] = (
@@ -292,8 +303,7 @@ def model_payload(banks, items, index, facts, choices, selected, retrieval=None,
             if retrieval is not None
             else [key for key, item in items.items() if item['document'] in bank_documents and not item.get('excluded')]
         )
-    bank_fields = ('id', 'amount', 'currency', 'direction', 'date', 'parties', 'references', 'description')
-    clean_banks = {key: {field: bank[field] for field in bank_fields if bank.get(field)} for key, bank in banks.items()}
+    clean_banks = {key: bank_view(bank) for key, bank in banks.items()}
     related = [
         key
         for key in banks

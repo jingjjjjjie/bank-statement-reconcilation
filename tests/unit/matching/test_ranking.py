@@ -108,6 +108,16 @@ class BatchTests(unittest.TestCase):
         over_allocated(rows, {"p1": {"amount": "90"}})
         self.assertTrue(all(row["assessment"] == "tentative" for row in rows))
 
+    def test_low_ranked_overlap_does_not_join_lines_and_shared_documents_pack_together(self):
+        """Only top candidates create competition; under a size limit, lines needing the same document share a batch."""
+        from dashboard.services.matching.piece_match_jobs import batches
+
+        choices = {"B1": ["a", "b", "c", "x"], "B2": ["d", "e", "f", "x"], "B3": ["g"], "B4": ["h"]}
+        documents = {"B1": {"sheet"}, "B2": {"other"}, "B3": {"sheet"}, "B4": {"other"}}
+        measure = lambda lines: 60 * len(set().union(*(documents[key] for key in lines)))  # noqa: E731
+        packed = [sorted(b) for b in batches(list(choices), choices, documents, measure, limit=100)]
+        self.assertEqual(sorted(packed), [["B1", "B3"], ["B2", "B4"]])
+
 
 class CheckedRowsTests(unittest.TestCase):
     def test_one_invalid_answer_keeps_the_rest_of_the_batch(self):
@@ -138,6 +148,16 @@ class CheckedRowsTests(unittest.TestCase):
         self.assertEqual(rows["B2"]["assessment"], "tentative")
         self.assertIn("currencies", rows["B2"]["reason"])
         self.assertIn("did not return", rows["B3"]["reason"])
+
+    def test_none_with_attached_pieces_is_kept_as_tentative(self):
+        """A returned transfer answered 'none' with its payout row keeps the row for review."""
+        from dashboard.services.matching.piece_match_jobs import checked_rows
+
+        banks = {"B1": {"amount": "450", "currency": "MYR"}}
+        items = {"p1": {"amount": "450", "currency": "MYR"}}
+        row = {"bank_id": "B1", "assessment": "none", "allocations": [{"item_id": "p1", "amount": ""}], "reason": "R"}
+        (kept,) = checked_rows({"decisions": [row]}, ["B1"], {"B1": ["p1"]}, banks, items)
+        self.assertEqual((kept["assessment"], kept["allocations"]), ("tentative", row["allocations"]))
 
 
 if __name__ == "__main__":

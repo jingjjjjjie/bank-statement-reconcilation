@@ -87,6 +87,9 @@ def checked_rows(result, keys, allowed, banks, items):
                 }
             )
             continue
+        # "None" with attached pieces (e.g. a returned transfer) keeps the evidence for review instead of failing.
+        if row.get('assessment') == 'none' and row.get('allocations'):
+            row = {**row, 'assessment': 'tentative', 'reason': f'{row.get("reason", "")} Model said none; review.'}
         try:
             rows.append(validate_result({'decisions': [row]}, [key], allowed, banks, items)[0])
         except ValueError as error:
@@ -181,14 +184,28 @@ def run(review, binding, banks, items, index, facts, config):
 
 BATCH_LINES = 20
 PROMPT_LIMIT = 180000
+TOP_CANDIDATES = 3  # Lines compete when they share one of their top-ranked candidates.
+PACKING_MARGIN = 5000  # Characters left for JSON keys and wrappers not counted by batch_inputs().
 
 
-def batches(keys, choices, size=None):
-    """Pack lines that share candidate pieces into the same batch, at most `size` lines each."""
-    size = size or BATCH_LINES
+def batches(keys, choices, documents=None, measure=None, size=None, limit=None):
+    """Pack competing lines together and group lines that need the same documents, so each is sent fewer times.
+
+    Args:
+        keys: Bank lines to ask about, in bank order.
+        choices: Ranked candidate piece IDs per line.
+        documents: Document IDs behind each line's candidates; defaults to the candidates themselves.
+        measure: Prompt characters a list of lines needs; defaults to zero.
+        size: Most lines per batch. limit: most characters per batch (requests() still halves as a backstop).
+    """
+    size, limit = size or BATCH_LINES, limit or PROMPT_LIMIT
+    documents = documents or {key: set(choices[key]) for key in keys}
+    measure = measure or (lambda lines: 0)
+    order = {key: number for number, key in enumerate(keys)}
     parent = {key: key for key in keys}
 
     def root(key):
+        """Find the group representative."""
         while parent[key] != key:
             parent[key] = parent[parent[key]]
             key = parent[key]
@@ -196,25 +213,82 @@ def batches(keys, choices, size=None):
 
     owner = {}
     for key in keys:
-        for item_id in choices[key]:
+        for item_id in choices[key][:TOP_CANDIDATES]:
             if item_id in owner:
                 parent[root(key)] = root(owner[item_id])
             owner.setdefault(item_id, key)
     groups = {}
     for key in keys:
         groups.setdefault(root(key), []).append(key)
-    packed, current = [], []
-    # Largest competing groups first; oversized groups are split into consecutive batches.
-    for group in sorted(groups.values(), key=len, reverse=True):
-        for start in range(0, len(group), size):
-            part = group[start : start + size]
-            if current and len(current) + len(part) > size:
-                packed.append(current)
-                current = []
-            current = current + part
-    if current:
+
+    def held(lines):
+        """Documents a batch of lines needs."""
+        return set().union(*(documents[key] for key in lines))
+
+    def fits(lines):
+        """Whether the lines and their documents stay within both limits."""
+        return len(lines) <= size and measure(lines) <= limit
+
+    # Oversized groups split by their best candidate, then into consecutive chunks that fit.
+    units = []
+    for group in groups.values():
+        parts = [group]
+        if not fits(group):
+            by_best = {}
+            for key in group:
+                by_best.setdefault(choices[key][0], []).append(key)
+            parts = list(by_best.values())
+        for part in parts:
+            chunk = []
+            for key in part:
+                if chunk and not fits(chunk + [key]):
+                    units.append(chunk)
+                    chunk = []
+                chunk.append(key)
+            units.append(chunk)
+    # Start with the largest unit, then add units sharing most documents and bringing fewest new ones.
+    remaining = sorted(units, key=lambda unit: (-len(unit), order[unit[0]]))
+    packed = []
+    while remaining:
+        current = remaining.pop(0)
+        while True:
+            have = held(current)
+            ranked = sorted(
+                remaining, key=lambda unit: (-len(have & held(unit)), len(held(unit) - have), order[unit[0]])
+            )
+            pick = next((unit for unit in ranked if fits(current + unit)), None)
+            if pick is None:
+                break
+            remaining.remove(pick)
+            current = current + pick
         packed.append(current)
     return packed
+
+
+def batch_inputs(keys, choices, items, index, facts, retrieval, banks):
+    """Documents behind each line, and a measure of the prompt characters a list of lines needs, for batches()."""
+    documents = {key: {items[item_id]['document'] for item_id in choices[key]} for key in keys}
+
+    def chars(value):
+        """Characters the value adds to the compact JSON prompt."""
+        return len(json.dumps(value, ensure_ascii=False, separators=(',', ':'), default=str))
+
+    users = {}  # Bank lines whose candidates use each document; the others are sent as related context.
+    for key, ids in choices.items():
+        for digest in {items[item_id]['document'] for item_id in ids}:
+            users.setdefault(digest, set()).add(key)
+    needed = set().union(*documents.values())
+    view = {digest: chars(piece_matching.document_view(digest, index, facts)) for digest in needed}
+    bank = {key: chars(piece_matching.bank_view(banks[key])) for key in set().union(*(users[d] for d in needed))}
+    line = {key: chars([piece_matching.bank_view(banks[key]), choices[key], retrieval.get(key, {})]) for key in keys}
+
+    def measure(lines):
+        """Characters for these lines, their documents and the related bank lines those documents bring."""
+        held = set().union(*(documents[key] for key in lines))
+        related = set().union(*(users[d] for d in held)) - set(lines)
+        return sum(view[d] for d in held) + sum(line[k] for k in lines) + sum(bank[k] for k in related)
+
+    return documents, measure
 
 
 def over_allocated(rows, items):
@@ -263,8 +337,14 @@ def run_matching(review, binding, banks, items, index, facts, config):
         and not row.get('reason', '').startswith('Matching unresolved:')
     ]
     completed = {row['bank_id'] for row in results}
+
     # Reuse only unchanged, still-verifiable evidence; no model request is needed.
-    for keys in batches([key for key in completed if choices[key]], choices):
+    def packed(keys):
+        """Batches for these lines, packed by competition and shared documents."""
+        documents, measure = batch_inputs(keys, choices, items, index, facts, retrieval, banks)
+        return batches(keys, choices, documents, measure, limit=PROMPT_LIMIT - len(instructions) - PACKING_MARGIN)
+
+    for keys in packed([key for key in completed if choices[key]]):
         piece_matching.model_payload(banks, items, index, facts, choices, keys, retrieval, include_images=False)
     results.extend(
         {
@@ -348,7 +428,7 @@ def run_matching(review, binding, banks, items, index, facts, config):
 
     try:
         publish()
-        queue = iter(batches([key for key in banks if choices[key] and key not in completed], choices))
+        queue = iter(packed([key for key in banks if choices[key] and key not in completed]))
         with ThreadPoolExecutor(max_workers=config['max_parallel']) as pool:
             pending = {}
             for keys in queue:

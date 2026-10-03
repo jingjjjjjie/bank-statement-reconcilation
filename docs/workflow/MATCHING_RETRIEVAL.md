@@ -29,9 +29,13 @@ Every candidate must match the amount, the name, or a filename. Nothing else qua
 
 ## Model requests
 
-Lines that share candidates are packed into the same request so the model can use each
-piece once; requests hold up to 20 lines and are halved until the text fits 180,000
-characters. The payload carries extracted facts and native document text, without page
+Lines that share one of their top three candidates compete and are packed into the same
+request, so the model can use each piece once. Requests are then filled with lines that need
+the same documents, so a shared payout sheet is sent in fewer requests. Requests hold up to
+20 lines and about 180,000 characters, measured before sending; an oversized request is still
+halved. On the Tohigh benchmark (3 October 2026) this cut 58 requests to 22 and input tokens by
+54% with the same evidence found for all 117 approved lines. A "none" answer that still
+attaches pieces, such as a returned transfer, is kept as tentative for review. The payload carries extracted facts and native document text, without page
 images. Proposals are validated against each line's own candidates; combined allocations
 beyond a piece's amount, and filename-only strong proposals, become tentative. Each run
 saves `final-review/piece-matching/retrieval.json` with every candidate's route and reason.
