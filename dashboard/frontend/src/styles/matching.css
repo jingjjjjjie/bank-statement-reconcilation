@@ -134,3 +134,7 @@
 .candidate-card.suggested[data-role=support]::before{display:none}
 .candidate-card[data-role=support] .allocation-controls select{background:#dbeafe;border-color:#93b5e5;color:#1e40af}
 .candidate-card[data-role=support] .allocation-note,.candidate-card[data-role=support] .suggested-allocation{color:#1e40af}
+
+/* A balanced draft is green; differences and invalid allocations retain the red warning. */
+.selection-summary.balanced{background:linear-gradient(110deg,#e8f5e9,#d7eee2,#eff8df);border-color:#91bd9c;color:#24583b}
+.selection-summary.balanced .warning,.selection-summary.balanced .difference,.selection-summary.balanced .allocation-note{color:#24583b}

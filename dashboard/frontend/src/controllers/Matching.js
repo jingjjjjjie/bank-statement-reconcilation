@@ -242,12 +242,6 @@ function renderCandidates() {
     if (item.boundary_unresolved) body.append(node('p', 'warning', 'Check receipt boundaries against the original.'));
     const actions = node('div', 'candidate-bottom candidate-actions');
     actions.append(button('Show', () => showEvidence('item', item.id), 'candidate-preview show-evidence'));
-    const use = button('Use only this', () => {
-      selected.clear(); allocationRoles.clear(); allocationAmounts.clear(); selected.set(item.id, defaultAllocation(item));
-      renderCandidates(); updateSummary(); showEvidence('item', item.id);
-    }, 'candidate-preview');
-    use.disabled = item.stale || item.excluded;
-    if (selected.size !== 1 || !selected.has(item.id)) actions.append(use);
     body.append(actions); details.append(body);
     const content = node('div', 'candidate-content'); content.append(details);
     const proposal = b.suggestion.allocations.find(a => a.item_id === item.id);
@@ -292,7 +286,9 @@ function updateSummary() {
     const id = card.dataset.itemId, proposal = b.suggestion.allocations.find(a => a.item_id === id);
     card.dataset.role = selected.has(id) ? allocationRole(id) : proposal?.amount === '' ? 'support' : 'money';
   });
+  const invalidAmount = [...selected].some(([id, value]) => allocationRole(id) === 'money' && (cents(value) === null || cents(value) <= 0));
   const summary = $('#selection-summary'); summary.replaceChildren();
+  summary.classList.toggle('balanced', difference === 0 && !invalidAmount);
   summary.append(node('strong', '', `${selected.size} selected · ${formatMoney((total / 100).toFixed(2), b.currency)} allocated`));
   summary.append(node('div', difference ? 'difference' : '', difference === 0 ? 'The allocation equals the bank payment.' : `Difference: ${formatMoney((difference / 100).toFixed(2), b.currency)}`));
   if ([...selected.keys()].some(id => allocationRole(id) === 'support')) summary.append(node('div', 'allocation-note', 'Supporting-only documents do not add to the allocated amount.'));

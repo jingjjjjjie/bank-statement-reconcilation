@@ -39,6 +39,7 @@ class AllocationRoleTests(unittest.TestCase):
             page.locator('#bank-filter').select_option('all')
             expect(role).to_have_value('money')
             allocation.fill('4.00')
+            expect(page.locator('#selection-summary')).to_have_css('color', 'rgb(161, 45, 36)')
             role.select_option('support')
             expect(allocation).not_to_be_visible()
             expect(page.locator('#selection-summary')).to_contain_text('MYR 0.00 allocated')
@@ -52,6 +53,8 @@ class AllocationRoleTests(unittest.TestCase):
             page.get_by_role('combobox', name='Use as D2', exact=True).select_option('support')
             expect(page.locator('#selection-summary')).to_contain_text('MYR 10.00 allocated')
             expect(page.locator('#selection-summary')).to_contain_text('equals the bank payment')
+            expect(page.locator('#selection-summary')).to_have_css('color', 'rgb(36, 88, 59)')
+            self.assertIn('linear-gradient', page.locator('#selection-summary').evaluate('(node) => getComputedStyle(node).backgroundImage'))
             expect(page.locator('#approve-match')).to_be_enabled()
             ledger = fixture.project / 'final-review/decisions.json'
             before = ledger.read_bytes() if ledger.exists() else None
