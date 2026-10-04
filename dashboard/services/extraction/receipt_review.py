@@ -97,6 +97,8 @@ def context(review, *, include_banks=True, prepared=None):
                 accepted = (
                     accepted if accepted and accepted["source_revision"] == binding and source_hash == digest else None
                 )
+                if accepted and not accepted["receipts"] and accepted.get("supporting_only") is not True:
+                    accepted = None
                 pieces = identify(
                     accepted["receipts"] if accepted else raw.get("receipts", []), digest, number, binding
                 )
@@ -109,6 +111,7 @@ def context(review, *, include_banks=True, prepared=None):
                     "source_path": document["paths"][0],
                     "source_revision": binding,
                     "accepted": bool(accepted) and accepted.get("accepted", True) and not trash,
+                    "supporting_only": bool(accepted and accepted.get("supporting_only")),
                     "trash": trash,
                     "needs_refresh": "receipts" not in raw,
                     "receipts": pieces,
@@ -116,7 +119,12 @@ def context(review, *, include_banks=True, prepared=None):
                     "description": raw.get("description", raw.get("summary", raw.get("brief_description", ""))),
                     "assembled": assembled,
                     "assembly_pending": assembled and assembly is None,
-                    "review_warnings": list(
+                    "review_warnings": (
+                        ["No entries extracted. Add an entry or confirm supporting evidence only."]
+                        if not pieces and not accepted and not trash
+                        else []
+                    )
+                    + list(
                         dict.fromkeys(
                             warning
                             for n in range(len(document["units"]))
@@ -296,7 +304,9 @@ def accept_extraction(review, body):
     path, saved, units, receipts, banks = evidence
     unit = units[body["key"]]
     # Individual Accept may replace Discard; validate everything before changing state.
-    pieces = validate_acceptance({**unit, "trash": False}, body["receipts"], saved)
+    pieces = validate_acceptance(
+        {**unit, "trash": False}, body["receipts"], saved, supporting_only=body.get("supporting_only", False)
+    )
     if unit.get("trash"):
         discarded = saved["trash"].pop(unit["document_id"])
         saved["history"].append(
@@ -310,9 +320,10 @@ def accept_extraction(review, body):
         )
     previous = saved["extractions"].get(body["key"])
     value = {"source_revision": unit["source_revision"], "receipts": pieces, "reviewer": body.get("reviewer")}
+    value["supporting_only"] = not pieces and body.get("supporting_only") is True
     saved["extractions"][body["key"]] = value
     record(path, saved, "accept_extraction", body.get("reviewer"), previous, value)
-    unit.update(accepted=True, trash=False, receipts=pieces)
+    unit.update(accepted=True, trash=False, receipts=pieces, supporting_only=value["supporting_only"])
     return snapshot_units(evidence)
 
 
@@ -355,9 +366,13 @@ def require_unallocated_document(review, saved, digest):
             raise ValueError("Undo approved Final review matches for this document first")
 
 
-def validate_acceptance(unit, pieces, saved):
+def validate_acceptance(unit, pieces, saved, *, supporting_only=False):
     """Apply the same source, boundary and field checks to individual and bulk acceptance."""
     verify_source(unit)
+    if not pieces and supporting_only is not True:
+        raise ValueError("No entries extracted. Add an entry or explicitly confirm supporting evidence only.")
+    if pieces and supporting_only is True:
+        raise ValueError("Supporting evidence only cannot contain monetary entries")
     if unit.get("trash"):
         raise ValueError("Restore this document from trash before accepting its extraction")
     if unit.get("regeneration") and unit["regeneration"]["status"] != "completed":

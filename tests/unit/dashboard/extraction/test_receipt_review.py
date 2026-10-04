@@ -9,6 +9,24 @@ from tests.fixtures.receipt_review import ReceiptReviewFixture
 
 
 class ReceiptReviewTests(ReceiptReviewFixture):
+    def test_empty_extraction_requires_explicit_supporting_only(self):
+        """Neither individual nor bulk acceptance silently approves missing entries."""
+        self.state['units'][self.key]['receipts'] = []
+        self.save_state()
+        view = self.view()
+        self.assertIn('No entries extracted', view['units'][0]['review_warnings'][0])
+        body = {'revision': view['revision'], 'key': self.key, 'receipts': []}
+        for flag in (False, 'true'):
+            with self.assertRaisesRegex(ValueError, 'No entries extracted'):
+                receipt_review.accept_extraction(self.review, {**body, 'supporting_only': flag})
+        bulk = receipt_review.accept_all_extractions(self.review, {'revision': view['revision']})
+        self.assertEqual(bulk['bulk']['accepted'], 0)
+        accepted = receipt_review.accept_extraction(self.review, {**body, 'supporting_only': True})
+        self.assertTrue(accepted['units'][0]['accepted'])
+        reopened = self.view()['units'][0]
+        self.assertTrue(reopened['accepted'])
+        self.assertTrue(reopened['supporting_only'])
+
     def test_accept_all_saves_draft_once_and_rejects_stale_repeat(self):
         """Bulk acceptance retains edits and audits them without matching bank entries."""
         view = self.view()

@@ -90,7 +90,7 @@ function renderDocumentTotal() {
     totals.set(currency, (totals.get(currency) || 0n) + cents);
   }
   const values = [...totals].map(([currency, cents]) => `${currency} ${cents / 100n}.${String(cents % 100n).padStart(2, '0')}`);
-  $('#document-total').textContent = `Document total: ${values.join(' / ') || 'Unavailable'}${incomplete ? ' (incomplete)' : ''}`;
+  $('#document-total').textContent = values.length ? `Document total: ${values.join(' / ')}${incomplete ? ' (incomplete)' : ''}` : incomplete ? 'Document total: amount missing' : 'No entries extracted';
 }
 
 function renderPieceNavigation() {

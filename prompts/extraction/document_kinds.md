@@ -1,7 +1,7 @@
 # Document kinds (heading = piece type; add a line when you see a mistake)
 
 ## Receipt or invoice
-One piece per receipt, invoice or bill, even across pages. Amount: the final amount to pay or paid, after rounding (e.g. Jumlah Perlu Dibayar), not the subtotal or current charges.
+One piece per receipt, invoice or bill, even across pages. For a numbered invoice, use the final charge for that invoice, including its tax and rounding. Distinguish the invoice charge from account-summary figures: previous balances, credits, payments and total outstanding are separate document totals, not extra pieces. A zero outstanding balance does not erase a nonzero invoice charge. For a bill with no separate identifiable invoice charge, use its final amount payable. Do not create pieces for subtotals or tax components. If the invoice charge cannot be identified reliably, leave the amount empty and explain the ambiguity in limitations.
 
 ## Contract or agreement
 One piece per fee, instalment or deposit stated. If only a rate is stated (per video, per hour), one piece at that rate; never multiply.

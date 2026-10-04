@@ -289,6 +289,10 @@ if ($('#receipt-form')) $('#receipt-form').onsubmit = event => {
     // Discarded entries are hidden, so retain their saved pieces when accepting.
     const body = {revision:receiptData.revision, key, receipts:unit.trash ? unit.receipts : readReceiptPieces()};
     const button = $('#accept-receipts') || $('#receipt-form [type=submit]');
+    if (!body.receipts.length) {
+      if (!confirm('No entries extracted. Confirm you reviewed the original and it is supporting evidence only, with no monetary entry to extract?')) return;
+      body.supporting_only = true;
+    }
     const data = await saveReceiptDecision('/api/receipts/accept', body, button);
     hooks.saved?.();
     setReceiptData(data, nextReviewKey(data, key));
