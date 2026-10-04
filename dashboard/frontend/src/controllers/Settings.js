@@ -162,4 +162,49 @@ function showUsage(usage) {
   }
 }
 pollVisible(async () => showUsage((await api('/api/config')).token_usage), 10000);
+
+/* Codex account: login status, versions and device-code login. Works without a workspace. */
+let loginTimer, codexLoggedIn = false;
+function showCodex(data) {
+  const method = data.method === 'chatgpt' ? 'ChatGPT' : data.method === 'api key' ? 'an API key (not used by this workflow)' : '';
+  $('#codex-status').textContent = !data.available ? 'Codex CLI not found.'
+    : data.logged_in ? `Logged in with ${method}.` : 'Not logged in.';
+  $('#codex-status').classList.toggle('validation', !data.logged_in || data.method !== 'chatgpt');
+  $('#codex-version').textContent = !data.installed ? '' : data.update_available
+    ? `Codex ${data.installed}. Update ${data.latest} available: run python scripts/codex/update_codex.py on the host.`
+    : `Codex ${data.installed}${data.latest ? ' (latest)' : ''}.`;
+  codexLoggedIn = data.logged_in;
+  $('#codex-login-start').textContent = data.logged_in ? 'Log in again' : 'Log in with ChatGPT';
+  showLogin(data.login);
+}
+function showLogin(login) {
+  const waiting = login.running;
+  $('#codex-login').hidden = !waiting && login.exit_code === null;
+  $('#codex-login-url').textContent = $('#codex-login-url').href = login.url || '';
+  $('#codex-login-code').textContent = login.code || '';
+  $('#codex-login-output').textContent = login.lines.join('\n');
+  $('#codex-login-start').disabled = waiting;
+  $('#codex-login-cancel').hidden = !waiting;
+  clearTimeout(loginTimer);
+  if (waiting) loginTimer = setTimeout(async () => {
+    const next = await api('/api/codex/login').catch(() => ({...login}));
+    if (next.running) showLogin(next); else checkCodex();
+  }, 2000);
+}
+async function checkCodex(refresh = false) {
+  $('#codex-check').disabled = true;
+  try { showCodex(await api(`/api/codex/status${refresh ? '?refresh=true' : ''}`)); }
+  catch (error) { $('#codex-status').textContent = error.message; }
+  finally { $('#codex-check').disabled = false; }
+}
+$('#codex-check').onclick = () => checkCodex(true);
+$('#codex-login-start').onclick = async () => {
+  if (codexLoggedIn && !confirm('Replace the current Codex login?')) return;
+  try { showLogin(await api('/api/codex/login', {})); } catch (error) { toast(error.message); }
+};
+$('#codex-login-cancel').onclick = async () => {
+  try { showLogin(await api('/api/codex/login/cancel', {})); } catch (error) { toast(error.message); }
+};
+checkCodex();
+pollVisible(() => checkCodex(), 60000);
 }

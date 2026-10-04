@@ -42,7 +42,7 @@ docker compose run --rm dashboard codex login
 docker compose up -d
 ```
 
-Choose ChatGPT login. Open **http://127.0.0.1:8765**, browse to `/uploads/WorkName`, and click Proceed after checking the input preview. Selecting the folder does not change files; Proceed writes the duplicate report and activates the project.
+Choose ChatGPT login, or later use **Settings → Codex account**, which shows the login and CLI version and offers ChatGPT device-code login (a link and one-time code to enter in any browser). Open **http://127.0.0.1:8765**, browse to `/uploads/WorkName`, and click Proceed after checking the input preview. Selecting the folder does not change files; Proceed writes the duplicate report and activates the project.
 
 Compose mounts the repository at `/workspace`, `UPLOADS_PATH` at `/uploads`, and `DOCUMENTS_PATH` at `/documents`. The `codex-home` volume retains login. Review state remains in the repository through the bind mount, while exact-copy outputs are inside the work folder. The mounts are read-write; ordinary work-folder processing preserves inputs. Legacy standalone-folder organization can move copies, so use working copies for that workflow.
 
