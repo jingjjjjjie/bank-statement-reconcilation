@@ -48,6 +48,12 @@ Compose mounts the repository at `/workspace`, `UPLOADS_PATH` at `/uploads`, and
 
 Paths in `.env` may be relative to the repository or absolute host paths. Use forward slashes on Windows and quote values containing spaces, for example `UPLOADS_PATH="C:/Shared Files/uploads"`. Keep input folders outside Git and the Docker build context. Files added to an existing mount appear immediately; changing mount settings requires `docker compose up -d dashboard`.
 
+### Access from the same Wi-Fi
+
+In `.env`, set `DASHBOARD_BIND_IP=0.0.0.0` and `DASHBOARD_ALLOWED_HOSTS=<PC-IP>:8765`, replacing `<PC-IP>` with the host computer's Wi-Fi IPv4 address. Apply with `docker compose up -d dashboard`, then open `http://<PC-IP>:8765` on another device on the same network. Additional allowed addresses can be comma-separated.
+
+Windows Firewall must allow inbound TCP port 8765 on the Wi-Fi interface, restricted to the local subnet. Creating this rule requires Windows administrator approval. Use a trusted network: everyone accessing the app shares its active workspace and review state. Keep the host computer awake and Docker running. If its IP changes, update the allowed address and browser link; a router DHCP reservation can keep it stable. The default configuration remains localhost-only.
+
 ### Builds, restarts and debugging
 
 Docker builds Vue in a separate Node stage and installs it at `/opt/dashboard-frontend`, outside the repository bind mount. One Uvicorn worker serves the API and compiled frontend on port 8765. No separate Node server is needed.

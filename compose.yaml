@@ -9,7 +9,9 @@ services:
     init: true
     command: ["python", "-m", "dashboard.app", "--host", "0.0.0.0", "--port", "8765"]
     ports:
-      - "127.0.0.1:${DASHBOARD_PORT:-8765}:8765"
+      - "${DASHBOARD_BIND_IP:-127.0.0.1}:${DASHBOARD_PORT:-8765}:8765"
+    environment:
+      DASHBOARD_ALLOWED_HOSTS: ${DASHBOARD_ALLOWED_HOSTS:-}
     volumes:
       - .:/workspace
       - "${DOCUMENTS_PATH:-../bank-statement-uploads}:/documents"

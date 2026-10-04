@@ -1,6 +1,7 @@
 """Dashboard decisions only touch temporary duplicate fixtures in these tests."""
 
 import json
+import os
 import tempfile
 import threading
 import unittest
@@ -50,7 +51,8 @@ class DashboardTests(unittest.TestCase):
         """Only verified steps turn green, and undo removes exact readiness."""
         self.assertFalse(any(step["checked"] for step in workflow_guide(None)["steps"]))
         self.assertEqual(
-            [step["checked"] for step in workflow_guide(self.review)["steps"]], [True, False, False, False, False, False, False]
+            [step["checked"] for step in workflow_guide(self.review)["steps"]],
+            [True, False, False, False, False, False, False],
         )
         self.review.keep(self.group, self.ids[0])
         steps = workflow_guide(self.review)["steps"]
@@ -201,6 +203,52 @@ class DashboardTests(unittest.TestCase):
             with urllib.request.urlopen(base + "/assets/" + asset.name) as response:
                 self.assertEqual(response.read(), asset.read_bytes())
                 self.assertIn("immutable", response.headers["Cache-Control"])
+
+    def test_explicit_lan_host_retains_token_and_same_origin_checks(self):
+        """LAN access is opt-in; unrelated hosts, origins and missing tokens remain blocked."""
+        lan = '192.168.68.110:8765'
+        with patch.dict(os.environ, {'DASHBOARD_ALLOWED_HOSTS': lan}):
+            app = create_app(self.review, 'test-token')
+        server = TestServer(('127.0.0.1', 0), app)
+        threading.Thread(target=server.serve_forever, daemon=True).start()
+        self.addCleanup(server.server_close)
+        self.addCleanup(server.shutdown)
+        url = f'http://127.0.0.1:{server.server_port}'
+        with urllib.request.urlopen(urllib.request.Request(url + '/api/session', headers={'Host': lan})) as response:
+            self.assertEqual(response.status, 200)
+        body = json.dumps({'group': self.group, 'id': self.ids[0]}).encode()
+        for host, origin, token in [
+            ('evil.example:8765', f'http://{lan}', 'test-token'),
+            (lan, 'https://evil.example', 'test-token'),
+            (lan, url, 'test-token'),
+            (lan, f'http://{lan}', ''),
+        ]:
+            with self.subTest(host=host, origin=origin, token=bool(token)):
+                request = urllib.request.Request(
+                    url + '/api/keep',
+                    body,
+                    {
+                        'Host': host,
+                        'Origin': origin,
+                        'X-Review-Token': token,
+                        'Content-Type': 'application/json',
+                    },
+                )
+                with self.assertRaises(urllib.error.HTTPError) as error:
+                    urllib.request.urlopen(request)
+                self.assertEqual(error.exception.code, 403)
+        request = urllib.request.Request(
+            url + '/api/keep',
+            body,
+            {
+                'Host': lan,
+                'Origin': f'http://{lan}',
+                'X-Review-Token': 'test-token',
+                'Content-Type': 'application/json',
+            },
+        )
+        with urllib.request.urlopen(request) as response:
+            self.assertEqual(json.load(response)['reviewed'], 1)
 
 
 if __name__ == "__main__":

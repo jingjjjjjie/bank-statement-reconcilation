@@ -80,18 +80,22 @@ def create_app(review=None, token=None, sources=None):
     )
     app = FastAPI(title="Reconciliation dashboard", docs_url=None, redoc_url=None, openapi_url=None)
     app.state.context = Context(review, token or secrets.token_urlsafe(32), sources)
+    allowed_hosts = {
+        host.strip().lower() for host in os.environ.get('DASHBOARD_ALLOWED_HOSTS', '').split(',') if host.strip()
+    }
 
     @app.middleware("http")
     async def local_requests(request: Request, call_next):
-        """Retain loopback, origin, token, size, and browser security checks."""
+        """Allow explicitly configured LAN addresses while retaining browser write protection."""
         port = request.scope["server"][1]
-        hosts = {f"127.0.0.1:{port}", f"localhost:{port}"}
-        if request.headers.get("host") not in hosts:
-            return JSONResponse({"error": "Local access only"}, status_code=403)
+        hosts = {f"127.0.0.1:{port}", f"localhost:{port}"} | allowed_hosts
+        host = request.headers.get('host', '').lower()
+        if host not in hosts:
+            return JSONResponse({"error": "Dashboard address is not allowed"}, status_code=403)
         if request.method == "POST":
             origin = request.headers.get("origin")
             if request.headers.get("X-Review-Token") != app.state.context.token or (
-                origin and origin not in {f"http://{host}" for host in hosts}
+                origin and origin != f"http://{host}"
             ):
                 return JSONResponse({"error": "Refresh the dashboard before making changes"}, status_code=403)
             body = bytearray()
