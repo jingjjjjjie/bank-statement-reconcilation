@@ -4,7 +4,7 @@ import { renderOfficePreview } from '../office.js';
 
 // Scope screen state and handlers to this cached Vue view.
 export default function initialize(page) {
-const { root, $, api, toast, pollVisible, showDevelopmentMode, navigate, routeQuery } = page;
+const { root, $, api, toast, pollVisible, navigate, routeQuery } = page;
 let token;
 /* Folder selection is read-only until the user starts a review. */
 let sourceState = {};

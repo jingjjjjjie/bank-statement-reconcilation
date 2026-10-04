@@ -49,7 +49,7 @@ The local server defaults to loopback; Compose binds it to `0.0.0.0` inside the 
 - `services/extraction/`: Documents and Review results pages: background extraction runs, regeneration queue,
   receipt review decisions and document status.
 - `services/matching/`: Final review: frozen-snapshot checks, human allocations, live piece matching and jobs.
-- `services/development.py`: development-mode replay of remembered exact-duplicate choices.
+- Development controls and decision-replay endpoints are retired; old development flags are ignored.
 - `previews/`: render originals (PDF pages, images, Office files) for the browser.
 - `frontend/src/`: Vue views, shared navigation, scoped page controllers, and styles.
 

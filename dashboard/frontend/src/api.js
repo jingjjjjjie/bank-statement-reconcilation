@@ -3,7 +3,7 @@ import { reactive } from 'vue';
 // Only shared display state lives here. The server owns evidence and decisions.
 export const appState = reactive({
   session: null, workspace: { name: 'Loading review…', period: '' },
-  resumePath: '/documents', steps: [], navigationReviewId: null, development: false, changes: 0, revisions: {}, toast: '', error: '',
+  resumePath: '/documents', steps: [], navigationReviewId: null, changes: 0, revisions: {}, toast: '', error: '',
 });
 export const pages = new Set();
 let sessionRequest, navigationRequest, toastTimer;
@@ -52,7 +52,6 @@ export async function api(path, body, options = {}) {
       appState.revisions[path] = (appState.revisions[path] || 0) + 1;
     }
     if (path === '/api/source/start') await loadSession();
-    if (path === '/api/development-mode') appState.development = data.enabled;
     // Saved extraction and matching decisions update their completion ticks.
     refreshNavigation(true).catch(error => toast(error.message));
   }
@@ -74,13 +73,12 @@ export async function refreshNavigation(invalidate = false) {
     do {
       revision = navigationRevision;
       reviewId = appState.session?.review_id;
-      const [workspace, workflow, development] = await Promise.all([
-        api('/api/workspace'), api('/api/workflow-checks'), api('/api/development-mode'),
+      const [workspace, workflow] = await Promise.all([
+        api('/api/workspace'), api('/api/workflow-checks'),
       ]);
       if (reviewId !== appState.session?.review_id) continue;
       appState.workspace = workspace;
       appState.steps = workflow.steps;
-      appState.development = development.enabled;
       appState.navigationReviewId = reviewId;
     } while (reviewId !== appState.session?.review_id || revision !== navigationRevision);
   })().finally(() => { navigationRequest = null; });

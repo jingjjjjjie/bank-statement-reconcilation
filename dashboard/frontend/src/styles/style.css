@@ -1073,9 +1073,6 @@ main { width: min(100%, 1600px); margin: 0 auto; padding: 0 clamp(20px, 3vw, 48p
 .content-decision-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; background: var(--mint); padding: 10px 12px; }
 .content-decision-bar .content-decision { padding: 0; }
 .content-decision-bar .button { flex-shrink: 0; }
-.exact-development { margin-bottom: 20px; }
-.exact-development .content-actions { align-items: end; }
-.exact-development .setting-field { min-width: 220px; }
 .content-loading { position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; padding: 20px; background: rgba(12, 35, 31, .68); }
 .content-loading-card { width: min(440px, 100%); padding: 32px; border-radius: 12px; background: white; text-align: center; box-shadow: 0 20px 60px rgba(0, 0, 0, .2); }
 .content-loading-card h2 { margin: 16px 0 8px; }

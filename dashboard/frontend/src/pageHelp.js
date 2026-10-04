@@ -51,7 +51,7 @@ export const pageHelp = {
     'Set document processing, models, reasoning effort and request limits, then Save settings. Saving does not start processing.',
     'Codex account: green means working, blue busy, red a problem. Login is rechecked every minute. Check now sends one tiny real request, recorded in token usage. Check for updates asks for the latest Codex; Update installs it for new requests on this computer only. To rebuild the image with it, run python scripts/codex/update_codex.py on the host. Log in with ChatGPT shows a link and a one-time code.',
     'PDF pages per call defaults to 5. Short PDFs use one call; longer PDFs use groups up to that limit, then whole-document assembly. Saved pages are preserved on resume. Testing modes and oversized groups keep the page route.',
-    'PDF vision reads every page. Testing modes require development mode and pictures. Changing processing modes requires refreshed inputs; previous results are archived.',
+    'PDF vision reads every page. Changing processing modes requires refreshed inputs; previous results are archived.',
     'Turning pictures off leaves image-dependent documents unresolved. Turning Codex off stops new model requests; active calls may finish.',
     'The request limit is shared by extraction and receipt assembly, including failed attempts. Cache reads use no new requests. Run again to resume saved work with a fresh allowance.',
     'Parallel requests controls simultaneous calls for the next run. More workers may hit subscription limits. Request limits are not token or spending caps.',

@@ -3,7 +3,7 @@ import { renderOfficePreview } from '../office.js';
 
 // Scope screen state and handlers to this cached Vue view.
 export default function initialize(page) {
-const { root, $, api, toast, pollVisible, showDevelopmentMode, navigate, routeQuery } = page;
+const { root, $, api, toast, pollVisible, navigate, routeQuery } = page;
 let token;
 /* Shared state stays small; the server owns all file checks and mutations. */
 let state, selected, filter = 'all', busy = false, renderVersion = 0;
@@ -105,38 +105,10 @@ $('#validate').onclick = async () => {
   if (busy) return; busy = true; render();
   try {const result = await api('/api/validate', {}); const panel = $('#validation'); panel.hidden = false; panel.className = `validation ${result.passed ? 'success' : ''}`; $('#validation-text').textContent = result.passed ? 'Exact duplicate review complete.' : `Outstanding issues:\n${result.problems.join('\n')}`; state = await api('/api/state'); token = state.token; render();} catch (error) {toast(error.message);} finally {busy = false; render();}
 };
-function showPreset(data) {
-  $('#exact-development-status').textContent = data.saved
-    ? `Saved ${data.exact} exact-duplicate decisions on ${new Date(data.at).toLocaleString()}.`
-    : 'No saved decisions yet.';
-  const cacheInfo = data.cache ? ` Shared cache: ${data.cache.model_results} model results.` : '';
-  const status = root.querySelector('#exact-development-status, #development-status');
-  if (status) status.textContent += cacheInfo;
-  $('#exact-apply').disabled = !data.saved;
-}
-$('#exact-remember').onclick = async () => {
-  try {showPreset(await api('/api/development/remember', {})); toast('Human decisions remembered.');}
-  catch (error) {toast(error.message);}
-};
-$('#exact-apply').onclick = async () => {
-  const button = $('#exact-apply'); button.disabled = true;
-  $('#exact-development-status').textContent = 'Applying matching decisions…';
-  try {
-    const result = await api('/api/development/apply', {reviewer: $('#exact-development-reviewer').value});
-    showPreset(result.saved);
-    state = await api('/api/state'); token = state.token; render();
-    $('#validation').hidden = true;
-    toast(`Applied ${result.exact_applied} exact-duplicate decisions.`);
-  } catch (error) {$('#exact-development-status').textContent = error.message; toast(error.message);}
-  finally {button.disabled = false;}
-};
 api('/api/state').then(async data => {
   state = data; token = data.token; selected = data.groups.find(g => g.status === 'pending')?.id; render();
-  try {showPreset(await api('/api/development-decisions'));}
-  catch (error) {$('#exact-development-status').textContent = `Unable to load remembered decisions: ${error.message}. Restart the dashboard server and reload.`;}
 }).catch(error => {
   $('#empty').textContent = `Unable to load review: ${error.message}`;
-  $('#exact-development-status').textContent = 'Unable to load saved decisions. Reload the dashboard.';
 });
 
 }

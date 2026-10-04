@@ -3,22 +3,10 @@ import { renderOfficePreview } from '../office.js';
 
 // Scope screen state and handlers to this cached Vue view.
 export default function initialize(page) {
-const { root, $, api, toast, pollVisible, showDevelopmentMode, navigate, routeQuery } = page;
+const { root, $, api, toast, pollVisible, navigate, routeQuery } = page;
 let token;
 /* Settings page: changes are explicit and never start document processing. */
 let savedSettings, dirty = false;
-$('#development-mode').onchange = async event => {
-  const enabled = event.target.checked;
-  event.target.disabled = true;
-  try {
-    if (!token) token = (await api('/api/session')).token;
-    showDevelopmentMode(await api('/api/development-mode', {enabled}));
-    showDevelopment(await api('/api/development-decisions'));
-  } catch (error) {
-    showDevelopmentMode({enabled: !enabled});
-    toast(error.message);
-  }
-};
 const stages = [
   ['pdf', 'PDF reading', 'Uses the PDF processing option above: extracted text, vision fallback, or full vision.'],
   ['images', 'JPG / image reading', 'Vision only for now, including PNG and other supported images. No separate OCR step. Picture processing must be on.'],
@@ -68,7 +56,6 @@ function showSettings(data) {
   showUsage(data.token_usage);
   $('#settings-refresh').hidden = !data.requires_refresh;
   $('#settings-fields').disabled = false;
-  $('#use-defaults').disabled = false;
   $('#settings-error').hidden = true;
   dirty = false;
   $('#save-state').textContent = 'All settings saved';
@@ -83,18 +70,6 @@ function markDirty() {
 }
 $('#settings-form').oninput = markDirty;
 $('#discard-settings').onclick = () => showSettings(savedSettings);
-$('#use-defaults').onclick = () => {
-  if (!savedSettings) return;
-  const defaults = savedSettings.defaults;
-  $('#pdf-mode').value = defaults.pdf_mode;
-  $('#pdf-whole-document-max-pages').value = defaults.pdf_whole_document_max_pages;
-  $('#pictures-enabled').checked = defaults.pictures_enabled;
-  $('#codex-enabled').checked = defaults.codex_enabled;
-  $('#max-calls').value = defaults.max_calls;
-  $('#max-parallel').value = defaults.max_parallel;
-  renderStages({...savedSettings, config: defaults});
-  markDirty();
-};
 
 /* Preserve backend validation and stale-tab protection when saving. */
 $('#settings-form').onsubmit = async event => {
@@ -117,37 +92,10 @@ $('#settings-form').onsubmit = async event => {
   }
 };
 Promise.all([api('/api/session'), api('/api/config')]).then(([session, config]) => {token = session.token; showSettings(config);}).catch(error => {$('#settings-error').hidden = false; $('#settings-error').textContent = error.message; $('#save-state').textContent = 'Unable to load settings';});
-function showDevelopment(data) {
-  $('#development-status').textContent = data.saved
-    ? `Saved ${data.exact} exact-duplicate decisions on ${new Date(data.at).toLocaleString()}.`
-    : 'No saved decisions yet.';
-  const cacheInfo = data.cache ? ` Shared cache: ${data.cache.model_results} model results.` : '';
-  const status = root.querySelector('#exact-development-status, #development-status');
-  if (status) status.textContent += cacheInfo;
-  $('#apply-decisions').disabled = !data.saved;
-}
-$('#remember-decisions').onclick = async () => {
-  try {showDevelopment(await api('/api/development/remember', {})); toast('Human decisions remembered.');}
-  catch (error) {toast(error.message);}
-};
-$('#apply-decisions').onclick = async () => {
-  const button = $('#apply-decisions'); button.disabled = true;
-  $('#development-status').textContent = 'Applying matching decisions…';
-  try {
-    const result = await api('/api/development/apply', {reviewer: $('#development-reviewer').value});
-    showDevelopment(result.saved);
-    toast(`Applied ${result.exact_applied} exact-duplicate decisions.`);
-  } catch (error) {$('#development-status').textContent = error.message; toast(error.message);}
-  finally {button.disabled = false;}
-};
-api('/api/development-decisions').then(showDevelopment).catch(error => {
-  $('#development-status').textContent = `Unable to load remembered decisions: ${error.message}. Restart the dashboard server and reload.`;
-});
-
 page.dirty(() => dirty);
 
 
-page.onRefresh(async () => showSettings(await api('/api/config')), ['/api/config', '/api/development/']);
+page.onRefresh(async () => showSettings(await api('/api/config')), ['/api/config']);
 
 function showUsage(usage) {
   // Update accounting without resetting unsaved form fields.

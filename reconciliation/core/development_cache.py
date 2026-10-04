@@ -22,17 +22,8 @@ def write_json(path, value):
 
 
 def mode():
-    """Default to normal operation unless development mode is explicitly enabled."""
-    path = WORKSPACE / "config/development.local.json"
-    return json.loads(path.read_text(encoding="utf-8")) if path.exists() else {"enabled": False}
-
-
-def set_mode(enabled):
-    """Persist the development switch without deleting cache data."""
-    if type(enabled) is not bool:
-        raise ValueError("Development mode must be true or false")
-    write_json(WORKSPACE / "config/development.local.json", {"enabled": enabled})
-    return mode()
+    """Keep retired development features disabled, including old saved flags."""
+    return {"enabled": False}
 
 
 def root_for(path):

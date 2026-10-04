@@ -3,14 +3,12 @@
 import tempfile
 import threading
 from pathlib import Path
-from unittest.mock import patch
 
 from PIL import Image, ImageDraw
 from playwright.sync_api import expect, sync_playwright
 
 from dashboard.routes import create_app
 from dashboard.services.review import Review
-from reconciliation.core import development_cache
 from reconciliation.core.settings import DEFAULTS
 from reconciliation.intake.duplicates import organize
 from tests.http_server import TestServer
@@ -28,9 +26,6 @@ def main():
         # Exercise actual browser keep/undo actions against isolated fixture documents.
         with tempfile.TemporaryDirectory() as temporary:
             base = Path(temporary)
-            isolated_mode = patch.object(development_cache, "WORKSPACE", base)
-            isolated_mode.start()
-            development_cache.set_mode(True)
             root = base / "sources"
             root.mkdir()
             image = Image.new("RGB", (400, 250), "white")
@@ -80,11 +75,7 @@ def main():
                 expect(page.locator("#save-state")).to_have_text("Unsaved changes")
                 page.get_by_role("button", name="Discard changes").click()
                 expect(page.locator("#max-calls")).to_have_value("7")
-                page.get_by_role("button", name="Use testing defaults").click()
-                expect(page.locator("#pdf-mode")).to_have_value(DEFAULTS["pdf_mode"])
-                expect(page.locator("#max-calls")).to_have_value(str(DEFAULTS["max_calls"]))
-                expect(page.locator("#save-state")).to_have_text("Unsaved changes")
-                page.get_by_role("button", name="Discard changes").click()
+                expect(page.locator("#use-defaults")).to_have_count(0)
                 expect(page.locator("#max-calls")).to_have_value("7")
                 page.set_viewport_size({"width": 390, "height": 844})
                 assert page.evaluate("document.documentElement.scrollWidth <= innerWidth")
@@ -102,7 +93,6 @@ def main():
             finally:
                 server.shutdown()
                 server.server_close()
-                isolated_mode.stop()
         browser.close()
         assert not errors, errors
         print("PASS: real previews, validation, mobile layout, fixture keep/undo and reload persistence.")

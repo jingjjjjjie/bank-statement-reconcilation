@@ -4,7 +4,7 @@ import { evidenceLocation } from '../evidenceLocation.js';
 
 // Scope screen state and handlers to this cached Vue view.
 export default function initialize(page) {
-const { root, $, api, toast, pollVisible, showDevelopmentMode, navigate, routeQuery } = page;
+const { root, $, api, toast, pollVisible, navigate, routeQuery } = page;
 let token;
 /* Present cached evidence; Python validates and persists every human decision. */
 let reviewData, activeId, saving = false, previewSerial = 0, previewState;

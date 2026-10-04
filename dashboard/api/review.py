@@ -4,14 +4,12 @@ import json
 
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import Response
-from pydantic import BaseModel, StrictBool
+from pydantic import BaseModel
 
 from dashboard.routes import active_context, context, interrupt_context
-from dashboard.services import development
 from dashboard.services.extraction import document_status, extraction_runs, receipt_review
 from dashboard.services.matching import final_review
 from dashboard.services.review import navigation_guide as workflow_guide
-from reconciliation.core import development_cache
 from reconciliation.core.settings import save_config
 from reconciliation.intake.duplicates import check
 
@@ -30,18 +28,6 @@ class SettingsChoice(BaseModel):
 
     config: dict
     revision: str
-
-
-class ModeChoice(BaseModel):
-    """Require a real boolean for development-mode changes."""
-
-    enabled: StrictBool
-
-
-class Reviewer(BaseModel):
-    """The person explicitly replaying saved decisions."""
-
-    reviewer: str
 
 
 @router.get("/workspace")
@@ -96,47 +82,6 @@ def configure(body: SettingsChoice, state=Depends(active_context)):
     """Save settings only if their source revision is current."""
     save_config(state.review.config_path, body.config, body.revision)
     return state.review.settings()
-
-
-@router.get("/development-mode")
-def mode():
-    """Read the inexpensive shared development flag."""
-    return development_cache.mode()
-
-
-@router.post("/development-mode")
-def set_mode(body: ModeChoice, state=Depends(context)):
-    """Change development mode only when processing is idle."""
-    if state.review and extraction_runs.execution_status(state.review)["running"]:
-        raise ValueError("Stop the current review before changing development mode")
-    result = development_cache.set_mode(body.enabled)
-    if result["enabled"] and state.review:
-        development.seed(state.review)
-    return result
-
-
-@router.get("/development-decisions")
-def presets(state=Depends(active_context)):
-    """Read remembered human decisions."""
-    return development.snapshot(state.review)
-
-
-def require_development():
-    """Keep remembered-decision mutations behind the existing mode toggle."""
-    if not development_cache.mode()["enabled"]:
-        raise ValueError("Enable Development / testing mode in Settings first")
-
-
-@router.post("/development/remember", dependencies=[Depends(require_development)])
-def remember(state=Depends(active_context)):
-    """Remember human decisions after an explicit click."""
-    return development.remember(state.review)
-
-
-@router.post("/development/apply", dependencies=[Depends(require_development)])
-def apply(body: Reviewer, state=Depends(active_context)):
-    """Replay only matching previously approved human decisions."""
-    return development.apply(state.review, body.reviewer)
 
 
 @router.get("/completion")

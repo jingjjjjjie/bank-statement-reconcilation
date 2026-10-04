@@ -13,7 +13,6 @@ usePage(root, initialize);
 <main class="settings-page">
     <section class="page-heading"><div><div class="page-title"><h1>Review settings</h1><PageHelp page="Settings" /></div></div></section>
     <div id="settings-error" class="validation" role="alert" hidden></div>
-    <section class="settings-card"><label class="setting-switch"><span><strong>Development / testing mode</strong></span><input id="development-mode" type="checkbox" role="switch" disabled></label><p id="development-mode-status" role="status">Loading mode?</p></section>
     <section class="settings-card codex-account"><div class="section-title"><div><h2>Codex account</h2></div>
 </div>
       <p class="codex-state"><span id="codex-dot" class="status-dot busy" aria-hidden="true"></span><strong id="codex-status" role="status" aria-live="polite">Checking Codex…</strong></p>
@@ -26,7 +25,7 @@ usePage(root, initialize);
       <fieldset id="settings-fields" disabled>
         <section class="settings-card"><div class="section-title"><div><h2>Documents</h2></div></div>
           <div class="settings-grid">
-            <label class="setting-field"><strong>PDF processing</strong><select id="pdf-mode"><option value="vision">Vision: every page</option><option value="hybrid" data-development-tools hidden>Text + checked vision fallback (testing)</option><option value="compare" data-development-tools hidden>Compare text and vision (testing)</option><option value="text_only">Legacy: extractor only</option><option value="auto">Legacy: vision for sparse pages only</option></select></label>
+            <label class="setting-field"><strong>PDF processing</strong><select id="pdf-mode"><option value="vision">Vision: every page</option><option value="text_only">Legacy: extractor only</option><option value="auto">Legacy: vision for sparse pages only</option></select></label>
             <label class="setting-field"><strong>PDF pages per call</strong><input id="pdf-whole-document-max-pages" type="number" min="1" max="40" required aria-describedby="pdf-whole-document-help"><span id="pdf-whole-document-help">Short PDFs: one call. Longer PDFs: groups up to this size, then whole-document assembly.</span></label>
             <label class="setting-switch"><span><strong>Allow picture processing</strong></span><input id="pictures-enabled" type="checkbox" role="switch"></label>
           </div>
@@ -53,13 +52,8 @@ usePage(root, initialize);
         </section>
       </fieldset>
       <div id="settings-refresh" class="validation" hidden>Prepared inputs need refreshing before the next content review. Previous metadata and decisions are archived.<code class="block-code">.tools\python\python.exe vision_workflow.py prepare --refresh</code></div>
-      <div class="settings-savebar"><div><strong id="save-state" role="status" aria-live="polite">Loading settings…</strong></div><div><button type="button" class="button secondary" id="use-defaults" data-development-tools hidden disabled>Use testing defaults</button><button type="button" class="button secondary" id="discard-settings" disabled>Discard changes</button><button type="submit" class="button dark" id="save-settings" disabled>Save settings</button></div></div>
+      <div class="settings-savebar"><div><strong id="save-state" role="status" aria-live="polite">Loading settings…</strong></div><div><button type="button" class="button secondary" id="discard-settings" disabled>Discard changes</button><button type="submit" class="button dark" id="save-settings" disabled>Save settings</button></div></div>
     </form>
-    <section class="settings-card" data-development-tools hidden><h2>Development cache</h2>
-      <p id="development-status" role="status">Loading remembered decisions…</p>
-      <label class="setting-field"><strong>Your name for replayed content decisions</strong><input id="development-reviewer" autocomplete="name" placeholder="Admin name"></label>
-      <div class="content-actions"><button class="button secondary" id="remember-decisions" type="button">Remember current decisions</button><button class="button secondary" id="apply-decisions" type="button">Apply remembered decisions</button></div>
-    </section>
 
   </main>
   </div>

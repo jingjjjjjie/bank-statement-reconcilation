@@ -30,7 +30,10 @@ class DevelopmentCacheTests(unittest.TestCase):
         workspace = patch.object(cache, "WORKSPACE", self.base)
         workspace.start()
         self.addCleanup(workspace.stop)
-        cache.set_mode(True)
+        self.actual_mode = cache.mode
+        mode = patch.object(cache, "mode", return_value={"enabled": True})
+        self.mode = mode.start()
+        self.addCleanup(mode.stop)
 
     def test_shared_results_survive_new_review_and_mode_off_ignores_them(self):
         """Identical requests reuse results with zero new tokens only in test mode."""
@@ -56,11 +59,11 @@ class DevelopmentCacheTests(unittest.TestCase):
             self.assertEqual(events[0]["status"], "cached")
             self.assertTrue(all(value == 0 for value in events[0]["usage"].values()))
             before = {str(p): p.read_bytes() for p in root.rglob("*") if p.is_file()}
-            cache.set_mode(False)
+            self.mode.return_value = {"enabled": False}
             CodexReviewer(self.base / "three").ask("same request", schema)
             self.assertEqual(len(calls), 2)
             self.assertEqual(before, {str(p): p.read_bytes() for p in root.rglob("*") if p.is_file()})
-            cache.set_mode(True)
+            self.mode.return_value = {"enabled": True}
             second.invalidate()
             self.assertFalse(list((root / "model-requests").glob("*/result.json")))
 
@@ -126,12 +129,12 @@ class DevelopmentCacheTests(unittest.TestCase):
         blob = cache.root_for(review.manifest_path) / "objects" / digest[:2] / digest
         self.assertEqual(blob.read_text(), "first version")
         self.assertEqual(hashlib.sha256(blob.read_bytes()).hexdigest(), digest)
-        cache.set_mode(False)
+        self.mode.return_value = {"enabled": False}
         self.assertIsNone(cache.capture(review.manifest_path, "bank"))
         self.assertTrue(one.exists())
 
-    def test_switch_gates_actions_and_rejects_changes_during_execution(self):
-        """The backend enforces the switch even when an old page remains open."""
+    def test_retired_development_actions_are_unavailable(self):
+        """Old browser tabs cannot invoke removed development actions."""
         review = self.review(self.base / "project")
         server = TestServer(("127.0.0.1", 0), create_app(review, "token"))
         threading.Thread(target=server.serve_forever, daemon=True).start()
@@ -148,14 +151,12 @@ class DevelopmentCacheTests(unittest.TestCase):
             with urllib.request.urlopen(request) as response:
                 return json.load(response)
 
-        self.assertFalse(post("/api/development-mode", {"enabled": False})["enabled"])
-        with self.assertRaises(urllib.error.HTTPError):
-            post("/api/development/remember", {})
-        with self.assertRaises(urllib.error.HTTPError):
-            post("/api/development-mode", {"enabled": "false"})
-        with patch("dashboard.services.extraction.extraction_runs.execution_status", return_value={"running": True}):
-            with self.assertRaises(urllib.error.HTTPError):
-                post("/api/development-mode", {"enabled": True})
-        self.assertFalse(cache.mode()["enabled"])
-        self.assertTrue(post("/api/development-mode", {"enabled": True})["enabled"])
-        self.assertTrue((cache.project_folder(review.manifest_path) / "latest-output.json").is_file())
+        for path in ('/api/development-mode', '/api/development/remember', '/api/development/apply'):
+            with self.subTest(path=path), self.assertRaises(urllib.error.HTTPError) as error:
+                post(path, {"enabled": True, "reviewer": "Tester"})
+            self.assertEqual(error.exception.code, 405)
+
+    def test_saved_development_flag_cannot_reenable_tools(self):
+        """Retired flags on disk never enable shared development behavior."""
+        cache.write_json(self.base / 'config/development.local.json', {'enabled': True})
+        self.assertEqual(self.actual_mode(), {'enabled': False})

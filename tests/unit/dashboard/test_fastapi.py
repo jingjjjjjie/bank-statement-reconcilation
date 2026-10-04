@@ -92,7 +92,7 @@ class FastApiTests(unittest.TestCase):
 
     def test_typed_body_and_size_limit(self):
         """Bad booleans, malformed selections, and oversized requests are rejected."""
-        self.post_error("/api/development-mode", {"enabled": "false"}, 422)
+        self.post_error("/api/development-mode", {"enabled": "false"}, 405)
         self.post_error("/api/source/workspace-select", {"path": []}, 422)
         self.post_error("/api/source/workspace-select", {"path": "x" * 9000}, 413)
 

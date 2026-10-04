@@ -25,10 +25,6 @@ export function usePage(root, initialize) {
       observers.push(observer);
       observer.observe(element, options);
     },
-    showDevelopmentMode(data) {
-      appState.development = data.enabled;
-      renderDevelopment();
-    },
     async api(path, body) {
       const controller = new AbortController();
       requests.add(controller);
@@ -46,18 +42,6 @@ export function usePage(root, initialize) {
       if (active) schedule(poll);
     },
   };
-
-  function renderDevelopment() {
-    if (!root.value) return;
-    root.value.querySelectorAll('[data-development-tools]').forEach(element => {
-      element.hidden = !appState.development;
-    });
-    const toggle = page.$('#development-mode');
-    if (toggle) { toggle.checked = appState.development; toggle.disabled = false; }
-    const status = page.$('#development-mode-status');
-    if (status) status.textContent = appState.development
-      ? 'Development tools and shared cache are enabled.' : 'Normal mode. Development tools are disabled.';
-  }
 
   function schedule(poll) {
     clearTimeout(poll.timer);
@@ -77,7 +61,7 @@ export function usePage(root, initialize) {
   onMounted(() => {
     element = root.value;
     pages.add(page);
-    try { initialize(page); renderDevelopment(); }
+    try { initialize(page); }
     catch (error) { toast(error.message); console.error(error); }
   });
   onActivated(() => {
@@ -109,5 +93,4 @@ export function usePage(root, initialize) {
     if (to.fullPath !== from.fullPath && dirty()) return confirm('Discard unsaved changes for this document?');
   });
   watch(() => route.query, () => { if (active && queryChanged) queryChanged(); });
-  watch(() => appState.development, renderDevelopment);
 }
