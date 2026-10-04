@@ -695,7 +695,8 @@ p {
 a.nav-item { text-decoration: none; margin-top: 5px; }
 a.nav-item:hover { background: #30483f; }
 .header-settings { font-size: 12px; text-decoration: none; color: var(--green); }
-.settings-page { padding-bottom: 20px; max-width: 1100px; margin-left: auto; margin-right: auto; box-sizing: content-box; }
+.settings-page { padding-bottom: 20px; }
+.settings-page > * { max-width: 1100px; margin-left: auto; margin-right: auto; }
 .settings-page form { max-width: 1100px; }
 .settings-page fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
 .settings-card { background: white; border: 1px solid var(--line); border-radius: 9px; padding: 25px 28px; margin-bottom: 20px; }
@@ -711,8 +712,8 @@ a.nav-item:hover { background: #30483f; }
 .settings-page .setting-switch { justify-content: space-between; }
 .codex-master { padding-bottom: 20px; margin-bottom: 20px; border-bottom: 1px solid var(--line); }
 .codex-account .section-title { justify-content: space-between; flex-wrap: wrap; margin-bottom: 14px; }
-.codex-actions { display: flex; flex-wrap: wrap; gap: 8px; }
-.codex-state { display: flex; align-items: center; gap: 9px; margin: 0 0 4px; }
+.codex-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+.codex-state { display: flex; align-items: center; gap: 9px; margin: 0; }
 .status-dot { width: 10px; height: 10px; border-radius: 50%; flex: none; background: #2f6fd6; }
 .status-dot.ok { background: #2e9d5b; }
 .status-dot.problem { background: #c9372c; }
