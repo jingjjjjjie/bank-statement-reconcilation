@@ -95,6 +95,9 @@ class ExtractionProgressTests(unittest.TestCase):
                 # Deliver an old Start reply after Stop: it must not undo cancellation.
                 starts.pop().fulfill(json={"running": True, "stop_requested": False})
                 expect(page.locator('#document-run-status')).to_contain_text('3 active processes')
+                rows[1]['units_read'] = 2
+                expect(page.locator('#document-progress-count')).to_have_text('3 / 4 steps (75%)')
+                rows[1].update(assembly_done=1, extracted=False, status='Needs attention')
                 execution.update(
                     running=False,
                     active_processes=0,
@@ -102,9 +105,6 @@ class ExtractionProgressTests(unittest.TestCase):
                     run_error="Review stopped. Completed results are saved; run again to resume.",
                 )
                 expect(page.locator('#document-run-status')).to_contain_text('Review stopped.')
-                rows[1]['units_read'] = 2
-                expect(page.locator('#document-progress-count')).to_have_text('3 / 4 steps (75%)')
-                rows[1].update(assembly_done=1, extracted=False, status='Needs attention')
                 expect(page.locator('#document-progress-stage')).to_have_text('2 / 2 documents processed')
                 expect(page.get_by_text('Needs attention', exact=True).last).to_be_visible()
                 expect(page.locator('#document-progress-count')).to_have_text('4 / 4 steps (100%)')

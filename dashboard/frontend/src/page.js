@@ -32,7 +32,12 @@ export function usePage(root, initialize) {
     async api(path, body) {
       const controller = new AbortController();
       requests.add(controller);
-      try { return await api(path, body, { signal: controller.signal, reviewId }); }
+      try {
+        const result = await api(path, body, { signal: controller.signal, reviewId });
+        // The initiating controller applies its save response; other cached pages still invalidate.
+        if (body !== undefined) previousChanges = revisionFor(refreshPaths);
+        return result;
+      }
       finally { requests.delete(controller); }
     },
     pollVisible(callback, milliseconds) {

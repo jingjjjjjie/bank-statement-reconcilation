@@ -418,9 +418,15 @@ class Review:
         }
 
 
-def workflow_guide(review):
+def workflow_guide(review, *, navigation=False):
     """Describe verified stage readiness and the next route for the dashboard."""
-    exact, content, bank = review.workflow_checks() if review else (False, False, False)
+    lightweight = navigation and review and review.manifest.get("Mode") == "exact_report"
+    if lightweight:
+        # Header indicators describe saved progress; processing/export retain their full gates.
+        statement = review.bank_statement()
+        exact, content, bank = True, False, statement.get("balance_checks") == "passed"
+    else:
+        exact, content, bank = review.workflow_checks() if review else (False, False, False)
     extracted = reviewed = has_extraction = False
     if review:
         from dashboard.services.extraction.document_status import snapshot
@@ -447,8 +453,8 @@ def workflow_guide(review):
             )
         except (OSError, ValueError, KeyError):
             pass
-    complete = False
-    if review and exact and content and bank:
+    complete = bool(lightweight and reviewed and bank and matched)
+    if not lightweight and review and exact and content and bank:
         try:
             complete = review.completion()["complete"]
         except (OSError, ValueError, KeyError):
@@ -489,3 +495,8 @@ def workflow_guide(review):
             for number, (name, href, checked) in enumerate(stages)
         ]
     }
+
+
+def navigation_guide(review):
+    """Read header progress without rerunning duplicate and processing authorization gates."""
+    return workflow_guide(review, navigation=True)

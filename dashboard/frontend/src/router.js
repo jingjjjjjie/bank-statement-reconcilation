@@ -29,7 +29,8 @@ router.beforeEach(async (to, from) => {
   if (!to.meta.public && !appState.session.active) return '/source';
   if (['/matching', '/extraction-review'].includes(to.path)) {
     try {
-      await refreshNavigation();
+      // Reuse the current workspace's saved readiness; actions refresh it in the background.
+      if (appState.navigationReviewId !== appState.session.review_id) await refreshNavigation();
       const step = appState.steps.find(step => step.href === to.path);
       if (!step || step.available === false) {
         toast(step?.blocked_reason || 'This page is not ready yet.');

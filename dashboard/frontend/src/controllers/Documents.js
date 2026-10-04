@@ -11,6 +11,8 @@ let documentRequestMessage = "";
 let executionRevision = 0;
 let legacyLocations;
 let extractionProgress = '';
+let finalSnapshotPending = false;
+let documentRows = '';
 
 function sourceFiles(rows) {
   /* Display every original location while retaining one extraction record per hash. */
@@ -110,13 +112,16 @@ async function refreshDocuments() {
     snapshot.documents = snapshot.documents.map(item => ({...item, paths:locations.get(item.id)?.length ? locations.get(item.id) : [item.path]}));
   }
   documentState = revision === executionRevision ? snapshot : {...snapshot, ...executionFields()};
-  renderDocuments();
+  const rowsChanged = JSON.stringify(snapshot.documents) !== documentRows;
+  documentRows = JSON.stringify(snapshot.documents);
+  if (rowsChanged) renderDocuments();
   renderDocumentProgress();
   // Refresh the header when background extraction changes saved document readiness.
   const progress = JSON.stringify(snapshot.documents.map(item => [item.id, item.extracted, item.approved_duplicate]));
   if (progress !== extractionProgress) {
+    const changed = extractionProgress !== '';
     extractionProgress = progress;
-    refreshNavigation().catch(error => toast(error.message));
+    refreshNavigation(changed).catch(error => toast(error.message));
   }
 }
 
@@ -135,6 +140,7 @@ function executionFields() {
 function setExecution(state) {
   /* Apply lightweight execution updates independently of document scans. */
   executionRevision++;
+  if (documentState.running && state.running === false) finalSnapshotPending = true;
   Object.assign(documentState, state);
   renderDocumentProgress();
 }
@@ -203,7 +209,12 @@ try {
 $('#document-search').oninput = rememberFilters;
 $('#document-filter').onchange = rememberFilters;
 refreshDocuments().catch(error => toast(error.message));
-pollVisible(refreshDocuments, 2000);
+pollVisible(async () => {
+  if (!documentState.running && !documentRequestMessage && !finalSnapshotPending) return;
+  finalSnapshotPending = false;
+  try { await refreshDocuments(); }
+  catch (error) { finalSnapshotPending = true; throw error; }
+}, 2000);
 pollVisible(refreshExecution, 500);
 
 installReceipts(page, {getDocumentState: () => documentState, setDocumentRequestMessage, refreshDocuments, setExecution, refreshExecution});

@@ -37,6 +37,17 @@ class ReviewCompletionBrowserTests(unittest.TestCase):
             tick = page.locator('.app-header a[href="/extraction-review"] .header-step.complete')
             expect(page.locator("#review-progress")).to_have_text("0 of 1 reviewed")
             expect(tick).to_have_count(0)
+            # Returning to this cached page must not wait for another readiness request.
+            checks = []
+            page.on('request', lambda request: checks.append(request.url)
+                    if request.url.endswith('/api/workflow-checks') else None)
+            page.locator('.app-header a[href="/documents"]').click()
+            expect(page.locator('#document-summary')).to_be_visible()
+            page.wait_for_timeout(500)
+            before = len(checks)
+            page.locator('.app-header a[href="/extraction-review"]').click()
+            expect(page.locator('#review-progress')).to_have_text('0 of 1 reviewed')
+            self.assertEqual(len(checks), before)
             page.locator("#accept-receipts").click()
             expect(tick).to_have_count(1)
             page.locator("#accept-receipts").click()

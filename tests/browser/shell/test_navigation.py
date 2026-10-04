@@ -156,7 +156,7 @@ class NavigationTests(unittest.TestCase):
                     self.assertTrue(page.evaluate("window.savedNavigation === document.querySelector('.app-header')"))
                     self.assertEqual(len(documents), 1)
                     page.wait_for_timeout(5500)
-                    self.assertGreater(len(polls), paused)
+                    self.assertEqual(len(polls), paused)
                     self.assertEqual(errors, [])
                     page.close(run_before_unload=False)
                     browser.close()

@@ -4,10 +4,35 @@ import unittest
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from dashboard.services.review import workflow_guide
+from dashboard.services.review import workflow_guide, navigation_guide
 
 
 class ReviewCompletionTests(unittest.TestCase):
+    def test_navigation_skips_processing_gates_but_checks_current_review(self):
+        """Header reads avoid duplicate gates while stale decisions still remove their tick."""
+        def forbidden():
+            """Fail if a display request starts full processing validation."""
+            self.fail('Navigation called a processing gate')
+
+        review = SimpleNamespace(
+            manifest={'Mode': 'exact_report'}, manifest_path='fixture',
+            workflow_checks=forbidden, completion=forbidden,
+            bank_statement=lambda: {'balance_checks': 'passed'},
+        )
+        documents = [{'extracted': True, 'status': 'Complete', 'approved_duplicate': False}]
+        for stale in (False, True):
+            with (
+                self.subTest(stale=stale),
+                patch('dashboard.services.extraction.document_status.snapshot', return_value={'documents': documents}),
+                patch('dashboard.services.matching.final_review.snapshot', return_value={'banks': [
+                    {'confidence': {'level': 'high'}, 'review_status': 'approved', 'stale': stale},
+                ]}),
+            ):
+                steps = {step['href']: step for step in navigation_guide(review)['steps']}
+                self.assertTrue(steps['/matching']['available'])
+                self.assertEqual(steps['/matching']['checked'], not stale)
+                self.assertEqual(steps['/final-report']['checked'], not stale)
+
     def test_review_pages_require_their_extracted_inputs(self):
         """Partial extraction permits source review; matching also needs a verified bank."""
         for documents, bank, extraction_ready, matching_ready in [

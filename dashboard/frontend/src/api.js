@@ -3,10 +3,11 @@ import { reactive } from 'vue';
 // Only shared display state lives here. The server owns evidence and decisions.
 export const appState = reactive({
   session: null, workspace: { name: 'Loading review…', period: '' },
-  resumePath: '/documents', steps: [], development: false, changes: 0, revisions: {}, toast: '', error: '',
+  resumePath: '/documents', steps: [], navigationReviewId: null, development: false, changes: 0, revisions: {}, toast: '', error: '',
 });
 export const pages = new Set();
 let sessionRequest, navigationRequest, toastTimer;
+let navigationRevision = 0;
 
 export function toast(message) {
   appState.toast = message;
@@ -53,7 +54,7 @@ export async function api(path, body, options = {}) {
     if (path === '/api/source/start') await loadSession();
     if (path === '/api/development-mode') appState.development = data.enabled;
     // Saved extraction and matching decisions update their completion ticks.
-    refreshNavigation().catch(error => toast(error.message));
+    refreshNavigation(true).catch(error => toast(error.message));
   }
   return data;
 }
@@ -65,14 +66,23 @@ export function revisionFor(prefixes) {
     total + (prefixes.some(prefix => path.startsWith(prefix)) ? revision : 0), 0);
 }
 
-export async function refreshNavigation() {
-  // Shared metadata is fetched once, then refreshed after actions rather than on every view.
-  if (!navigationRequest) navigationRequest = Promise.all([
-    api('/api/workspace'), api('/api/workflow-checks'), api('/api/development-mode'),
-  ]).then(([workspace, workflow, development]) => {
-    appState.workspace = workspace;
-    appState.steps = workflow.steps;
-    appState.development = development.enabled;
-  }).finally(() => { navigationRequest = null; });
+export async function refreshNavigation(invalidate = false) {
+  // A save during a pending refresh must get a subsequent, current snapshot.
+  if (invalidate) navigationRevision++;
+  if (!navigationRequest) navigationRequest = (async () => {
+    let revision, reviewId;
+    do {
+      revision = navigationRevision;
+      reviewId = appState.session?.review_id;
+      const [workspace, workflow, development] = await Promise.all([
+        api('/api/workspace'), api('/api/workflow-checks'), api('/api/development-mode'),
+      ]);
+      if (reviewId !== appState.session?.review_id) continue;
+      appState.workspace = workspace;
+      appState.steps = workflow.steps;
+      appState.development = development.enabled;
+      appState.navigationReviewId = reviewId;
+    } while (reviewId !== appState.session?.review_id || revision !== navigationRevision);
+  })().finally(() => { navigationRequest = null; });
   return navigationRequest;
 }

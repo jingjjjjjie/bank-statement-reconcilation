@@ -10,7 +10,7 @@ from dashboard.routes import active_context, context, interrupt_context
 from dashboard.services import development
 from dashboard.services.extraction import document_status, extraction_runs, receipt_review
 from dashboard.services.matching import final_review
-from dashboard.services.review import workflow_guide
+from dashboard.services.review import navigation_guide as workflow_guide
 from reconciliation.core import development_cache
 from reconciliation.core.settings import save_config
 from reconciliation.intake.duplicates import check
