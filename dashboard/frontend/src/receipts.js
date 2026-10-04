@@ -282,10 +282,6 @@ if ($('#accept-all-receipts')) $('#accept-all-receipts').onclick = () => receipt
   setReceiptData(data, key);
   const skipped = data.bulk.skipped.length;
   toast(`${data.bulk.accepted} accepted.${skipped ? ` ${skipped} still need attention.` : ''}`);
-  if (skipped) receiptError(new Error(data.bulk.skipped.map(item => {
-    const unit = data.units.find(unit => unit.key === item.key);
-    return `${unit?.source_path.split('/').pop() || item.key}: ${item.reason}`;
-  }).join('\n')));
 });
 if ($('#receipt-form')) $('#receipt-form').onsubmit = event => {
   event.preventDefault();
