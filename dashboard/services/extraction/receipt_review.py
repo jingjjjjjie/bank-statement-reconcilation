@@ -120,7 +120,7 @@ def context(review, *, include_banks=True, prepared=None):
                     "assembled": assembled,
                     "assembly_pending": assembled and assembly is None,
                     "review_warnings": (
-                        ["No entries extracted. Add an entry or confirm supporting evidence only."]
+                        ["No entries extracted. Add an entry or accept as supporting evidence."]
                         if not pieces and not accepted and not trash
                         else []
                     )
@@ -370,7 +370,7 @@ def validate_acceptance(unit, pieces, saved, *, supporting_only=False):
     """Apply the same source, boundary and field checks to individual and bulk acceptance."""
     verify_source(unit)
     if not pieces and supporting_only is not True:
-        raise ValueError("No entries extracted. Add an entry or explicitly confirm supporting evidence only.")
+        raise ValueError("No entries extracted. Add an entry or accept as supporting evidence.")
     if pieces and supporting_only is True:
         raise ValueError("Supporting evidence only cannot contain monetary entries")
     if unit.get("trash"):

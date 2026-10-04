@@ -12,6 +12,11 @@ const emptyPiece = () => ({location:'', document_type:'', invoice_numbers:[], pa
 
 function receiptError(error) {
   /* Keep action failures visible without discarding edited fields. */
+  if (error.message.startsWith('No entries extracted.')) {
+    $('#receipt-error').hidden = true;
+    $('#receipt-unit-status').textContent = error.message;
+    return;
+  }
   $('#receipt-error').textContent = error.message;
   $('#receipt-error').hidden = false;
 }
@@ -114,6 +119,7 @@ function addReceiptPiece(piece=emptyPiece()) {
 }
 
 function showReceiptUnit() {
+  $('#receipt-error').hidden = true;
   /* Show every individual piece beneath its original source reference. */
   const unit = receiptData?.units.find(item => item.key === $('#receipt-unit').value);
   $('#receipt-pieces').replaceChildren();
@@ -160,7 +166,8 @@ function renderReviewState() {
   icon.setAttribute('aria-label', labels[state]);
   const undo = !!unit?.accepted && !dirty;
   const hasNext = index >= 0 && index + 1 < receiptData.units.length;
-  button.textContent = undo ? 'Undo accept' : hasNext ? 'Accept & next' : 'Accept';
+  const supportingOnly = unit && !(unit.trash ? unit.receipts.length : $('#receipt-pieces').children.length);
+  button.textContent = undo ? 'Undo accept' : supportingOnly ? 'Accept as supporting' : hasNext ? 'Accept & next' : 'Accept';
   button.title = pending ? 'Waiting for extraction' : failed ? 'Extraction unavailable'
     : unit?.trash ? 'Replace Discard with Accepted' : dirty ? 'Accept current changes' : button.textContent;
   button.classList.toggle('secondary', undo);
@@ -262,7 +269,14 @@ if ($('#accept-all-receipts')) $('#accept-all-receipts').onclick = () => receipt
   if (!receiptData) return;
   const key = $('#receipt-unit').value;
   const body = {revision:receiptData.revision};
-  if (page.isDirty()) body.draft = {key, receipts:readReceiptPieces()};
+  if (page.isDirty()) {
+    const pieces = readReceiptPieces();
+    if (!pieces.length) {
+      receiptError(new Error('No entries extracted. Add an entry or accept as supporting evidence.'));
+      return;
+    }
+    body.draft = {key, receipts:pieces};
+  }
   const data = await saveReceiptDecision('/api/receipts/accept-all', body, $('#accept-all-receipts'));
   hooks.saved?.();
   setReceiptData(data, key);
@@ -290,7 +304,6 @@ if ($('#receipt-form')) $('#receipt-form').onsubmit = event => {
     const body = {revision:receiptData.revision, key, receipts:unit.trash ? unit.receipts : readReceiptPieces()};
     const button = $('#accept-receipts') || $('#receipt-form [type=submit]');
     if (!body.receipts.length) {
-      if (!confirm('No entries extracted. Confirm you reviewed the original and it is supporting evidence only, with no monetary entry to extract?')) return;
       body.supporting_only = true;
     }
     const data = await saveReceiptDecision('/api/receipts/accept', body, button);
