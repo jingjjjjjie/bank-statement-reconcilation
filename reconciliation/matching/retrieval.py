@@ -87,6 +87,29 @@ def exact_references(bank, item):
     return sorted(found)
 
 
+class ReferenceIndex:
+    """Prepare source reference patterns once for a complete ranking pass."""
+
+    def __init__(self, items):
+        """Retain the exact reference boundaries used by source matching."""
+        self.items = {
+            key: [
+                (value, re.compile(r'(?<![\w/.-])' + r'\s*'.join(re.escape(c) for c in value) + r'(?![\w/.-])'))
+                for value in references(item)
+            ]
+            for key, item in items.items()
+        }
+
+    def query(self, bank):
+        """Normalize the bank once and return its exact source references per piece."""
+        bank_ids = references(bank)
+        narration = unicodedata.normalize('NFKC', bank.get('description', '')).casefold()
+        return {
+            key: sorted(value for value, pattern in patterns if value in bank_ids or pattern.search(narration))
+            for key, patterns in self.items.items()
+        }
+
+
 def dates(record):
     """Read unambiguous dates for tie-breaking; retain unparsed dates in model evidence."""
     result = []

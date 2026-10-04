@@ -186,7 +186,7 @@ def evidence_reason(bank, item):
     return 'No exact party-and-amount match established. Check references, context and any grouped allocation.'
 
 
-def snapshot(review):
+def snapshot(review, *, summary=False):
     """Expose suggestions, human outcomes, remaining evidence and changed-source flags."""
     path, state, banks, items, index, facts = context(review)
     hashes = {digest: source_hash(doc['paths'][0]) for digest, doc in index['documents'].items()}
@@ -194,10 +194,10 @@ def snapshot(review):
     if facts.get('live_pieces'):
         from dashboard.services.matching.piece_matching import suggestions
 
-        choices, suggestions = suggestions(review, banks, items, facts, index)
+        choices, suggestions = suggestions(review, banks, items, facts, index, include_candidates=not summary)
     else:
         choices = {}
-        for stage in ('matching', 'contextual'):
+        for stage in () if summary else ('matching', 'contextual'):
             for payload in (CACHE / stage).glob('input-*.json'):
                 for bank in read(payload)['banks']:
                     choices.setdefault(bank['id'], []).extend(bank['candidate_ids'])
@@ -242,13 +242,22 @@ def snapshot(review):
             stale=stale,
             confidence=pairing_confidence(bank, suggestion, items, decision, stale),
             support_status='Supporting' if support else 'No supporting',
-            history=[h for h in state['history'] if h['bank_id'] == key],
+            history=[] if summary else [h for h in state['history'] if h['bank_id'] == key],
         )
+        if summary:
+            continue
         evidence_ids = set(bank['candidates'])
         if decision:
             evidence_ids.update(a['item_id'] for a in decision['allocations'])
         bank['evidence_reasons'] = {
             item_id: evidence_reason(bank, items[item_id]) for item_id in evidence_ids if item_id in items
+        }
+    if summary:
+        return {
+            'banks': [
+                {key: bank[key] for key in ('confidence', 'review_status', 'stale', 'decision')}
+                for bank in banks.values()
+            ]
         }
     return normalize_currencies(
         {

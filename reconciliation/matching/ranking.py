@@ -10,7 +10,7 @@ from pathlib import PurePath
 
 from reconciliation.core.money import normalize_currency
 from reconciliation.matching.candidates import number
-from reconciliation.matching.retrieval import dates, exact_references
+from reconciliation.matching.retrieval import ReferenceIndex, dates
 
 TOLERANCE = Decimal("0.05")  # Sen rounding (e.g. Penggenapan) still flags the difference in review.
 CONTENT_SLOTS = 30  # Amount and name matches.
@@ -120,6 +120,9 @@ def rank(banks, items, documents, root=""):
     """Return ordered candidate IDs and an auditable reason for every bank line."""
     live = {key: item for key, item in items.items() if not item.get("excluded") and not item.get("retired")}
     index = NameIndex(live)
+    reference_index = ReferenceIndex(live)
+    item_dates = {key: dates(item) for key, item in live.items()}
+    item_amounts = {key: number(item['amount']) for key, item in live.items()}
     by_document = defaultdict(list)
     for key, item in live.items():
         by_document[item["document"]].append(key)
@@ -152,6 +155,7 @@ def rank(banks, items, documents, root=""):
     for bank in banks:
         key, value = bank["id"], number(bank.get("amount"))
         bank_dates = dates(bank)
+        bank_references = reference_index.query(bank)
         query = index.query(bank.get("parties", []))
         rows = {}  # candidate id -> reason
         units = []  # (sort key, [ids], reason)
@@ -168,9 +172,9 @@ def rank(banks, items, documents, root=""):
             if not compatible(item):
                 continue
             name = index.similarity(query, item_key)
-            reference = exact_references(bank, item)
-            gap = min((abs((a - b).days) for a in bank_dates for b in dates(item)), default=None)
-            item_value = number(item["amount"])
+            reference = bank_references[item_key]
+            gap = min((abs((a - b).days) for a in bank_dates for b in item_dates[item_key]), default=None)
+            item_value = item_amounts[item_key]
             amount_match = value is not None and item_value is not None and abs(value - item_value) <= TOLERANCE
             if amount_match or reference:
                 units.append(

@@ -445,7 +445,7 @@ def workflow_guide(review, *, navigation=False):
         try:
             candidates = [
                 row
-                for row in matching_snapshot(review)['banks']
+                for row in matching_snapshot(review, summary=True)['banks']
                 if row['confidence']['level'] in {'high', 'low'} or row.get('decision')
             ]
             matched = bool(candidates) and all(

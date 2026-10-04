@@ -1,7 +1,9 @@
 """Live piece evidence for the single final-review allocation ledger."""
 
+import json
 import re
 from datetime import datetime, timezone
+from functools import lru_cache
 from pathlib import Path
 
 from dashboard.services.review import write_json
@@ -192,18 +194,28 @@ def activate(review):
     return {'activated': True, 'preserved_decisions': len(old['decisions'])}
 
 
-def candidates(banks, items, facts=None, index=None):
-    """Rank pieces by amount, then name, then filename, exactly as Generate matches does."""
+@lru_cache(maxsize=4)
+def _candidate_choices(payload):
+    """Cache only pure ranking results, keyed by all freshly loaded ranking inputs."""
     from reconciliation.matching.ranking import rank
 
-    return rank(list(banks.values()), items, (facts or {}).get('documents', {}), (index or {}).get('root', ''))[0]
+    banks, items, documents, root = json.loads(payload)
+    return rank(banks, items, documents, root)[0]
 
 
-def suggestions(review, banks, items, facts=None, index=None):
+def candidates(banks, items, facts=None, index=None):
+    """Reuse unchanged ranking inputs without caching evidence checks or human decisions."""
+    payload = json.dumps(
+        [list(banks.values()), items, (facts or {}).get('documents', {}), (index or {}).get('root', '')]
+    )
+    return {key: list(ids) for key, ids in _candidate_choices(payload).items()}
+
+
+def suggestions(review, banks, items, facts=None, index=None, *, include_candidates=True):
     """Use only model suggestions bound to the current bank and complete piece evidence."""
     from dashboard.services.matching.final_review import read
 
-    choices = candidates(banks, items, facts, index)
+    choices = candidates(banks, items, facts, index) if include_candidates else {}
     path = review.manifest_path.parent / 'final-review/piece-suggestions.json'
     saved = read(path) if path.exists() else {}
     valid = saved.get('binding') == revision([banks, items])
