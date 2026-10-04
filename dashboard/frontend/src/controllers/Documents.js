@@ -1,6 +1,6 @@
 import { node } from '../dom.js';
 import { installReceipts } from '../receipts.js';
-import { refreshNavigation } from '../api.js';
+import { refreshNavigation, appState } from '../api.js';
 
 // Scope screen state and handlers to this cached Vue view.
 export default function initialize(page) {
@@ -210,7 +210,7 @@ $('#document-search').oninput = rememberFilters;
 $('#document-filter').onchange = rememberFilters;
 refreshDocuments().catch(error => toast(error.message));
 pollVisible(async () => {
-  if (!documentState.running && !documentRequestMessage && !finalSnapshotPending) return;
+  if (appState.liveConnected || (!documentState.running && !documentRequestMessage && !finalSnapshotPending)) return;
   finalSnapshotPending = false;
   try { await refreshDocuments(); }
   catch (error) { finalSnapshotPending = true; throw error; }
@@ -220,5 +220,6 @@ pollVisible(refreshExecution, 500);
 installReceipts(page, {getDocumentState: () => documentState, setDocumentRequestMessage, refreshDocuments, setExecution, refreshExecution});
 
 
+page.onLive(['/api/document-status']);
 page.onRefresh(refreshDocuments, ['/api/receipts/', '/api/content/']);
 }

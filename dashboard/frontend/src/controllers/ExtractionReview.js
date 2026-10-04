@@ -345,6 +345,7 @@ root.addEventListener('click', event => {
 
 const receipts = installReceipts(page, {showOriginal, clearOriginal, changed: () => {extractionDirty = true;}, saved: () => {extractionDirty = false;}});
 page.dirty(() => extractionDirty);
+page.onLive(['/api/document-status']);
 page.onRefresh(() => receipts.reload(), ['/api/receipts/', '/api/content/']);
 page.onQuery(() => {
   const key = new URLSearchParams(routeQuery()).get('unit');

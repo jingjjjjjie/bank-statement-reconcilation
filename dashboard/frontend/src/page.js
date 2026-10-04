@@ -9,6 +9,7 @@ export function usePage(root, initialize) {
   let active = false, disposed = false, dirty = () => false, refresh, queryChanged, element;
   let previousChanges = appState.changes;
   let refreshPaths;
+  let livePaths = [], livePending = false, refreshing = false;
   const reviewId = appState.session.review_id;
   const page = {
     get root() { return element; },
@@ -20,16 +21,28 @@ export function usePage(root, initialize) {
     dirty: callback => { dirty = callback; },
     isDirty: () => !disposed && dirty(),
     onRefresh: (callback, paths) => { refresh = callback; refreshPaths = paths; previousChanges = revisionFor(paths); },
+    onLive: paths => { livePaths = paths; },
+    liveUpdate(path) {
+      if (!livePaths.includes(path)) return;
+      livePending = true;
+      refreshLive();
+    },
     onQuery: callback => { queryChanged = callback; },
     observe(observer, element, options) {
       observers.push(observer);
       observer.observe(element, options);
     },
     async api(path, body) {
+      const protectedRead = refreshing && body === undefined && ['/api/matching', '/api/receipts', '/api/document-status'].includes(path);
       const controller = new AbortController();
       requests.add(controller);
       try {
         const result = await api(path, body, { signal: controller.signal, reviewId });
+        if (protectedRead && dirty()) {
+          const error = new Error('Background refresh deferred while editing');
+          error.name = 'DraftChanged';
+          throw error;
+        }
         // The initiating controller applies its save response; other cached pages still invalidate.
         if (body !== undefined) previousChanges = revisionFor(refreshPaths);
         return result;
@@ -42,6 +55,18 @@ export function usePage(root, initialize) {
       if (active) schedule(poll);
     },
   };
+
+  async function refreshLive() {
+    // Background updates never replace an unsaved draft or rebuild a hidden page.
+    if (!livePending || !active || disposed || dirty() || !refresh || refreshing) return;
+    livePending = false; refreshing = true;
+    try { await refresh(); }
+    catch (error) {
+      if (error.name === 'DraftChanged') livePending = true;
+      else page.toast(error.message);
+    }
+    finally { refreshing = false; if (livePending && !dirty()) refreshLive(); }
+  }
 
   function schedule(poll) {
     clearTimeout(poll.timer);
@@ -61,6 +86,7 @@ export function usePage(root, initialize) {
   onMounted(() => {
     element = root.value;
     pages.add(page);
+    element.addEventListener('change', () => queueMicrotask(refreshLive));
     try { initialize(page); }
     catch (error) { toast(error.message); console.error(error); }
   });
@@ -69,9 +95,8 @@ export function usePage(root, initialize) {
     if (queryChanged) queryChanged();
     document.addEventListener('visibilitychange', visibility);
     polls.forEach(schedule);
-    if (previousChanges !== revisionFor(refreshPaths) && !dirty() && refresh) {
-      Promise.resolve(refresh()).catch(error => page.toast(error.message));
-    }
+    if (previousChanges !== revisionFor(refreshPaths) && refresh) livePending = true;
+    refreshLive();
     if (!dirty()) previousChanges = revisionFor(refreshPaths);
   });
   onDeactivated(() => {

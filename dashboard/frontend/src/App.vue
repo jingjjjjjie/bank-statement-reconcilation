@@ -2,7 +2,7 @@
 import Navigation from './components/Navigation.vue';
 import { onMounted, onBeforeUnmount } from 'vue';
 import { router } from './router.js';
-import { appState, pages, refreshNavigation, toast } from './api.js';
+import { appState, pages, refreshNavigation, toast, startLive, stopLive } from './api.js';
 
 // Keep source-file downloads and new-tab links native; route only application links.
 function navigate(event) {
@@ -19,9 +19,10 @@ function beforeUnload(event) {
 }
 onMounted(() => {
   window.addEventListener('beforeunload', beforeUnload);
+  startLive();
   refreshNavigation().catch(error => toast(error.message));
 });
-onBeforeUnmount(() => window.removeEventListener('beforeunload', beforeUnload));
+onBeforeUnmount(() => { stopLive(); window.removeEventListener('beforeunload', beforeUnload); });
 </script>
 
 <template>

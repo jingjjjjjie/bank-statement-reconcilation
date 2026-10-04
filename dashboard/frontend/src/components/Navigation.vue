@@ -23,6 +23,7 @@ const items = computed(() => {
 <template>
   <nav class="app-header" aria-label="Main navigation">
     <span class="app-brand">Bank Statement Reconciliation</span>
+    <span v-if="appState.syncing" class="sync-status" role="status">Updating...</span>
     <div class="header-links">
       <component :is="item.disabled ? 'span' : RouterLink" v-for="item in items" :key="item.path" :to="item.disabled ? undefined : item.path" class="header-link" :class="{ disabled: item.disabled }" active-class="active" :role="item.disabled ? 'link' : undefined" :aria-disabled="item.disabled ? 'true' : undefined" :title="item.disabled ? item.reason : undefined" :tabindex="item.disabled ? 0 : undefined">
         <span v-if="item.step" class="header-step" :class="{ complete: item.step.checked }"
@@ -41,6 +42,7 @@ const items = computed(() => {
 
 <style scoped>
 .app-header { display: flex; align-items: center; gap: 24px; height: 68px; padding: 0 24px; background: #18392f; color: #fff; }
+.sync-status { font-size: 11px; color: #cad8cf; white-space: nowrap; }
 .app-brand { flex-shrink: 0; font-size: 15px; font-weight: 650; }
 .header-links { display: flex; align-self: stretch; margin-left: auto; min-width: 0; overflow-x: auto; scrollbar-width: thin; scrollbar-color: #6a8878 transparent; }
 .header-settings-icon { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 36px; width: 36px; height: 36px; border-radius: 9px; color: #cad8cf; }

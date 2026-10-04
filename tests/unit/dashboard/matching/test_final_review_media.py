@@ -33,6 +33,23 @@ class MatchingMediaSpeedTests(unittest.TestCase):
         with urllib.request.urlopen(self.base + path, timeout=3) as response:
             return response.read()
 
+    def test_cached_display_cannot_authorize_changed_evidence(self):
+        """A warm display never bypasses fresh source validation on approval."""
+        self.get('/api/matching')
+        body = self.fixture.request()
+        (self.fixture.review.root / 'receipt-1.txt').write_text('Changed evidence')
+        request = urllib.request.Request(
+            self.base + '/api/matching-decide',
+            data=json.dumps(body).encode(),
+            headers={'Content-Type': 'application/json', 'X-Review-Token': 'token'},
+        )
+        with self.assertRaises(urllib.error.HTTPError) as rejected:
+            urllib.request.urlopen(request, timeout=3)
+        self.assertEqual(rejected.exception.code, 400)
+        message = json.load(rejected.exception)['error']
+        self.assertIn('changed', message.lower())
+        self.assertEqual(final_review.context(self.fixture.review)[1]['version'], 0)
+
     def test_media_bypasses_busy_workflow_lock(self):
         """A blocked status check must not delay validated evidence metadata or pages."""
         started, release = threading.Event(), threading.Event()

@@ -4,6 +4,7 @@ import asyncio
 import hashlib
 import os
 import secrets
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, HTTPException, Request
@@ -70,7 +71,8 @@ def active_context(state=Depends(context)):
 
 def create_app(review=None, token=None, sources=None):
     """Build the ASGI app without starting a server or performing model calls."""
-    from dashboard.api import codex, files, review as review_api, source
+    from dashboard.api import codex, files, live, review as review_api, source
+    from dashboard.services.live_state import LiveState
 
     workspace = Path(__file__).resolve().parent.parent
     sources = sources or (
@@ -78,8 +80,19 @@ def create_app(review=None, token=None, sources=None):
         if review
         else SourceSelection(workspace, workspace / "dashboard/.data")
     )
-    app = FastAPI(title="Reconciliation dashboard", docs_url=None, redoc_url=None, openapi_url=None)
+
+    @asynccontextmanager
+    async def lifespan(app):
+        """Finish display workers before the application releases its workspace."""
+        try:
+            yield
+        finally:
+            await app.state.live.close()
+
+    app = FastAPI(lifespan=lifespan, title="Reconciliation dashboard", docs_url=None, redoc_url=None, openapi_url=None)
     app.state.context = Context(review, token or secrets.token_urlsafe(32), sources)
+    app.state.live = LiveState(app.state.context)
+    app.include_router(live.router)
     allowed_hosts = {
         host.strip().lower() for host in os.environ.get('DASHBOARD_ALLOWED_HOSTS', '').split(',') if host.strip()
     }
@@ -107,6 +120,8 @@ def create_app(review=None, token=None, sources=None):
                 return JSONResponse({"error": "Invalid request size"}, status_code=400)
             request._body = bytes(body)
         response = await call_next(request)
+        if request.method == "POST" and response.status_code < 400:
+            app.state.live.invalidate()
         response.headers.setdefault("Cache-Control", "no-store")
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["Content-Security-Policy"] = (

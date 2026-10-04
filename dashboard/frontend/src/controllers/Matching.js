@@ -487,5 +487,6 @@ async function matchingProgress() {
   matchingWasRunning = !!state.running;
 }
 pollVisible(matchingProgress, 2000);
-page.onRefresh(refresh, ['/api/matching-decide', '/api/matching-pieces', '/api/matching-run', '/api/receipts/', '/api/content/']);
+page.onLive(['/api/matching']);
+page.onRefresh(async () => { await refresh(); if (activeId) chooseBank(activeId, undefined, true); }, ['/api/matching-decide', '/api/matching-pieces', '/api/matching-run', '/api/receipts/', '/api/content/']);
 }
