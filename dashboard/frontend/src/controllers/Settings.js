@@ -28,6 +28,18 @@ function updateReasoning(stage, selected = 'default') {
   input.value = levels.includes(selected) ? selected : 'default';
   input.disabled = !model;
 }
+function refreshModels(models) {
+  // Rebuild model lists from a refreshed catalog, keeping each current (even unsaved) choice.
+  savedSettings.models = models;
+  for (const [stage] of stages) {
+    const select = $(`#${stage}-model`), model = select.value, reasoning = $(`#${stage}-reasoning`).value;
+    const options = models.map(m => new Option(m.name, m.id));
+    if (model && !models.some(m => m.id === model)) options.push(new Option(`${model} (no longer listed)`, model));
+    select.replaceChildren(new Option('Codex default', ''), ...options);
+    select.value = model;
+    updateReasoning(stage, reasoning);
+  }
+}
 function renderStages(data) {
   $('#stage-settings').replaceChildren();
   for (const [stage, title, description] of stages) {
@@ -112,7 +124,7 @@ function showUsage(usage) {
 pollVisible(async () => showUsage((await api('/api/config')).token_usage), 10000);
 
 /* Codex account: one status line with a dot (green working, blue busy, red problem). Works without a workspace. */
-let codex, check = null, checking = false, codexTimer;
+let codex, check = null, checking = false, codexTimer, checkedAt = null;
 function codexState() {
   if (!codex) return ['busy', 'Checking Codex…'];
   if (codex.update.running) return ['busy', `Installing Codex ${codex.latest}…`];
@@ -128,9 +140,9 @@ function showCodex() {
   const [tone, text] = codexState();
   $('#codex-dot').className = `status-dot ${tone}`;
   $('#codex-status').textContent = text;
-  const version = !codex?.installed ? '' : codex.update_available ? `Codex ${codex.installed} · ${codex.latest} available` : `Codex ${codex.installed} (latest)`;
-  const tested = check?.ok ? `Test request answered in ${check.seconds} s` : '';
-  $('#codex-detail').textContent = [version, tested].filter(Boolean).join(' · ');
+  $('#codex-version').textContent = !codex?.installed ? '' : codex.update_available ? `${codex.installed} · ${codex.latest} available` : `${codex.installed} (latest)`;
+  const time = at => at.toLocaleTimeString([], {hour: 'numeric', minute: '2-digit'});
+  $('#codex-detail').textContent = [checkedAt && `Last check ${time(checkedAt)}`, check?.ok && `test request answered in ${check.seconds} s`].filter(Boolean).join(' · ');
   const login = codex?.login || {running: false, lines: [], exit_code: null};
   const update = codex?.update || {running: false, lines: [], exit_code: null};
   $('#codex-login').hidden = !login.running;
@@ -150,7 +162,7 @@ function showCodex() {
   if (login.running || update.running) codexTimer = setTimeout(() => loadCodex(), 2000);
 }
 async function loadCodex(refresh = false) {
-  try { codex = await api(`/api/codex/status${refresh ? '?refresh=true' : ''}`); }
+  try { codex = await api(`/api/codex/status${refresh ? '?refresh=true' : ''}`); checkedAt = new Date(); }
   catch (error) { codex = null; $('#codex-status').textContent = error.message; return; }
   showCodex();
 }
@@ -164,7 +176,13 @@ $('#codex-update').onclick = async () => {
   if (!(codex?.update_available && codex.can_update)) {
     $('#codex-update').disabled = true;
     await loadCodex(true);
-    if (codex && !codex.update_available) toast(codex.latest ? `Codex ${codex.installed} is the latest version.` : `Could not check for updates: ${codex.latest_error}`);
+    let models = '';
+    if (savedSettings) {
+      const fresh = await api('/api/config').catch(() => null);
+      if (fresh) { refreshModels(fresh.models); models = ` Model list refreshed (${fresh.models.length} models).`; }
+    }
+    if (codex && !codex.update_available) toast((codex.latest ? `Codex ${codex.installed} is the latest version.` : `Could not check for updates: ${codex.latest_error}.`) + models);
+    showCodex();
     return;
   }
   if (!confirm(`Install Codex ${codex.latest}? New requests will use it; running requests are not interrupted.`)) return;

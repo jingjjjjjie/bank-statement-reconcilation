@@ -13,7 +13,7 @@ usePage(root, initialize);
 <main class="settings-page">
     <section class="page-heading"><div><div class="page-title"><h1>Review settings</h1><PageHelp page="Settings" /></div></div></section>
     <div id="settings-error" class="validation" role="alert" hidden></div>
-    <section class="settings-card codex-account"><div class="section-title"><div><h2>Codex account</h2></div>
+    <section class="settings-card codex-account"><div class="section-title"><div><h2>Codex account <span id="codex-version" class="codex-version"></span></h2></div>
 </div>
       <p class="codex-state"><span id="codex-dot" class="status-dot busy" aria-hidden="true"></span><strong id="codex-status" role="status" aria-live="polite">Checking Codex…</strong></p>
       <p id="codex-detail" class="codex-detail"></p>

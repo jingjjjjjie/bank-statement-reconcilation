@@ -719,6 +719,7 @@ a.nav-item:hover { background: #30483f; }
 .status-dot.busy { animation: status-pulse 1.2s ease-in-out infinite; }
 @keyframes status-pulse { 50% { opacity: .35; } }
 @media (prefers-reduced-motion: reduce) { .status-dot.busy { animation: none; } }
+.codex-version { margin-left: 6px; color: var(--muted); font-size: 13px; font-weight: 400; }
 .codex-detail { margin: 0 0 0 19px; color: var(--muted); font-size: 13px; }
 .codex-login { margin: 16px 0 0; padding: 14px 16px 14px 34px; background: var(--mint); border-radius: 7px; line-height: 2; }
 .codex-login a { overflow-wrap: anywhere; }

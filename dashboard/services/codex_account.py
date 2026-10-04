@@ -128,13 +128,15 @@ def _number(version):
 
 
 def status(refresh=False):
-    """Login method, installed and latest versions, and any login or update in progress."""
+    """Login method, installed and latest versions, and any login or update in progress; refresh re-asks for both."""
     code, text = run("login", "status")
     lowered = text.lower()
     method = "chatgpt" if "chatgpt" in lowered else "api key" if "api key" in lowered else ""
     version_code, version_text = run("--version")
     installed = re.search(r"\d+\.\d+\.\d+", version_text) if version_code == 0 else None
     latest, latest_error = latest_version(refresh)
+    if refresh:  # Also refresh Codex's model catalog, which the Settings model lists read.
+        run("debug", "models")
     with _lock:
         login, update = _login.view(), _update.view()
     return {
