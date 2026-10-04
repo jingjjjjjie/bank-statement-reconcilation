@@ -8,7 +8,7 @@ export const pageHelp = {
   Bank: ['Bank Statement Extraction', [
     'Load for final matching prepares the current bank statement and extracted supporting pieces. Generate matches starts matching here; Stop pauses it. The progress bar shows processed transactions and failures. Review the results on Review Matching. Loading alone does not start model calls.',
     'Enter the year printed on the statement, then extract it. Check the transactions and balances against the original PDF.',
-    'Use Check bank extraction when ready. Search filters the statement rows.',
+    'Search filters the statement rows.',
   ]],
   Documents: ['Documents', [
     'Run all documents to extract the remaining files. Progress is saved; Stop pauses new requests while active calls finish.',
