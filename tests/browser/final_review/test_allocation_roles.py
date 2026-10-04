@@ -21,7 +21,7 @@ class AllocationRoleTests(unittest.TestCase):
         self.addCleanup(fixture.doCleanups)
         fixture.review.manifest = {}
         fixture.review.workspace = lambda: {'name': 'Example workspace', 'period': 'December'}
-        fixture.review.workflow_checks = lambda: (False, False, False)
+        fixture.enable_review_navigation()
         server = TestServer(('127.0.0.1', 0), create_app(fixture.review, 'fixture', SimpleNamespace()))
         threading.Thread(target=server.serve_forever, daemon=True).start()
         self.addCleanup(server.server_close)

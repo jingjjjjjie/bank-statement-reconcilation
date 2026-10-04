@@ -6,13 +6,13 @@ export const pageHelp = {
     'Use Browse folders or enter the folder path, then select Proceed. Exact duplicates are copied to output/duplicates/; originals stay in place.',
   ]],
   Bank: ['Bank Statement Extraction', [
-    'Load for final matching prepares the current bank statement and extracted supporting pieces. Generate matches starts matching here; Stop pauses it. The progress bar shows processed transactions and failures. Review the results on Final review. Loading alone does not start model calls.',
+    'Load for final matching prepares the current bank statement and extracted supporting pieces. Generate matches starts matching here; Stop pauses it. The progress bar shows processed transactions and failures. Review the results on Review Matching. Loading alone does not start model calls.',
     'Enter the year printed on the statement, then extract it. Check the transactions and balances against the original PDF.',
     'Use Check bank extraction when ready. Search filters the statement rows.',
   ]],
   Documents: ['Documents', [
     'Run all documents to extract the remaining files. Progress is saved; Stop pauses new requests while active calls finish.',
-    'Search or filter the list, then open Review results to check each extraction against its original.',
+    'Search or filter the list, then open Review Extraction to check each extraction against its original.',
   ]],
   ExactReport: ['Exact duplicates', [
     'Inspect each group of identical files. Hashes and full byte comparisons verify duplicates automatically; no selection is needed.',
@@ -31,7 +31,7 @@ export const pageHelp = {
     'Options contains Reload results, Export reviews and Accept all. Reload results fetches the latest saved results.',
     'Export reviews downloads saved reviews as benchmark ground truth: accepted pieces, discarded documents, and pending documents without pieces. Unsaved edits are not included.',
   ]],
-  Matching: ['Final review', [
+  Matching: ['Review Matching', [
     'Open Edit allocation on a selected document to choose Counts toward amount or Supporting only. Supporting only contributes no money. Role and allocation edits are drafts until Confirm / Save; changing a role updates the total and difference immediately.',
     'Load for final matching on the Bank statement page prepares the current bank and extracted pieces. Generate matches, Stop and matching progress are also on the Bank statement page. Matching proposals still require your review.',
     'Review one bank transaction at a time. Use the transaction selector, filters or Next to move to another payment.',
@@ -40,17 +40,12 @@ export const pageHelp = {
     'Search all pieces broadens the shortlist. Check original parties, amounts and receipt boundaries; equal amounts alone do not establish a match. Warnings and differences must be reviewed.',
     'Reject suggestion rejects the saved proposal; other evidence may exist. Undo decision releases its allocations. Unmatched pieces uses the same review ledger.',
   ]],
-  FinalReport: ['Final report', [
-    'Search or filter transactions and use View evidence to inspect confirmed supporting documents.',
+  FinalReport: ['Export', [
+    'Search or filter the transaction report. View evidence opens confirmed supporting documents.',
+    'Download the bank statement workbook or document ZIPs here. Unmatched documents exclude duplicates and documents with a confirmed match. Original project contains input files, not application or review state.',
     'Export Excel uses the bank statement workbook format, with or without supporting evidence paths. Confirmed, fully supported matches show OK; other remarks stay blank.',
-    'Return to Final review to change decisions. The report reflects the current saved ledger.',
-  ]],
-  Completion: ['Completion', [
-    'Export original documents preserves every source file, including duplicates. Export original project includes the original workspace inputs and folders, excluding generated output and review data. Changed or missing intake documents must be restored before exporting originals.',
-    'Export matched documents includes whole documents with current human-confirmed matches, including partial links, in their original folder structure. Suggestions and stale matches are excluded.',
-    'Export unmatched documents downloads a ZIP with the uploads folder structure, excluding documents with any current approved match and confirmed duplicates. Partial matches exclude the whole document; unapproved and stale matches remain included.',
-    'Check that each workflow step is complete. Return to the relevant page for any outstanding work.',
-    'Token usage is cumulative. Cached input is included in input tokens; attempts with unknown usage make totals incomplete.',
+    'Return to Review Matching to change decisions. The report reflects the current saved ledger.',
+    'Workflow and recorded token usage are available inside Export. Unknown usage makes totals incomplete.',
   ]],
   Settings: ['Review settings', [
     'Set document processing, models, reasoning effort and request limits, then Save settings. Saving does not start processing.',

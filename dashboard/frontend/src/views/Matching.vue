@@ -13,7 +13,7 @@ usePage(root, initialize);
 <main class="matching-main">
     <section aria-label="Review controls">
       <div class="queue-controls">
-        <div class="page-title"><h1>Final review</h1><PageHelp page="Matching" /></div>
+        <div class="page-title"><h1>Review Matching</h1><PageHelp page="Matching" /></div>
 
         <button type="button" class="button secondary" popovertarget="matching-options" aria-label="Review options">Options</button>
         <div id="matching-options" popover>

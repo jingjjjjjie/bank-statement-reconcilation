@@ -421,13 +421,30 @@ class Review:
 def workflow_guide(review):
     """Describe verified stage readiness and the next route for the dashboard."""
     exact, content, bank = review.workflow_checks() if review else (False, False, False)
-    reviewed = False
+    extracted = reviewed = has_extraction = False
     if review:
         from dashboard.services.extraction.document_status import snapshot
 
         try:
             documents = [row for row in snapshot(review)["documents"] if not row["approved_duplicate"]]
+            extracted = bool(documents) and all(row.get("extracted", False) for row in documents)
+            has_extraction = any(row.get("extracted", False) for row in documents)
             reviewed = bool(documents) and all(row["status"] in {"Complete", "Trash"} for row in documents)
+        except (OSError, ValueError, KeyError):
+            pass
+    matched = False
+    if review and hasattr(review, 'manifest_path'):
+        from dashboard.services.matching.final_review import snapshot as matching_snapshot
+
+        try:
+            candidates = [
+                row
+                for row in matching_snapshot(review)['banks']
+                if row['confidence']['level'] in {'high', 'low'} or row.get('decision')
+            ]
+            matched = bool(candidates) and all(
+                row['review_status'] in {'approved', 'denied'} and not row['stale'] for row in candidates
+            )
         except (OSError, ValueError, KeyError):
             pass
     complete = False
@@ -439,20 +456,32 @@ def workflow_guide(review):
     stages = [
         ("Workspace", "/", bool(review)),
         ("Exact duplicates", "/review", exact),
-        ("Documents", "/documents", content),
-        ("Review results", "/extraction-review", reviewed),
+        ("Documents", "/documents", extracted),
+        ("Review Extraction", "/extraction-review", reviewed),
         ("Bank extraction", "/bank", bank),
-        ("Completion", "/complete", complete),
+        ("Review Matching", "/matching", matched),
+        ("Export", "/final-report", complete),
     ]
     if review and review.manifest.get("Mode") == "exact_report":
         stages = [stage for stage in stages if stage[1] != "/review"]
-        stages[1] = ("Documents", "/documents", content)
+        stages[1] = ("Documents", "/documents", extracted)
+    access = {
+        '/extraction-review': (has_extraction, 'Extract documents before reviewing their results.', '/documents'),
+        '/matching': (
+            bank and extracted,
+            'Finish document and bank statement extraction before reviewing matches.',
+            '/bank' if not bank else '/documents',
+        ),
+    }
     return {
         "steps": [
             {
                 "name": name,
                 "href": href,
                 "checked": checked,
+                "available": access.get(href, (bool(review) or href in {'/', '/bank'}, '', '/source'))[0],
+                "blocked_reason": access.get(href, (True, 'Choose a workspace first.', '/source'))[1],
+                "redirect": access.get(href, (True, '', '/source'))[2],
                 "next": stages[number + 1][1]
                 if checked and number < len(stages) - 1 and all(previous[2] for previous in stages[:number])
                 else None,

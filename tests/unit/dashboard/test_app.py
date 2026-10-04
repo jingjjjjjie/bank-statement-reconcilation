@@ -50,7 +50,7 @@ class DashboardTests(unittest.TestCase):
         """Only verified steps turn green, and undo removes exact readiness."""
         self.assertFalse(any(step["checked"] for step in workflow_guide(None)["steps"]))
         self.assertEqual(
-            [step["checked"] for step in workflow_guide(self.review)["steps"]], [True, False, False, False, False, False]
+            [step["checked"] for step in workflow_guide(self.review)["steps"]], [True, False, False, False, False, False, False]
         )
         self.review.keep(self.group, self.ids[0])
         steps = workflow_guide(self.review)["steps"]

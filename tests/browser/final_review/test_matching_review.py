@@ -23,7 +23,7 @@ class MatchingReviewBrowserTests(unittest.TestCase):
         self.addCleanup(fixture.doCleanups)
         fixture.review.manifest = {}
         fixture.review.workspace = lambda: {'name': 'Fixture', 'period': 'December'}
-        fixture.review.workflow_checks = lambda: (False, False, False)
+        fixture.enable_review_navigation()
         server = TestServer(('127.0.0.1', 0), create_app(fixture.review, 'test-token', SimpleNamespace()))
         threading.Thread(target=server.serve_forever, daemon=True).start()
         self.addCleanup(server.server_close)
@@ -69,7 +69,7 @@ class MatchingReviewBrowserTests(unittest.TestCase):
         self.addCleanup(fixture.doCleanups)
         fixture.review.manifest = {}
         fixture.review.workspace = lambda: {'name': 'Fixture', 'period': 'December'}
-        fixture.review.workflow_checks = lambda: (False, False, False)
+        fixture.enable_review_navigation()
         server = TestServer(('127.0.0.1', 0), create_app(fixture.review, 'test-token', SimpleNamespace()))
         threading.Thread(target=server.serve_forever, daemon=True).start()
         self.addCleanup(server.server_close)
@@ -130,7 +130,7 @@ class MatchingReviewBrowserTests(unittest.TestCase):
         self.addCleanup(fixture.doCleanups)
         fixture.review.manifest = {}
         fixture.review.workspace = lambda: {'name': 'Fixture', 'period': 'December'}
-        fixture.review.workflow_checks = lambda: (False, False, False)
+        fixture.enable_review_navigation()
         facts = final_review.read(fixture.cache / 'facts.json')
         master = fixture.project / 'bank-output/master_statement.csv'
         with master.open('a', encoding='utf-8', newline='') as stream:

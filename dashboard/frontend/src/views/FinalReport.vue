@@ -3,6 +3,7 @@ import PageHelp from '../components/PageHelp.vue';
 import { computed, nextTick, onActivated, onDeactivated, ref } from 'vue';
 import { api } from '../api.js';
 import ReportEvidence from '../components/ReportEvidence.vue';
+import ExportDownloads from '../components/ExportDownloads.vue';
 import '../styles/final-report.css';
 const data = ref(null), error = ref(''), loading = ref(false), query = ref(''), filter = ref('all');
 const exportDialog = ref(null), exportButton = ref(null);
@@ -43,7 +44,7 @@ function closeExport() {
 function containFocus(event) {
   /* Wrap keyboard navigation within the popup, including Shift+Tab. */
   if (event.key !== 'Tab') return;
-  const controls = [...event.currentTarget.querySelectorAll('button:not(:disabled), a[href], select:not(:disabled)')].filter(el => el.getClientRects().length);
+  const controls = [...event.currentTarget.querySelectorAll('button:not(:disabled), a[href], select:not(:disabled), summary')].filter(el => el.getClientRects().length);
   const first = controls[0], last = controls.at(-1);
   if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
   else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
@@ -56,11 +57,13 @@ onDeactivated(() => { request++; loading.value = false; closeEvidence(); closeEx
 
 <template>
   <main class="final-report" :aria-busy="loading">
-    <header class="report-heading"><div><div class="page-title"><h1>Final report</h1><PageHelp page="FinalReport" /></div></div><button v-if="data" ref="exportButton" type="button" class="button dark" @click="exportDialog.showModal()">Export Excel</button></header>
+    <header class="report-heading"><div class="page-title"><h1 id="completion-title">Final report</h1><PageHelp page="FinalReport" /></div><button ref="exportButton" type="button" class="button dark" @click="exportDialog.showModal()">Export</button></header>
+    <div class="export-layout">
+      <section class="transaction-report" aria-label="Transaction report">
     <p v-if="loading && !data" role="status">Loading saved review decisions…</p>
-    <div v-if="error" role="alert" class="report-notice">{{ error }} <button type="button" @click="refresh">Retry</button></div>
+    <div v-if="error" role="alert" class="report-empty"><span class="report-eyebrow">TRANSACTION REPORT</span><h2>Report not ready</h2><p>Prepare matching to see the final transaction report here.</p><button type="button" class="button secondary" @click="refresh">Retry</button><details><summary>Error details</summary>{{ error }}</details></div>
     <template v-if="data">
-      <div class="report-summary"><strong>{{ data.banks.length }} transactions</strong><span>{{ data.banks.filter(b => b.support_status === 'Supporting').length }} supporting</span><span>{{ data.banks.filter(b => b.support_status !== 'Supporting').length }} without full support</span></div>
+      <div class="report-summary"><div><span>Transactions</span><strong>{{ data.banks.length }}</strong></div><div class="summary-supported"><span>Supporting</span><strong>{{ data.banks.filter(b => b.support_status === 'Supporting').length }}</strong></div><div><span>Without full support</span><strong>{{ data.banks.filter(b => b.support_status !== 'Supporting').length }}</strong></div></div>
       <p v-if="pending" class="report-notice">{{ pending }} {{ pending === 1 ? 'transaction still needs' : 'transactions still need' }} review. This report includes them as No supporting.</p>
 
       <div class="report-filters"><label>Find a transaction<input v-model="query" type="search" placeholder="Name, amount or reference…"></label><label>Support status<select v-model="filter" aria-label="Support status"><option value="all">All transactions</option><option>Supporting</option><option>No supporting</option></select></label><span>{{ rows.length }} shown</span></div>
@@ -68,12 +71,18 @@ onDeactivated(() => { request++; loading.value = false; closeEvidence(); closeEx
         <tr v-for="bank in rows" :key="bank.id"><td><strong>{{ bank.parties.join(' / ') }}</strong><span>{{ bank.description }}</span></td><td data-label="Bank amount">{{ money(bank.amount, bank.currency) }}</td><td data-label="Support"><span class="report-status" :class="{supported: bank.support_status === 'Supporting'}">{{ bank.support_status }}</span><small v-if="bank.stale">Evidence changed — recheck required</small></td><td data-label="Review">{{ decisionLabel(bank.review_status) }}</td><td><button v-if="bank.review_status === 'approved' && !bank.stale && bank.decision?.allocations?.length" type="button" class="text-button" :aria-label="`View evidence for ${bank.id}`" @click="openEvidence(bank, $event)">View evidence</button></td></tr>
       </tbody></table><p v-if="!rows.length" class="report-caption">No transactions match these filters.</p></div>
     </template>
+      </section>
+
+    </div>
     <dialog ref="exportDialog" class="report-export-dialog" aria-labelledby="report-export-title" @cancel.prevent="closeExport" @keydown="containFocus">
-      <header class="dialog-heading"><h2 id="report-export-title">Export Excel</h2><button type="button" class="dialog-close" aria-label="Close export" @click="closeExport">&times;</button></header>
-      <div class="report-export-options">
-        <a class="button dark" href="/api/matching-workbook?include_evidence_paths=true" download="reviewed-statement-with-paths.xlsx" @click="closeExport">With supporting evidence paths</a>
-        <a class="button secondary" href="/api/matching-workbook?include_evidence_paths=false" download="reviewed-statement.xlsx" @click="closeExport">Without supporting evidence paths</a>
-      </div>
+      <header class="dialog-heading"><h2 id="report-export-title">Export</h2><button type="button" class="dialog-close" aria-label="Close export" @click="closeExport">&times;</button></header>
+      <ExportDownloads>
+        <div v-if="data" class="workbook-options">
+          <a class="button dark" href="/api/matching-workbook?include_evidence_paths=true" download="reviewed-statement-with-paths.xlsx" @click="closeExport">With supporting evidence paths</a>
+          <a class="button secondary" href="/api/matching-workbook?include_evidence_paths=false" download="reviewed-statement.xlsx" @click="closeExport">Without supporting evidence paths</a>
+        </div>
+        <p v-else class="workbook-unavailable">Available when the report is ready.</p>
+      </ExportDownloads>
     </dialog>
     <dialog ref="dialog" class="evidence-dialog" aria-labelledby="report-evidence-title" @cancel.prevent="closeEvidence" @keydown="containFocus">
       <template v-if="selected">

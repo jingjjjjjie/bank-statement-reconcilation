@@ -52,10 +52,8 @@ export async function api(path, body, options = {}) {
     }
     if (path === '/api/source/start') await loadSession();
     if (path === '/api/development-mode') appState.development = data.enabled;
-    // Saved extraction decisions change the Review results completion tick.
-    if (path !== '/api/matching-decide') {
-      refreshNavigation().catch(error => toast(error.message));
-    }
+    // Saved extraction and matching decisions update their completion ticks.
+    refreshNavigation().catch(error => toast(error.message));
   }
   return data;
 }

@@ -1,5 +1,6 @@
 import { node } from '../dom.js';
 import { installReceipts } from '../receipts.js';
+import { refreshNavigation } from '../api.js';
 
 // Scope screen state and handlers to this cached Vue view.
 export default function initialize(page) {
@@ -9,6 +10,7 @@ let documentState = {prepared: false, documents: []};
 let documentRequestMessage = "";
 let executionRevision = 0;
 let legacyLocations;
+let extractionProgress = '';
 
 function sourceFiles(rows) {
   /* Display every original location while retaining one extraction record per hash. */
@@ -71,7 +73,7 @@ function renderDocuments() {
     open.href = `/api/content-file?id=${encodeURIComponent(item.id)}`;
     open.target = '_blank'; open.rel = 'noopener';
     const file = node('td', 'document-actions');
-    const extraction = node('a', 'receipt-review-link', 'Review results');
+    const extraction = node('a', 'receipt-review-link', 'Review Extraction');
     extraction.href = `/extraction-review?unit=${encodeURIComponent(item.id + ':0')}`;
     file.append(extraction, open);
     tr.append(title, node('td'), file);
@@ -110,6 +112,12 @@ async function refreshDocuments() {
   documentState = revision === executionRevision ? snapshot : {...snapshot, ...executionFields()};
   renderDocuments();
   renderDocumentProgress();
+  // Refresh the header when background extraction changes saved document readiness.
+  const progress = JSON.stringify(snapshot.documents.map(item => [item.id, item.extracted, item.approved_duplicate]));
+  if (progress !== extractionProgress) {
+    extractionProgress = progress;
+    refreshNavigation().catch(error => toast(error.message));
+  }
 }
 
 function setDocumentRequestMessage(message) {
@@ -171,7 +179,7 @@ function renderDocumentProgress() {
     ? `Stopping - waiting for ${documentState.active_processes || 0} active processes to exit.`
     : (!documentState.running && documentRequestMessage) || documentState.run_error ||
       (documentState.running ? `${documentState.phase || 'Extracting supporting documents'} - ${documentState.active_processes || 0} active processes - ${documentState.elapsed_seconds || 0}s elapsed` :
-        'Open Review results beside a document to check its extraction.');
+        'Open Review Extraction beside a document to check its extraction.');
 }
 
 function rememberFilters() {

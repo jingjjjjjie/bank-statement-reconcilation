@@ -1,18 +1,21 @@
 <script setup>
 import { computed } from 'vue';
+import { RouterLink } from 'vue-router';
 import { appState } from '../api.js';
 const links = [
   ['/source', 'Workspace'], ['/documents', 'Documents'],
-  ['/extraction-review', 'Review results'], ['/bank', 'Bank statement'],
-  ['/matching', 'Final review'], ['/final-report', 'Final report'],
-  ['/complete', 'Completion'],
+  ['/extraction-review', 'Review Extraction'], ['/bank', 'Bank statement'],
+  ['/matching', 'Review Matching'], ['/final-report', 'Export'],
 ];
 // Pair each header destination with its existing workflow status.
 const items = computed(() => {
   const steps = appState.steps.filter(step => step.href !== '/review');
   return links.map(([path, label]) => {
     const index = steps.findIndex(step => (step.href === '/' ? '/source' : step.href) === path);
-    return { path, label, step: index >= 0 ? steps[index] : null, number: index + 1 };
+    const status = steps[index];
+    return { path, label, step: path !== '/final-report' ? status : null, number: index + 1,
+      disabled: status?.available === false || (!status && ['/matching', '/extraction-review'].includes(path)),
+      reason: status?.blocked_reason || 'Checking workflow readiness…' };
   });
 });
 </script>
@@ -21,14 +24,14 @@ const items = computed(() => {
   <nav class="app-header" aria-label="Main navigation">
     <span class="app-brand">Bank Statement Reconciliation</span>
     <div class="header-links">
-      <RouterLink v-for="item in items" :key="item.path" :to="item.path" class="header-link" active-class="active">
+      <component :is="item.disabled ? 'span' : RouterLink" v-for="item in items" :key="item.path" :to="item.disabled ? undefined : item.path" class="header-link" :class="{ disabled: item.disabled }" active-class="active" :role="item.disabled ? 'link' : undefined" :aria-disabled="item.disabled ? 'true' : undefined" :title="item.disabled ? item.reason : undefined" :tabindex="item.disabled ? 0 : undefined">
         <span v-if="item.step" class="header-step" :class="{ complete: item.step.checked }"
           :aria-label="item.step.checked ? 'Complete' : `Step ${item.number}`">
           <svg v-if="item.step.checked" viewBox="0 0 16 16" aria-hidden="true"><path d="m4 8 2.5 2.5L12 5" /></svg>
           <template v-else>{{ item.number }}</template>
         </span>
         <span>{{ item.label }}</span>
-      </RouterLink>
+      </component>
     </div>
     <RouterLink to="/settings" class="header-settings-icon" active-class="active" aria-label="Settings" title="Settings">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9.5 3-.6 2.2-1.7 1L5 5.6 2.5 10l1.6 1.6v1.8L2.5 15 5 19.4l2.2-.6 1.7 1 .6 2.2h5l.6-2.2 1.7-1 2.2.6 2.5-4.4-1.6-1.6v-1.8L21.5 10 19 5.6l-2.2.6-1.7-1L14.5 3Z"/><circle cx="12" cy="12.5" r="3"/></svg>
@@ -47,6 +50,8 @@ const items = computed(() => {
 .header-link { display: inline-flex; flex-shrink: 0; align-items: center; gap: 7px; padding: 0 12px; border-bottom: 2px solid transparent; color: #cad8cf; text-decoration: none; font-size: 12px; white-space: nowrap; }
 .header-link:hover, .header-link:focus-visible { background: #29493b; color: #fff; }
 .header-link.active { color: #fff; border-bottom-color: #b6d49b; }
+.header-link.disabled { color:#9aac9f; opacity:.55; cursor:not-allowed; border-bottom-color:transparent; }
+.header-link.disabled:hover { background:transparent; }
 .header-step { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border: 1px solid #6c8879; border-radius: 50%; color: #d5e0d8; font-size: 10px; font-weight: 600; }
 .header-step.complete { border-color: #a9ca9d; background: #a9ca9d; color: #18392f; }
 .header-step svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }

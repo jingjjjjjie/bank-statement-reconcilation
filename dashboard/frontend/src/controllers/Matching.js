@@ -73,7 +73,7 @@ function renderQueue() {
   const index = rows.findIndex(b => b.id === activeId);
   for (const b of rows.slice(transactionPage * 10, transactionPage * 10 + 10)) {
     const number = rows.indexOf(b) + 1;
-    const finished = ['approved', 'denied'].includes(b.review_status);
+    const finished = ['approved', 'denied'].includes(b.review_status) && !b.stale;
     const control = button(String(number), () => requestBank(b.id), `transaction-number ${finished ? 'finished' : ''}`);
     control.dataset.bankId = b.id;
     control.setAttribute('aria-label', `Transaction ${number}, ${b.review_status === 'denied' ? 'rejected' : b.review_status}`);

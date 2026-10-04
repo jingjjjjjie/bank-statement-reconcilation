@@ -389,3 +389,66 @@ body:has(.evidence-dialog[open]) {
 .report-export-dialog::backdrop { background:#13271dc4; }
 .report-export-options { display:grid; gap:12px; padding:20px; }
 .report-export-options .button { text-align:center; white-space:normal; }
+
+/* One export workspace: transaction report beside the available downloads. */
+.final-report{max-width:1600px;padding:32px 36px 48px}
+.report-heading{padding-bottom:24px;border-bottom:1px solid #dce2db;margin-bottom:28px}
+.report-heading h1{font-size:30px;letter-spacing:-1px;margin:0}
+.report-eyebrow{font-size:10px;font-weight:650;letter-spacing:1.4px;color:#6c7b70}
+.export-layout{display:grid;grid-template-columns:minmax(0,1fr);gap:28px;align-items:start}
+.transaction-report{min-width:0}
+.report-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0;margin:0 0 20px;padding:0;border:1px solid #dce2db;border-radius:12px;background:white;overflow:hidden}
+.report-summary>div{padding:20px 22px;border-right:1px solid #e7ebe5;display:grid;gap:8px}
+.report-summary>div:last-child{border-right:0}
+.report-summary span{font-size:11px;color:#657168}
+.report-summary strong{font-size:30px;line-height:1.1;font-weight:600;letter-spacing:-1px}
+.report-summary .summary-supported{background:#edf4eb;color:#285c36}
+.report-filters{margin:18px 0;gap:12px;font-size:11px}
+.report-filters input,.report-filters select{font-size:12px;min-height:40px;width:100%;box-sizing:border-box}
+.report-filters input{min-width:0}
+.report-table th{font-size:10px;text-transform:uppercase;letter-spacing:.6px;padding:14px 12px}
+.report-table td{font-size:12px;padding:16px 12px}
+.report-table td:first-child{min-width:160px;max-width:290px}
+.report-table td:first-child span{font-size:11px;line-height:1.5}
+.report-table td:first-child strong{font-weight:600}
+.final-report .text-button{font-size:11px;padding:8px;min-height:36px;white-space:nowrap}
+.export-downloads{display:grid;gap:18px;position:sticky;top:20px;min-width:0}
+.workbook-download{padding:24px;background:#18392f;border-radius:12px;color:white}
+.download-type{font-size:10px;letter-spacing:1px;border:1px solid #658572;border-radius:4px;padding:4px 6px;color:#c9deb9}
+.workbook-download h2{font-size:20px;margin:20px 0 10px;font-weight:550;letter-spacing:-.4px}
+.workbook-download p{font-size:12px;line-height:1.6;color:#c2d3c9;margin:0 0 20px}
+.workbook-download .button{width:100%;background:#d9ecc7;color:#17392e;border:0;justify-content:center;font-size:13px}
+.workbook-download small{display:block;font-size:10px;color:#c2d3c9;line-height:1.5;margin-top:10px}
+.workbook-download .workbook-unavailable{margin:0;padding:12px;border:1px solid #547466;border-radius:6px}
+.archive-downloads{background:white;border:1px solid #dce2db;border-radius:12px;padding:0 20px}
+.download-section-heading{display:flex;align-items:center;justify-content:space-between;padding:20px 0 8px}
+.download-section-heading h2{font-size:13px;margin:0}
+.download-section-heading>span{font-size:10px;color:#758276}
+.archive-download{padding:16px 0;border-bottom:1px solid #e7ebe5}
+.archive-download:last-child{border-bottom:0}
+.archive-download button{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;padding:0;min-height:28px;background:none;border:0;text-align:left;color:#233329;font-size:12px;font-weight:600;cursor:pointer}
+.archive-download button:disabled{opacity:.5;cursor:wait}
+.download-word{color:#46684a;font-size:10px;font-weight:500}
+.archive-download p{font-size:11px;line-height:1.5;color:#718075;margin:5px 0 0}
+.archive-download .download-message{color:#254c30;overflow-wrap:anywhere}
+.export-run-details{font-size:11px;line-height:1.6;color:#6c7b70;padding:0 4px;overflow-wrap:anywhere}
+.export-run-details summary{cursor:pointer;color:#52665a}
+.export-checks{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 12px}
+.export-checks dd{margin:0;text-align:right}
+.report-empty{padding:48px 32px;background:white;border:1px solid #dce2db;border-radius:12px}
+.report-empty h2{font-size:23px;margin:16px 0 10px;font-weight:550}
+.report-empty p{font-size:13px;color:#657168;line-height:1.6}
+.report-empty details{margin-top:24px;font-size:11px;color:#748075;overflow-wrap:anywhere}
+@media(max-width:1100px){.export-layout{grid-template-columns:minmax(0,1fr) 270px;gap:18px}.final-report{padding:24px}.report-summary>div{padding:18px 14px}}
+@media(max-width:850px){.export-layout{grid-template-columns:1fr}.export-downloads{position:static;grid-template-columns:1fr 1fr;align-items:start}.export-run-details{grid-column:1/-1}.report-heading{margin-bottom:20px}}
+@media(max-width:550px){.final-report{padding:22px 14px}.report-heading h1{font-size:26px}.report-heading>.report-eyebrow{display:none}.report-summary>div{padding:16px 12px}.report-summary strong{font-size:25px}.report-summary span{font-size:10px}.export-downloads{grid-template-columns:1fr}.report-filters{align-items:end}.report-filters>span{margin-left:auto}.report-empty{padding:30px 22px}}
+
+/* Keep downloads behind one Export button above the report. */
+.report-export-dialog{width:min(740px,calc(100vw - 32px));max-height:90dvh;overflow:auto}
+.report-export-dialog .export-downloads{position:static;grid-template-columns:1fr 1fr;padding:20px;gap:20px;align-items:start}
+.report-export-dialog .export-run-details{grid-column:1/-1}
+.workbook-options{display:grid;gap:10px}
+.workbook-options .button{white-space:normal;text-align:center;line-height:1.4;box-sizing:border-box;padding:12px}
+.workbook-options .button.secondary{color:#e5f0df;background:transparent;border:1px solid #6a8977}
+.export-layout{display:block}
+@media(max-width:650px){.report-export-dialog .export-downloads{grid-template-columns:1fr;padding:14px;gap:14px}.report-export-dialog .dialog-heading h2{font-size:20px}}

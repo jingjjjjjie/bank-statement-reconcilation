@@ -47,8 +47,8 @@ class FinalReportBrowserTests(unittest.TestCase):
             page.get_by_label('demo-receipt-1.pdf page', exact=True).select_option('0')
             page.get_by_label('demo-receipt-1.pdf zoom', exact=True).select_option('150')
             page.get_by_role('button', name='Close evidence').click()
-            page.locator('.app-header a[href="/matching"]').click()
-            expect(page).to_have_url(self.url + '/matching')
+            page.locator('.app-header a[href="/documents"]').click()
+            expect(page).to_have_url(self.url + '/documents')
             saved = page.request.get(self.url + '/api/matching').json()
             pending = []
             page.route('**/api/matching', lambda route: pending.append(route))
@@ -129,6 +129,9 @@ class FinalReportBrowserTests(unittest.TestCase):
         fixture.review.manifest = {}
         fixture.review.workspace = lambda: {'name': 'Synthetic December 2025', 'period': 'Demo data'}
         fixture.review.workflow_checks = lambda: (False, False, False)
+        fixture.review.completion = lambda: {
+            'exact_done': True, 'content_done': False, 'bank_done': False, 'complete': False,
+        }
         server = TestServer(('127.0.0.1', 0), create_app(fixture.review, 'test-token', SimpleNamespace()))
         threading.Thread(target=server.serve_forever, daemon=True).start()
         self.addCleanup(server.server_close)
@@ -188,7 +191,7 @@ class FinalReportBrowserTests(unittest.TestCase):
             expect(trigger).to_be_focused()
             expect(page.get_by_label('Find a transaction')).to_have_value('Cedar')
             expect(page.locator('.report-table tbody tr')).to_have_count(1)
-            export_button = page.get_by_role('button', name='Export Excel', exact=True)
+            export_button = page.get_by_role('button', name='Export', exact=True)
             for width in (1440, 390):
                 page.set_viewport_size({'width': width, 'height': 1000})
                 expect(page.get_by_role('navigation')).to_have_count(1)
@@ -199,8 +202,9 @@ class FinalReportBrowserTests(unittest.TestCase):
                 page.keyboard.press('Escape')
                 expect(help_button).to_have_attribute('aria-expanded', 'false')
                 export_button.click()
-                export_dialog = page.get_by_role('dialog', name='Export Excel')
+                export_dialog = page.get_by_role('dialog', name='Export')
                 expect(export_dialog).to_be_visible()
+                self.capture(page, f'06-export-menu-{width}.png')
                 expect(export_dialog.get_by_role('link')).to_have_count(2)
                 for _ in range(5):
                     page.keyboard.press('Tab')
@@ -264,7 +268,7 @@ class FinalReportBrowserTests(unittest.TestCase):
             )
             page.reload()
             expect(page.get_by_role('alert').filter(has_text='Saved matching snapshot')).to_be_visible()
-            expect(page.get_by_role('button', name='Export Excel', exact=True)).to_have_count(0)
+            expect(page.get_by_role('button', name='Export', exact=True)).to_have_count(1)
             page.unroute('**/api/matching')
             page.get_by_role('button', name='Retry').click()
             expect(page.locator('.report-table tbody tr')).to_have_count(3)

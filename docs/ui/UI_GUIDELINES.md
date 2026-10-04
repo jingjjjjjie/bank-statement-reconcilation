@@ -56,3 +56,7 @@ Shared help control: `dashboard/frontend/src/components/PageHelp.vue`.
 - Final review allocation summaries use a green gradient for valid amounts that equal the bank payment; differences or invalid amounts remain red. Green indicates balanced amounts, not saved approval.
 
 - Final review candidate actions use Show to open original evidence. Omit Use only this; selection changes through checkboxes and Remove.
+
+- Review Extraction and Review Matching are the visible review-page names. Documents ticks after saved extraction completes; review ticks require current saved decisions. Reviewed matching transaction boxes are green in both confidence filters.
+- Export is one unnumbered navigation destination combining the final report and downloads. One Export button above the report opens the workbook choices and document ZIPs. Keep one page-help circle. The former /complete route redirects to /final-report.
+- Disable Review Extraction until extraction results exist; disable Review Matching until document and bank extraction finish. Disabled navigation explains the prerequisite, and direct routes enforce the same readiness checks. Original-file downloads remain accessible from Export.

@@ -227,3 +227,15 @@ separate lines; pending, rejected and stale matches leave PARTICULAR blank.
 
 REMARK displays bold red OK only for current, fully supported human approvals.
 Unapproved, stale and incomplete support keeps the remark blank.
+
+
+## Combined report and export workspace
+
+The unnumbered Export destination opens /final-report; /complete redirects there.
+The transaction report retains support filters and confirmed-only evidence previews.
+One Export button opens both bank-workbook options and the matched, unmatched,
+original-document and original-project ZIPs. Workflow checks and recorded usage
+remain available in the same dialog. Downloads retain their existing ledger rules.
+Review Matching stays unavailable until bank and document extraction finish;
+reviewed high/low-confidence proposals give the stage a tick only while decisions
+are current. No-match rows do not require a proposed-match decision for that tick.

@@ -41,7 +41,7 @@ class PiecePipelineBrowserTests(unittest.TestCase):
         review.root, review.data, review.manifest = fixture.base, fixture.base / 'data', {}
         review.data.mkdir()
         review.workspace = lambda: {'name': 'Fixture', 'period': ''}
-        review.workflow_checks = lambda: (False, False, False)
+        review.workflow_checks = lambda: (False, False, True)
         server = TestServer(('127.0.0.1', 0), create_app(review, 'fixture'))
         threading.Thread(target=server.serve_forever, daemon=True).start()
         self.addCleanup(server.server_close)
@@ -94,7 +94,7 @@ class PiecePipelineBrowserTests(unittest.TestCase):
             page.locator('.app-header a[href="/bank"]').click()
             page.locator('#load-final-matching').click()
             expect(page.locator('#final-matching-ready')).to_have_text(
-                'Progress is saved automatically. Review results on Final review.'
+                'Progress is saved automatically. Review the matches on Review Matching.'
             )
             expect(page.locator('#generate-matches')).to_be_visible()
             expect(page.locator('#generate-matches')).to_be_enabled()

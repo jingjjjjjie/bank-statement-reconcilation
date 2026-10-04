@@ -60,7 +60,7 @@ async function loadMatchingReadiness() {
     $('#generate-matches').disabled = !matchingReady;
     if (matchingReady) await matchingProgress(); else renderMatchingProgress({});
     $('#final-matching-ready').textContent = data.live_pieces
-      ? 'Progress is saved automatically. Review results on Final review.' : 'Load the current bank statement and extracted pieces for final matching.';
+      ? 'Progress is saved automatically. Review the matches on Review Matching.' : 'Load the current bank statement and extracted pieces for final matching.';
   } catch (error) {
     $('#final-matching-ready').textContent = 'Prepare the bank statement and supporting documents before loading.';
   }

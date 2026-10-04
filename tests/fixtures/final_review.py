@@ -110,6 +110,13 @@ class FinalReviewFixture(unittest.TestCase):
         """Write fixture JSON to an isolated location."""
         path.write_text(json.dumps(data), encoding='utf-8')
 
+    def enable_review_navigation(self):
+        """Represent completed extraction prerequisites for frozen matching browser fixtures."""
+        self.review.workflow_checks = lambda: (False, False, True)
+        patch('dashboard.services.extraction.document_status.snapshot', return_value={
+            'prepared': True, 'documents': [{'status': 'Complete', 'extracted': True, 'approved_duplicate': False}],
+        }).start()
+
     def request(self, bank='B1', action='approve', allocations=None, **extra):
         """Build a request bound to the current persisted revision."""
         state = matching.context(self.review)[1]
