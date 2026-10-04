@@ -16,9 +16,11 @@ usePage(root, initialize);
     <section class="settings-card"><label class="setting-switch"><span><strong>Development / testing mode</strong></span><input id="development-mode" type="checkbox" role="switch" disabled></label><p id="development-mode-status" role="status">Loading mode?</p></section>
     <section class="settings-card codex-account"><div class="section-title"><div><h2>Codex account</h2></div><button type="button" class="button secondary" id="codex-check">Check now</button></div>
       <p id="codex-status" role="status" aria-live="polite">Checking Codex…</p>
+      <p id="codex-check-result" role="status" aria-live="polite"></p>
       <p id="codex-version"></p>
+      <pre id="codex-update-output" hidden></pre>
       <div id="codex-login" hidden><p>Open <a id="codex-login-url" target="_blank" rel="noopener noreferrer"></a> and enter <strong id="codex-login-code"></strong></p><pre id="codex-login-output"></pre></div>
-      <div class="content-actions"><button type="button" class="button secondary" id="codex-login-start">Log in with ChatGPT</button><button type="button" class="button secondary" id="codex-login-cancel" hidden>Cancel login</button></div>
+      <div class="content-actions"><button type="button" class="button secondary" id="codex-update" hidden>Update Codex</button><button type="button" class="button secondary" id="codex-login-start">Log in with ChatGPT</button><button type="button" class="button secondary" id="codex-login-cancel" hidden>Cancel login</button></div>
     </section>
     <form id="settings-form">
       <fieldset id="settings-fields" disabled>

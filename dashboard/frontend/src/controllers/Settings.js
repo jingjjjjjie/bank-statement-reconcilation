@@ -163,16 +163,20 @@ function showUsage(usage) {
 }
 pollVisible(async () => showUsage((await api('/api/config')).token_usage), 10000);
 
-/* Codex account: login status, versions and device-code login. Works without a workspace. */
-let loginTimer, codexLoggedIn = false;
+/* Codex account: login status, a live check, update and device-code login. Works without a workspace. */
+let loginTimer, updateTimer, codexLoggedIn = false, codexLatest = '';
 function showCodex(data) {
   const method = data.method === 'chatgpt' ? 'ChatGPT' : data.method === 'api key' ? 'an API key (not used by this workflow)' : '';
   $('#codex-status').textContent = !data.available ? 'Codex CLI not found.'
     : data.logged_in ? `Logged in with ${method}.` : 'Not logged in.';
   $('#codex-status').classList.toggle('validation', !data.logged_in || data.method !== 'chatgpt');
   $('#codex-version').textContent = !data.installed ? '' : data.update_available
-    ? `Codex ${data.installed}. Update ${data.latest} available: run python scripts/codex/update_codex.py on the host.`
+    ? `Codex ${data.installed}. Version ${data.latest} is available.`
     : `Codex ${data.installed}${data.latest ? ' (latest)' : ''}.`;
+  codexLatest = data.latest;
+  $('#codex-update').hidden = !(data.update_available && data.can_update) && !data.update.running;
+  $('#codex-update').textContent = `Update to ${data.latest}`;
+  showUpdate(data.update);
   codexLoggedIn = data.logged_in;
   $('#codex-login-start').textContent = data.logged_in ? 'Log in again' : 'Log in with ChatGPT';
   showLogin(data.login);
@@ -191,13 +195,38 @@ function showLogin(login) {
     if (next.running) showLogin(next); else checkCodex();
   }, 2000);
 }
+function showUpdate(update) {
+  $('#codex-update-output').hidden = !update.running && update.exit_code === null;
+  $('#codex-update-output').textContent = update.running ? ['Installing…', ...update.lines].join('\n')
+    : update.exit_code === 0 ? 'Update installed. New Codex requests use it.' : update.lines.join('\n');
+  $('#codex-update').disabled = update.running;
+  clearTimeout(updateTimer);
+  if (update.running) updateTimer = setTimeout(async () => {
+    const next = await api('/api/codex/update').catch(() => ({...update}));
+    if (next.running) showUpdate(next); else checkCodex(true);
+  }, 2000);
+}
 async function checkCodex(refresh = false) {
-  $('#codex-check').disabled = true;
   try { showCodex(await api(`/api/codex/status${refresh ? '?refresh=true' : ''}`)); }
   catch (error) { $('#codex-status').textContent = error.message; }
-  finally { $('#codex-check').disabled = false; }
 }
-$('#codex-check').onclick = () => checkCodex(true);
+$('#codex-check').onclick = async () => {
+  $('#codex-check').disabled = true;
+  $('#codex-check-result').textContent = 'Sending a test request…';
+  try {
+    await checkCodex(true);
+    const result = await api('/api/codex/check', {});
+    $('#codex-check-result').textContent = result.ok
+      ? `Connection OK: ${result.model} answered in ${result.seconds} s.`
+      : `Connection failed: ${result.error || 'unexpected reply'}`;
+    $('#codex-check-result').classList.toggle('validation', !result.ok);
+  } catch (error) { $('#codex-check-result').textContent = error.message; }
+  finally { $('#codex-check').disabled = false; }
+};
+$('#codex-update').onclick = async () => {
+  if (!confirm(`Install Codex ${codexLatest}? New requests will use it; running requests are not interrupted.`)) return;
+  try { showUpdate(await api('/api/codex/update', {})); } catch (error) { toast(error.message); }
+};
 $('#codex-login-start').onclick = async () => {
   if (codexLoggedIn && !confirm('Replace the current Codex login?')) return;
   try { showLogin(await api('/api/codex/login', {})); } catch (error) { toast(error.message); }

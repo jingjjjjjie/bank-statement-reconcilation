@@ -59,6 +59,29 @@ DEFAULT_MAX_CALLS = 1000
 LOGIN_CHECK_TIMEOUT = 30
 
 
+#: Codex installed by the dashboard's Update button, kept in the login volume so it survives restarts.
+UPDATED_CODEX = Path.home() / ".codex/cli"
+
+
+def package_version(executable):
+    """Version from the npm package behind a Codex executable, or None when it is not an npm install."""
+    package = Path(executable).resolve().parents[1] / "package.json"
+    try:
+        return tuple(int(part) for part in json.loads(package.read_text(encoding="utf-8"))["version"].split("."))
+    except (OSError, ValueError, KeyError):
+        return None
+
+
+def codex_executable():
+    """The Codex CLI to run: a newer dashboard-updated copy, else PATH, else the Windows desktop install."""
+    bundled = Path(os.environ.get("LOCALAPPDATA", "")) / "Programs/OpenAI/Codex/bin/codex.exe"
+    installed = shutil.which("codex") or str(bundled)
+    updated = UPDATED_CODEX / "node_modules/.bin/codex"
+    if updated.is_file() and (package_version(updated) or ()) > (package_version(installed) or ()):
+        return str(updated)
+    return installed
+
+
 def request_digest(prompt, schema, model, reasoning, images=()):
     """Content-address one request by prompt, schema, model settings and image bytes."""
     digest = hashlib.sha256(json.dumps([prompt, schema, model, reasoning, CACHE_PROFILE], sort_keys=True).encode())
@@ -117,8 +140,7 @@ class CodexReviewer:
         cancel_event=None,
     ):
         """Configure the codex executable, default model, call budget and cache folder under `work`."""
-        bundled = Path(os.environ.get("LOCALAPPDATA", "")) / "Programs/OpenAI/Codex/bin/codex.exe"
-        self.executable = executable or shutil.which("codex") or str(bundled)
+        self.executable = executable or codex_executable()
         self.work, self.model = work, model if model is not None else DEFAULT_MODEL
         self.reasoning = reasoning
         self.max_calls, self.timeout = max_calls, timeout

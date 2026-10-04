@@ -1,4 +1,4 @@
-"""Codex login status, version check and device-code login; usable before a workspace is selected."""
+"""Codex login status, connection check, update and device-code login; usable before a workspace is selected."""
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from starlette.concurrency import run_in_threadpool
@@ -47,3 +47,21 @@ def login():
 def cancel():
     """Stop a waiting device-code login."""
     return codex_account.cancel_login()
+
+
+@router.post("/check")
+async def check():
+    """Send one tiny real request to confirm Codex answers; recorded in token usage."""
+    return await run_in_threadpool(codex_account.check_connection)
+
+
+@router.get("/update")
+def update_state():
+    """Report the update install in progress."""
+    return codex_account.update_state()
+
+
+@router.post("/update", dependencies=[Depends(this_computer)])
+def update():
+    """Install the latest stable Codex for the workflow; refused while a Codex request runs."""
+    return codex_account.start_update()
