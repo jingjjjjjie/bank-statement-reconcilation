@@ -695,7 +695,7 @@ p {
 a.nav-item { text-decoration: none; margin-top: 5px; }
 a.nav-item:hover { background: #30483f; }
 .header-settings { font-size: 12px; text-decoration: none; color: var(--green); }
-.settings-page { padding-bottom: 20px; }
+.settings-page { padding-bottom: 20px; max-width: 1100px; margin-left: auto; margin-right: auto; box-sizing: content-box; }
 .settings-page form { max-width: 1100px; }
 .settings-page fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
 .settings-card { background: white; border: 1px solid var(--line); border-radius: 9px; padding: 25px 28px; margin-bottom: 20px; }
@@ -720,7 +720,7 @@ a.nav-item:hover { background: #30483f; }
 @keyframes status-pulse { 50% { opacity: .35; } }
 @media (prefers-reduced-motion: reduce) { .status-dot.busy { animation: none; } }
 .codex-version { margin-left: 6px; color: var(--muted); font-size: 13px; font-weight: 400; }
-.codex-detail { margin: 0 0 0 19px; color: var(--muted); font-size: 13px; }
+.codex-detail { margin: 4px 0 0; color: var(--muted); font-size: 13px; white-space: nowrap; }
 .codex-login { margin: 16px 0 0; padding: 14px 16px 14px 34px; background: var(--mint); border-radius: 7px; line-height: 2; }
 .codex-login a { overflow-wrap: anywhere; }
 .codex-code { font-size: 18px; font-weight: 650; letter-spacing: 2px; padding: 2px 8px; background: white; border: 1px solid var(--line); border-radius: 5px; user-select: all; }

@@ -14,9 +14,8 @@ usePage(root, initialize);
     <section class="page-heading"><div><div class="page-title"><h1>Review settings</h1><PageHelp page="Settings" /></div></div></section>
     <div id="settings-error" class="validation" role="alert" hidden></div>
     <section class="settings-card codex-account"><div class="section-title"><div><h2>Codex account <span id="codex-version" class="codex-version"></span></h2></div>
-</div>
+        <span id="codex-detail" class="codex-detail"></span></div>
       <p class="codex-state"><span id="codex-dot" class="status-dot busy" aria-hidden="true"></span><strong id="codex-status" role="status" aria-live="polite">Checking Codex…</strong></p>
-      <p id="codex-detail" class="codex-detail"></p>
       <div class="codex-actions"><button type="button" class="button secondary" id="codex-check">Check now</button><button type="button" class="button secondary" id="codex-update">Check for updates</button><button type="button" class="button secondary" id="codex-login-start">Log in with ChatGPT</button><button type="button" class="button secondary" id="codex-login-cancel" hidden>Cancel</button></div>
       <ol id="codex-login" class="codex-login" hidden><li>Open <a id="codex-login-url" target="_blank" rel="noopener noreferrer"></a></li><li>Enter <code id="codex-login-code" class="codex-code"></code> (expires in 15 minutes)</li></ol>
       <pre id="codex-output" class="codex-output" hidden></pre>
