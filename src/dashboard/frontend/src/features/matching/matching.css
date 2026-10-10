@@ -148,7 +148,13 @@
 
 /* Keep allocation editing collapsed and the preview action at the card's bottom right. */
 .candidate-actions{padding-bottom:10px;margin-top:0;align-items:flex-end}
-.candidate-actions .show-evidence{margin-left:auto;flex:none}
+.candidate-source-actions{display:flex;align-items:center;gap:8px;margin-left:auto;flex:none}
+.candidate-source-actions .show-evidence{flex:none}
 .allocation-editor{flex:1;min-width:0}
 .allocation-editor>summary{cursor:pointer;font-size:11px;color:#40594b;padding:6px 0}
 .allocation-editor .allocation-controls{padding:8px 0 0}
+
+/* Identify extracted bank facts without implying a reviewed decision. */
+.matching-app .statement-source { display:flex; align-items:center; gap:6px; width:fit-content; margin:0 0 7px; padding:3px 7px; border:1px solid #dce8f6; border-radius:5px; background:var(--blue-light); color:var(--primary); font-size:11px; font-weight:600; line-height:1.4; }
+.matching-app .statement-source-icon { position:relative; width:10px; height:12px; flex:none; border:1px solid currentColor; border-radius:2px; }
+.matching-app .statement-source-icon::after { content:''; position:absolute; left:2px; right:2px; top:4px; height:1px; background:currentColor; box-shadow:0 3px currentColor; }

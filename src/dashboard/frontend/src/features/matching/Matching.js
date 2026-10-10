@@ -150,7 +150,11 @@ function chooseBank(id, addItem, preservePreview = false) {
     node('span', `payment-tag review-state ${b.review_status}`, status));
   const narration = node('p', 'payment-description', b.description || 'Payment description unavailable');
   narration.setAttribute('aria-label', 'Payment details');
-  detail.append(header, meta, narration);
+  const sourceLabel = node('div', 'statement-source');
+  const sourceIcon = node('span', 'statement-source-icon');
+  sourceIcon.setAttribute('aria-hidden', 'true');
+  sourceLabel.append(sourceIcon, node('span', '', 'From bank statement'));
+  detail.append(sourceLabel, header, meta, narration);
   if (b.suggestion.outdated) detail.append(node('p', 'warning', 'Saved proposal is outdated. Recheck current evidence or generate matches again.'));
   if (b.suggestion.failed) detail.append(node('p', 'warning', b.suggestion.reason));
   if (b.stale) detail.append(node('p', 'warning', 'Original evidence changed. This transaction cannot be treated as supported until rechecked.'));
@@ -226,13 +230,12 @@ function renderCandidates() {
       } else expandedCandidates.delete(item.id);
     };
     const body = node('div', 'candidate-body');
-    const source = node('details', 'source-details candidate-source');
+    const source = node('div', 'candidate-source');
     const meta = node('div', 'candidate-meta');
     if (suggested.has(item.id)) {
       meta.append(node('span', 'candidate-confidence', confidenceLabel[b.confidence.level || 'none']));
       if (b.suggestion.reason) source.append(node('p', 'candidate-reason', b.suggestion.reason));
     }
-    source.prepend(node('summary', '', 'Details'));
     if (item.description) source.append(node('p', 'candidate-description', item.description));
     const dates = item.dates?.length ? item.dates.map(d => typeof d === 'string' ? d : d.value).join(', ') : item.date;
     source.append(node('p', 'candidate-info', [dates, item.filename, item.location].filter(Boolean).join(' / ')));
@@ -263,8 +266,9 @@ function renderCandidates() {
     download.download = item.filename;
     download.title = `Download original: ${item.filename}`;
     download.setAttribute('aria-label', `Download original ${item.filename}`);
-    actions.append(download);
-    actions.append(button('Show document', () => showEvidence('item', item.id), 'candidate-preview show-evidence'));
+    const sourceActions = node('div', 'candidate-source-actions');
+    sourceActions.append(download, button('Show document', () => showEvidence('item', item.id), 'candidate-preview show-evidence'));
+    actions.append(sourceActions);
     content.append(actions);
     card.append(control, content); (isSelected ? tray : list).append(card);
   }

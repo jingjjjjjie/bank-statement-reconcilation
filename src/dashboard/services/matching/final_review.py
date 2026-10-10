@@ -442,6 +442,15 @@ def decision_update(review, state, bank_id, banks, items, facts, before):
 
 def evidence(review, kind, key):
     """Resolve only corpus-listed originals and verify their bytes before previewing."""
+    from dashboard.services.matching import piece_matching, preview_sources
+
+    if kind not in {'bank', 'item'}:
+        raise ValueError('Unknown evidence type')
+    if review is not None and piece_matching.enabled(review):
+        source, expected = preview_sources.resolve(review, kind, key)
+        if source_hash(source) != expected:
+            raise ValueError('Original evidence changed or is unavailable')
+        return Path(source)
     _, _, banks, items, _, facts = context(review)
     if kind == 'bank':
         source, expected = (
