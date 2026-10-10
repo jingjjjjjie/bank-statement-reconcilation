@@ -89,7 +89,7 @@ Shared help control: `src/dashboard/frontend/src/components/PageHelp.vue`.
 - Final review candidate actions use Show to open original evidence. Omit Use only this; selection changes through checkboxes and Remove.
 
 - Review Extraction and Review Matching are the visible review-page names. Documents ticks after saved extraction completes; review ticks require current saved decisions. Reviewed matching transaction boxes are blue in both confidence filters.
-- Export is one unnumbered navigation destination combining the final report and downloads. One Export button above the report opens the workbook choices and document ZIPs. Keep one page-help circle. The former /complete route redirects to /final-report.
+- Export is the fifth navigation destination combining the final report and downloads. One Export button above the report opens the workbook choices and document ZIPs. Keep one page-help circle. The former /complete route redirects to /final-report.
 - Disable Review Extraction until extraction results exist; disable Review Matching until document and bank extraction finish. Disabled navigation explains the prerequisite, and direct routes enforce the same readiness checks. Original-file downloads remain accessible from Export.
 
 - Dashboard display reads use shared workspace snapshots and a single live event stream. Keep the current view visible while Updating... is shown in the header. Live updates must preserve unsaved drafts, and saved/confirmed states still require successful backend validation. Disconnects fall back to ordinary progress requests.
@@ -125,4 +125,4 @@ Shared help control: `src/dashboard/frontend/src/components/PageHelp.vue`.
 - Extraction entry cards show Show and Remove only. Right-align the document total
   and Add entry / Reset / Merge all / Remove toolbar group, including wrapped rows.
 
-- Omit Workspace from the application header. Back to Home retains access to project selection. Number visible workflow destinations Documents 1, Review Extraction 2, Bank statement 3 and Review Matching 4; Export stays unnumbered.
+- Omit Workspace from the application header. Back to Home retains access to project selection. Number visible workflow destinations Documents 1, Review Extraction 2, Bank statement 3, Review Matching 4 and Export 5.

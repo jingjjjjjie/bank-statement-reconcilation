@@ -19,7 +19,7 @@ const items = computed(() => {
   return destinations.map(([path, label], position) => {
     const index = steps.findIndex(step => step.href === path);
     const status = steps[index];
-    return { path, label, step: path !== '/final-report' ? status : null, number: position + 1,
+    return { path, label, step: status, number: position + 1,
       disabled: status?.available === false || (!status && ['/matching', '/extraction-review'].includes(path)),
       reason: status?.blocked_reason || 'Checking workflow readiness…' };
   });
