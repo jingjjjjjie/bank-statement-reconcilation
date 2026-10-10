@@ -15,6 +15,10 @@ from jsonschema.exceptions import ValidationError as SchemaValidationError
 from reconciliation.intake.workspace import SourceSelection
 
 FRONTEND = Path(os.environ.get("DASHBOARD_FRONTEND", Path(__file__).parent / "frontend/dist"))
+# Evidence edits submit complete piece lists; small control requests keep their tighter bound.
+EVIDENCE_REQUEST_PATHS = {"/api/receipts/accept", "/api/receipts/merge-all", "/api/matching-decide"}
+MAX_EVIDENCE_REQUEST_BYTES = 1024 * 1024
+MAX_CONTROL_REQUEST_BYTES = 8192
 PAGES = {
     "",
     "source",
@@ -112,9 +116,12 @@ def create_app(review=None, token=None, sources=None):
             ):
                 return JSONResponse({"error": "Refresh the dashboard before making changes"}, status_code=403)
             body = bytearray()
+            limit = (
+                MAX_EVIDENCE_REQUEST_BYTES if request.url.path in EVIDENCE_REQUEST_PATHS else MAX_CONTROL_REQUEST_BYTES
+            )
             async for chunk in request.stream():
                 body.extend(chunk)
-                if len(body) > 8192:
+                if len(body) > limit:
                     return JSONResponse({"error": "Invalid request size"}, status_code=413)
             if not body:
                 return JSONResponse({"error": "Invalid request size"}, status_code=400)
