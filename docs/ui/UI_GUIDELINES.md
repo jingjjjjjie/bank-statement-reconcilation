@@ -50,7 +50,8 @@ Shared help control: `dashboard/frontend/src/components/PageHelp.vue`.
 - Matching supports a draggable, keyboard-accessible panel split on desktop,
   saved locally as a display preference. Double-click or Home restores 50/50.
   Highlight the previewed candidate with a blue outline while preserving rainbows.
-  Put compact 40px Confirm/Save, Reject and Next buttons below the right evidence
+  Put compact 34px Confirm/Save, Reject and Next buttons, at most 140px wide and
+  right-aligned, below the right evidence
   preview, after page/zoom controls. Reserve a secondary row for Undo and save status
   so decisions do not rearrange the main buttons. Save feedback must not cover them.
 
@@ -91,3 +92,7 @@ Shared help control: `dashboard/frontend/src/components/PageHelp.vue`.
 - Disable Review Extraction until extraction results exist; disable Review Matching until document and bank extraction finish. Disabled navigation explains the prerequisite, and direct routes enforce the same readiness checks. Original-file downloads remain accessible from Export.
 
 - Dashboard display reads use shared workspace snapshots and a single live event stream. Keep the current view visible while Updating... is shown in the header. Live updates must preserve unsaved drafts, and saved/confirmed states still require successful backend validation. Disconnects fall back to ordinary progress requests.
+
+- Review Matching starts Available candidates collapsed; click or keyboard activation
+  expands its search button and candidate list. Keep the toolbar flush with the top
+  of the workspace, and offer 50% and 75% original-preview zoom.

@@ -134,3 +134,22 @@ data. Main action rectangles remain identical before/after those decisions at
 1536, 390 and 320 pixels. Existing allocation/save and report/download tests passed.
 All changes are isolated in a dedicated commit; reverting it restores the previous
 UI. Resetting the divider alone restores equal panel widths without reverting code.
+
+
+## Compact matching controls and candidate disclosure
+
+Matching actions are now 34px high, capped at 140px wide and aligned to the right
+beneath the original preview. The reserved Undo/status row keeps them stable.
+Available candidates starts collapsed and expands through a native keyboard-accessible
+disclosure. Search uses a compact bordered button. Preview zoom includes 50% and
+75% of the fit-width scale; the matching toolbar has no extra top padding.
+
+Inspected Playwright captures of the live matching page and synthetic fixtures,
+including the expanded search/candidates and the scaled 1536x760 layout. Fixed an
+expanded-section overlap found by the existing candidate workflow test. The review
+pane scrolls when needed, and candidate lists retain bounded scrolling. Production
+build and seven theme/matching/report browser tests passed; checks cover desktop,
+scaled desktop and 320/390px mobile widths, disclosure keyboard activation, zoom
+values, stable Reject/Undo actions, candidate selection and saved report behaviour.
+Rejection behaviour and all workflow/model prompts are unchanged. Revert this
+commit to restore the previous matching presentation.
