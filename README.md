@@ -1,60 +1,61 @@
 <div align="center">
 
-# 🧾 Bank Statement Reconciliation
+![Accounting Copilot: A little less paperwork.](docs/assets/readme-banner.svg)
 
-**From bank transactions to reviewed supporting evidence.**
+### Bank Statement Reconciliation
 
-![Python](https://img.shields.io/badge/Python-3.12-3776AB?style=flat-square&logo=python&logoColor=white)
-![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=flat-square&logo=fastapi&logoColor=white)
-![Vue](https://img.shields.io/badge/Vue-3-4FC08D?style=flat-square&logo=vuedotjs&logoColor=white)
-![Docker](https://img.shields.io/badge/Docker-2496ED?style=flat-square&logo=docker&logoColor=white)
+Your receipts, statements and supporting documents. One place to make sense of them.
 
-[Quick start](#quick-start) · [Workflow](#workflow) · [Roadmap](#roadmap) · [Docs](docs/README.md)
+**[Get started](#get-started)** &nbsp;·&nbsp; **[How it works](#how-it-works)** &nbsp;·&nbsp; **[Documentation](docs/README.md)**
+
+`Python` &nbsp; `FastAPI` &nbsp; `Vue 3` &nbsp; `Docker`
 
 </div>
 
-A local app for checking bank transactions against receipts, invoices and supporting documents. Extract data, review it beside the originals, approve matches and export the results.
+> 🌱 **Growing into something shareable.**  
+> Currently hard-coded; open source soon! Bank extraction currently targets AmBank statements.
 
-Built with Python, FastAPI and Vue 3. AI extraction and matching use Codex through your ChatGPT subscription login.
+## Small steps. Clear records.
 
-<a id="roadmap"></a>
-## 🚧 Roadmap
+📄 **Read the paperwork.** Extract receipts, invoices and supporting files. Group exact duplicates automatically.
 
-Currently hard-coded; open source soon!
+🔎 **Check the details.** Review entries beside the originals, then inspect suggested matches.
 
-- Remove project-specific assumptions.
-- Make setup reusable across workspaces.
-- Prepare a clean public release.
+✅ **Make the call.** Accept or reject evidence. Your decisions are saved; originals stay intact.
 
-### What it does
+📦 **Take it with you.** Export bank workbooks and supporting-document ZIPs.
 
-| Feature | Purpose |
-| --- | --- |
-| 📄 Extract | Read supporting files and group exact duplicates. |
-| 🔎 Review | Compare extracted entries with original documents. |
-| ✅ Approve | Review suggested matches and save your decisions. |
-| 📦 Export | Download bank workbooks and supporting-document ZIPs. |
+<a id="how-it-works"></a>
+## How it works
 
-<a id="quick-start"></a>
-## 🚀 Quick start
+**Documents → Extraction → Your review → Matching → Export**
 
-Requires Docker with Docker Compose and a ChatGPT account with Codex access.
+Run supporting documents, check their entries, then extract the bank statement. On the bank page, choose **Load for final matching**, then **Generate matches**. Review the proposed evidence before accepting it.
 
-1. Copy `.env.example` to `.env`.
-2. Set `UPLOADS_PATH` to your jobs folder. Use forward slashes for Windows paths.
-3. Create a project folder with exactly one bank-statement PDF in `statement/` and supporting files in `documents/`:
+AI extraction and matching use Codex through your ChatGPT subscription login. Suggestions always need your review.
+
+<a id="get-started"></a>
+## 🚀 Get started
+
+You need **Docker Compose** and **a ChatGPT account with Codex access**.
+
+**01 · Add your files**
+
+Copy `.env.example` to `.env`. Set `UPLOADS_PATH` to your jobs folder; use forward slashes on Windows.
 
 ```text
 bank-statement-uploads/
   MyProject/
     statement/
-      bank-statement.pdf
+      bank-statement.pdf    # One statement PDF
     documents/
       invoice.pdf
       receipts/
 ```
 
-The default jobs folder is `../bank-statement-uploads`, beside this repository. Keep input files outside the repository.
+The default folder is `../bank-statement-uploads`, beside this repository. Keep inputs outside Git.
+
+**02 · Start your workspace**
 
 ```console
 docker compose build
@@ -62,54 +63,33 @@ docker compose run --rm dashboard codex login
 docker compose up -d
 ```
 
-Choose ChatGPT login. Open [localhost:8765](http://localhost:8765), select **Bank Statement Reconciliation**, then **New project**. Choose `/uploads/MyProject` and proceed. Use **Resume** to reopen saved work.
+Choose ChatGPT login. Open **[localhost:8765](http://localhost:8765)**, then **Bank Statement Reconciliation → New project**. Select `/uploads/MyProject`. Use **Resume** to pick up where you left off.
 
-<a id="workflow"></a>
-## 🔄 Workflow
+## 🌱 Up next
 
-1. **Extract documents.** Run supporting files, compare results with the originals and correct or accept entries.
-2. **Extract the bank statement.** Enter its year and check transactions and balances. Bank extraction currently targets AmBank statements.
-3. **Generate matches.** On the bank page, select **Load for final matching**, then **Generate matches**.
-4. **Review matching.** Inspect proposed evidence and amounts, then accept or reject. AI suggestions require your review.
-5. **Export.** Review saved results and download workbooks or document ZIPs.
-
-Exact duplicates are detected automatically; originals stay intact. Extraction progress and review decisions are saved. Source changes require rechecking affected evidence.
+- [ ] Remove hard-coded project assumptions.
+- [ ] Make setup reusable across workspaces.
+- [ ] Prepare the open-source release.
 
 <details>
-<summary><strong>Development & maintenance</strong></summary>
-
-### Run and update
+<summary><strong>For developers</strong></summary>
 
 ```console
-# Rebuild after code changes
+# Rebuild
 docker compose up -d --build dashboard
 
-# View logs
+# Test
+docker compose exec dashboard python -m unittest discover -s tests/unit -t .
+
+# Logs
 docker compose logs --tail 50 dashboard
 
-# Stop the app
+# Stop
 docker compose down
 ```
 
-The app is localhost-only by default. The `codex-home` volume retains your login; project review data persists through the repository mount. Do not delete these when updating.
+The app binds to localhost by default. Keep the `codex-home` volume and project review data when updating.
 
-### Development
-
-Python owns extraction, validation and workflow state. The Vue frontend lives in `dashboard/frontend/`.
-
-```console
-docker compose exec dashboard python -m unittest discover -s tests/unit -t .
-```
-
-See [test instructions](tests/README.md) for browser checks and [architecture](docs/ARCHITECTURE.md) for the code layout.
+[Architecture](docs/ARCHITECTURE.md) · [Tests](tests/README.md) · [Matching rules](docs/workflow/FINAL_COMPARISON.md) · [Token usage](docs/operations/TOKEN_ACCOUNTING.md)
 
 </details>
-
-## 📚 Documentation
-
-- [Documentation index](docs/README.md)
-- [Workflow](docs/workflow/WORKFLOW.md)
-- [Matching and review rules](docs/workflow/FINAL_COMPARISON.md)
-- [PDF processing](docs/workflow/PDF_ROUTING.md)
-- [Live dashboard updates](docs/workflow/LIVE_DISPLAY.md)
-- [Token usage](docs/operations/TOKEN_ACCOUNTING.md)

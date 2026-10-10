@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="420" viewBox="0 0 1280 420" role="img" aria-labelledby="title desc">
+  <title id="title">Accounting Copilot — A little less paperwork.</title>
+  <desc id="desc">A pastel blue and lavender banner with a smiling receipt, a green checkmark and the words Bank Statement Reconciliation.</desc>
+  <defs>
+    <linearGradient id="bg" x2="1" y2="1"><stop stop-color="#eff6ff"/><stop offset=".55" stop-color="#f1efff"/><stop offset="1" stop-color="#fff1eb"/></linearGradient>
+    <linearGradient id="paper" x2="0" y2="1"><stop stop-color="#fff"/><stop offset="1" stop-color="#f8f7ff"/></linearGradient>
+    <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%"><feDropShadow dx="0" dy="16" stdDeviation="16" flood-color="#5f57a8" flood-opacity=".12"/></filter>
+  </defs>
+  <rect width="1280" height="420" rx="28" fill="url(#bg)"/>
+  <circle cx="1160" cy="65" r="160" fill="#e5ddff" opacity=".5"/>
+  <circle cx="40" cy="435" r="130" fill="#d9edff" opacity=".6"/>
+  <g font-family="Inter, Segoe UI, Arial, sans-serif">
+    <rect x="66" y="57" width="216" height="32" rx="16" fill="#fff" fill-opacity=".8"/>
+    <circle cx="85" cy="73" r="4" fill="#8b7de0"/>
+    <text x="98" y="78" font-size="12" font-weight="700" letter-spacing="1.5" fill="#665a99">ACCOUNTING COPILOT</text>
+    <text x="64" y="164" font-size="55" font-weight="750" letter-spacing="-2.5" fill="#292646">A little less</text>
+    <text x="64" y="227" font-size="55" font-weight="750" letter-spacing="-2.5" fill="#7160c4">paperwork.</text>
+    <text x="67" y="272" font-size="18" fill="#6c6883">Bank Statement Reconciliation</text>
+    <text x="67" y="300" font-size="16" fill="#817a94">Extract. Review. Match. Exhale.</text>
+    <rect x="66" y="337" width="174" height="30" rx="15" fill="#fff" fill-opacity=".8"/>
+    <text x="85" y="357" font-size="12" font-weight="600" fill="#756493">A WORK IN PROGRESS</text>
+  </g>
+  <g transform="translate(860 61) rotate(9 110 145)" filter="url(#shadow)">
+    <rect x="-26" y="28" width="217" height="285" rx="24" fill="#dbd3fa"/>
+    <path d="M20 0h176a20 20 0 0 1 20 20v271l-18-11-18 11-18-11-18 11-18-11-18 11-18-11-18 11-18-11-18 11-18-11-18 11V20A20 20 0 0 1 20 0Z" fill="url(#paper)" stroke="#e3dff1" stroke-width="2"/>
+    <rect x="29" y="31" width="78" height="10" rx="5" fill="#d2c9f2"/>
+    <rect x="29" y="53" width="127" height="7" rx="3.5" fill="#edeaf7"/>
+    <circle cx="79" cy="109" r="5" fill="#5b5178"/>
+    <circle cx="137" cy="109" r="5" fill="#5b5178"/>
+    <ellipse cx="61" cy="123" rx="12" ry="7" fill="#ffdedc"/>
+    <ellipse cx="155" cy="123" rx="12" ry="7" fill="#ffdedc"/>
+    <path d="M95 126q13 15 26 0" fill="none" stroke="#5b5178" stroke-width="4" stroke-linecap="round"/>
+    <path d="M30 166h156" stroke="#e8e3f2" stroke-width="2" stroke-dasharray="5 6"/>
+    <path d="M30 193h83m39 0h32M30 215h65m57 0h32M30 237h102" stroke="#ded8ed" stroke-width="7" stroke-linecap="round"/>
+  </g>
+  <g transform="translate(1071 258)" filter="url(#shadow)">
+    <circle r="45" fill="#daf5e8" stroke="#fff" stroke-width="7"/>
+    <path d="m-16 0 11 11 23-24" fill="none" stroke="#54a481" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <path d="m795 105 5 17 17 5-17 5-5 17-5-17-17-5 17-5Z" fill="#b0a0e2"/>
+  <path d="m1138 153 4 12 12 4-12 4-4 12-4-12-12-4 12-4Z" fill="#e4b18e"/>
+  <circle cx="800" cy="301" r="7" fill="#c6c0ef"/>
+</svg>
