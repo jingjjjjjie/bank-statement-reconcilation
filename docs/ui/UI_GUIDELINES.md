@@ -124,3 +124,5 @@ Shared help control: `src/dashboard/frontend/src/components/PageHelp.vue`.
 
 - Extraction entry cards show Show and Remove only. Right-align the document total
   and Add entry / Reset / Merge all / Remove toolbar group, including wrapped rows.
+
+- Omit Workspace from the application header. Back to Home retains access to project selection. Number visible workflow destinations Documents 1, Review Extraction 2, Bank statement 3 and Review Matching 4; Export stays unnumbered.

@@ -8,7 +8,7 @@ const route = useRoute();
 const contextName = computed(() => route.path === '/home' ? 'Home'
   : 'Bank Statement Reconciliation');
 const links = [
-  ['/projects', 'Workspace'], ['/documents', 'Documents'],
+  ['/documents', 'Documents'],
   ['/extraction-review', 'Review Extraction'], ['/bank', 'Bank statement'],
   ['/matching', 'Review Matching'], ['/final-report', 'Export'],
 ];
@@ -16,10 +16,10 @@ const links = [
 const items = computed(() => {
   const steps = appState.steps.filter(step => step.href !== '/review');
   const destinations = route.meta.portal ? [] : links;
-  return destinations.map(([path, label]) => {
-    const index = steps.findIndex(step => (['/', '/source'].includes(step.href) ? '/projects' : step.href) === path);
+  return destinations.map(([path, label], position) => {
+    const index = steps.findIndex(step => step.href === path);
     const status = steps[index];
-    return { path, label, step: path !== '/final-report' ? status : null, number: index + 1,
+    return { path, label, step: path !== '/final-report' ? status : null, number: position + 1,
       disabled: status?.available === false || (!status && ['/matching', '/extraction-review'].includes(path)),
       reason: status?.blocked_reason || 'Checking workflow readiness…' };
   });
