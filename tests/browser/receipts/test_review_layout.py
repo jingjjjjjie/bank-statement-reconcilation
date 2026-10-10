@@ -62,7 +62,7 @@ class ReviewLayoutTests(unittest.TestCase):
             expect(page.locator('#extraction-options')).not_to_be_visible()
             expect(options).to_be_focused()
             expect(page.get_by_role('button', name='Split', exact=True)).to_have_count(0)
-            expect(page.get_by_role('link', name='Download original')).to_have_attribute('download', 'photo.png')
+            expect(page.get_by_role('link', name='Download original', exact=True)).to_have_attribute('download', 'photo.png')
             page.get_by_role('button', name='Select piece 21', exact=True).click()
             expect(page.locator('.active-piece .piece-number')).to_have_text('21')
             expect(page.locator('#merge-piece')).to_have_count(0)

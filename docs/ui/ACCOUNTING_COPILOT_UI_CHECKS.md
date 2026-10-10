@@ -217,3 +217,20 @@ The broader compare/save matching test reached and passed approval, undo and par
 No supporting assertions, then failed to find #document-tab after a separate concurrent
 unmatched-pieces navigation change. That tab change is excluded from this commit.
 Inspected extraction and matching fixture screenshots with the unified controls.
+
+
+## Compact preview toolbar and document downloads
+
+Preview page/zoom controls and review actions share one line when the preview panel
+is at least 700px wide, with compact wrapping below that size. The matching page
+selector is capped at 160px. Both bottom toolbars omit download controls.
+Matching candidate cards place the labelled download icon before Show document.
+Extraction pieces offer Download beside Show, with a document-level fallback in the
+entry toolbar. Bank-original download remains beside the source selector.
+
+Matching downloads explicitly request attachment disposition while retaining evidence
+validation and original filename. The original bytes are not transformed. Build and
+five theme/extraction browser tests passed. Playwright verified single-line alignment
+at 1536px, compact action sizes, narrow layouts, icon order, selector width, no bottom
+bar download links, bank download availability and a real downloaded fixture whose
+bytes equal the source response. Inspected matching and extraction screenshots.

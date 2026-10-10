@@ -267,3 +267,27 @@ body.matching-app #toast { bottom:160px; pointer-events:none; }
 .extraction-workspace .editor-footer .button { justify-content:center; text-align:center; width:100%; max-width:none; min-width:0; height:34px; min-height:34px; padding:3px 6px; margin:0; font-size:11px; line-height:12px; white-space:normal; overflow-wrap:anywhere; }
 
 .matching-app .decision-actions .button:disabled { background:#eef1f6; border-color:var(--line); color:#7e8b9b; opacity:1; }
+
+/* Share a compact original toolbar; narrow panels wrap the actions below it. */
+.matching-app .evidence-panel,.extraction-workspace .extraction-original { container-type:inline-size; }
+.matching-app .preview-toolbar,.extraction-workspace .preview-toolbar { display:flex; align-items:center; flex-wrap:wrap; flex:none; gap:6px 8px; padding:6px 12px; border-top:1px solid var(--line); background:#f9fbfd; }
+.matching-app .preview-toolbar .evidence-navigation,.extraction-workspace .preview-toolbar .viewer-footer { flex:1 1 340px; min-width:0; padding:0; gap:6px; border:0; background:transparent; }
+.matching-app .preview-toolbar .decision-footer,.extraction-workspace .preview-toolbar .editor-footer { flex:1 0 100%; width:100%; padding:0; border:0; background:transparent; }
+.matching-app .preview-toolbar #preview-page { flex:1; width:0; max-width:160px; min-width:0; }
+.matching-app .preview-toolbar #preview-zoom { width:80px; }
+.matching-app .original-download,.extraction-workspace .preview-toolbar .original-link { display:inline-flex; flex:none; align-items:center; justify-content:center; width:28px; height:28px; margin:0; border:1px solid var(--line); border-radius:5px; background:white; color:var(--primary); text-decoration:none; }
+@container (min-width:700px) {
+  .matching-app .preview-toolbar,.extraction-workspace .preview-toolbar { flex-wrap:nowrap; }
+  .matching-app .preview-toolbar .decision-footer,.extraction-workspace .preview-toolbar .editor-footer { flex:0 0 300px; width:300px; }
+  .matching-app .preview-toolbar .evidence-navigation,.extraction-workspace .preview-toolbar .viewer-footer { flex:1; flex-wrap:nowrap; }
+  .extraction-workspace .preview-toolbar .viewer-footer label:first-child { min-width:0; }
+  .extraction-workspace .preview-toolbar .viewer-footer select { max-width:100px; }
+  .extraction-workspace .preview-toolbar #original-status { display:none; }
+}
+
+.matching-app .candidate-download,.extraction-workspace .piece-download { display:inline-flex; align-items:center; justify-content:center; text-decoration:none; box-sizing:border-box; }
+.extraction-workspace .entry-toolbar .original-link { display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; border:1px solid var(--line); border-radius:5px; background:white; color:var(--primary); }
+
+.matching-app .evidence-heading:has(#evidence-original:not([hidden])) { display:flex; }
+
+.matching-app .candidate-download { width:32px; height:30px; padding:0; }

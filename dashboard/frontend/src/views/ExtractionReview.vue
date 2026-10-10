@@ -32,15 +32,17 @@ usePage(root, initialize);
             <button id="reset-original-pieces" class="button secondary" type="button">Reset to original</button>
             <button id="merge-all-pieces" class="button secondary" type="button" disabled>Merge all</button>
             <button id="remove-piece" class="button secondary" type="button" aria-label="Remove this piece from extraction">Remove</button>
-            <div id="piece-tabs" hidden></div>
+            <a id="receipt-original" class="original-link" download aria-label="Download original" title="Download original"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M5 16v4h14v-4" /></svg></a><div id="piece-tabs" hidden></div>
           </div>
           <p id="receipt-error" class="validation" role="alert" hidden></p><p id="receipt-unit-status" role="status"></p>
           <form id="receipt-form"><div id="receipt-pieces"></div></form>
         </section>
         <section class="extraction-original" aria-label="Original document">
           <div id="original-viewport"><div id="original-preview"></div></div>
-          <div class="viewer-footer"><label>Page / sheet <select id="original-page"></select></label><label>Zoom <select id="original-zoom"><option value="1">Fit page</option><option value="1.5">150%</option><option value="2">200%</option><option value="3">300%</option></select></label><span id="original-status" role="status"></span><a id="receipt-original" class="original-link" download aria-label="Download original" title="Download original"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M5 16v4h14v-4" /></svg></a></div>
+          <div class="preview-toolbar">
+          <div class="viewer-footer"><label>Page / sheet <select id="original-page"></select></label><label>Zoom <select id="original-zoom"><option value="1">Fit page</option><option value="1.5">150%</option><option value="2">200%</option><option value="3">300%</option></select></label><span id="original-status" role="status"></span></div>
           <div class="editor-footer"><button id="accept-receipts" class="button dark" type="submit" form="receipt-form">Accept</button><button id="discard-document" class="button discard-document" type="button">Reject</button><button id="next-review-document" class="button secondary" type="button">Next &rarr;</button></div>
+          </div>
         </section>
       </div>
     </main>

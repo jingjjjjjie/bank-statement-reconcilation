@@ -52,12 +52,13 @@ def matching_office(page: int = Query(0, ge=0), path=Depends(matching_source)):
 
 
 @router.get("/matching-file")
-def matching_file(kind: str, id: str, state=Depends(active_context)):
+def matching_file(kind: str, id: str, download: bool = False, state=Depends(active_context)):
     """Return original matching evidence with a conservative content type."""
     path = final_review.evidence(state.review, kind, id)
     safe = {".pdf", ".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp", ".txt", ".csv", ".xlsx", ".docx"}
     response = file_response(path, None if path.suffix.lower() in safe else "application/octet-stream")
-    response.headers['Content-Disposition'] = "inline; filename*=UTF-8''" + quote(path.name, safe='')
+    disposition = "attachment" if download else "inline"
+    response.headers['Content-Disposition'] = disposition + "; filename*=UTF-8''" + quote(path.name, safe='')
     return response
 
 

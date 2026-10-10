@@ -258,6 +258,13 @@ function renderCandidates() {
       editor.ontoggle = () => { if (editor.open) expandedAllocations.add(item.id); else expandedAllocations.delete(item.id); };
       editor.append(toggle, allocationControls(item)); actions.append(editor);
     }
+    const download = node('a', 'candidate-preview candidate-download');
+    download.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M5 16v4h14v-4" /></svg>';
+    download.href = `/api/matching-file?kind=item&id=${encodeURIComponent(item.id)}&download=true`;
+    download.download = item.filename;
+    download.title = `Download original: ${item.filename}`;
+    download.setAttribute('aria-label', `Download original ${item.filename}`);
+    actions.append(download);
     actions.append(button('Show document', () => showEvidence('item', item.id), 'candidate-preview show-evidence'));
     content.append(actions);
     card.append(control, content); (isSelected ? tray : list).append(card);
@@ -375,10 +382,11 @@ async function showEvidence(kind, id) {
   root.querySelectorAll('.candidate-card').forEach(card => card.classList.toggle('previewing', kind === 'item' && card.dataset.itemId === id));
   $('#evidence-content').replaceChildren(node('div', 'empty-state', 'Loading original evidenceâ€¦'));
   $('#evidence-title').textContent = kind === 'bank' ? 'Original bank statement' : itemById.get(id).filename;
-  $('#evidence-original').href = `/api/matching-file?${query}`; $('#evidence-original').hidden = false;
+  $('#evidence-original').href = `/api/matching-file?${query}&download=true`; $('#evidence-original').hidden = kind !== 'bank';
   try {
     const info = await api(`/api/matching-preview?${query}`); if (serial !== previewSerial) return;
     const sourcePath = info.source_path || (kind === 'item' ? itemById.get(id).source_path : '') || '';
+    $('#evidence-original').download = sourcePath.replaceAll(String.fromCharCode(92), '/').split('/').pop() || '';
     $('#evidence-path').textContent = sourcePath;
     $('#evidence-path').title = sourcePath;
     $('#evidence-path').hidden = !sourcePath;

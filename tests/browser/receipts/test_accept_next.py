@@ -66,6 +66,8 @@ class AcceptNextTests(unittest.TestCase):
             expect(page.locator('#accept-receipts')).to_have_text('Accept')
             expect(page.locator('.editor-footer button')).to_have_count(3)
             expect(page.locator('.extraction-original #accept-receipts')).to_have_count(1)
+            expect(page.locator('.preview-toolbar a')).to_have_count(0)
+            expect(page.locator('.piece-download').first).to_be_visible()
             for width in [1536, 390, 320]:
                 page.set_viewport_size({'width': width, 'height': 900})
                 buttons = page.locator('.editor-footer button')
@@ -74,6 +76,10 @@ class AcceptNextTests(unittest.TestCase):
                     self.assertEqual(bounds['height'], 34)
                     self.assertLessEqual(bounds['width'], 140)
                 self.assertTrue(page.evaluate('document.documentElement.scrollWidth <= innerWidth'))
+                if width == 1536:
+                    navigation = page.locator('.viewer-footer').bounding_box()
+                    actions = page.locator('.editor-footer').bounding_box()
+                    self.assertEqual(navigation['y'] + navigation['height'] / 2, actions['y'] + actions['height'] / 2)
             page.set_viewport_size({'width': 1440, 'height': 1000})
             page.locator('[data-field="total"]').first.fill('42.00')
             page.route('**/api/receipts/accept', lambda route: held.append(route))

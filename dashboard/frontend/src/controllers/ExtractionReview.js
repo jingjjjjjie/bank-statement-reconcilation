@@ -132,7 +132,9 @@ function renderPieceNavigation() {
       const remove = node('button', 'remove-entry', 'Remove');
       remove.type = 'button'; remove.title = 'Remove this entry from extraction';
       remove.onclick = () => removePiece(card);
-      actions.append(showPiece, remove); row.append(actions);
+      const download = node('a', 'show-piece piece-download', 'Download');
+      download.title = 'Download original document';
+      actions.append(showPiece, download, remove); row.append(actions);
       for (const label of [...card.querySelectorAll(':scope > label')]) detailFields.append(label);
       const location = detailFields.querySelector('[data-field="amount_location"]');
       if (location) {
@@ -156,6 +158,11 @@ function renderPieceNavigation() {
     select.setAttribute('aria-pressed', String(number === activePiece));
     select.onclick = () => { activePiece = number; renderPieceNavigation(); };
     card.querySelector('.show-piece').setAttribute('aria-label', `Show original for piece ${number + 1}`);
+    const unit = receipts.data?.units.find(item => item.key === $('#receipt-unit').value);
+    const download = card.querySelector('.piece-download');
+    download.href = `/api/content-file?id=${encodeURIComponent(unit?.document_id || '')}`;
+    download.download = unit?.source_path?.replaceAll(String.fromCharCode(92), '/').split('/').pop() || '';
+    download.setAttribute('aria-label', `Download original for piece ${number + 1}`);
     card.querySelector('.remove-entry').setAttribute('aria-label', `Remove piece ${number + 1}`);
   });
 }
