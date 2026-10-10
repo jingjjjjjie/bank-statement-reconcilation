@@ -1,0 +1,126 @@
+@import './fonts.css';
+
+/* Accounting Copilot's shared theme leaves evidence confidence and decision colours intact. */
+:root {
+  --app-header-height:82px;
+  --primary:#2563b6;
+  --primary-hover:#1d4e91;
+  --blue-light:#eef5fd;
+  --nav:#16334f;
+  --ink:#203247;
+  --muted:#65758a;
+  --line:#e2e8f0;
+  --paper:#f5f7fb;
+}
+body { font-family:'DM Sans','Segoe UI',Arial,sans-serif; -webkit-font-smoothing:antialiased; }
+button,input,select,textarea { font-family:inherit; }
+body .page-help [role=tooltip] { font-family:'DM Sans','Segoe UI',Arial,sans-serif; color:var(--ink); border-color:var(--line); }
+body .page-help .page-help-button { color:var(--muted); }
+body .page-help .page-help-button:hover,body .page-help .page-help-button[aria-expanded=true] { color:var(--primary); }
+body .page-help .page-help-button:focus-visible { outline-color:var(--primary); }
+.button.dark,.button.ready,.context-next,.workspace-card-footer .button { background:var(--primary); border-color:var(--primary); color:white; }
+.button.dark:hover,.button.ready:hover,.context-next:hover,.workspace-card-footer .button:hover { background:var(--primary-hover); border-color:var(--primary-hover); }
+.button.secondary { background:white; border-color:var(--line); color:var(--ink); }
+.button.secondary:hover:not(:disabled) { background:var(--blue-light); border-color:#bfd3ea; }
+.button:focus-visible { outline:2px solid var(--primary); outline-offset:3px; }
+.workspace-page,.extraction-workspace,.matching-app { background:var(--paper); color:var(--ink); }
+.workspace-picker>header,.workspace-card,.workspace-card-footer,.workspace-input { border-color:var(--line); }
+.workspace-card-footer,.workspace-input { background:#f8fafd; }
+.workspace-identity h2,.workspace-input strong,.picker-heading h1 { color:var(--nav); }
+.manual-path-controls input { border-color:var(--line); color:var(--ink); background:#fafbfd; }
+.progress-track { background:#e4ebf5; }
+.progress-fill,.progress i { background:var(--primary); }
+.document-table a,.document-tree a,.text-button { color:var(--primary); }
+
+/* Review screens use the approved white cards and cool grey evidence canvas. */
+.extraction-workspace main,.matching-app .matching-main { height:calc(100dvh - var(--app-header-height)); padding:22px 24px 24px; }
+.extraction-workspace .review-header,.matching-app .matching-header { min-height:68px; height:68px; border:1px solid var(--line); border-radius:10px 10px 0 0; padding:0 20px; }
+.extraction-workspace .review-title h1,.matching-app .matching-header h1 { color:var(--nav); font-size:20px; letter-spacing:-.6px; }
+.extraction-workspace .extraction-layout,.matching-app .matching-layout { border:1px solid var(--line); border-top:0; border-radius:0 0 10px 10px; overflow:hidden; box-shadow:0 4px 20px #17345305; }
+.extraction-workspace .extraction-editor,.matching-app .decision-panel { border-color:var(--line); background:#fafbfd; }
+.extraction-workspace .entry-toolbar { padding:13px 18px; border-color:var(--line); background:white; }
+.extraction-workspace .entry-toolbar .piece-count,.extraction-workspace #document-total { color:var(--ink); }
+.extraction-workspace #receipt-pieces { background:#fafbfd; padding:22px 18px; }
+.extraction-workspace #receipt-pieces fieldset { border-color:#d5e1ef; border-radius:9px; box-shadow:0 2px 8px #19365706; padding:16px; }
+.extraction-workspace #receipt-pieces fieldset.active-piece { border-color:#a7c3e5; box-shadow:inset 3px 0 var(--primary),0 2px 8px #19365706; }
+.extraction-workspace #receipt-pieces .piece-row { gap:14px 10px; }
+.extraction-workspace #receipt-pieces .piece-row label { color:var(--muted); font-size:12px; }
+.extraction-workspace #receipt-pieces .piece-row :is(input,select) { height:38px; padding:8px 10px; background:#fafbfd; border-color:#dfe6ef; border-radius:6px; }
+.extraction-workspace #receipt-pieces .piece-row :is(input,select):hover { border-color:#a9bfdc; }
+.extraction-workspace #receipt-pieces [data-field=payee],.extraction-workspace #receipt-pieces [data-field=total] { color:var(--ink); }
+.extraction-workspace :is(input,select,textarea):focus { outline-color:var(--primary); }
+.extraction-workspace .piece-number { background:var(--blue-light); color:var(--primary); border-radius:6px; }
+.extraction-workspace .piece-number[aria-pressed=true] { background:var(--primary); color:white; }
+.extraction-workspace .piece-details summary,.extraction-workspace .piece-card-actions button:not(.remove-entry) { color:var(--primary); }
+.extraction-workspace .piece-card-actions button:not(.remove-entry) { background:var(--blue-light); border-color:#d1dff0; }
+.extraction-workspace .piece-card-actions button:not(.remove-entry):hover { background:#e0edfb; }
+.extraction-workspace .piece-details[open],.extraction-workspace .editor-footer,.extraction-workspace .viewer-footer,.extraction-workspace .extraction-editor { border-color:var(--line); }
+.extraction-workspace .editor-footer { padding:15px 18px; }
+.extraction-workspace #accept-receipts.dark { background:var(--primary); border-color:var(--primary); }
+.extraction-workspace #accept-receipts.dark:hover { background:var(--primary-hover); }
+.extraction-workspace .editor-footer .button:disabled,.extraction-workspace #accept-receipts:disabled { background:#eef1f6; border-color:var(--line); color:#7e8b9b; }
+.extraction-workspace .extraction-original,.matching-app .evidence-panel { background:#edf1f6; }
+.extraction-workspace .viewer-footer,.matching-app .evidence-heading { background:#f9fbfd; border-color:var(--line); }
+.extraction-workspace .viewer-footer label,.extraction-workspace .original-link,.review-progress,.matching-app .candidate-description,.matching-app .candidate-info,.matching-app .bank-meta { color:var(--muted); }
+.extraction-workspace #document-buttons button[aria-current],.matching-app .transaction-number[aria-current] { outline-color:var(--primary); }
+.extraction-workspace #document-buttons button:focus-visible,.extraction-workspace .piece-card-actions button:focus-visible { outline-color:var(--primary); }
+.extraction-workspace #extraction-options { inset:calc(var(--app-header-height) + 94px) 44px auto auto; border-color:var(--line); color:var(--ink); }
+.extraction-workspace #extraction-options .button { color:var(--ink); }
+.extraction-workspace #extraction-options .button:hover { background:var(--blue-light); }
+
+/* Suggested rainbows, green balanced totals, approved states and trash keep their original styles. */
+.matching-app :is(input,select,textarea,button,a):focus-visible { outline-color:var(--primary); }
+.matching-app input:not([type=checkbox]),.matching-app select,.matching-app textarea { border-color:#dfe6ef; color:var(--ink); }
+.matching-app .matching-header { margin:0; }
+.matching-app .queue-controls { border:1px solid var(--line); border-radius:10px 10px 0 0; min-height:68px; }
+.matching-app .review-tabs button.selected { color:var(--primary); border-color:var(--primary); }
+.matching-app .decision-scroll { background:#fafbfd; }
+.matching-app .candidate-card:not(.suggested) { border-color:#d8e2ee; }
+.matching-app .candidate-card.selected:not(.suggested) { border-color:#adc6e6; background:#f5f9fe; }
+.matching-app .candidate-card.previewing { box-shadow:inset 3px 0 var(--primary); }
+.matching-app .candidate-preview { color:var(--primary); background:var(--blue-light); border-color:#cbdcf0; }
+.matching-app .candidate-reason { color:var(--ink); }
+.matching-app .transaction-notes summary,.matching-app .source-details summary,.matching-app .review-note summary,.matching-app .history summary { color:var(--muted); }
+.matching-app .narration { background:#f0f4f9; }
+.final-report { color:var(--ink); }
+.report-heading p,.dialog-heading p { color:var(--muted); }
+
+/* Neutralise decorative green surfaces while preserving meaningful status colours. */
+.stats .recovery-note { background:var(--blue-light); }
+.stats .recovery-note p,.picker-kicker,.picker-heading p,.input-path { color:var(--muted); }
+.picker-step,.workspace-input .input-icon { color:var(--primary); }
+.workspace-card,.workspace-input,.workspace-card-footer { border-color:var(--line); }
+.workspace-input,.workspace-card-footer { background:#f8fafd; }
+.workspace-card-top .workspace-icon { background:var(--blue-light); color:var(--primary); }
+.workspace-card-top .folder-symbol { background:var(--blue-light); color:var(--primary); }
+.manual-path { color:var(--muted); }
+.final-report .report-table th { background:#f4f7fb; color:var(--muted); }
+.documents-page .progress-track { background:#e4ebf5; }
+.documents-page .progress-fill { background:var(--primary); }
+.documents-page .document-table a,.documents-page .document-tree a { color:var(--primary); }
+.matching-app #selected-tray { background:#f4f8fd; border-color:#d5e2f2; }
+.matching-app .candidate-tray { border-color:var(--line); }
+.matching-app .candidate-info,.matching-app .candidate-description,.matching-app .candidate-parties,
+.matching-app .payment-narration,.matching-app .document-amount-label { color:var(--muted); }
+.matching-app .allocation-editor>summary { color:var(--primary); }
+.matching-app .allocation-controls :is(select,input) { border-color:#dfe6ef; color:var(--ink); }
+.matching-app .allocation-note,.matching-app .suggested-allocation { color:var(--muted); }
+.matching-app .selection-summary.balanced :is(.allocation-note,.warning,.difference) { color:#24583b; }
+
+@media(max-width:1100px) { :root { --app-header-height:112px; } }
+@media(max-width:900px) {
+  .extraction-workspace main,.matching-app .matching-main { padding:16px 12px; }
+  .extraction-workspace .review-header,.matching-app .matching-header { padding:0 14px; }
+  .extraction-workspace .review-title h1,.matching-app .matching-header h1 { font-size:18px; }
+  .extraction-workspace #extraction-options { right:26px; top:calc(var(--app-header-height) + 86px); }
+}
+@media(max-width:650px) {
+  .extraction-workspace main,.matching-app .matching-main { height:auto; min-height:calc(100dvh - var(--app-header-height)); padding:12px 8px; }
+  .extraction-workspace .review-header,.matching-app .matching-header { min-height:58px; height:58px; padding:0 12px; }
+  .extraction-workspace #receipt-pieces { padding:16px 12px; }
+  .extraction-workspace #receipt-pieces fieldset { padding:12px; }
+  .extraction-workspace #receipt-pieces .piece-row { gap:10px 6px; }
+  .extraction-workspace #receipt-pieces .piece-row :is(input,select) { padding:7px; }
+  .extraction-workspace .editor-footer { padding:12px; }
+  .extraction-workspace #extraction-options { right:20px; top:calc(var(--app-header-height) + 72px); }
+}

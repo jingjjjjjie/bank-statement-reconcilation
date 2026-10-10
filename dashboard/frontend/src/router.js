@@ -41,6 +41,6 @@ router.beforeEach(async (to, from) => {
 });
 router.afterEach((to, from, failure) => {
   if (!failure && to.path !== '/source' && appState.session?.active) appState.resumePath = to.fullPath;
-  document.title = `${to.meta.title} · Bank Statement Reconciliation`;
+  document.title = `${to.meta.title} · Accounting Copilot`;
   document.body.className = to.meta.body || '';
 });

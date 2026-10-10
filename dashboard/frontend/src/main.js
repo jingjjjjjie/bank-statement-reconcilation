@@ -6,6 +6,7 @@ import './styles/documents.css';
 import './styles/extraction-review.css';
 import './styles/matching.css';
 import './styles/application.css';
+import './styles/accounting.css';
 
 // Wait for the initial session and route before mounting controllers.
 const app = createApp(App);

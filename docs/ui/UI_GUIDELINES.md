@@ -25,6 +25,13 @@ User preference, recorded 2026-09-18:
 Shared help content: `dashboard/frontend/src/pageHelp.js`.
 Shared help control: `dashboard/frontend/src/components/PageHelp.vue`.
 
+- Accounting Copilot uses the Career Copilot wordmark style: locally hosted Syne
+  800, 17px desktop text, tight letter spacing and the same blue-to-teal gradient.
+  Bank Reconciliation remains the application descriptor. Use DM Sans for the UI,
+  white cards, cool grey surfaces and blue primary controls. Keep rainbow suggestions
+  and meaningful green completion/balanced states. Keep the selected-page underline
+  close to its label, and allow room around the wordmark so glyphs do not clip.
+
 - Step 2 displays all pieces together as editable rows. Keep payee, payer, amount, currency, date and document number visible; put type, other names, references and Amount at (with Show, which jumps the preview to that page or sheet rows) under Details. Fields from older extractions appear only when they hold a value. Selecting a row targets Remove; Merge all combines every entry in the current document into one editable draft; Split is not offered. Narrow screens wrap the fields and place save actions after the rows without overlap.
 
 - Pieces represent separate receipts or payees, not purchase lines. Show editable payee, payer, amount, currency, date and document number together; keep type, other names, references and amount location in the piece disclosure. Add entry and Remove are explicit edits; existing identities are preserved.
