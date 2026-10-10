@@ -97,3 +97,18 @@ The Final report heading divider is removed and the gap above transaction totals
 is compact. The production build and four theme/report browser tests passed again;
 rendered assertions check all four ZIP buttons' blue fill/white text and the absent
 heading border.
+
+## Matching on scaled desktop displays
+
+1920x1080 at 125% scaling provides approximately 1536x864 CSS pixels before browser
+chrome. At a 1536x760 viewport the previous 40% Selected-tray height cap cropped the
+bottom of a synthetic candidate card. Short desktop viewports now use less outer
+padding, a compact toolbar/footer and a scrollable review pane. Selected and
+available lists retain bounded scrolling; footer decisions stay visible. Text size,
+rainbows and the larger-screen layout are preserved.
+
+The production build and four theme/report browser tests passed. The theme check
+now covers 2560x1300, 1920x950, 1536x760, 1366x650 and 1280x620 as well as existing
+desktop/tablet/mobile sizes. It checks footer bounds and full selected-card height
+on shorter desktops. Inspected before/after fixture screenshots at 1536x760 and
+1280x620. Changes are CSS-only; no matching or approval logic changed.

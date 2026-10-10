@@ -63,7 +63,7 @@ class AccountingThemeTests(unittest.TestCase):
             page.emulate_media(reduced_motion='reduce')
             self.assertEqual(rainbow.evaluate('(e)=>getComputedStyle(e,"::before").animationName'), 'none')
             page.emulate_media(reduced_motion='no-preference')
-            for width, height in [(1440, 1000), (1024, 900), (390, 844), (320, 740)]:
+            for width, height in [(2560, 1300), (1920, 950), (1536, 760), (1366, 650), (1280, 620), (1440, 1000), (1024, 900), (390, 844), (320, 740)]:
                 with self.subTest(width=width):
                     page.set_viewport_size({'width': width, 'height': height})
                     self.assertTrue(page.evaluate('document.documentElement.scrollWidth <= innerWidth'))
@@ -71,6 +71,12 @@ class AccountingThemeTests(unittest.TestCase):
                     settings = page.get_by_role('link', name='Settings', exact=True).bounding_box()
                     brand = title.bounding_box()
                     self.assertLessEqual(brand['x'] + brand['width'], settings['x'])
+                    if width > 700:
+                        footer = page.locator('.decision-footer').bounding_box()
+                        self.assertLessEqual(footer['y'] + footer['height'], height)
+                        if height <= 820:
+                            self.assertEqual(page.locator('.decision-scroll').evaluate('(e)=>getComputedStyle(e).overflowY'), 'auto')
+                            self.assertGreaterEqual(page.locator('#selected-candidates').bounding_box()['height'], rainbow.bounding_box()['height'])
                     active = page.locator('.header-link.active')
                     self.assertEqual(active.evaluate('(e)=>getComputedStyle(e).height'), '44px')
                     button = page.get_by_role('button', name='How to use this page')

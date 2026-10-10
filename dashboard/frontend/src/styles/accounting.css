@@ -191,6 +191,21 @@ body .final-report .report-export-dialog .download-message { grid-column:1/-1; m
 .extraction-workspace #document-review-status[data-state=accepted] { background:var(--blue-light); color:var(--primary); }
 body .final-report .report-heading { border-bottom:0; padding-bottom:0; margin-bottom:20px; }
 
+/* Scaled desktop displays need scrollable review content rather than clipped trays. */
+@media(min-width:701px) and (max-height:820px) {
+  .matching-app .matching-main { padding:12px 16px; }
+  .matching-app .queue-controls { min-height:56px; padding:8px 16px; }
+  .matching-app .decision-scroll { overflow-y:auto; overscroll-behavior:contain; }
+  .matching-app #review-editor { flex:1 0 auto; min-height:auto; overflow:visible; }
+  .matching-app #selected-tray { flex:none; max-height:none; }
+  .matching-app #selected-candidates { max-height:clamp(170px,26dvh,260px); }
+  .matching-app #support-group { flex:1 0 auto; min-height:160px; }
+  .matching-app #candidate-list { max-height:clamp(180px,30dvh,320px); }
+  .matching-app .decision-footer { padding:10px 16px; }
+  .matching-app .decision-actions { margin-top:0; }
+  .matching-app .evidence-content { padding:16px; }
+}
+
 @media(max-width:1100px) { :root { --app-header-height:112px; } }
 @media(max-width:900px) {
   .extraction-workspace main,.matching-app .matching-main { padding:16px 12px; }
