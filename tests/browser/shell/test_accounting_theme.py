@@ -90,8 +90,11 @@ class AccountingThemeTests(unittest.TestCase):
             expect(dialog).to_be_visible()
             self.assertEqual(dialog.locator('.workbook-download').evaluate('(e)=>getComputedStyle(e).backgroundColor'), 'rgb(255, 255, 255)')
             self.assertEqual(dialog.locator('.button.dark').evaluate('(e)=>getComputedStyle(e).backgroundColor'), 'rgb(37, 99, 182)')
-            self.assertEqual(dialog.locator('.button.secondary').evaluate('(e)=>getComputedStyle(e).color'), 'rgb(37, 99, 182)')
+            self.assertEqual(dialog.locator('.workbook-options .button.secondary').evaluate('(e)=>getComputedStyle(e).color'), 'rgb(37, 99, 182)')
             self.assertEqual(dialog.locator('.download-word').first.evaluate('(e)=>getComputedStyle(e).color'), 'rgb(37, 99, 182)')
+            self.assertEqual(dialog.locator('.download-section-heading h2').evaluate_all('(els)=>els.map(e=>getComputedStyle(e).fontSize)'), ['15px', '15px'])
+            self.assertEqual(dialog.locator('.archive-download .button').evaluate_all('(els)=>els.map(e=>getComputedStyle(e).minHeight)'), ['36px'] * 4)
+            self.assertEqual(dialog.locator('.workbook-options .button').first.evaluate('(e)=>getComputedStyle(e).textDecorationLine'), 'none')
             for width in [1440, 390, 320]:
                 page.set_viewport_size({'width': width, 'height': 1000})
                 bounds = dialog.bounding_box()

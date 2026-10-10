@@ -77,3 +77,18 @@ theme/report tests passed, including new assertions for the loaded Export dialog
 white panel, blue workbook buttons and ZIP links. Export dialog screenshots were
 checked at 1440, 390 and 320 pixels. A seven-route computed-colour scan found green
 only in status markers in the observed states; no workflow data was changed.
+
+## Export alignment and reviewed page boxes
+
+Workbook and document downloads now have matching 15px section headings, format
+badges, card padding and rounded button controls. Workbook links have no underline;
+ZIP downloads have visible 36px outlined buttons beside their descriptions. Removed
+the repeated workbook instruction. The close button matches other compact controls.
+Reviewed extraction document boxes and matching transaction boxes now use blue,
+including the extraction acceptance icon; trash and balanced-total styles remain.
+
+Production build and all four theme/report browser tests passed. Inspected fixture
+screenshots at 1440 and 320 pixels, and live Export screenshots at 1440, 390 and 320.
+A read-only live check verified aligned desktop headings, no horizontal dialog
+overflow, and blue completed indicators in both review pages. Download integration
+tests continue to pass with the same endpoints, filenames and focus behaviour.

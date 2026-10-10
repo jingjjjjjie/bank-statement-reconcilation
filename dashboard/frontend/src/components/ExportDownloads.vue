@@ -34,18 +34,15 @@ onActivated(refresh);
 <template>
   <aside class="export-downloads" aria-label="Downloads">
     <section class="workbook-download">
-      <span class="download-type">XLSX</span><h2>Bank statement</h2>
+      <div class="download-section-heading"><h2>Bank statement</h2><span class="download-type">XLSX</span></div>
       <p>The final report in your bank statement format.</p>
       <slot />
-      <small>Choose whether to include evidence paths.</small>
     </section>
     <section class="archive-downloads">
-      <div class="download-section-heading"><h2>Document folders</h2><span>ZIP</span></div>
+      <div class="download-section-heading"><h2>Document folders</h2><span class="download-type">ZIP</span></div>
       <div v-for="archive in archives" :key="archive.id" class="archive-download">
-        <button :id="`export-${archive.id}`" type="button" :disabled="!!busy" :aria-label="`Export ${archive.title.toLowerCase()}`" @click="download(archive)">
-          <span>{{ archive.title }}</span><span class="download-word">{{ busy === archive.id ? 'Preparing…' : 'Download' }}</span>
-        </button>
-        <p>{{ archive.detail }}</p>
+        <div class="archive-description"><strong>{{ archive.title }}</strong><p>{{ archive.detail }}</p></div>
+        <button :id="`export-${archive.id}`" class="button secondary" type="button" :disabled="!!busy" :aria-label="`Export ${archive.title.toLowerCase()}`" @click="download(archive)"><span class="download-word">{{ busy === archive.id ? 'Preparing…' : 'Download' }}</span></button>
         <p v-if="messages[archive.id]" :id="`${archive.id}-export-status`" role="status" class="download-message">{{ messages[archive.id] }}</p>
       </div>
     </section>

@@ -16,7 +16,7 @@ User preference, recorded 2026-09-18:
   the far right, visible even when the navigation links scroll on narrow screens.
 - Verify page help and navigation with Playwright, including narrow screens.
 - Step 2 shows the current filename without a dropdown. Use ten numbered squares
-  at a time to select documents, green for reviewed and an outline for the current
+  at a time to select documents, blue for reviewed and an outline for the current
   document; arrows move between groups of ten.
 - Extraction review offers Discard and Undo discard. Trash is
   an audited, reversible classification that excludes supporting evidence; it never
@@ -72,7 +72,7 @@ Shared help control: `dashboard/frontend/src/components/PageHelp.vue`.
 
 - Final review candidate actions use Show to open original evidence. Omit Use only this; selection changes through checkboxes and Remove.
 
-- Review Extraction and Review Matching are the visible review-page names. Documents ticks after saved extraction completes; review ticks require current saved decisions. Reviewed matching transaction boxes are green in both confidence filters.
+- Review Extraction and Review Matching are the visible review-page names. Documents ticks after saved extraction completes; review ticks require current saved decisions. Reviewed matching transaction boxes are blue in both confidence filters.
 - Export is one unnumbered navigation destination combining the final report and downloads. One Export button above the report opens the workbook choices and document ZIPs. Keep one page-help circle. The former /complete route redirects to /final-report.
 - Disable Review Extraction until extraction results exist; disable Review Matching until document and bank extraction finish. Disabled navigation explains the prerequisite, and direct routes enforce the same readiness checks. Original-file downloads remain accessible from Export.
 
