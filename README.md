@@ -16,6 +16,7 @@ Documentation:
 
 - [Workflow and Mermaid diagrams](docs/workflow/WORKFLOW.md)
 - [Dashboard screens and maintenance](dashboard/README.md)
+- [Live dashboard updates and caching](docs/workflow/LIVE_DISPLAY.md)
 - [Final comparison rules and open decisions](docs/workflow/FINAL_COMPARISON.md)
 - [Final report UI checks with synthetic evidence](docs/ui/FINAL_REPORT_UI_REVIEW.md)
 - [Earlier live UI audit](docs/ui/UI_REVIEW.md) - historical observations, not current sign-off
