@@ -87,3 +87,35 @@ function keySplit(event) {
   </main>
   </div>
 </template>
+
+<style scoped>
+/* Keep review controls on the page, with a separate scrollable filter row. */
+.matching-main .queue-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 16px;
+  padding: 4px 0 18px;
+  min-height: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  overflow: visible;
+}
+.queue-controls h1 { font-size: 22px; line-height: 1.3; }
+.queue-controls .confidence-controls {
+  grid-column: 1 / -1;
+  min-width: 0;
+  overflow-x: auto;
+  padding: 3px;
+}
+.confidence-controls > * { flex-shrink: 0; }
+.matching-main .matching-layout {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+@media (max-width: 700px) {
+  .matching-main .queue-controls { padding: 8px 8px 18px; gap: 12px; }
+  .queue-controls h1 { font-size: 20px; }
+}
+</style>
