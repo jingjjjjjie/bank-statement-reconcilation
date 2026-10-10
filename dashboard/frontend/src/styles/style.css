@@ -710,7 +710,7 @@ a.nav-item:hover { background: #30483f; }
 .settings-page small { display: block; color: var(--muted); font-size: 12px; line-height: 1.65; }
 .settings-page select, .settings-page input[type=number] { padding: 10px; }
 .settings-page .setting-switch { justify-content: space-between; }
-.codex-master { padding-bottom: 20px; margin-bottom: 20px; border-bottom: 1px solid var(--line); }
+.codex-master { margin-bottom: 0; }
 .codex-account .section-title { justify-content: space-between; flex-wrap: wrap; margin-bottom: 14px; }
 .codex-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
 .codex-state { display: flex; align-items: center; gap: 9px; margin: 0; }
@@ -740,7 +740,7 @@ a.nav-item:hover { background: #30483f; }
 .settings-savebar { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 20px 0; }
 .settings-savebar strong { font-size: 12px; font-weight: 600; }
 .settings-savebar p { font-size: 11px; margin-top: 5px; }
-.settings-savebar > div:last-child { display: flex; gap: 10px; flex-shrink: 0; }
+.settings-savebar > div:last-child { display: flex; flex-wrap: wrap; gap: 10px; }
 @media(max-width: 1000px) {
   .settings-grid, .budget-grid { grid-template-columns: 1fr; gap: 22px; }
   .call-rules > div { grid-template-columns: 160px 1fr; }
