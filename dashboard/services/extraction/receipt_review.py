@@ -413,21 +413,26 @@ def accept_all_extractions(review, body):
     prepared, skipped = {}, []
     if draft:
         unit = units[draft['key']]
-        prepared[unit['key']] = validate_acceptance(unit, draft['receipts'], saved)
+        prepared[unit['key']] = validate_acceptance(
+            unit, draft['receipts'], saved, supporting_only=not draft['receipts']
+        )
     for key, unit in units.items():
         if key in prepared or unit['accepted'] or unit.get('trash'):
             continue
         try:
-            if unit.get('review_warnings'):
-                raise ValueError('Review the extraction warning individually before accepting')
             if not unit['readable'] or unit['needs_refresh']:
                 raise ValueError('Extraction requires review or regeneration')
-            prepared[key] = validate_acceptance(unit, unit['receipts'], saved)
+            prepared[key] = validate_acceptance(
+                unit, unit['receipts'], saved, supporting_only=not unit['receipts']
+            )
         except (ValueError, ValidationError, OSError) as error:
             skipped.append({'key': key, 'reason': str(error)})
     for key, pieces in prepared.items():
         unit = units[key]
-        value = {'source_revision': unit['source_revision'], 'receipts': pieces, 'reviewer': None}
+        value = {
+            'source_revision': unit['source_revision'], 'receipts': pieces,
+            'reviewer': None, 'supporting_only': not pieces,
+        }
         saved['history'].append(
             {
                 'at': datetime.now(timezone.utc).isoformat(),
@@ -440,7 +445,11 @@ def accept_all_extractions(review, body):
             }
         )
         saved['extractions'][key] = value
-        unit.update(accepted=True, receipts=pieces)
+        unit.update(accepted=True, receipts=pieces, supporting_only=not pieces)
+        unit['review_warnings'] = [
+            warning for warning in unit['review_warnings']
+            if warning != 'No entries extracted. Add an entry or accept as supporting evidence.'
+        ]
     if prepared:
         path.parent.mkdir(parents=True, exist_ok=True)
         write_json(path, saved)

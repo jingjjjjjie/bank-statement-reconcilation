@@ -10,7 +10,7 @@ from tests.fixtures.receipt_review import ReceiptReviewFixture
 
 class ReceiptReviewTests(ReceiptReviewFixture):
     def test_empty_extraction_requires_explicit_supporting_only(self):
-        """Neither individual nor bulk acceptance silently approves missing entries."""
+        """Individual acceptance requires the supporting-only flag for empty results."""
         self.state['units'][self.key]['receipts'] = []
         self.save_state()
         view = self.view()
@@ -19,13 +19,32 @@ class ReceiptReviewTests(ReceiptReviewFixture):
         for flag in (False, 'true'):
             with self.assertRaisesRegex(ValueError, 'No entries extracted'):
                 receipt_review.accept_extraction(self.review, {**body, 'supporting_only': flag})
-        bulk = receipt_review.accept_all_extractions(self.review, {'revision': view['revision']})
-        self.assertEqual(bulk['bulk']['accepted'], 0)
         accepted = receipt_review.accept_extraction(self.review, {**body, 'supporting_only': True})
         self.assertTrue(accepted['units'][0]['accepted'])
         reopened = self.view()['units'][0]
         self.assertTrue(reopened['accepted'])
         self.assertTrue(reopened['supporting_only'])
+
+    def test_accept_all_empty_results_persist_as_supporting_evidence(self):
+        """Empty completed results receive durable approval without invented amounts."""
+        self.state['units'][self.key]['receipts'] = []
+        self.save_state()
+        result = receipt_review.accept_all_extractions(self.review, {'revision': self.view()['revision']})
+        self.assertEqual(result['bulk'], {'accepted': 1, 'skipped': []})
+        self.assertEqual(result['units'][0]['review_warnings'], [])
+        unit = self.view()['units'][0]
+        self.assertTrue(unit['accepted'])
+        self.assertTrue(unit['supporting_only'])
+        self.assertEqual(unit['receipts'], [])
+
+    def test_accept_all_empty_draft_persists_as_supporting_evidence(self):
+        """Removing the final entry follows individual supporting-only acceptance."""
+        result = receipt_review.accept_all_extractions(self.review, {
+            'revision': self.view()['revision'], 'draft': {'key': self.key, 'receipts': []},
+        })
+        self.assertEqual(result['bulk'], {'accepted': 1, 'skipped': []})
+        self.assertTrue(self.view()['units'][0]['supporting_only'])
+        self.assertEqual(self.view()['units'][0]['receipts'], [])
 
     def test_accept_all_saves_draft_once_and_rejects_stale_repeat(self):
         """Bulk acceptance retains edits and audits them without matching bank entries."""
@@ -58,16 +77,16 @@ class ReceiptReviewTests(ReceiptReviewFixture):
         self.assertIn('source changed', result['bulk']['skipped'][0]['reason'])
         self.assertFalse((self.work / 'receipt-matches.json').exists())
 
-    def test_system_warning_requires_individual_review(self):
-        """PDF disagreements stay visible and cannot pass an untouched bulk acceptance."""
+    def test_accept_all_retains_system_warnings(self):
+        """Explicit bulk approval retains extraction warnings for later inspection."""
         warning = 'Text and vision disagree; verify the original.'
         self.state['units'][self.key]['review_warnings'] = [warning]
         self.save_state()
         view = self.view()
         self.assertEqual(view['units'][0]['review_warnings'], [warning])
         result = receipt_review.accept_all_extractions(self.review, {'revision': view['revision']})
-        self.assertEqual(result['bulk']['accepted'], 0)
-        self.assertIn('individually', result['bulk']['skipped'][0]['reason'])
+        self.assertEqual(result['bulk'], {'accepted': 1, 'skipped': []})
+        self.assertEqual(self.view()['units'][0]['review_warnings'], [warning])
 
     def test_accept_all_rejects_invalid_draft_without_writing(self):
         """Invalid edits stay unsaved rather than being dropped during a bulk action."""

@@ -45,7 +45,7 @@
 .tool-directory .portal-heading :is(h1,h2) { margin:0; color:#666; font-size:16px; font-weight:700; line-height:24px; letter-spacing:1px; text-transform:uppercase; }
 .directory-section { margin-top:40px; }
 .upcoming-card { display:flex; flex-direction:column; align-items:flex-start; min-height:236px; padding:24px; border:1px solid #e3e3e3; border-radius:16px; background:white; box-shadow:0 2px 5px #0000000a; }
-.upcoming-card h3 { margin:0; color:var(--muted); font-size:20px; font-weight:500; line-height:28px; }
+.upcoming-card h3 { margin:0; color:#111; font-size:22px; font-weight:500; line-height:30px; }
 .upcoming-card p { margin:8px 0 0; color:#626262; font-size:18px; font-weight:300; line-height:25px; }
 .tool-directory .portal-grid { grid-template-columns:repeat(auto-fill,minmax(280px,330px)); gap:20px; }
 .tool-directory .portal-card { display:block; min-height:210px; padding:24px; border:1px solid #e3e3e3; border-radius:16px; color:#111; box-shadow:0 2px 5px #0000000a; text-decoration:none; }
