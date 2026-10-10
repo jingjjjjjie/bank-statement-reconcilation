@@ -61,6 +61,14 @@ class DocumentFolderTests(unittest.TestCase):
             expect(page.locator('.duplicate-file .document-status')).to_have_text('Exact duplicate')
             expect(page.locator('.duplicate-file')).to_have_css('background-color', 'rgb(238, 238, 238)')
             expect(page.locator('#document-total')).to_have_text('2')
+            # Extraction totals must not shrink or offset the Documents summary.
+            for width, height, size in ((1536, 760, '21px'), (390, 844, '18px')):
+                page.set_viewport_size({'width': width, 'height': height})
+                for metric in ('document-total', 'document-admin', 'document-complete'):
+                    expect(page.locator(f'#{metric}')).to_have_css('font-size', size)
+                    expect(page.locator(f'#{metric}')).to_have_css('margin-left', '0px')
+                self.assertTrue(page.evaluate('document.documentElement.scrollWidth <= innerWidth'))
+            page.set_viewport_size({'width': 1440, 'height': 960})
             expect(page.locator('.document-folder button, .folder-arrow')).to_have_count(0)
             expect(page.locator('.duplicate-file strong')).to_have_css('color', 'rgb(115, 115, 115)')
             page.locator('#document-search').fill('copies')

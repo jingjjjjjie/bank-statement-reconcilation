@@ -161,7 +161,7 @@
 #document-review-status:is([data-state=trash],[data-state=failed]) { background:#eee6df; color:#86513d; }
 .editor-footer .button:disabled, #accept-receipts:disabled { background:#edf0ed; border:1px solid #dce3dd; color:#8b948e; opacity:1; cursor:default; box-shadow:none; }
 
-#document-total{font-size:12px;font-weight:600;margin-left:auto;overflow-wrap:anywhere}.entry-toolbar{flex-wrap:wrap}
+.extraction-workspace #document-total{font-size:12px;font-weight:600;margin-left:auto;overflow-wrap:anywhere}.entry-toolbar{flex-wrap:wrap}
 
 #receipt-unit-status:empty{display:none}
 .extraction-original .sheet-table .source-highlight > :is(td,th){background:#fff0ae !important;border-top:2px solid #b98112;border-bottom:2px solid #b98112;color:#3e310a}
@@ -178,7 +178,7 @@
 #extraction-options #accept-all-receipts{border-top:1px solid #e7ece5;border-radius:0;margin-top:4px}
 .entry-toolbar{gap:10px;padding:8px 16px;min-height:32px}
 .entry-toolbar .piece-count{margin-right:0;font-size:13px;color:#203831}
-#document-total{margin-left:auto;margin-right:8px;font-size:13px;font-variant-numeric:tabular-nums}
+.extraction-workspace #document-total{margin-left:auto;margin-right:8px;font-size:13px;font-variant-numeric:tabular-nums}
 .entry-toolbar .button{min-height:30px;padding:5px 9px}
 #receipt-pieces{padding:14px 16px;background:#eaf0eb;scrollbar-gutter:stable}
 #receipt-pieces fieldset{padding:12px;margin-bottom:14px;border:1px solid #c9d6cc;border-radius:10px;background:white;box-shadow:0 3px 8px #20383112}
@@ -215,7 +215,7 @@
 }
 @media(max-width:650px){
   .review-header{padding:0 12px;gap:10px}.entry-toolbar{gap:8px;padding:8px 12px}
-  #document-total{order:3;flex-basis:100%;margin:0;font-size:12px}
+  .extraction-workspace #document-total{order:3;flex-basis:100%;margin:0;font-size:12px}
   .entry-toolbar .piece-count{margin-right:auto}
   #receipt-pieces{padding:10px 12px}.piece-row{grid-template-columns:24px minmax(0,1fr) minmax(0,1fr);gap:8px 6px}
   #receipt-pieces .piece-row label:has([data-field=payee]){grid-column:2;grid-row:1}
