@@ -192,6 +192,26 @@ body .final-report .report-export-dialog .download-message { grid-column:1/-1; m
 body .final-report .report-heading { border-bottom:0; padding-bottom:0; margin-bottom:20px; }
 
 /* Scaled desktop displays need scrollable review content rather than clipped trays. */
+.matching-app .matching-divider { display:none; }
+@media(min-width:1000px) {
+  .matching-app .matching-layout { grid-template-columns:minmax(0,var(--review-width,50fr)) 12px minmax(0,var(--evidence-width,50fr)); }
+  .matching-app .matching-divider { display:flex; align-items:center; justify-content:center; cursor:col-resize; touch-action:none; background:#f5f7fb; border-inline:1px solid var(--line); }
+  .matching-app .matching-divider::after { content:''; width:3px; height:38px; border-radius:3px; background:#b9c9df; }
+  .matching-app .matching-divider:hover::after,.matching-app .matching-divider:focus-visible::after { background:var(--primary); }
+  .matching-app .matching-divider:focus-visible { outline:2px solid var(--primary); outline-offset:-2px; }
+  .matching-app .matching-layout.is-resizing { cursor:col-resize; user-select:none; }
+}
+.matching-app .candidate-card.previewing { outline:2px solid var(--primary); outline-offset:-2px; box-shadow:inset 4px 0 var(--primary); }
+.matching-app .decision-footer { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); grid-template-rows:40px minmax(22px,auto); gap:4px 8px; padding:8px 16px; }
+.matching-app .decision-actions { display:contents; }
+.matching-app .decision-actions>.button { width:100%; max-width:none; justify-content:center; height:40px; min-height:40px; padding:4px 8px; margin:0; text-align:center; overflow-wrap:anywhere; }
+.matching-app #approve-match { grid-row:1; grid-column:1; }
+.matching-app #deny-match { grid-row:1; grid-column:2; }
+.matching-app #next-review-transaction { grid-row:1; grid-column:3; }
+.matching-app #undo-match { grid-row:2; grid-column:1; justify-self:start; padding:2px 0; font-size:11px; color:var(--primary); }
+.matching-app .decision-footer #save-status { grid-row:2; grid-column:2/-1; margin:0; align-self:center; text-align:right; font-size:10px; overflow-wrap:anywhere; }
+.matching-app .decision-footer #save-status:empty { display:block; }
+body.matching-app #toast { bottom:160px; pointer-events:none; }
 @media(min-width:701px) and (max-height:820px) {
   .matching-app .matching-main { padding:12px 16px; }
   .matching-app .queue-controls { min-height:56px; padding:8px 16px; }
@@ -201,7 +221,7 @@ body .final-report .report-heading { border-bottom:0; padding-bottom:0; margin-b
   .matching-app #selected-candidates { max-height:clamp(170px,26dvh,260px); }
   .matching-app #support-group { flex:1 0 auto; min-height:160px; }
   .matching-app #candidate-list { max-height:clamp(180px,30dvh,320px); }
-  .matching-app .decision-footer { padding:10px 16px; }
+  .matching-app .decision-footer { padding:8px 16px; }
   .matching-app .decision-actions { margin-top:0; }
   .matching-app .evidence-content { padding:16px; }
 }

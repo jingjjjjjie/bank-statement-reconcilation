@@ -1,6 +1,7 @@
 """Check the approved typography, compact navigation and preserved rainbow styling."""
 
 import threading
+import re
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
@@ -74,6 +75,8 @@ class AccountingThemeTests(unittest.TestCase):
                     if width > 700:
                         footer = page.locator('.decision-footer').bounding_box()
                         self.assertLessEqual(footer['y'] + footer['height'], height)
+                        self.assertEqual(page.locator('.evidence-panel #approve-match').count(), 1)
+                        self.assertEqual(page.locator('#approve-match').bounding_box()['height'], 40)
                         if height <= 820:
                             self.assertEqual(page.locator('.decision-scroll').evaluate('(e)=>getComputedStyle(e).overflowY'), 'auto')
                             self.assertGreaterEqual(page.locator('#selected-candidates').bounding_box()['height'], rainbow.bounding_box()['height'])
@@ -88,6 +91,41 @@ class AccountingThemeTests(unittest.TestCase):
                     page.mouse.move(0, 0)
                     button.evaluate('(e)=>e.blur()')
                     page.screenshot(path=str(output / f'matching-fixture-{width}.png'), full_page=True)
+            page.set_viewport_size({'width': 1536, 'height': 760})
+            divider = page.get_by_role('separator', name='Resize review and evidence panels')
+            expect(divider).to_be_visible()
+            initial = page.locator('.decision-panel').bounding_box()['width']
+            grip = divider.bounding_box()
+            page.mouse.move(grip['x'] + grip['width'] / 2, grip['y'] + 80)
+            page.mouse.down()
+            page.mouse.move(grip['x'] + 150, grip['y'] + 80, steps=8)
+            page.mouse.up()
+            self.assertGreater(page.locator('.decision-panel').bounding_box()['width'], initial + 100)
+            value = divider.get_attribute('aria-valuenow')
+            page.reload()
+            expect(divider).to_have_attribute('aria-valuenow', value)
+            divider.focus()
+            page.keyboard.press('Home')
+            expect(divider).to_have_attribute('aria-valuenow', '50')
+            page.keyboard.press('ArrowRight')
+            expect(divider).to_have_attribute('aria-valuenow', '52')
+            divider.dblclick()
+            expect(divider).to_have_attribute('aria-valuenow', '50')
+            rainbow.get_by_role('button', name='Show', exact=True).click()
+            expect(rainbow).to_have_class(re.compile(r'\bpreviewing\b'))
+            self.assertEqual(rainbow.evaluate('(e)=>getComputedStyle(e).outlineWidth'), '2px')
+            actions = page.locator('#approve-match, #deny-match, #next-review-transaction')
+            for width in [1536, 390, 320]:
+                page.set_viewport_size({'width': width, 'height': 760})
+                before = actions.evaluate_all('(els)=>els.map(e=>{const b=e.getBoundingClientRect();return [b.x,b.y+scrollY,b.width,b.height]})')
+                page.locator('#deny-match').click()
+                expect(page.locator('#undo-match')).to_be_visible()
+                after = actions.evaluate_all('(els)=>els.map(e=>{const b=e.getBoundingClientRect();return [b.x,b.y+scrollY,b.width,b.height]})')
+                self.assertEqual(before, after)
+                page.screenshot(path=str(output / f'matching-stable-undo-{width}.png'), full_page=True)
+                page.locator('#undo-match').click()
+                expect(page.locator('#undo-match')).to_be_hidden()
+                self.assertEqual(before, actions.evaluate_all('(els)=>els.map(e=>{const b=e.getBoundingClientRect();return [b.x,b.y+scrollY,b.width,b.height]})'))
             page.set_viewport_size({'width': 1440, 'height': 1000})
             page.goto(f'http://127.0.0.1:{server.server_port}/final-report')
             self.assertEqual(page.locator('.final-report').evaluate('(e)=>getComputedStyle(e).color'), 'rgb(32, 50, 71)')

@@ -45,6 +45,12 @@ Shared help control: `dashboard/frontend/src/components/PageHelp.vue`.
 - Matching on desktop viewports up to 820px tall uses compact outer spacing and
   a scrollable review pane. Keep full selected cards reachable and confirmation
   actions fixed; do not reduce text size to fit a scaled display.
+- Matching supports a draggable, keyboard-accessible panel split on desktop,
+  saved locally as a display preference. Double-click or Home restores 50/50.
+  Highlight the previewed candidate with a blue outline while preserving rainbows.
+  Put compact 40px Confirm/Save, Reject and Next buttons below the right evidence
+  preview, after page/zoom controls. Reserve a secondary row for Undo and save status
+  so decisions do not rearrange the main buttons. Save feedback must not cover them.
 
 - Step 2 displays all pieces together as editable rows. Keep payee, payer, amount, currency, date and document number visible; put type, other names, references and Amount at (with Show, which jumps the preview to that page or sheet rows) under Details. Fields from older extractions appear only when they hold a value. Selecting a row targets Remove; Merge all combines every entry in the current document into one editable draft; Split is not offered. Narrow screens wrap the fields and place save actions after the rows without overlap.
 

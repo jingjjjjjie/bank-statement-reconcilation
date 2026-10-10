@@ -112,3 +112,25 @@ now covers 2560x1300, 1920x950, 1536x760, 1366x650 and 1280x620 as well as exist
 desktop/tablet/mobile sizes. It checks footer bounds and full selected-card height
 on shorter desktops. Inspected before/after fixture screenshots at 1536x760 and
 1280x620. Changes are CSS-only; no matching or approval logic changed.
+
+## Reversible matching layout improvements
+
+Added a desktop separator that resizes panels between 35/65 and 65/35. It supports
+pointer capture, keyboard arrows, Home and double-click reset. The preference is
+stored locally under `matching-review-width`; transaction state remains separate.
+Narrow screens keep the existing stacked layout. The previewed candidate gets a
+blue outline without replacing its confidence rainbow.
+
+Confirm/Save, Reject and Next are compact 40px controls below the evidence preview's
+page/zoom controls. Undo and save status occupy a reserved secondary row. The long
+partial/contextual action label is shortened to Save partial, with an explanatory
+tooltip. Save feedback sits above the footer without intercepting pointer input.
+Approval, rejection, allocation and undo request logic is unchanged.
+
+Production build and seven theme/matching/report browser tests passed. The theme
+test exercises pointer resizing, preference persistence across reload, keyboard and
+double-click reset, preview highlighting, and Reject/Undo against synthetic fixture
+data. Main action rectangles remain identical before/after those decisions at
+1536, 390 and 320 pixels. Existing allocation/save and report/download tests passed.
+All changes are isolated in a dedicated commit; reverting it restores the previous
+UI. Resetting the divider alone restores equal panel widths without reverting code.

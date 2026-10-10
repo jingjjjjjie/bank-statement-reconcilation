@@ -309,7 +309,8 @@ function updateSummary() {
   $('#support-status').textContent = b.decision && unchanged
     ? `${b.support_status}. ${b.review_status === 'denied' ? 'Suggestion rejected; other evidence may exist.' : 'Saved review decision.'}`
     : `${selected.size} selected · Not confirmed`;
-  $('#approve-match').textContent = difference === 0 && values.some(v => v !== '') ? 'Confirm supporting' : 'Save partial / contextual evidence';
+  $('#approve-match').textContent = difference === 0 && values.some(v => v !== '') ? 'Confirm supporting' : 'Save partial';
+  $('#approve-match').title = 'Save the selected supporting evidence and allocations';
   const missingAmount = [...selected].some(([id, value]) => allocationRole(id) === 'money' && !value);
   if (missingAmount) summary.append(node('div', 'warning', 'Enter an allocation amount or choose Supporting only.'));
   root.querySelectorAll('.allocation-controls input, .allocation-controls select').forEach(control => control.disabled = saving);
