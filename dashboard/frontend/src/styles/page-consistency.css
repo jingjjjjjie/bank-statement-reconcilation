@@ -1,0 +1,69 @@
+/* Carry the extraction workspace's quiet surfaces and scale across workflow pages. */
+body:not(.extraction-workspace):not(.matching-app):not(.directory-page) main {
+  margin:0 auto;
+  padding:22px 24px 32px;
+  max-width:none;
+}
+body main :is(.page-heading,.picker-heading,.report-heading,.portal-heading) {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:16px;
+  min-height:68px;
+  height:auto;
+  margin:0 0 16px;
+  padding:16px 20px;
+  background:white;
+  border:1px solid var(--line);
+  border-radius:10px;
+}
+body main :is(.page-heading,.picker-heading,.report-heading,.portal-heading) h1 {
+  margin:0;
+  color:var(--nav);
+  font-size:20px;
+  font-weight:600;
+  line-height:1.3;
+  letter-spacing:-.6px;
+}
+body main :is(.settings-card,.workspace-card,.project-row) {
+  border-color:var(--line);
+  border-radius:10px;
+  box-shadow:0 2px 8px #17345304;
+}
+body main .settings-card { padding:20px; margin-bottom:16px; }
+.settings-page .page-heading { margin-left:auto; margin-right:auto; }
+body main .settings-card h2 { font-size:16px; line-height:1.4; }
+body:not(.extraction-workspace):not(.matching-app) main .button {
+  min-height:34px;
+  padding:7px 12px;
+  font-size:12px;
+  border-radius:6px;
+}
+body main :is(.document-filters,.bank-toolbar,.setting-field) :is(input,select) {
+  min-height:36px;
+  border-radius:6px;
+  border-color:#dfe6ef;
+  background:#fafbfd;
+}
+body main .stats { border-radius:10px; margin-bottom:16px; }
+body main .stats > div { padding:16px 20px; }
+body main .stats strong { font-size:24px; }
+body.documents-page .page-heading { margin-bottom:0; border-radius:10px 10px 0 0; }
+body.documents-page .page-heading + .settings-card { border-top:0; border-radius:0 0 10px 10px; }
+body.documents-page .document-table-wrap { margin-top:16px; }
+body.documents-page .document-toolbar { gap:12px; }
+/* Home remains a directory; dialog headings retain their own compact layout. */
+body.directory-page main .portal-heading { background:transparent; border:0; padding:0; min-height:0; }
+@media (max-width:700px) {
+  body:not(.extraction-workspace):not(.matching-app):not(.directory-page) main { padding:12px 8px 24px; }
+  body main :is(.page-heading,.picker-heading,.report-heading,.portal-heading) {
+    min-height:58px;
+    padding:12px;
+    gap:12px;
+    flex-wrap:wrap;
+  }
+  body main :is(.page-heading,.picker-heading,.report-heading,.portal-heading) h1 { font-size:18px; }
+  body main .settings-card { padding:16px 12px; }
+  body main .stats > div { padding:12px; }
+  body main .stats strong { font-size:20px; }
+}
