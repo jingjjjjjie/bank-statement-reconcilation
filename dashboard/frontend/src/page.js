@@ -33,7 +33,7 @@ export function usePage(root, initialize) {
       observer.observe(element, options);
     },
     async api(path, body) {
-      const protectedRead = refreshing && body === undefined && ['/api/matching', '/api/receipts', '/api/document-status'].includes(path);
+      const protectedRead = refreshing && body === undefined && ['/api/matching', '/api/receipts', '/api/document-status', '/api/config'].includes(path);
       const controller = new AbortController();
       requests.add(controller);
       try {
