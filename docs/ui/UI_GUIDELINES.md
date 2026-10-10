@@ -52,8 +52,9 @@ Shared help control: `dashboard/frontend/src/components/PageHelp.vue`.
   Highlight the previewed candidate with a blue outline while preserving rainbows.
   Put compact 34px Confirm/Save, Reject and Next buttons, at most 140px wide and
   right-aligned, below the right evidence
-  preview, after page/zoom controls. Reserve a secondary row for Undo and save status
-  so decisions do not rearrange the main buttons. Save feedback must not cover them.
+  preview, after page/zoom controls. Confirmed and Rejected states offer Undo within
+  their existing buttons; edits return confirmation to Save changes. Do not reserve
+  a second footer row. Save feedback must not cover the controls.
 
 - Step 2 displays all pieces together as editable rows. Keep payee, payer, amount, currency, date and document number visible; put type, other names, references and Amount at (with Show, which jumps the preview to that page or sheet rows) under Details. Fields from older extractions appear only when they hold a value. Selecting a row targets Remove; Merge all combines every entry in the current document into one editable draft; Split is not offered. Narrow screens wrap the fields and place save actions after the rows without overlap.
 
@@ -96,3 +97,7 @@ Shared help control: `dashboard/frontend/src/components/PageHelp.vue`.
 - Review Matching starts Available candidates collapsed; click or keyboard activation
   expands its search button and candidate list. Keep the toolbar flush with the top
   of the workspace, and offer 50% and 75% original-preview zoom.
+
+- Candidate search expands inline beside its Search and Reset buttons, without a
+  separate empty toolbar row. Matching save announcements are accessible but do not
+  add a visible timestamp row beneath the buttons.

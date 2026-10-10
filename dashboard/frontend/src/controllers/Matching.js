@@ -132,7 +132,7 @@ function chooseBank(id, addItem, preservePreview = false) {
   $('#toggle-candidate-search').textContent = 'Search';
   transactionPage = Math.floor(Math.max(0, visibleBanks().findIndex(row => row.id === id)) / 10);
   $('#save-status').textContent = b.decision ? `Saved · ${new Date(b.decision.at).toLocaleString()}` : '';
-  $('#review-editor').hidden = false; $('#undo-match').hidden = !b.decision;
+  $('#review-editor').hidden = false;
   $('#deny-match').disabled = false;
   $('#approve-match').textContent = b.review_status === 'approved' ? 'Save & next' : 'Confirm & next';
   const detail = $('#transaction-detail'); detail.replaceChildren();
@@ -309,12 +309,22 @@ function updateSummary() {
   $('#support-status').textContent = b.decision && unchanged
     ? `${b.support_status}. ${b.review_status === 'denied' ? 'Suggestion rejected; other evidence may exist.' : 'Saved review decision.'}`
     : `${selected.size} selected · Not confirmed`;
-  $('#approve-match').textContent = difference === 0 && values.some(v => v !== '') ? 'Confirm supporting' : 'Save partial';
-  $('#approve-match').title = 'Save the selected supporting evidence and allocations';
+  // Reflect the saved decision in its existing action; edits require a fresh save.
+  const confirmed = b.review_status === 'approved' && unchanged;
+  const rejected = b.review_status === 'denied';
+  $('#approve-match').textContent = saving ? 'Saving...' : confirmed ? 'Confirmed · Undo'
+    : b.review_status === 'approved' ? 'Save changes'
+    : difference === 0 && values.some(v => v !== '') ? 'Confirm supporting' : 'Save partial';
+  $('#approve-match').title = confirmed ? 'Undo confirmation' : 'Save the selected supporting evidence and allocations';
+  $('#approve-match').setAttribute('aria-pressed', String(confirmed));
+  $('#deny-match').textContent = rejected ? 'Rejected · Undo' : 'Reject suggestion';
+  $('#deny-match').title = rejected ? 'Undo rejection' : 'Reject supporting suggestion for this transaction';
+  $('#deny-match').setAttribute('aria-pressed', String(rejected));
+  $('#deny-match').disabled = saving;
   const missingAmount = [...selected].some(([id, value]) => allocationRole(id) === 'money' && !value);
   if (missingAmount) summary.append(node('div', 'warning', 'Enter an allocation amount or choose Supporting only.'));
   root.querySelectorAll('.allocation-controls input, .allocation-controls select').forEach(control => control.disabled = saving);
-  $('#approve-match').disabled = missingAmount || saving || !selected.size || b.stale || difference < 0 || values.some(v => v !== '' && (cents(v) === null || cents(v) <= 0));
+  $('#approve-match').disabled = saving || (!confirmed && (missingAmount || !selected.size || b.stale || difference < 0 || values.some(v => v !== '' && (cents(v) === null || cents(v) <= 0))));
 }
 async function saveDecision(action) {
   /* Send explicit user intent, then reload the authoritative ledger and balances. */
@@ -468,7 +478,8 @@ $('#toggle-candidate-search').onclick = toggleCandidateSearch;
 $('#candidate-query').onkeydown = event => { if (event.key === 'Escape') { event.preventDefault(); toggleCandidateSearch(); } };
 $('#candidate-query').oninput = () => { renderCandidates(); $('#candidate-list').scrollTop = 0; };
 $('#restore-suggestion').onclick = () => { selected.clear(); allocationRoles.clear(); allocationAmounts.clear(); bank().suggestion.allocations.forEach(a => selected.set(a.item_id, a.amount)); renderCandidates(); updateSummary(); };
-$('#approve-match').onclick = () => saveDecision('approve'); $('#deny-match').onclick = () => saveDecision('deny'); $('#undo-match').onclick = () => saveDecision('undo');
+$('#approve-match').onclick = () => saveDecision(bank().review_status === 'approved' && draftSnapshot() === savedDraft ? 'undo' : 'approve');
+$('#deny-match').onclick = () => saveDecision(bank().review_status === 'denied' ? 'undo' : 'deny');
 $('#preview-bank').onclick = () => { if (activeId) showEvidence('bank', activeId); };
 $('#preview-page').onchange = () => renderEvidencePage();
 $('#preview-prev').onclick = () => { $('#preview-page').selectedIndex--; renderEvidencePage(); };

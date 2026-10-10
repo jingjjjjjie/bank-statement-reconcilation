@@ -153,3 +153,19 @@ scaled desktop and 320/390px mobile widths, disclosure keyboard activation, zoom
 values, stable Reject/Undo actions, candidate selection and saved report behaviour.
 Rejection behaviour and all workflow/model prompts are unchanged. Revert this
 commit to restore the previous matching presentation.
+
+
+## Inline saved states and search
+
+Removed the reserved Undo/timestamp row. The footer is now 47px high including
+padding and border, with the same three 34px actions. Confirmed and rejected
+buttons show their persisted state and offer Undo in place. Edited confirmed
+allocations show Save changes and require successful backend validation. Saving
+announcements remain accessible; errors stay visible through the existing alert.
+Candidate search and its compact Close search/Reset buttons occupy one row.
+
+Production build passed. All seven browser tests passed across the matching,
+report and theme suites; the final theme rerun also verifies the 47px footer,
+inline search at 320/390px, state toggles and stable action rectangles after
+rejection/undo. Inspected expanded-search and saved-state Playwright screenshots.
+No model prompts, allocation validation, saved ledger format or originals changed.
