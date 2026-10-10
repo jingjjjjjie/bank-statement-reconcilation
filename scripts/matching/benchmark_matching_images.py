@@ -36,11 +36,6 @@ def digest(path):
         return hashlib.file_digest(stream, 'sha256').hexdigest()
 
 
-def no_shared_cache(path):
-    """Keep benchmark responses outside application response caches."""
-    return None
-
-
 def extraction_coverage(index, state):
     """Count complete documents and keep missing or stale assembly unresolved."""
     from reconciliation.extraction.pipeline.assembly import current_assembly
@@ -167,11 +162,10 @@ def extract_fresh(output, workers):
     engine = CodexReviewer(work, model='gpt-5.6-sol', max_calls=1000, timeout=300)
     started = time.perf_counter()
     status, error = 'finished', None
-    with patch('reconciliation.core.development_cache.root_for', no_shared_cache):
-        try:
-            run(work, index, state, engine)
-        except Exception as failure:
-            status, error = 'unresolved', str(failure)
+    try:
+        run(work, index, state, engine)
+    except Exception as failure:
+        status, error = 'unresolved', str(failure)
     result = {
         'status': status,
         'error': error,
@@ -428,7 +422,6 @@ def match(output, workers):
 
     results, started = [], time.perf_counter()
     with (
-        patch('reconciliation.core.development_cache.root_for', no_shared_cache),
         ThreadPoolExecutor(max_workers=workers) as pool,
     ):
         futures = [

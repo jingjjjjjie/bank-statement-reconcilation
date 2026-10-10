@@ -344,7 +344,6 @@ class Review:
                 action["status"] = "rolled_back"
                 write_json(self.state_path, self.state)
                 raise
-            self.cache_decisions()
 
     def undo(self, group):
         """Undo a keep decision, restoring archived copies only if every file is unchanged."""
@@ -384,13 +383,6 @@ class Review:
                 action["status"] = "done"
                 write_json(self.state_path, self.state)
                 raise
-            self.cache_decisions()
-
-    def cache_decisions(self):
-        """Keep development history outside the review folder when enabled."""
-        from dashboard.services import development
-
-        development.capture(self)
 
     def document(self, file_id):
         """Describe how to preview one manifest file: native for PDFs and images, rendered pages for Office."""

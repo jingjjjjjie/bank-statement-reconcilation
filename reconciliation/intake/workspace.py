@@ -6,7 +6,6 @@ import os
 import string
 from pathlib import Path
 
-from reconciliation.core import development_cache
 from reconciliation.intake.duplicates import (
     duplicate_groups,
     fingerprint,
@@ -155,7 +154,6 @@ class SourceSelection:
         result = extract(source, year)
         output.parent.mkdir(parents=True, exist_ok=True)
         write_master(result, output)
-        development_cache.capture(Path(manifest), "bank-extraction")
         return {"path": str(output), "existing": False}
 
     def start(self, expected=None):

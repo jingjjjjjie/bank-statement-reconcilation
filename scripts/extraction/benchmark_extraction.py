@@ -213,10 +213,8 @@ def main():
         },
     )
     sys.path.insert(0, str(args.output / 'runtime'))
-    from reconciliation.core import development_cache
 
     # Disable sharing only inside this benchmark process; dashboard settings are untouched.
-    development_cache.root_for = lambda path: None
     reports = []
     while len(reports) < len(json.loads((args.output / 'plan.json').read_text())['workers']):
         workers = json.loads((args.output / 'plan.json').read_text())['workers'][len(reports)]

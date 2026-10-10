@@ -13,7 +13,6 @@ from uuid import uuid4
 
 from jsonschema import validate
 
-from reconciliation.core import development_cache
 from reconciliation.core.prompts import load_prompt
 from reconciliation.core.settings import DEFAULT_MODEL
 
@@ -155,7 +154,7 @@ class CodexReviewer:
         self.usage_path = work / "token-usage.jsonl"
         self.run_id = uuid4().hex
         self.stage = "unknown"
-        self.last_result = self.last_shared = None
+        self.last_result = None
         self.cache.mkdir(parents=True, exist_ok=True)
 
     @property
@@ -195,9 +194,6 @@ class CodexReviewer:
         entry = {"event_id": uuid4().hex, **entry}
         with self._shared_lock:
             record(self.usage_path, entry)
-            shared = development_cache.root_for(self.work)
-            if shared is not None:
-                record(shared / "runs" / self.run_id / "token-usage.jsonl", entry)
 
     def ask(self, prompt, schema, images=()):
         """Return a schema-valid answer, reusing cached results so runs resume without repeat calls."""
@@ -208,20 +204,10 @@ class CodexReviewer:
         folder.mkdir(exist_ok=True)
         result_path = folder / "result.json"
         self.last_result = result_path
-        self.last_shared = None
-        shared = development_cache.root_for(self.work)
-        if shared is not None:
-            self.last_shared = shared / "model-requests" / folder.name / "result.json"
-            if not result_path.exists() and self.last_shared.is_file():
-                shared_result = json.loads(self.last_shared.read_text(encoding="utf-8"))
-                validate(shared_result, schema)
-                with self.acceptance():
-                    development_cache.write_json(result_path, shared_result)
         if result_path.exists():
             result = json.loads(result_path.read_text(encoding="utf-8"))
             validate(result, schema)
             (folder / "prompt.txt").write_text(prompt, encoding="utf-8")
-            development_cache.share_request(self.work, folder)
             self._record(
                 {
                     "status": "cached",
@@ -266,7 +252,6 @@ class CodexReviewer:
                 raise BudgetReached("Call limit reached; resume with the same command")
             self._record({**entry, "status": "started"})
             self._calls[0] += 1
-        development_cache.share_request(self.work, folder)
         process_audit = {}
         status = "failed"
         try:
@@ -291,7 +276,6 @@ class CodexReviewer:
         finally:
             usage = reported_usage(events_path)
             self._record({**entry, "status": status, "usage": usage, **process_audit})
-            development_cache.share_request(self.work, folder)
         if self._cancelled.is_set():
             raise ReviewCancelled("Review stopped by user")
         if process.returncode or not output_path.exists():
@@ -302,8 +286,6 @@ class CodexReviewer:
         temporary.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
         with self.acceptance():
             temporary.replace(result_path)
-            if self.last_shared is not None:
-                development_cache.copy_atomic(result_path, self.last_shared)
         return result
 
     def invalidate(self):
@@ -311,5 +293,3 @@ class CodexReviewer:
         # Discard structurally valid responses that fail workflow coverage validation.
         if self.last_result is not None:
             self.last_result.unlink(missing_ok=True)
-        if self.last_shared is not None and development_cache.root_for(self.work) is not None:
-            self.last_shared.unlink(missing_ok=True)

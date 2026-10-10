@@ -67,7 +67,6 @@ def main():
     engine = CodexReviewer(args.output, model='gpt-5.6-sol', max_calls=2 * len(selected), timeout=240)
     rows = []
     with (
-        patch('reconciliation.core.development_cache.root_for', return_value=None),
         patch('reconciliation.extraction.sources.pdf_routing.mode', return_value={'enabled': True}),
     ):
         for i, (path, number, digest) in enumerate(selected):

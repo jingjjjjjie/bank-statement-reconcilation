@@ -12,7 +12,6 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from statistics import median
-from unittest.mock import patch
 
 from reconciliation.core.paths import WORKSPACE
 
@@ -187,11 +186,6 @@ def request(task):
     )
 
 
-def no_shared_cache(path):
-    """Prevent experiment results from populating or reusing application caches."""
-    return None
-
-
 def coverage_valid(result, count):
     """Apply production page-coverage and piece-source binding checks."""
     if count == 1:
@@ -254,7 +248,6 @@ def run(output, manifest, workers):
     rows = []
     started = time.perf_counter()
     with (
-        patch('reconciliation.core.development_cache.root_for', no_shared_cache),
         ThreadPoolExecutor(max_workers=workers) as pool,
     ):
         futures = [pool.submit(job, task, arm) for task, arm in jobs]

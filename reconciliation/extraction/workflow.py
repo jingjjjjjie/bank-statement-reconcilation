@@ -436,7 +436,6 @@ def report(work, index, state):
     except ValueError:
         removed = {}  # Conflicting decisions are already listed in `problems`.
     export_inventory(work / "supporting-inventory.csv", index, state, removed)
-    development_cache.capture(Path(index["manifest"]), "content-review")
     return problems
 
 

@@ -12,7 +12,6 @@ from dashboard.routes import active_context, context
 from dashboard.services.extraction import extraction_runs
 from dashboard.services.projects import list_projects
 from dashboard.services.review import Review
-from reconciliation.core import development_cache
 from reconciliation.intake.workspace import STATEMENT_YEARS
 
 router = APIRouter(prefix="/api")
@@ -147,7 +146,6 @@ def export_bank(body: ExportChoice, state=Depends(active_context)):
             body.company,
             Path(temporary) / "answer_statement_bank_only.xlsx",
         )
-        development_cache.capture(state.review.manifest_path, "bank-export", [output])
         return Response(
             output.read_bytes(), media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )

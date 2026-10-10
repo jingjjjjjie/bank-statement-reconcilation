@@ -22,7 +22,6 @@ def model_schema(name):
 
 EXTRACTION = model_schema('extraction')
 ASSEMBLY = model_schema('receipt_assembly')
-PIECE = EXTRACTION['properties']['pieces']['items']
 # Stored typed facts keep any type so older records (invoice, claim_period...) stay valid.
 FACTS = {
     'type': 'array',
