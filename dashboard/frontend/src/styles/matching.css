@@ -1,4 +1,8 @@
 /* Final review follows the compact Review results workspace. */
+/* The source path identifies the preview; candidate Show controls select evidence. */
+.matching-app .evidence-panel .evidence-heading { display:none; }
+.matching-app #bank-view #selected-tray { border-color:#e4eaf2; }
+.matching-app #selected-candidates .candidate-card.selected:not(.suggested) { border-color:#dce5ef; }
 .matching-app{background:#f6f7f5;color:#203831}
 .matching-main{width:100%;max-width:none;margin:0;padding:0;height:calc(100dvh - 68px);display:flex;flex-direction:column}
 .matching-app [hidden]{display:none!important}
@@ -112,7 +116,7 @@
 
 /* Jump to the cited original without selecting or approving the candidate. */
 .show-evidence{background:#2563eb;color:white;border-color:#2563eb;cursor:pointer}
-.show-evidence:hover{background:#1d4ed8;border-color:#1d4ed8}
+.matching-app .show-evidence:hover{background:#eff6ff;border-color:#cbdcf0;color:var(--primary)}
 .show-evidence:focus-visible{outline:2px solid #2563eb;outline-offset:3px}
 #evidence-content .source-cell-highlight{background:#dbeafe!important;outline:2px solid #2563eb;outline-offset:-2px;color:#172554}
 

@@ -258,7 +258,7 @@ function renderCandidates() {
       editor.ontoggle = () => { if (editor.open) expandedAllocations.add(item.id); else expandedAllocations.delete(item.id); };
       editor.append(toggle, allocationControls(item)); actions.append(editor);
     }
-    actions.append(button('Show', () => showEvidence('item', item.id), 'candidate-preview show-evidence'));
+    actions.append(button('Show document', () => showEvidence('item', item.id), 'candidate-preview show-evidence'));
     content.append(actions);
     card.append(control, content); (isSelected ? tray : list).append(card);
   }

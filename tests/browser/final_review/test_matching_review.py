@@ -105,7 +105,7 @@ class MatchingReviewBrowserTests(unittest.TestCase):
             page.goto(f'http://127.0.0.1:{server.server_port}/matching')
             card = page.locator('#selected-candidates .candidate-card').first
             card.locator('summary').first.click()
-            card.get_by_role('button', name='Show', exact=True).click()
+            card.get_by_role('button', name='Show document', exact=True).click()
             expect(page.locator('#preview-page')).to_have_value('1')
             expect(page.locator('[data-source-row="45"] .source-cell-highlight')).to_have_count(3)
             data['items'][0]['amount_location'] = 'page 3'
@@ -119,7 +119,7 @@ class MatchingReviewBrowserTests(unittest.TestCase):
             page.route('**/api/matching-image?*', lambda route: route.fulfill(status=404))
             page.reload()
             page.locator('#selected-candidates summary').first.click()
-            page.locator('#selected-candidates').get_by_role('button', name='Show', exact=True).click()
+            page.locator('#selected-candidates').get_by_role('button', name='Show document', exact=True).click()
             expect(page.locator('#preview-page')).to_have_value('2')
             browser.close()
 
@@ -239,7 +239,7 @@ class MatchingReviewBrowserTests(unittest.TestCase):
             page.keyboard.press('Enter')
             expect(candidate.locator('.candidate-details')).to_have_attribute('open', '')
             expect(page.get_by_role('button', name='Use only this', exact=True)).to_have_count(0)
-            candidate.get_by_role('button', name='Show', exact=True).click()
+            candidate.get_by_role('button', name='Show document', exact=True).click()
             expect(page.locator('#evidence-content')).to_contain_text('Original receipt 2')
             expect(page.locator('#selected-candidates [data-item-id="D1"]')).to_be_visible()
             candidate.get_by_role('checkbox').click()
