@@ -40,7 +40,7 @@ class ProjectNavigationTests(unittest.TestCase):
                         executable_path=r"C:\Program Files\Google\Chrome\Application\chrome.exe"
                         if os.name == "nt" else None,
                     )
-                    page = browser.new_page(viewport={"width": 1440, "height": 1000})
+                    page = browser.new_page(viewport={"width": 1782, "height": 817})
                     def capture(name):
                         """Optionally save synthetic screenshots for visual review."""
                         if os.environ.get("PROJECT_SCREENSHOTS"):
@@ -118,6 +118,7 @@ class ProjectNavigationTests(unittest.TestCase):
                     expect(page).to_have_url(base + "/accounting-finance")
                     expect(page.locator(".portal-card")).to_be_visible()
                     self.assertTrue(page.evaluate("document.documentElement.scrollWidth <= innerWidth"))
+                    capture("accounting-finance-mobile")
                     self.assertEqual(errors, [])
                     browser.close()
             finally:

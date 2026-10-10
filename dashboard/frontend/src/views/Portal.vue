@@ -3,7 +3,7 @@ import '../styles/portal.css';
 </script>
 
 <template>
-  <main class="portal-main">
+  <main class="portal-main tool-directory">
     <div class="portal-heading">
       <h1>Accounting and Finance</h1>
     </div>
@@ -16,7 +16,6 @@ import '../styles/portal.css';
         </span>
         <h2>Bank Statement Reconciliation</h2>
         <p>Reconcile bank statements with supporting documents.</p>
-        <span class="portal-card-action">View projects <span aria-hidden="true">→</span></span>
       </RouterLink>
     </div>
   </main>

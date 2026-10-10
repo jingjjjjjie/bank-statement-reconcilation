@@ -24,7 +24,7 @@ const items = computed(() => {
 </script>
 
 <template>
-  <nav class="app-header" aria-label="Main navigation">
+  <nav class="app-header" :class="{ 'directory-header': route.path === '/accounting-finance' }" aria-label="Main navigation">
     <div class="app-brand">
       <img class="brand-logo" :src="logo" alt="UPVANTAGE Group">
       <div class="brand-identity"><strong>Accounting Copilot</strong><span v-if="!route.meta.portal && appState.session?.active" :title="appState.workspace.name">{{ appState.workspace.name }}</span></div>
@@ -71,6 +71,7 @@ const items = computed(() => {
 .header-step.complete { border-color:#cbdcf0; background:var(--blue-light); color:var(--primary); }
 .header-link.active .header-step:not(.complete) { color:white; background:var(--primary); border-color:var(--primary); }
 .header-step svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.directory-header { height:80px; border-bottom-color:#e3e3e3; }
 @media (max-width:1100px) {
   .app-header { display:grid; grid-template-columns:minmax(0,1fr) 36px; grid-template-rows:62px 50px; gap:0 12px; padding:0 16px; }
   .app-brand { grid-row:1; grid-column:1; gap:12px; min-width:0; }
@@ -80,6 +81,9 @@ const items = computed(() => {
   .header-links { grid-row:2; grid-column:1/-1; width:100%; margin:0; }
   .header-settings-icon { grid-row:1; grid-column:2; }
   .sync-status { display:none; }
+  .directory-header { grid-template-rows:80px; }
+  .directory-header .header-links { display:none; }
+  .directory-header .header-settings-icon { grid-row:1; }
 }
 @media (max-width:450px) { .brand-logo { width:76px; } .app-brand { gap:8px; } .brand-identity { padding-left:8px; } .brand-identity strong { font-size:14px; } }
 @media (max-width:380px) { .brand-logo { width:34px; } .app-brand { gap:4px; } .brand-identity { padding-left:6px; } .brand-identity strong { font-size:13px; } }
