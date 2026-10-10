@@ -75,8 +75,11 @@ def select_workspace(body: PathChoice, state=Depends(context)):
 def start(body: StartChoice, state=Depends(context)):
     """Resume the same review; invalidate cached views only for a different project."""
     same_source = state.review and state.sources.selected() == state.review.root
-    if state.review and not same_source and extraction_runs.execution_status(state.review)["running"]:
-        raise ValueError("Stop document processing before changing workspaces")
+    if state.review and not same_source:
+        from dashboard.services.matching.piece_match_jobs import status as matching_status
+
+        if extraction_runs.execution_status(state.review)["running"] or matching_status(state.review)["running"]:
+            raise ValueError("Stop document processing and matching before changing workspaces")
     manifest, data = state.sources.start(body.preview)
     if state.review and state.review.manifest_path.resolve() == manifest.resolve():
         return {"active": str(state.review.root), "groups": len(state.review.groups), "resumed": True}
