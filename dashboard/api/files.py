@@ -36,7 +36,7 @@ def matching_source(kind: str, id: str, request: Request):
 @router.get("/matching-preview")
 def matching_preview(path=Depends(matching_source)):
     """Describe a validated bank or supporting source."""
-    return extraction_preview.describe(path)
+    return {**extraction_preview.describe(path), "source_path": str(path)}
 
 
 @router.get("/matching-image")

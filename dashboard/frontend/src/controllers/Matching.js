@@ -106,6 +106,7 @@ function applyFilters(control, key) {
     previewSerial++; previewState = null;
     $('#transaction-detail').replaceChildren();
     $('#review-editor').hidden = true;
+    $('#restore-suggestion').disabled = true;
     renderQueue();
   } else {
     chooseBank(rows.find(row => row.id === activeId)?.id || rows[0].id);
@@ -132,8 +133,9 @@ function chooseBank(id, addItem, preservePreview = false) {
   $('#toggle-candidate-search').setAttribute('aria-expanded', 'false');
   $('#toggle-candidate-search').textContent = 'Search';
   transactionPage = Math.floor(Math.max(0, visibleBanks().findIndex(row => row.id === id)) / 10);
-  $('#save-status').textContent = b.decision ? `Saved · ${new Date(b.decision.at).toLocaleString()}` : '';
+  $('#save-status').textContent = b.decision ? `Saved Â· ${new Date(b.decision.at).toLocaleString()}` : '';
   $('#review-editor').hidden = false;
+  $('#restore-suggestion').disabled = false;
   $('#deny-match').disabled = false;
   $('#approve-match').textContent = labels.accept;
   const detail = $('#transaction-detail'); detail.replaceChildren();
@@ -239,7 +241,7 @@ function renderCandidates() {
     if (retrievalReason) source.append(node('p', 'candidate-reason', retrievalReason));
     meta.append(source); body.append(meta);
     if (item.currency === b.currency && cents(item.amount) !== null && cents(item.amount) !== cents(b.amount)) body.append(node('p', 'warning', `Bank minus source: ${formatMoney(((cents(b.amount) - cents(item.amount)) / 100).toFixed(2), b.currency)}`));
-    if (item.used !== '0') body.append(node('p', 'warning', `Reserved: ${formatMoney(item.used, item.currency)} · Available here: ${available(item) === null ? 'unknown' : formatMoney((available(item) / 100).toFixed(2), item.currency)}`));
+    if (item.used !== '0') body.append(node('p', 'warning', `Reserved: ${formatMoney(item.used, item.currency)} Â· Available here: ${available(item) === null ? 'unknown' : formatMoney((available(item) / 100).toFixed(2), item.currency)}`));
     if (item.stale) body.append(node('p', 'warning', 'Source changed or unavailable. Approval blocked.'));
     if (item.boundary_unresolved) body.append(node('p', 'warning', 'Check receipt boundaries against the original.'));
     details.append(body);
@@ -298,7 +300,7 @@ function updateSummary() {
   const invalidAmount = [...selected].some(([id, value]) => allocationRole(id) === 'money' && (cents(value) === null || cents(value) <= 0));
   const summary = $('#selection-summary'); summary.replaceChildren();
   summary.classList.toggle('balanced', difference === 0 && !invalidAmount);
-  summary.append(node('strong', '', `${selected.size} selected · ${formatMoney((total / 100).toFixed(2), b.currency)} allocated`));
+  summary.append(node('strong', '', `${selected.size} selected Â· ${formatMoney((total / 100).toFixed(2), b.currency)} allocated`));
   summary.append(node('div', difference ? 'difference' : '', difference === 0 ? 'The allocation equals the bank payment.' : `Difference: ${formatMoney((difference / 100).toFixed(2), b.currency)}`));
   if ([...selected.keys()].some(id => allocationRole(id) === 'support')) summary.append(node('div', 'allocation-note', 'Supporting-only documents do not add to the allocated amount.'));
   if (values.some(v => v !== '' && cents(v) === null)) summary.append(node('div', 'warning', 'Enter valid amounts with up to two decimal places.'));
@@ -309,7 +311,7 @@ function updateSummary() {
   $('#support-heading').textContent = 'Available candidates';
   $('#support-status').textContent = b.decision && unchanged
     ? `${b.support_status}. ${b.review_status === 'denied' ? 'Suggestion rejected; other evidence may exist.' : 'Saved review decision.'}`
-    : `${selected.size} selected · Not confirmed`;
+    : `${selected.size} selected Â· Not confirmed`;
   // Reflect the saved decision in its existing action; edits require a fresh save.
   const confirmed = b.review_status === 'approved' && unchanged;
   const rejected = b.review_status === 'denied';
@@ -323,6 +325,7 @@ function updateSummary() {
   $('#deny-match').title = rejected ? 'Undo rejection' : 'Reject supporting suggestion for this transaction';
   $('#deny-match').setAttribute('aria-pressed', String(rejected));
   $('#deny-match').disabled = saving;
+  $('#restore-suggestion').disabled = saving;
   const missingAmount = [...selected].some(([id, value]) => allocationRole(id) === 'money' && !value);
   if (missingAmount) summary.append(node('div', 'warning', 'Enter an allocation amount or choose Supporting only.'));
   root.querySelectorAll('.allocation-controls input, .allocation-controls select').forEach(control => control.disabled = saving);
@@ -331,7 +334,7 @@ function updateSummary() {
 async function saveDecision(action) {
   /* Send explicit user intent, then reload the authoritative ledger and balances. */
   if (saving) return;
-  saving = true; error(); $('#save-status').textContent = 'Saving your decision…';
+  saving = true; error(); $('#save-status').textContent = 'Saving your decisionâ€¦';
   updateSummary();
   const queue = visibleBanks(), position = queue.findIndex(row => row.id === activeId);
   const nextId = action === 'approve' ? queue[position + 1]?.id : null;
@@ -355,6 +358,8 @@ async function showEvidence(kind, id) {
   /* Ignore late responses when the reviewer switches documents quickly. */
   const serial = ++previewSerial, query = new URLSearchParams({kind,id});
   previewState = null;
+  $('#evidence-path').textContent = '';
+  $('#evidence-path').hidden = true;
   $('#preview-prev').disabled = true; $('#preview-next').disabled = true;
   $('#preview-zoom').value = '1'; applyZoom();
   const sources = $('#preview-source'); sources.replaceChildren();
@@ -362,17 +367,21 @@ async function showEvidence(kind, id) {
   for (const itemId of ids) {
     const item = itemById.get(itemId);
     if (!item) continue;
-    const option = node('option', '', `${item.parties.join(' / ') || item.filename} · ${item.filename}`);
+    const option = node('option', '', `${item.parties.join(' / ') || item.filename} Â· ${item.filename}`);
     option.value = itemId; sources.append(option);
   }
   const bankOption = node('option', '', 'Original bank statement'); bankOption.value = '__bank__'; sources.append(bankOption);
   sources.value = kind === 'bank' ? '__bank__' : id;
   root.querySelectorAll('.candidate-card').forEach(card => card.classList.toggle('previewing', kind === 'item' && card.dataset.itemId === id));
-  $('#evidence-content').replaceChildren(node('div', 'empty-state', 'Loading original evidence…'));
+  $('#evidence-content').replaceChildren(node('div', 'empty-state', 'Loading original evidenceâ€¦'));
   $('#evidence-title').textContent = kind === 'bank' ? 'Original bank statement' : itemById.get(id).filename;
   $('#evidence-original').href = `/api/matching-file?${query}`; $('#evidence-original').hidden = false;
   try {
     const info = await api(`/api/matching-preview?${query}`); if (serial !== previewSerial) return;
+    const sourcePath = info.source_path || (kind === 'item' ? itemById.get(id).source_path : '') || '';
+    $('#evidence-path').textContent = sourcePath;
+    $('#evidence-path').title = sourcePath;
+    $('#evidence-path').hidden = !sourcePath;
     const location = kind === 'item' ? evidenceLocation(itemById.get(id), info) : {page: bank().page};
     previewState = {kind,id,info,location};
     const select = $('#preview-page'); select.replaceChildren();
@@ -388,7 +397,7 @@ async function renderEvidencePage(serial = ++previewSerial) {
   const {kind,id,info} = previewState, n = Number($('#preview-page').value || 0), target = $('#evidence-content');
   const query = new URLSearchParams({kind,id,page:n});
   $('#preview-prev').disabled = n <= 0; $('#preview-next').disabled = n >= info.pages - 1;
-  target.replaceChildren(node('div', 'empty-state', 'Loading page…'));
+  target.replaceChildren(node('div', 'empty-state', 'Loading pageâ€¦'));
   try {
     if (info.kind === 'text') target.replaceChildren(node('pre', '', info.text));
     else if (info.kind === 'unsupported') target.replaceChildren(node('div', 'empty-state', info.message));
@@ -397,7 +406,7 @@ async function renderEvidencePage(serial = ++previewSerial) {
       renderOfficePreview(target, data, n === previewState.location.page ? previewState.location.highlight : null);
       target.querySelector('.source-cell-highlight')?.scrollIntoView({block:'center', inline:'center'});
     } else {
-      const image = node('img'); image.alt = `${$('#evidence-title').textContent} · ${info.labels[n]}`;
+      const image = node('img'); image.alt = `${$('#evidence-title').textContent} Â· ${info.labels[n]}`;
       image.onload = () => { if (serial === previewSerial) target.replaceChildren(image); };
       image.onerror = () => { if (serial === previewSerial) target.replaceChildren(node('div', 'empty-state', 'Preview unavailable. Use Open original.')); };
       image.src = `/api/matching-image?${query}`;
@@ -423,10 +432,10 @@ function renderUnmatched() {
   const rows = reviewData.items.filter(i => !i.excluded && (i.remaining === '' || Number(i.remaining) > 0) && `${i.filename} ${i.parties.join(' ')} ${i.amount} ${i.description} ${(i.references || []).join(' ')}`.toLowerCase().includes(query));
   for (const item of rows) {
     const row = node('div', 'unmatched-row'), description = node('div');
-    description.append(node('h3', '', item.description || item.payee || item.filename), node('p', '', `${item.filename} · ${item.location}`), node('p', '', item.parties.join(' / ')));
+    description.append(node('h3', '', item.description || item.payee || item.filename), node('p', '', `${item.filename} Â· ${item.location}`), node('p', '', item.parties.join(' / ')));
     const remaining = node('div'); remaining.append(node('strong', '', item.remaining === '' ? 'Contextual evidence' : formatMoney(item.remaining, item.currency)), node('p', '', item.remaining === '' ? 'No extracted monetary balance' : 'Remaining amount'));
     const actions = node('div', 'unmatched-actions');
-    actions.append(button('Review with transaction →', () => { const select = $('#unmatched-bank'); if (!select.value) { select.focus(); toast('Choose a bank transaction above first.'); return; } if (requestBank(select.value, item.id)) changeTab(false); }, 'button secondary'));
+    actions.append(button('Review with transaction â†’', () => { const select = $('#unmatched-bank'); if (!select.value) { select.focus(); toast('Choose a bank transaction above first.'); return; } if (requestBank(select.value, item.id)) changeTab(false); }, 'button secondary'));
     row.append(description, remaining, actions); list.append(row);
   }
   if (!rows.length) list.append(node('p', 'empty-state', 'No unallocated supporting items in this search.'));
@@ -434,9 +443,9 @@ function renderUnmatched() {
 function renderBankPicker() {
   /* Share one searchable transaction selector instead of duplicating it per document. */
   const select = $('#unmatched-bank'), current = select.value, query = $('#unmatched-bank-query').value.toLowerCase(); select.replaceChildren();
-  const placeholder = node('option', '', 'Choose a transaction…'); placeholder.value = ''; select.append(placeholder);
+  const placeholder = node('option', '', 'Choose a transactionâ€¦'); placeholder.value = ''; select.append(placeholder);
   for (const b of reviewData.banks.filter(b => `${b.id} ${b.parties.join(' ')} ${b.amount} ${b.description}`.toLowerCase().includes(query))) {
-    const option = node('option', '', `${b.id} · ${b.parties.join(' / ')} · ${b.amount}`); option.value = b.id; select.append(option);
+    const option = node('option', '', `${b.id} Â· ${b.parties.join(' / ')} Â· ${b.amount}`); option.value = b.id; select.append(option);
   }
   if ([...select.options].some(option => option.value === current)) select.value = current;
 }
@@ -484,7 +493,6 @@ $('#candidate-query').oninput = () => { renderCandidates(); $('#candidate-list')
 $('#restore-suggestion').onclick = () => { selected.clear(); allocationRoles.clear(); allocationAmounts.clear(); bank().suggestion.allocations.forEach(a => selected.set(a.item_id, a.amount)); renderCandidates(); updateSummary(); };
 $('#approve-match').onclick = () => saveDecision(bank().review_status === 'approved' && draftSnapshot() === savedDraft ? 'undo' : 'approve');
 $('#deny-match').onclick = () => saveDecision(bank().review_status === 'denied' ? 'undo' : 'deny');
-$('#preview-bank').onclick = () => { if (activeId) showEvidence('bank', activeId); };
 $('#preview-page').onchange = () => renderEvidencePage();
 $('#preview-prev').onclick = () => { $('#preview-page').selectedIndex--; renderEvidencePage(); };
 $('#preview-next').onclick = () => { $('#preview-page').selectedIndex++; renderEvidencePage(); };
