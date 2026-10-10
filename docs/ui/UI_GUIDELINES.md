@@ -31,6 +31,11 @@ Shared help control: `dashboard/frontend/src/components/PageHelp.vue`.
   white cards, cool grey surfaces and blue primary controls. Keep rainbow suggestions
   and meaningful green completion/balanced states. Keep the selected-page underline
   close to its label, and allow room around the wordmark so glyphs do not clip.
+- Export and evidence dialogs use the same white/blue palette, including workbook
+  and ZIP download controls. Low-confidence suggestions use pale blue; high-confidence
+  rainbows remain. Green is reserved for status markers and balanced totals. Keep
+  the UPVANTAGE logo background blended into the header and Bank Reconciliation
+  moderately bold (600).
 
 - Step 2 displays all pieces together as editable rows. Keep payee, payer, amount, currency, date and document number visible; put type, other names, references and Amount at (with Show, which jumps the preview to that page or sheet rows) under Details. Fields from older extractions appear only when they hold a value. Selecting a row targets Remove; Merge all combines every entry in the current document into one editable draft; Split is not offered. Narrow screens wrap the fields and place save actions after the rows without overlap.
 

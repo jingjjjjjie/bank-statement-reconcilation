@@ -24,6 +24,7 @@ class AccountingThemeTests(unittest.TestCase):
         self.addCleanup(fixture.doCleanups)
         fixture.review.manifest = {}
         fixture.review.workspace = lambda: {'name': 'Fixture', 'period': 'December'}
+        fixture.review.completion = lambda: {'complete': False}
         fixture.enable_review_navigation()
         proposals = final_review.read(fixture.cache / 'decisions.json')
         proposals[0]['assessment'] = 'strong'
@@ -51,6 +52,9 @@ class AccountingThemeTests(unittest.TestCase):
             self.assertIn('oklch(0.52 0.18 250)', typography[4])
             self.assertIn('oklch(0.55 0.18 210)', typography[4])
             self.assertTrue(page.locator('.brand-logo').evaluate('(e)=>e.complete && e.naturalWidth>0'))
+            self.assertEqual(page.locator('.brand-logo').evaluate('(e)=>getComputedStyle(e).width'), '148px')
+            self.assertEqual(page.locator('.brand-identity span').evaluate('(e)=>getComputedStyle(e).fontWeight'), '600')
+            self.assertEqual(title.evaluate('(e)=>getComputedStyle(e).paddingBottom'), '6px')
             rainbow = page.locator('.candidate-card.suggested[data-confidence=high]').first
             expect(rainbow).to_be_visible(timeout=30000)
             self.assertIn('linear-gradient', rainbow.evaluate('(e)=>getComputedStyle(e).backgroundImage'))
@@ -77,5 +81,23 @@ class AccountingThemeTests(unittest.TestCase):
                     page.mouse.move(0, 0)
                     button.evaluate('(e)=>e.blur()')
                     page.screenshot(path=str(output / f'matching-fixture-{width}.png'), full_page=True)
+            page.set_viewport_size({'width': 1440, 'height': 1000})
+            page.goto(f'http://127.0.0.1:{server.server_port}/final-report')
+            self.assertEqual(page.locator('.final-report').evaluate('(e)=>getComputedStyle(e).color'), 'rgb(32, 50, 71)')
+            page.get_by_role('button', name='Export', exact=True).click()
+            dialog = page.locator('.report-export-dialog')
+            expect(dialog).to_be_visible()
+            self.assertEqual(dialog.locator('.workbook-download').evaluate('(e)=>getComputedStyle(e).backgroundColor'), 'rgb(255, 255, 255)')
+            self.assertEqual(dialog.locator('.button.dark').evaluate('(e)=>getComputedStyle(e).backgroundColor'), 'rgb(37, 99, 182)')
+            self.assertEqual(dialog.locator('.button.secondary').evaluate('(e)=>getComputedStyle(e).color'), 'rgb(37, 99, 182)')
+            self.assertEqual(dialog.locator('.download-word').first.evaluate('(e)=>getComputedStyle(e).color'), 'rgb(37, 99, 182)')
+            for width in [1440, 390, 320]:
+                page.set_viewport_size({'width': width, 'height': 1000})
+                bounds = dialog.bounding_box()
+                self.assertGreaterEqual(bounds['x'], 0)
+                self.assertLessEqual(bounds['x'] + bounds['width'], width)
+                page.screenshot(path=str(output / f'export-fixture-{width}.png'), full_page=True)
+            page.keyboard.press('Escape')
+            expect(dialog).to_be_hidden()
             self.assertEqual(errors, [])
             browser.close()

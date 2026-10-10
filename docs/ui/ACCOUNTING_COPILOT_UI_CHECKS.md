@@ -57,3 +57,23 @@ Local inspection artifacts are under `duplicated/inspection/accounting-copilot/`
 screenshots and cropped reference/application wordmarks. They are ignored local
 artifacts because live screenshots contain customer evidence. The committed static
 preview under `docs/ui/previews/reconassist/` contains sample data only.
+
+## Palette and header follow-up
+
+The Export dialog's workbook panel and download buttons had independent green
+styles. Replaced those with white panels, blue primary downloads and blue secondary
+links. Export text, evidence controls, folder headings, switches, progress and
+low-confidence suggestions now follow the shared palette. Explicit selector scope
+prevents lazy-loaded Export styles from restoring green controls. High-confidence
+rainbows and balanced green totals remain unchanged.
+
+Enlarged the desktop logo from 132x54 to 148x60; applied a subtle CSS contrast filter
+to blend its 251/251/251 JPEG background into the white header. The original image
+file is unchanged. Bank Reconciliation uses weight 600. Increased wordmark line
+height and bottom padding, and inspected the close-up for clear space below the g.
+
+Production build and the 28 live responsive checks passed again. The four
+theme/report tests passed, including new assertions for the loaded Export dialog's
+white panel, blue workbook buttons and ZIP links. Export dialog screenshots were
+checked at 1440, 390 and 320 pixels. A seven-route computed-colour scan found green
+only in status markers in the observed states; no workflow data was changed.
