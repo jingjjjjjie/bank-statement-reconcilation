@@ -31,8 +31,9 @@ No actionable P0, P1 or P2 differences remain within the requested styling scope
   sharp. WISE AI branding and unrelated tools were intentionally not copied.
 - Content: the page is Home at `/home`. Accounting and Finance replaces Analytics;
   Bank Statement Reconciliation opens the project list. The requested Others
-  section contains a non-interactive Coming soon card. No landing-page help icon
-  or project subtitle appears.
+  section contains a full-size non-interactive Coming soon card with the copy
+  "More functionalities coming soon." The header reads Accounting Copilot and
+  Home; no landing-page help icon or project name appears.
 
 ## Verification and comparison history
 

@@ -4,6 +4,9 @@ import { RouterLink, useRoute } from 'vue-router';
 import { appState } from '../api.js';
 import logo from '../assets/upvantage.jpg';
 const route = useRoute();
+// Identify the landing page or the active project beside the application name.
+const contextName = computed(() => route.path === '/home' ? 'Home'
+  : !route.meta.portal && appState.session?.active ? appState.workspace.name : '');
 const links = [
   ['/projects', 'Workspace'], ['/documents', 'Documents'],
   ['/extraction-review', 'Review Extraction'], ['/bank', 'Bank statement'],
@@ -27,7 +30,7 @@ const items = computed(() => {
   <nav class="app-header" :class="{ 'directory-header': route.path === '/home' }" aria-label="Main navigation">
     <div class="app-brand">
       <img class="brand-logo" :src="logo" alt="UPVANTAGE Group">
-      <div class="brand-identity"><strong>Accounting Copilot</strong><span v-if="!route.meta.portal && appState.session?.active" :title="appState.workspace.name">{{ appState.workspace.name }}</span></div>
+      <div class="brand-identity"><strong>Accounting Copilot</strong><span v-if="contextName" :title="contextName">{{ contextName }}</span></div>
     </div>
     <span v-if="appState.syncing" class="sync-status" role="status">Updating...</span>
     <div class="header-links">

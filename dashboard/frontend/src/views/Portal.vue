@@ -21,7 +21,10 @@ import '../styles/portal.css';
     <section class="directory-section" aria-labelledby="others-heading">
       <div class="portal-heading"><h2 id="others-heading">Others</h2></div>
       <div class="portal-grid">
-        <article class="upcoming-card"><h3>Coming soon</h3></article>
+        <article class="upcoming-card">
+          <h3>Coming soon</h3>
+          <p>More functionalities coming soon.</p>
+        </article>
       </div>
     </section>
   </main>
