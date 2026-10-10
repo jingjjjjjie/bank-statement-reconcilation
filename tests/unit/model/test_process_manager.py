@@ -116,11 +116,31 @@ class ProcessManagerTests(unittest.TestCase):
 
     def test_parent_exit_does_not_leave_child_running(self):
         """A successful main-process exit must also clean up remaining children."""
-        marker = self.folder / "child"
-        code = TREE.replace("time.sleep(60)", "")
-        result = self.manager.run([sys.executable, "-c", code, str(marker), CHILD])
-        self.assertEqual(result.returncode, 0)
-        self.assertFalse(alive(self.wait_file(marker)))
+        marker, release = self.folder / "child", self.folder / "release"
+        code = TREE.replace("time.sleep(60)", "while not pathlib.Path(sys.argv[3]).exists(): time.sleep(0.01)")
+        handle = None
+        with ThreadPoolExecutor(1) as pool:
+            future = pool.submit(self.manager.run, [sys.executable, "-c", code, str(marker), CHILD, str(release)])
+            try:
+                pid = self.wait_file(marker)
+                if os.name == "nt":
+                    from reconciliation.model.windows_process import W, api, close_handle, wait
+
+                    # Retain the original child identity before exit, even if Windows reuses its PID.
+                    handle = api("OpenProcess", W.HANDLE, W.DWORD, W.BOOL, W.DWORD)(0x100000, False, pid)
+                    self.assertTrue(handle)
+            finally:
+                release.touch()
+            try:
+                result = future.result(timeout=5)
+                self.assertEqual(result.returncode, 0)
+                if handle:
+                    self.assertEqual(wait(handle, 0), 0)
+                else:
+                    self.assertFalse(alive(pid))
+            finally:
+                if handle:
+                    close_handle(handle)
         self.assertEqual(self.manager.active_count, 0)
 
     def test_stop_during_launch_cannot_miss_registration(self):

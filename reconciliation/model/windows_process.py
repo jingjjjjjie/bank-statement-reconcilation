@@ -118,6 +118,8 @@ create_process = api(
 )
 wait = api("WaitForSingleObject", W.DWORD, W.HANDLE, W.DWORD)
 exit_code = api("GetExitCodeProcess", W.BOOL, W.HANDLE, C.POINTER(W.DWORD))
+open_process = api("OpenProcess", W.HANDLE, W.DWORD, W.BOOL, W.DWORD)
+in_job = api("IsProcessInJob", W.BOOL, W.HANDLE, W.HANDLE, C.POINTER(W.BOOL))
 
 
 def checked(success):
@@ -134,6 +136,7 @@ class WindowsProcess:
         """Assign the job at creation, before any child instructions can run."""
         self.job = checked(create_job(None, None))
         self.handle, self.returncode = None, None
+        self.members = {}
         handles, attributes = [], None
         try:
             limits = ExtendedLimits()
@@ -202,17 +205,53 @@ class WindowsProcess:
         return self.returncode
 
     def alive(self):
-        """Query the entire job, including children whose parent has exited."""
+        """Verify job members' original handles, including asynchronous termination."""
         info = Accounting()
         checked(query_job(self.job, 1, C.byref(info), C.sizeof(info), None))
-        return bool(info.active)
+        self.capture_members(max(1, info.total))
+        states = [wait(handle, 0) for handle in self.members.values()]
+        if 0xFFFFFFFF in states:
+            raise C.WinError(C.get_last_error())
+        return bool(info.active) or 258 in states
+
+    def capture_members(self, capacity):
+        """Retain process identities before termination; never claim ownership by PID alone."""
+        while True:
+            buffer = C.create_string_buffer(8 + C.sizeof(C.c_size_t) * capacity)
+            if query_job(self.job, 3, buffer, C.sizeof(buffer), None):
+                break
+            if C.get_last_error() != 234:  # ERROR_MORE_DATA: a descendant appeared during the query.
+                raise C.WinError(C.get_last_error())
+            capacity = max(capacity * 2, W.DWORD.from_buffer(buffer).value)
+        count = W.DWORD.from_buffer(buffer, 4).value
+        for pid in (C.c_size_t * count).from_buffer(buffer, 8):
+            if pid in self.members:
+                continue
+            handle = open_process(0x101000, False, pid)  # SYNCHRONIZE | PROCESS_QUERY_LIMITED_INFORMATION
+            if not handle:
+                if C.get_last_error() == 87:  # The process exited before its handle could be opened.
+                    continue
+                raise C.WinError(C.get_last_error())
+            belongs = W.BOOL()
+            try:
+                checked(in_job(handle, self.job, C.byref(belongs)))
+                if belongs.value:
+                    self.members[pid] = handle
+                    handle = None
+            finally:
+                if handle:
+                    close_handle(handle)
 
     def terminate(self, force=False):
         """Windows job termination forcibly stops every contained process."""
+        self.alive()  # Capture existing descendants before job accounting drops terminating members.
         checked(terminate_job(self.job, 1))
 
     def close(self):
         """Release native handles; the job also protects against owner failure."""
+        for handle in self.members.values():
+            close_handle(handle)
+        self.members.clear()
         for name in ("handle", "job"):
             handle = getattr(self, name, None)
             if handle:
