@@ -140,7 +140,7 @@ class ContentPageTests(ExtractionRunsFixture):
         data = receipt_review.snapshot(self.review)
         with self.assertRaisesRegex(ValueError, "Finish regeneration"):
             receipt_review.accept_extraction(
-                self.review, {"revision": data["revision"], "key": digest + ":0", "receipts": []}
+                self.review, {"revision": data["revision"], "key": digest + ":0", "receipts": [], "supporting_only": True}
             )
 
     def test_new_regeneration_uses_idle_parallel_slot(self):
@@ -194,8 +194,11 @@ class ContentPageTests(ExtractionRunsFixture):
         digest = next(iter(index["documents"]))
         data = receipt_review.snapshot(self.review)
         receipt_review.accept_extraction(
-            self.review, {"revision": data["revision"], "key": digest + ":0", "receipts": []}
+            self.review, {"revision": data["revision"], "key": digest + ":0", "receipts": [], "supporting_only": True}
         )
+        accepted = next(unit for unit in receipt_review.snapshot(self.review)["units"] if unit["document_id"] == digest)
+        self.assertTrue(accepted["accepted"])
+        self.assertTrue(accepted["supporting_only"])
         with patch(
             "dashboard.services.extraction.extraction_runs.CodexReviewer",
             side_effect=lambda *args, **kwargs: FixtureReviewer(),
