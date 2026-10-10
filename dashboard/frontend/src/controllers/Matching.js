@@ -111,11 +111,12 @@ function applyFilters(control, key) {
   }
 }
 
-function requestBank(id) {
+function requestBank(id, addItem) {
   /* Protect edited allocations when navigating between transactions. */
-  if (saving || id === activeId) return;
-  if (activeId && draftSnapshot() !== savedDraft && !window.confirm('Leave this transaction and discard unsaved changes?')) return;
-  chooseBank(id);
+  if (saving || (id === activeId && !addItem)) return false;
+  if (activeId && draftSnapshot() !== savedDraft && !window.confirm('Discard unsaved allocation changes?')) return false;
+  chooseBank(id, addItem);
+  return true;
 }
 function chooseBank(id, addItem, preservePreview = false) {
   /* Start a draft from this transaction's saved choice, or its cached proposal. */
@@ -412,7 +413,7 @@ function renderUnmatched() {
     description.append(node('h3', '', item.description || item.payee || item.filename), node('p', '', `${item.filename} · ${item.location}`), node('p', '', item.parties.join(' / ')));
     const remaining = node('div'); remaining.append(node('strong', '', item.remaining === '' ? 'Contextual evidence' : formatMoney(item.remaining, item.currency)), node('p', '', item.remaining === '' ? 'No extracted monetary balance' : 'Remaining amount'));
     const actions = node('div', 'unmatched-actions');
-    actions.append(button('Review with transaction →', () => { const select = $('#unmatched-bank'); if (!select.value) { select.focus(); toast('Choose a bank transaction above first.'); return; } changeTab(false); chooseBank(select.value, item.id); }, 'button secondary'));
+    actions.append(button('Review with transaction →', () => { const select = $('#unmatched-bank'); if (!select.value) { select.focus(); toast('Choose a bank transaction above first.'); return; } if (requestBank(select.value, item.id)) changeTab(false); }, 'button secondary'));
     row.append(description, remaining, actions); list.append(row);
   }
   if (!rows.length) list.append(node('p', 'empty-state', 'No unallocated supporting items in this search.'));
