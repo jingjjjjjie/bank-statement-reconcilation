@@ -233,7 +233,15 @@ function readReceiptPieces() {
     const assembled = receiptData?.units.find(unit => unit.key === $('#receipt-unit').value)?.assembled;
     if (piece.references) piece.invoice_numbers = piece.document_number ? [piece.document_number] : piece.references.filter(r => r.type === 'invoice').map(r => r.value);
     piece.location = piece.amount_location || piece.location || '';
-    if (piece.date) piece.dates = [{type:'date', value:piece.date}];
+    // Change only the primary date fact; retain separate due/payment dates.
+    const originalDate = card.receiptPiece?.date || '';
+    if (piece.date !== originalDate) {
+      const dates = piece.dates || [], index = dates.findIndex(date => date.value === originalDate);
+      const replacement = piece.date ? [{type:'date', value:piece.date}] : [];
+      if (index >= 0) dates.splice(index, 1, ...replacement);
+      else dates.unshift(...replacement);
+      piece.dates = dates;
+    }
     // An edited currency is no longer the automatic default.
     if (piece.currency !== (card.receiptPiece?.currency || '')) piece.currency_default = false;
     delete piece.needs_review;
