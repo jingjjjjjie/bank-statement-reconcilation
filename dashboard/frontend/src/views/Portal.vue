@@ -1,4 +1,5 @@
 <script setup>
+import clockIcon from '../assets/icons/clock.svg?raw';
 import '../styles/portal.css';
 </script>
 
@@ -22,6 +23,7 @@ import '../styles/portal.css';
       <div class="portal-heading"><h2 id="others-heading">Others</h2></div>
       <div class="portal-grid">
         <article class="upcoming-card">
+          <span class="portal-icon" aria-hidden="true" v-html="clockIcon"></span>
           <h3>Coming soon</h3>
           <p>More functionalities coming soon.</p>
         </article>
