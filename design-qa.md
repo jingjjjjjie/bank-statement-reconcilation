@@ -24,8 +24,9 @@ No actionable P0, P1 or P2 differences remain within the requested styling scope
 - Layout: 80px header, section starting at x247, 40px top padding, 12px
   heading-to-card spacing, 330px card width, 24px inset and 16px corner radius
   match the reference. Mobile uses 20px side gutters without horizontal overflow.
-- Colors: white canvas, neutral grey section label and icon, dark title,
-  light grey border and subtle shadow replace the earlier blue tile treatment.
+- Colors: the user's follow-up restores the previous cool grey canvas and blue
+  document icon on its pale blue rounded tile. The compact section label, card
+  layout, neutral border and subtle shadow remain from the reference styling.
 - Assets: existing UPVANTAGE branding and reconciliation document icon remain
   sharp. WISE AI branding and unrelated tools were intentionally not copied.
 - Content: Accounting and Finance replaces Analytics; the only card is Bank

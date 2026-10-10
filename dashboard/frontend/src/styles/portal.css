@@ -39,14 +39,14 @@
 .project-dialog .picker-heading { margin:0 0 24px; }
 .project-dialog .page-title h1 { margin:0; }
 /* Match the reference tool directory while retaining the existing application branding. */
-.directory-page { background:#fff; }
+.directory-page { background:var(--paper); }
 .tool-directory { width:100%; max-width:1320px; padding:40px 16px 64px; }
 .tool-directory .portal-heading { margin-bottom:12px; }
 .tool-directory .portal-heading h1 { color:#666; font-size:16px; font-weight:700; line-height:24px; letter-spacing:1px; text-transform:uppercase; }
 .tool-directory .portal-grid { grid-template-columns:repeat(auto-fill,minmax(280px,330px)); gap:20px; }
 .tool-directory .portal-card { display:block; min-height:210px; padding:24px; border:1px solid #e3e3e3; border-radius:16px; color:#111; box-shadow:0 2px 5px #0000000a; text-decoration:none; }
 .tool-directory .portal-card:hover { border-color:#c8c8c8; box-shadow:0 3px 9px #00000010; text-decoration:none; }
-.tool-directory .portal-icon { display:block; width:28px; height:28px; margin-bottom:20px; border:0; border-radius:0; background:transparent; color:#686868; }
+.tool-directory .portal-icon { margin-bottom:20px; }
 .tool-directory .portal-card h2 { margin:0 0 8px; font-size:20px; font-weight:500; line-height:28px; }
 .tool-directory .portal-card p { margin:0; color:#626262; font-size:18px; font-weight:300; line-height:25px; }
 @media (max-width:900px) { .portal-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
