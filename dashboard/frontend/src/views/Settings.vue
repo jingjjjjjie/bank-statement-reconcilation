@@ -51,7 +51,7 @@ usePage(root, initialize);
         </section>
       </fieldset>
       <div id="settings-refresh" class="validation" hidden>Prepared inputs need refreshing before the next content review. Previous metadata and decisions are archived.<code class="block-code">.tools\python\python.exe vision_workflow.py prepare --refresh</code></div>
-      <div class="settings-savebar"><div><strong id="save-state" role="status" aria-live="polite">Loading settings…</strong></div><div><button type="button" class="button secondary" id="discard-settings" disabled>Discard changes</button><button type="submit" class="button dark" id="save-settings" disabled>Save settings</button></div></div>
+      <div class="settings-savebar"><div><strong id="save-state" role="status" aria-live="polite">Loading settings…</strong></div><div><button type="button" class="button secondary" id="reset-settings" disabled>Reset to defaults</button><button type="button" class="button secondary" id="discard-settings" disabled>Discard changes</button><button type="submit" class="button dark" id="save-settings" disabled>Save settings</button></div></div>
     </form>
 
   </main>

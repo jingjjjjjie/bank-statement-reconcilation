@@ -6,7 +6,7 @@ export default function initialize(page) {
 const { root, $, api, toast, pollVisible, navigate, routeQuery } = page;
 let token;
 /* Settings page: changes are explicit and never start document processing. */
-let savedSettings, dirty = false;
+let savedSettings, draftConfig, dirty = false;
 const stages = [
   ['pdf', 'PDF reading', 'Uses the PDF processing option above: extracted text, vision fallback, or full vision.'],
   ['images', 'JPG / image reading', 'Vision only for now, including PNG and other supported images. No separate OCR step. Picture processing must be on.'],
@@ -25,7 +25,8 @@ function updateReasoning(stage, selected = 'default') {
   const levels = model?.reasoning || [];
   const input = $(`#${stage}-reasoning`);
   input.replaceChildren(new Option('Model default', 'default'), ...levels.map(r => new Option(r[0].toUpperCase() + r.slice(1), r)));
-  input.value = levels.includes(selected) ? selected : 'default';
+  if (selected !== 'default' && !levels.includes(selected)) input.add(new Option(`${selected} (no longer listed)`, selected));
+  input.value = selected;
   input.disabled = !model;
 }
 function refreshModels(models) {
@@ -51,13 +52,15 @@ function renderStages(data) {
     const choice = data.config.stages?.[stage] || data.config;
     const select = $(`#${stage}-model`);
     select.replaceChildren(new Option('Codex default', ''), ...data.models.map(m => new Option(m.name, m.id)));
+    if (choice.model && !data.models.some(m => m.id === choice.model)) select.add(new Option(`${choice.model} (no longer listed)`, choice.model));
     select.value = choice.model;
     updateReasoning(stage, choice.reasoning);
     select.onchange = () => {updateReasoning(stage); markDirty();};
   }
 }
-function showSettings(data) {
-  savedSettings = data;
+function showSettings(data, draft = false) {
+  if (!draft) savedSettings = data;
+  draftConfig = data.config;
   $('#pdf-mode').value = data.config.pdf_mode;
   $('#pdf-whole-document-max-pages').value = data.config.pdf_whole_document_max_pages;
   $('#pictures-enabled').checked = data.config.pictures_enabled;
@@ -72,7 +75,9 @@ function showSettings(data) {
   dirty = false;
   $('#save-state').textContent = 'All settings saved';
   $('#save-settings').disabled = $('#discard-settings').disabled = true;
+  $('#reset-settings').disabled = false;
   callExample();
+  if (draft) markDirty();
 }
 function markDirty() {
   dirty = true;
@@ -82,6 +87,11 @@ function markDirty() {
 }
 $('#settings-form').oninput = markDirty;
 $('#discard-settings').onclick = () => showSettings(savedSettings);
+$('#reset-settings').onclick = () => {
+  // Stage canonical defaults; Save commits them and Discard restores the saved revision.
+  showSettings({...savedSettings, config: structuredClone(savedSettings.defaults)}, true);
+  $('#save-state').textContent = 'Defaults restored — save to apply';
+};
 
 /* Preserve backend validation and stale-tab protection when saving. */
 $('#settings-form').onsubmit = async event => {
@@ -89,21 +99,23 @@ $('#settings-form').onsubmit = async event => {
   if (!savedSettings || !token) return;
   $('#settings-fields').disabled = true;
   $('#save-settings').disabled = $('#discard-settings').disabled = true;
+  $('#reset-settings').disabled = true;
   try {
-    const choices = {...savedSettings.config.stages};
+    const choices = {...draftConfig.stages};
     for (const [stage] of stages) {
       const choice = {model: $(`#${stage}-model`).value, reasoning: $(`#${stage}-reasoning`).value};
-      if (stage in choices || choice.model !== savedSettings.config.model || choice.reasoning !== savedSettings.config.reasoning) choices[stage] = choice;
+      if (stage in choices || choice.model !== draftConfig.model || choice.reasoning !== draftConfig.reasoning) choices[stage] = choice;
     }
-    const config = {...savedSettings.config, pdf_mode: $('#pdf-mode').value, pdf_whole_document_max_pages: Number($('#pdf-whole-document-max-pages').value), pictures_enabled: $('#pictures-enabled').checked, codex_enabled: $('#codex-enabled').checked, max_calls: Number($('#max-calls').value), max_parallel: Number($('#max-parallel').value), stages: choices};
+    const config = {...draftConfig, pdf_mode: $('#pdf-mode').value, pdf_whole_document_max_pages: Number($('#pdf-whole-document-max-pages').value), pictures_enabled: $('#pictures-enabled').checked, codex_enabled: $('#codex-enabled').checked, max_calls: Number($('#max-calls').value), max_parallel: Number($('#max-parallel').value), stages: choices};
     showSettings(await api('/api/config', {config, revision: savedSettings.revision}));
     toast('Settings saved. No review was started.');
   } catch (error) {
     $('#settings-error').hidden = false; $('#settings-error').textContent = error.message;
     $('#settings-fields').disabled = false; markDirty();
+    $('#reset-settings').disabled = false;
   }
 };
-Promise.all([api('/api/session'), api('/api/config')]).then(([session, config]) => {token = session.token; showSettings(config);}).catch(error => {$('#settings-error').hidden = false; $('#settings-error').textContent = error.message; $('#save-state').textContent = 'Unable to load settings';});
+Promise.all([api('/api/session'), api('/api/config')]).then(([session, config]) => {token = session.token; showSettings(config);}).catch(error => {$('#settings-error').hidden = false; $('#settings-error').textContent = error.message; $('#save-state').textContent = 'Unable to load settings'; $('#call-example').textContent = 'Saved limit unavailable'; $('#token-usage').textContent = 'Usage unavailable';});
 page.dirty(() => dirty);
 
 
@@ -162,7 +174,17 @@ function showCodex() {
   if (login.running || update.running) codexTimer = setTimeout(() => loadCodex(), 2000);
 }
 async function loadCodex(refresh = false) {
-  try { codex = await api(`/api/codex/status${refresh ? '?refresh=true' : ''}`); checkedAt = new Date(); }
+  const wasRunning = codex?.update.running || codex?.login.running;
+  try {
+    codex = await api(`/api/codex/status${refresh ? '?refresh=true' : ''}`); checkedAt = new Date();
+    if (wasRunning && !codex.update.running && !codex.login.running) {
+      codex = await api('/api/codex/status?refresh=true');
+      if (savedSettings) {
+        const fresh = await api('/api/config');
+        refreshModels(fresh.models);
+      }
+    }
+  }
   catch (error) { codex = null; $('#codex-status').textContent = error.message; return; }
   showCodex();
 }
