@@ -150,7 +150,7 @@ class MatchingReviewTests(FinalReviewFixture):
         self.assertEqual([row['REMARK'] for row in with_paths], ['OK', '', ''])
         self.assertEqual(with_paths[0]['CR'], '10')
         self.assertEqual(with_paths[0]['DR'], '')
-        self.assertEqual(with_paths[0]['PARTICULAR'], 'Receipt')
+        self.assertEqual(with_paths[0]['PARTICULAR'], 'Receipt : 10.00')
         self.assertEqual(with_paths[1]['PARTICULAR'], '')
         self.assertEqual(with_paths[0]['Supporting evidence paths'], str(matching.evidence(self.review, 'item', 'D1')))
         self.assertEqual([row['Supporting evidence paths'] for row in with_paths[1:]], ['', ''])

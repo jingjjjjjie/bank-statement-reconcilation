@@ -42,7 +42,7 @@ class TokenBrowserTests(unittest.TestCase):
                     page.on("pageerror", lambda error: errors.append(str(error)))
                     url = f"http://127.0.0.1:{server.server_port}"
                     page.goto(url + "/review")
-                    expect(page).to_have_title("Exact duplicates · Bank Statement Reconciliation")
+                    expect(page).to_have_title("Exact duplicates · Accounting Copilot")
                     expect(page.locator("h1")).to_have_text("Exact duplicate review")
                     page.screenshot(path=".tools/formal-dashboard.png", full_page=True)
                     page.set_viewport_size({"width": 390, "height": 844})
@@ -68,39 +68,9 @@ class TokenBrowserTests(unittest.TestCase):
                     page.reload()
                     expect(page.locator("#token-usage")).to_contain_text("server is restarted")
                     page.goto(url + "/complete")
-                    expect(page.locator("#completion-title")).to_have_text("Workflow in progress.")
-                    expect(page.locator("#final-usage")).to_be_hidden()
-                    page.route(
-                        "**/api/completion",
-                        lambda route: route.fulfill(
-                            status=200,
-                            content_type="application/json",
-                            body=json.dumps(
-                                {
-                                    "exact_done": True,
-                                    "content_done": True,
-                                    "bank_done": True,
-                                    "complete": True,
-                                    "token_usage": {
-                                        "totals": {
-                                            "input_tokens": 100,
-                                            "cached_input_tokens": 40,
-                                            "output_tokens": 25,
-                                            "reasoning_output_tokens": 5,
-                                        },
-                                        "attempts": 1,
-                                        "unknown_attempts": 0,
-                                        "cache_hits": 0,
-                                        "by_stage": {"pdf": {"input_tokens": 100, "output_tokens": 25}},
-                                        "by_model": {"test": {"input_tokens": 100, "output_tokens": 25}},
-                                    },
-                                }
-                            ),
-                        ),
-                    )
-                    page.reload()
-                    expect(page.locator("#final-total")).to_have_text("125 tokens")
-                    expect(page.locator("#final-usage")).to_be_visible()
+                    expect(page).to_have_url(url + "/final-report")
+                    expect(page.locator("#completion-title")).to_have_text("Final report")
+                    expect(page.locator("#final-usage")).to_have_count(0)
                     work = base / "next-workspace"
                     next_source = work / "documents"
                     next_source.mkdir(parents=True)

@@ -35,6 +35,7 @@ class UnmatchedExportBrowserTests(unittest.TestCase):
         fixture.review.manifest = final_review.read(fixture.review.manifest_path)
         fixture.review.workspace = lambda: {'name': 'Synthetic workspace', 'period': 'December 2025'}
         fixture.review.workflow_checks = lambda: (False, False, False)
+        fixture.review.bank_statement = lambda: {'available': False}
         fixture.review.completion = lambda: {
             'exact_done': True,
             'content_done': True,
@@ -46,7 +47,8 @@ class UnmatchedExportBrowserTests(unittest.TestCase):
         before = ledger_path.read_bytes()
         (fixture.review.root.parent / 'statement').mkdir()
         (fixture.review.root.parent / 'statement/bank.pdf').write_bytes(b'Original statement')
-        server = TestServer(('127.0.0.1', 0), create_app(fixture.review, 'test-token', SimpleNamespace()))
+        sources = SimpleNamespace(selected=lambda: None, selected_bank=lambda: None, selected_workspace=lambda: None)
+        server = TestServer(('127.0.0.1', 0), create_app(fixture.review, 'test-token', sources))
         threading.Thread(target=server.serve_forever, daemon=True).start()
         self.addCleanup(server.server_close)
         self.addCleanup(server.shutdown)
@@ -77,7 +79,15 @@ class UnmatchedExportBrowserTests(unittest.TestCase):
                 for kind, filename, expected in [
                     ('original', 'original-documents.zip', {'documents/receipt-1.txt', 'documents/receipt-2.txt'}),
                     ('matched', 'matched-documents.zip', {'documents/receipt-1.txt'}),
-                    ('project', 'original-project.zip', {'uploads/documents/receipt-1.txt', 'uploads/documents/receipt-2.txt', 'uploads/statement/bank.pdf'}),
+                    (
+                        'project',
+                        'original-project.zip',
+                        {
+                            'uploads/documents/receipt-1.txt',
+                            'uploads/documents/receipt-2.txt',
+                            'uploads/statement/bank.pdf',
+                        },
+                    ),
                 ]:
                     with page.expect_download() as source_download:
                         page.locator('#export-' + kind).click()
@@ -101,7 +111,9 @@ class UnmatchedExportBrowserTests(unittest.TestCase):
             self.assertEqual(ledger_path.read_bytes(), before)
             self.assertEqual(len(list(fixture.review.root.iterdir())), 2)
             page.get_by_role('button', name='Close export').click()
-            expect(page.get_by_role('link', name='Review Matching', exact=False)).to_have_attribute('aria-disabled', 'true')
+            expect(page.get_by_role('link', name='Review Matching', exact=False)).to_have_attribute(
+                'aria-disabled', 'true'
+            )
             page.goto(f'http://127.0.0.1:{server.server_port}/matching')
             expect(page).to_have_url(f'http://127.0.0.1:{server.server_port}/bank')
             page.goto(f'http://127.0.0.1:{server.server_port}/extraction-review')
