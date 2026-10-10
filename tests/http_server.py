@@ -15,7 +15,9 @@ class TestServer:
         self.socket.bind(address)
         self.socket.listen(128)
         self.server_port = self.socket.getsockname()[1]
-        self.server = uvicorn.Server(uvicorn.Config(app, log_level="error", access_log=False))
+        self.server = uvicorn.Server(
+            uvicorn.Config(app, log_level="error", access_log=False, timeout_graceful_shutdown=2)
+        )
         self.stopped = threading.Event()
 
     def serve_forever(self):
