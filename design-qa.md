@@ -29,8 +29,10 @@ No actionable P0, P1 or P2 differences remain within the requested styling scope
   layout, neutral border and subtle shadow remain from the reference styling.
 - Assets: existing UPVANTAGE branding and reconciliation document icon remain
   sharp. WISE AI branding and unrelated tools were intentionally not copied.
-- Content: Accounting and Finance replaces Analytics; the only card is Bank
-  Statement Reconciliation. No landing-page help icon or project subtitle appears.
+- Content: the page is Home at `/home`. Accounting and Finance replaces Analytics;
+  Bank Statement Reconciliation opens the project list. The requested Others
+  section contains a non-interactive Coming soon card. No landing-page help icon
+  or project subtitle appears.
 
 ## Verification and comparison history
 

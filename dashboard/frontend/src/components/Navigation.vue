@@ -24,14 +24,14 @@ const items = computed(() => {
 </script>
 
 <template>
-  <nav class="app-header" :class="{ 'directory-header': route.path === '/accounting-finance' }" aria-label="Main navigation">
+  <nav class="app-header" :class="{ 'directory-header': route.path === '/home' }" aria-label="Main navigation">
     <div class="app-brand">
       <img class="brand-logo" :src="logo" alt="UPVANTAGE Group">
       <div class="brand-identity"><strong>Accounting Copilot</strong><span v-if="!route.meta.portal && appState.session?.active" :title="appState.workspace.name">{{ appState.workspace.name }}</span></div>
     </div>
     <span v-if="appState.syncing" class="sync-status" role="status">Updating...</span>
     <div class="header-links">
-      <RouterLink v-if="route.path !== '/accounting-finance'" to="/accounting-finance" class="button secondary back-home">← Back to Home</RouterLink>
+      <RouterLink v-if="route.path !== '/home'" to="/home" class="button secondary back-home">← Back to Home</RouterLink>
       <component :is="item.disabled ? 'span' : RouterLink" v-for="item in items" :key="item.path" :to="item.disabled ? undefined : item.path" class="header-link" :class="{ disabled: item.disabled }" active-class="active" :role="item.disabled ? 'link' : undefined" :aria-disabled="item.disabled ? 'true' : undefined" :title="item.disabled ? item.reason : undefined" :tabindex="item.disabled ? 0 : undefined">
         <span v-if="item.step" class="header-step" :class="{ complete: item.step.checked }"
           :aria-label="item.step.checked ? 'Complete' : `Step ${item.number}`">

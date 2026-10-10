@@ -18,5 +18,11 @@ import '../styles/portal.css';
         <p>Reconcile bank statements with supporting documents.</p>
       </RouterLink>
     </div>
+    <section class="directory-section" aria-labelledby="others-heading">
+      <div class="portal-heading"><h2 id="others-heading">Others</h2></div>
+      <div class="portal-grid">
+        <article class="upcoming-card"><h3>Coming soon</h3></article>
+      </div>
+    </section>
   </main>
 </template>
