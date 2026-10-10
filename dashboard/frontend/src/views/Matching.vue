@@ -44,17 +44,14 @@ function keySplit(event) {
       <div class="queue-controls">
         <div class="page-title"><h1>Review Matching</h1><PageHelp page="Matching" /></div>
 
-        <button type="button" class="button secondary" popovertarget="matching-options" aria-label="Review options">Options</button>
-        <div id="matching-options" popover>
-          <div class="review-tabs"><button id="bank-tab" class="selected" type="button">Transactions</button><button id="document-tab" type="button">Unmatched pieces</button></div>
-
-        </div>
         <div id="transaction-toolbar" class="confidence-controls">
         <label class="sr-only" for="bank-filter">Decision</label><select id="bank-filter"><option value="all">All decisions</option><option value="pending">Pending</option><option value="approved">Approved</option><option value="denied">Rejected</option></select>
         <label class="sr-only" for="confidence-filter">Pairing confidence</label><select id="confidence-filter"><option value="all">All confidence levels</option><option value="high">High confidence</option><option value="low">Low confidence</option><option value="none">No match</option></select>
         <span id="queue-count" class="subtle" role="status"></span>
         <div class="transaction-navigation"><button id="previous-transactions" type="button" aria-label="Previous ten transactions">&larr;</button><div id="transaction-pages" role="group" aria-label="Transaction pages"></div><button id="next-transactions" type="button" aria-label="Next ten transactions">&rarr;</button></div>
         </div>
+        <button id="bank-tab" class="button secondary" type="button" hidden>Back to transactions</button>
+        <button id="document-tab" class="button secondary" type="button">Unmatched pieces</button>
       </div>
     </section>
     <p id="matching-load-note" class="warning" hidden>Load the current data for final matching on the Bank statement page first.</p>
@@ -80,7 +77,7 @@ function keySplit(event) {
         <div class="evidence-heading"><label class="sr-only" for="preview-source">Displayed evidence</label><select id="preview-source" aria-label="Displayed evidence"></select><span id="evidence-title" class="sr-only">Select a document</span><button id="preview-bank" class="button secondary" type="button">Bank statement</button></div>
         <div id="evidence-content" class="evidence-content"><div class="empty-state">Select a transaction to start reviewing.</div></div>
         <div class="evidence-navigation"><button id="preview-prev" type="button" aria-label="Previous source page" disabled>&lsaquo;</button><label class="sr-only" for="preview-page">Source page</label><select id="preview-page" aria-label="Source page"></select><button id="preview-next" type="button" aria-label="Next source page" disabled>&rsaquo;</button><label for="preview-zoom">Zoom</label><select id="preview-zoom"><option value="1">Fit width</option><option value="0.5">50%</option><option value="0.75">75%</option><option value="1.5">150%</option><option value="2">200%</option><option value="3">300%</option></select><a id="evidence-original" target="_blank" rel="noopener" hidden>Open original ↗</a></div>
-        <div class="decision-footer"><div class="decision-actions"><button id="approve-match" class="button dark" type="button" disabled>Confirm &amp; next</button><button id="deny-match" class="button secondary" type="button" disabled>Reject suggestion</button><button id="next-review-transaction" class="button secondary" type="button" disabled>Next &rarr;</button></div><p id="save-status" class="sr-only" role="status"></p></div>
+        <div class="decision-footer"><div class="decision-actions"><button id="approve-match" class="button dark" type="button" disabled>Accept</button><button id="deny-match" class="button secondary" type="button" disabled>Reject</button><button id="next-review-transaction" class="button secondary" type="button" disabled>Next &rarr;</button></div><p id="save-status" class="sr-only" role="status"></p></div>
       </section>
     </section>
     <section id="document-view" class="unmatched-panel" hidden><div class="section-heading"><div><h2>Unmatched supporting evidence</h2></div><input id="document-query" type="search" aria-label="Search unmatched evidence" placeholder="Find a piece, payee or amount…"></div><div class="unmatched-bank-picker"><label>Find a bank transaction<input id="unmatched-bank-query" type="search" placeholder="Name, amount or reference…"></label><label>Match evidence to<select id="unmatched-bank" aria-label="Transaction for unmatched evidence"></select></label></div><div id="unmatched-list"></div></section>
@@ -89,23 +86,21 @@ function keySplit(event) {
 </template>
 
 <style scoped>
-/* Keep review controls on the page, with a separate scrollable filter row. */
+/* Keep the title and filters together in one compact, scrollable page toolbar. */
 .matching-main .queue-controls {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 16px;
-  padding: 4px 0 18px;
+  display: flex;
+  gap: 14px;
+  padding: 6px 2px 14px;
   min-height: 0;
   background: transparent;
   border: 0;
   border-radius: 0;
-  overflow: visible;
-}
-.queue-controls h1 { font-size: 22px; line-height: 1.3; }
-.queue-controls .confidence-controls {
-  grid-column: 1 / -1;
-  min-width: 0;
   overflow-x: auto;
+}
+.queue-controls h1 { font-size: 20px; line-height: 1.3; }
+.queue-controls .confidence-controls {
+  flex: 1;
+  min-width: max-content;
   padding: 3px;
 }
 .confidence-controls > * { flex-shrink: 0; }
@@ -115,7 +110,7 @@ function keySplit(event) {
   box-shadow: none;
 }
 @media (max-width: 700px) {
-  .matching-main .queue-controls { padding: 8px 8px 18px; gap: 12px; }
-  .queue-controls h1 { font-size: 20px; }
+  .matching-main .queue-controls { padding: 8px 8px 14px; gap: 12px; }
+  .queue-controls h1 { font-size: 18px; }
 }
 </style>

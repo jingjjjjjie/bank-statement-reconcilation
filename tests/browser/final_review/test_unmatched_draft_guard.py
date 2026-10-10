@@ -33,7 +33,6 @@ class UnmatchedDraftGuardTests(unittest.TestCase):
             page.locator('[aria-label="Edit allocation D1"]').click()
             allocation = page.get_by_role('textbox', name='Allocation D1', exact=True)
             allocation.fill('4.00')
-            page.get_by_role('button', name='Review options').click()
             page.locator('#document-tab').click()
             for destination in ('B1', 'B2'):
                 page.locator('#unmatched-bank').select_option(destination)
