@@ -99,6 +99,8 @@ class PiecePipelineBrowserTests(unittest.TestCase):
             page.locator('.app-header a[href="/matching"]').click()
             expect(page.locator('#generate-matches, #matching-progress')).to_have_count(0)
             expect(page.locator('#document-tab, #document-view')).to_have_count(0)
+            expect(page.locator('#bank-view')).to_be_visible()
+            expect(page.locator('.transaction-number[aria-current]')).to_be_visible()
             page.locator('#toggle-candidate-search').click()
             page.locator('#candidate-query').fill('Delivery piece')
             expect(page.locator('#candidate-list')).to_contain_text('Delivery piece')

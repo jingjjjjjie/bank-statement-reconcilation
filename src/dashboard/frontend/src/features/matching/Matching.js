@@ -485,5 +485,10 @@ async function matchingProgress() {
 }
 pollVisible(matchingProgress, 2000);
 page.onLive(['/api/matching']);
-page.onRefresh(async () => { await refresh(); if (activeId) chooseBank(activeId, undefined, true); }, ['/api/matching-decide', '/api/matching-pieces', '/api/matching-run', '/api/receipts/', '/api/content/']);
+page.onRefresh(async () => {
+  /* Select newly loaded payments when returning from an initially empty workspace. */
+  await refresh();
+  if (visibleBanks().some(row => row.id === activeId)) chooseBank(activeId, undefined, true);
+  else applyFilters();
+}, ['/api/matching-decide', '/api/matching-pieces', '/api/matching-run', '/api/receipts/', '/api/content/']);
 }
