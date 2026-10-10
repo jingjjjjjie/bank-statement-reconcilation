@@ -86,6 +86,52 @@ body main :is(.document-workspace,.bank-workspace) .stats > div {
 }
 body main :is(.document-workspace,.bank-workspace) .stats strong { font-size:16px; margin:0; }
 body main :is(.document-workspace,.bank-workspace) .stats small { font-size:11px; }
+/* Give each workspace a clear action header, calm summary band, and readable table. */
+body main :is(.document-workspace,.bank-workspace) .page-heading { padding:18px 24px; }
+body main :is(.document-workspace,.bank-workspace) .settings-card { padding:20px 24px; }
+body main :is(.document-workspace,.bank-workspace) .content-actions { margin:0; gap:8px; }
+body main .document-workspace .document-progress { margin:0; }
+body main .document-workspace #document-run-status { margin-top:8px; font-size:12px; }
+body main .processing-toolbar { display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; }
+body main .processing-toolbar h2 { margin:0; }
+body main .processing-toolbar .stage-actions { margin:0; gap:8px; }
+body main :is(.document-workspace,.bank-workspace) .stats {
+  display:grid;
+  gap:0;
+  padding:18px 24px;
+  background:#f8fafc;
+}
+body main .document-workspace .stats { grid-template-columns:repeat(3,minmax(0,1fr)); }
+body main .bank-workspace .stats { grid-template-columns:1fr 1fr 1.4fr 1fr; }
+body main :is(.document-workspace,.bank-workspace) .stats > div {
+  display:flex;
+  flex-direction:column;
+  align-items:flex-start;
+  gap:5px;
+  padding:0 20px;
+  border-left:1px solid var(--line);
+  min-width:0;
+}
+body main :is(.document-workspace,.bank-workspace) .stats > div:first-child { padding-left:0; border-left:0; }
+body main :is(.document-workspace,.bank-workspace) .stats strong { font-size:21px; line-height:1.3; font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }
+body main :is(.document-workspace,.bank-workspace) .stats span { font-size:11px; }
+body main :is(.document-workspace,.bank-workspace) .stats small { line-height:1.4; }
+body main :is(.document-toolbar,.bank-toolbar) { align-items:center; gap:20px; margin-bottom:20px; }
+body main :is(.document-toolbar,.bank-toolbar) h2 { margin:0 0 4px; }
+body main :is(.document-toolbar,.bank-toolbar) p { font-size:12px; }
+body.documents-page .document-table-wrap { margin-top:0; }
+body main :is(.document-table,.bank-table) thead { background:#f8fafc; }
+body main :is(.document-table,.bank-table) th { font-size:11px; text-transform:none; letter-spacing:0; font-weight:600; }
+body main :is(.document-file,.bank-table tbody tr):hover { background:#f8fafd; }
+@media (max-width:700px) {
+  body main :is(.document-workspace,.bank-workspace) :is(.page-heading,.settings-card) { padding:16px; }
+  body main :is(.document-workspace,.bank-workspace) .stats { padding:16px; }
+  body main :is(.document-workspace,.bank-workspace) .stats > div { padding:0 10px; }
+  body main :is(.document-workspace,.bank-workspace) .stats strong { font-size:18px; }
+  body main .bank-workspace .stats { grid-template-columns:repeat(2,minmax(0,1fr)); gap:18px 0; }
+  body main .bank-workspace .stats > div:nth-child(3) { padding-left:0; border-left:0; }
+  body main :is(.document-toolbar,.bank-toolbar) { align-items:stretch; gap:14px; }
+}
 /* Home remains a directory; dialog headings retain their own compact layout. */
 body.directory-page main .portal-heading { background:transparent; border:0; padding:0; min-height:0; }
 @media (max-width:700px) {
