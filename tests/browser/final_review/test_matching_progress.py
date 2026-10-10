@@ -45,6 +45,8 @@ class MatchingProgressTests(unittest.TestCase):
                 else:
                     route.fulfill(json=state)
 
+            # Synthetic HTTP progress has no server worker or matching live events.
+            page.route('**/api/live', lambda route: route.abort())
             page.route('**/api/matching', snapshot)
             page.route('**/api/matching-run', progress)
             page.route('**/api/matching-stop', lambda route: route.fulfill(json={**state, 'stop_requested': True}))
@@ -66,8 +68,7 @@ class MatchingProgressTests(unittest.TestCase):
             state.update(running=False, stop_requested=True)
             expect(page.locator('#matching-run-status')).to_have_text('Stopped', timeout=10000)
             expect(page.locator('#generate-matches')).to_have_text('Resume matching')
-            expect(page.locator('#stop-matches')).to_be_visible()
-            expect(page.locator('#stop-matches')).to_be_disabled()
+            expect(page.locator('#stop-matches')).to_be_hidden()
             state.update(completed=10, stop_requested=False, failed=1, error='One model call failed')
             expect(page.locator('#matching-run-status')).to_have_text('Finished with errors', timeout=10000)
             expect(page.locator('#matching-progress-count')).to_have_text('10 / 10 processed (100%)')
