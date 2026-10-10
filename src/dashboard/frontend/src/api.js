@@ -67,7 +67,7 @@ export async function api(path, body, options = {}) {
       appState.changes++;
       appState.revisions[path] = (appState.revisions[path] || 0) + 1;
     }
-    if (path === '/api/source/start') await loadSession();
+    if (['/api/source/start', '/api/projects/reset', '/api/projects/delete'].includes(path)) await loadSession();
     // Saved extraction and matching decisions update their completion ticks.
     refreshNavigation(true).catch(error => toast(error.message));
   }

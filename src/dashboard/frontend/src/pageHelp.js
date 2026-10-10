@@ -2,6 +2,8 @@
 export const pageHelp = {
   Projects: ['Projects', [
     'Resume a saved project or choose New project.',
+    'Close keeps progress and frees the workspace for another browser. Resume reopens it.',
+    'Reset starts a fresh run. Delete removes the workspace from this list. Both keep originals and archive previous results. Stop running jobs first.',
   ]],
   Source: ['Workspace', [
     'Choose a folder with statement/ and documents/, then Proceed. Resume reopens your last review.',

@@ -83,7 +83,7 @@ def active_context(state=Depends(context)):
 
 def create_app(review=None, token=None, sources=None):
     """Build the ASGI app without starting a server or performing model calls."""
-    from dashboard.api import codex, files, live, review as review_api, source
+    from dashboard.api import codex, files, live, project_actions, review as review_api, source
     from dashboard.services.live_state import LiveState
 
     workspace = Path(__file__).resolve().parents[2]
@@ -181,6 +181,7 @@ def create_app(review=None, token=None, sources=None):
         }
 
     app.include_router(source.router)
+    app.include_router(project_actions.router)
     app.include_router(review_api.router)
     app.include_router(files.router)
     app.include_router(codex.router)

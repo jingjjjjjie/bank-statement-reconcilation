@@ -19,6 +19,10 @@
 .project-list { border:1px solid var(--line); border-radius:12px; background:white; overflow:hidden; }
 .project-row { display:flex; align-items:center; gap:24px; padding:24px; border-bottom:1px solid var(--line); }
 .project-row:last-child { border-bottom:0; }
+.project-actions { display:flex; flex:0 0 280px; flex-wrap:wrap; justify-content:flex-end; gap:8px; }
+.project-actions .button { flex:1 1 125px; white-space:nowrap; }
+.project-actions .project-delete { color:#a32d3a; border-color:#e8c7cc; }
+.project-actions .project-delete:hover:not(:disabled) { background:#fff3f4; border-color:#dca6af; }
 .project-identity { flex:1; min-width:0; }
 .project-title { display:flex; align-items:center; flex-wrap:wrap; gap:10px; }
 .project-title h2 { margin:0; font-size:17px; overflow-wrap:anywhere; }
@@ -62,6 +66,7 @@
   .project-row { flex-wrap:wrap; gap:18px; padding:20px; }
   .project-identity { flex-basis:100%; }
   .project-meta { flex:1; }
+  .project-actions { flex:1 1 100%; }
   .project-toolbar label:first-child { flex-basis:100%; }
   .tool-directory { padding:32px 20px 48px; }
   .tool-directory .portal-heading { margin-bottom:12px; }

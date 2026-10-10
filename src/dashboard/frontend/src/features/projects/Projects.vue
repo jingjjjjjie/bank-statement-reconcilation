@@ -1,7 +1,7 @@
 <script setup>
 import { computed, nextTick, onActivated, onDeactivated, ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { api, appState } from '../../api.js';
+import { api, appState, toast } from '../../api.js';
 import PageHelp from '../../components/PageHelp.vue';
 import Source from './Source.vue';
 import './portal.css';
@@ -35,6 +35,22 @@ async function open(project) {
       await api('/api/source/start', { preview: preview.token });
       await router.push('/documents');
     }
+  } catch (failure) { error.value = failure.message; }
+  finally { opening.value = ''; }
+}
+
+// Explain the selected operation before discarding any saved progress or drafts.
+async function changeProject(project, action) {
+  const reset = action === 'reset';
+  const message = reset
+    ? `Reset workspace “${project.name}”?\n\nExtraction results, bank transactions and review decisions will be cleared for a fresh run. Previous results and token records will be archived. Original documents and bank statements stay unchanged.`
+    : `Delete workspace “${project.name}”?\n\nThis removes it from the app. Its generated results and token records will be archived. Original documents and bank statements stay unchanged. You can add the folder again as a new project.`;
+  if (!window.confirm(message + (project.active ? '\n\nUnsaved edits in this workspace will be discarded.' : ''))) return;
+  opening.value = project.id; error.value = '';
+  try {
+    await api(`/api/projects/${action}`, { id: project.id });
+    toast(reset ? 'Workspace reset. Resume to start a fresh run.' : 'Workspace deleted. Original files kept.');
+    await load();
   } catch (failure) { error.value = failure.message; }
   finally { opening.value = ''; }
 }
@@ -80,7 +96,11 @@ onDeactivated(() => { dialog.value?.close(); creating.value = false; });
           <p v-if="project.error" class="project-warning">{{ project.error }}</p>
         </div>
         <div class="project-meta"><span class="project-status" :class="project.status">{{ project.status === 'ongoing' ? 'Ongoing' : 'Needs attention' }}</span><span>{{ project.documents == null ? 'File count unavailable' : `${project.documents} supporting files` }}</span><span>Updated {{ updated(project.updated) }}</span></div>
-        <button type="button" class="button secondary" :aria-label="`Resume ${project.name}`" :disabled="!!opening || !project.workspace" @click="open(project)">{{ opening === project.id ? 'Opening…' : 'Resume' }}</button>
+        <div class="project-actions">
+          <button type="button" class="button secondary" :aria-label="`Resume ${project.name}`" :disabled="!!opening || !project.workspace || project.in_use" @click="open(project)">{{ project.in_use ? 'Project in use' : opening === project.id ? 'Working…' : 'Resume' }}</button>
+          <button type="button" class="button secondary" :aria-label="`Reset workspace ${project.name}`" :disabled="!!opening || !project.workspace || project.in_use" @click="changeProject(project, 'reset')">Reset workspace</button>
+          <button type="button" class="button secondary project-delete" :aria-label="`Delete workspace ${project.name}`" :disabled="!!opening || project.in_use" @click="changeProject(project, 'delete')">Delete workspace</button>
+        </div>
       </article>
     </section>
     <div v-else-if="!loading && !error" class="portal-empty">
