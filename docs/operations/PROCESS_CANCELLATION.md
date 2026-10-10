@@ -18,8 +18,12 @@ the tracked tree, displays an error, and blocks a new review.
   `PROC_THREAD_ATTRIBUTE_JOB_LIST`, so assignment is atomic with process creation.
   Job descendants inherit containment, breakaway is not enabled, and closing the
   last job handle kills remaining members. Stop calls `TerminateJobObject` and
-  checks `ActiveProcesses` plus the main process handle before closing handles.
-  Windows job termination is immediate, not a graceful signal.
+  checks `ActiveProcesses`, the main process handle, and retained member handles
+  before closing them. Original member handles avoid PID reuse and premature
+  completion while asynchronous termination is still finishing. Member capture
+  and termination are separate operations; the Job contains descendants created
+  between them, while handle waits verify the captured members. Termination is
+  forcible, not a graceful signal.
 - **Linux/Docker:** Popen starts a new session. Cleanup sends SIGTERM to the
   process group, waits up to one second, then sends SIGKILL and waits up to five
   seconds. `/proc` verifies no executing group members remain; zombies have already
@@ -31,6 +35,8 @@ The same cleanup runs after timeouts, exceptions, and normal parent exit, so a
 parent cannot leave ordinary children behind. File-backed standard input/output
 avoids blocking cancellation on a full or unread pipe. Only the review's owned
 jobs/groups are signalled; unrelated Codex sessions are never searched or killed.
+If an exit query fails, cleanup still attempts to terminate the owned tree, but
+retains its unverified state and blocks restart.
 
 Each executed attempt's token audit record includes the main process ID, exit
 code, and whether exit was verified. Cancelled requests do not become cached

@@ -9,7 +9,7 @@ import unittest
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from time import monotonic, sleep
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from reconciliation.model.processes import ProcessManager, ProcessStopError, ReviewCancelled, spawn
 
@@ -186,6 +186,20 @@ class ProcessManagerTests(unittest.TestCase):
         with patch("reconciliation.model.processes.spawn", return_value=RefusesToStop()):
             with self.assertRaises(ProcessStopError):
                 self.manager.run(["fixture"], timeout=0, audit=audit)
+        self.assertEqual(self.manager.active_count, 1)
+        self.assertFalse(audit["exit_verified"])
+
+    def test_failed_exit_query_still_attempts_owned_tree_termination(self):
+        """Verification failure attempts Stop but retains unverified ownership."""
+        process = Mock(pid=123)
+        process.poll.return_value = 0
+        process.alive.side_effect = OSError("Cannot query fixture tree")
+        audit = {}
+        with patch("reconciliation.model.processes.spawn", return_value=process):
+            with self.assertRaises(ProcessStopError):
+                self.manager.run(["fixture"], audit=audit)
+        process.terminate.assert_called_once_with(force=True)
+        process.close.assert_not_called()
         self.assertEqual(self.manager.active_count, 1)
         self.assertFalse(audit["exit_verified"])
 

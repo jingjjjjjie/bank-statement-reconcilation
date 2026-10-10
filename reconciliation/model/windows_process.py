@@ -244,8 +244,10 @@ class WindowsProcess:
 
     def terminate(self, force=False):
         """Windows job termination forcibly stops every contained process."""
-        self.alive()  # Capture existing descendants before job accounting drops terminating members.
-        checked(terminate_job(self.job, 1))
+        try:
+            self.alive()  # Capture descendants before job accounting drops terminating members.
+        finally:
+            checked(terminate_job(self.job, 1))
 
     def close(self):
         """Release native handles; the job also protects against owner failure."""

@@ -120,6 +120,11 @@ class ProcessManager:
                         raise TimeoutError("process tree is still active")
             process.close()
         except Exception as error:
+            # A failed exit query must not prevent a best-effort stop of the owned tree.
+            try:
+                process.terminate(force=True)
+            except Exception:
+                pass
             raise ProcessStopError(f"Cannot verify shutdown of process {process.pid}: {error}") from error
         with self._lock:
             self._active.remove(process)
