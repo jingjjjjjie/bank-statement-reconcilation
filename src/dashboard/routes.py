@@ -1,6 +1,5 @@
 """FastAPI application, local request protection, and Vue asset delivery."""
 
-import asyncio
 import hashlib
 import os
 import secrets
@@ -12,6 +11,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, JSONResponse, Response
 from jsonschema.exceptions import ValidationError as SchemaValidationError
 
+from dashboard.services.sessions import COOKIE, Context, Sessions
 from reconciliation.intake.workspace import SourceSelection
 
 FRONTEND = Path(os.environ.get("DASHBOARD_FRONTEND", Path(__file__).parent / "frontend/dist"))
@@ -43,19 +43,9 @@ PAGES = {
 }
 
 
-class Context:
-    """Keep the active review and serialized file decisions in one server process."""
-
-    def __init__(self, review, token, sources):
-        """Create one session without changing saved workflow state."""
-        self.review, self.token, self.sources = review, token, sources
-        self.lock = asyncio.Lock()
-        self.review_id = secrets.token_hex(16)
-
-
 async def context(request: Request):
     """Wait for workflow access without occupying request-worker threads."""
-    state = request.app.state.context
+    state = request.state.context
     async with state.lock:
         expected = request.headers.get("X-Review-Id")
         if request.method == "POST" and expected and expected != state.review_id:
@@ -65,7 +55,7 @@ async def context(request: Request):
 
 async def interrupt_context(request: Request):
     """Allow cancellation and status reads to bypass slow workflow requests."""
-    state = request.app.state.context
+    state = request.state.context
     expected = request.headers.get("X-Review-Id")
     if request.method == "POST" and expected and expected != state.review_id:
         raise HTTPException(409, "The active workspace changed. Reload this page before saving.")
@@ -84,7 +74,6 @@ def active_context(state=Depends(context)):
 def create_app(review=None, token=None, sources=None):
     """Build the ASGI app without starting a server or performing model calls."""
     from dashboard.api import codex, files, live, project_actions, review as review_api, source
-    from dashboard.services.live_state import LiveState
 
     workspace = Path(__file__).resolve().parents[2]
     sources = sources or (
@@ -99,11 +88,12 @@ def create_app(review=None, token=None, sources=None):
         try:
             yield
         finally:
-            await app.state.live.close()
+            await app.state.sessions.close()
 
     app = FastAPI(lifespan=lifespan, title="Reconciliation dashboard", docs_url=None, redoc_url=None, openapi_url=None)
     app.state.context = Context(review, token or secrets.token_urlsafe(32), sources)
-    app.state.live = LiveState(app.state.context)
+    app.state.live = app.state.context.live
+    app.state.sessions = Sessions(app.state.context)
     app.include_router(live.router)
     allowed_hosts = {
         host.strip().lower() for host in os.environ.get('DASHBOARD_ALLOWED_HOSTS', '').split(',') if host.strip()
@@ -117,9 +107,11 @@ def create_app(review=None, token=None, sources=None):
         host = request.headers.get('host', '').lower()
         if host not in hosts:
             return JSONResponse({"error": "Dashboard address is not allowed"}, status_code=403)
+        state = app.state.sessions.get(request.cookies.get(COOKIE))
+        request.state.context = state
         if request.method == "POST":
             origin = request.headers.get("origin")
-            if request.headers.get("X-Review-Token") != app.state.context.token or (
+            if request.headers.get("X-Review-Token") != state.token or (
                 origin and origin != f"http://{host}"
             ):
                 return JSONResponse({"error": "Refresh the dashboard before making changes"}, status_code=403)
@@ -136,7 +128,10 @@ def create_app(review=None, token=None, sources=None):
             request._body = bytes(body)
         response = await call_next(request)
         if request.method == "POST" and response.status_code < 400:
-            app.state.live.invalidate()
+            state.live.invalidate()
+        if request.cookies.get(COOKIE) != state.session_id:
+            response.set_cookie(COOKIE, state.session_id, httponly=True, samesite="strict",
+                                secure=request.url.scheme == "https")
         response.headers.setdefault("Cache-Control", "no-store")
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["Content-Security-Policy"] = (
@@ -170,9 +165,9 @@ def create_app(review=None, token=None, sources=None):
         return JSONResponse({"error": str(error)}, status_code=status)
 
     @app.get("/api/session")
-    async def session():
+    async def session(request: Request):
         """Return routing metadata without scanning documents or acquiring a workflow lock."""
-        state = app.state.context
+        state = request.state.context
         return {
             "token": state.token,
             "review_id": state.review_id,

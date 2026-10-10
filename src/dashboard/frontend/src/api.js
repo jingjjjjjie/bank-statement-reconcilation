@@ -38,6 +38,8 @@ export async function loadSession() {
 export async function api(path, body, options = {}) {
   const session = appState.session || await loadSession();
   if (path === '/api/session' && body === undefined) return session;
+  if (path === '/api/source/close' && [...pages].some(page => page.isDirty()) &&
+      !confirm('Close project and discard unsaved edits?')) throw Error('Project close cancelled');
   if (path === '/api/source/start' && [...pages].some(page => page.isDirty())) {
     const source = await api('/api/source');
     if (source.active !== source.selected?.path &&
@@ -67,7 +69,7 @@ export async function api(path, body, options = {}) {
       appState.changes++;
       appState.revisions[path] = (appState.revisions[path] || 0) + 1;
     }
-    if (['/api/source/start', '/api/projects/reset', '/api/projects/delete'].includes(path)) await loadSession();
+    if (['/api/source/start', '/api/source/close', '/api/projects/reset', '/api/projects/delete'].includes(path)) await loadSession();
     // Saved extraction and matching decisions update their completion ticks.
     refreshNavigation(true).catch(error => toast(error.message));
   }

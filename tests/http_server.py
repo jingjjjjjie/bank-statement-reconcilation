@@ -9,8 +9,20 @@ import uvicorn
 class TestServer:
     """Small socket-owning test fixture with deterministic shutdown."""
 
-    def __init__(self, address, app):
+    def __init__(self, address, app, *, isolated_sessions=False):
         """Reserve the port before test clients are allowed to connect."""
+        if not isolated_sessions:
+            identity = app.state.sessions.fixture().session_id
+            original = app
+
+            async def fixture_session(scope, receive, send):
+                """Treat stateless fixture requests as one browser, retaining real session guards."""
+                if scope['type'] == 'http' and not any(key == b'cookie' for key, _ in scope['headers']):
+                    scope = {**scope, 'headers': [*scope['headers'],
+                             (b'cookie', ('accounting_session=' + identity).encode())]}
+                await original(scope, receive, send)
+
+            app = fixture_session
         self.socket = socket.socket()
         self.socket.bind(address)
         self.socket.listen(128)

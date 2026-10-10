@@ -135,7 +135,7 @@ function setDocumentRequestMessage(message) {
 
 function executionFields() {
   /* Keep a slow document snapshot from overwriting a newer stop acknowledgement. */
-  return Object.fromEntries(['running', 'stop_requested', 'active_processes', 'execution_status', 'run_error', 'phase', 'elapsed_seconds']
+  return Object.fromEntries(['running', 'blocked', 'block_reason', 'stop_requested', 'active_processes', 'execution_status', 'run_error', 'phase', 'elapsed_seconds']
     .map(key => [key, documentState[key]]));
 }
 
@@ -169,7 +169,7 @@ function renderDocumentProgress() {
   const preparing = busy && !documentState.prepared;
   $('#run-documents').textContent = documentState.running ? (stopping ? 'Stopping...' : 'Extracting...') :
     preparing ? 'Preparing...' : busy ? 'Starting...' : extracted || done ? 'Resume extraction' : 'Extract documents';
-  $('#run-documents').disabled = busy || !!documentState.running || (!!rows.length && extracted === rows.length);
+  $('#run-documents').disabled = busy || !!documentState.running || !!documentState.blocked || (!!rows.length && extracted === rows.length);
   $('#stop-documents').disabled = !documentState.running || !!documentState.stop_requested;
   $('#stop-documents').textContent = stopping ? 'Stopping...' : 'Stop';
   bar.value = total ? Math.floor(done / total * 100) : 0;
@@ -182,12 +182,12 @@ function renderDocumentProgress() {
   track.dataset.busy = String(preparing);
   track.dataset.running = String(!!documentState.running && !stopping);
   track.querySelector('.progress-fill').style.transform = `scaleX(${percent / 100})`;
-  $('#document-run-status').textContent = documentState.execution_status === 'stop_failed'
+  $('#document-run-status').textContent = documentState.block_reason || (documentState.execution_status === 'stop_failed'
     ? documentState.run_error : stopping
     ? `Stopping - waiting for ${documentState.active_processes || 0} active processes to exit.`
     : (!documentState.running && documentRequestMessage) || documentState.run_error ||
       (documentState.running ? `${documentState.phase || 'Extracting supporting documents'} - ${documentState.active_processes || 0} active processes - ${documentState.elapsed_seconds || 0}s elapsed` :
-        'Open Review Extraction beside a document to check its extraction.');
+        'Open Review Extraction beside a document to check its extraction.'));
 }
 
 function rememberFilters() {
@@ -212,7 +212,7 @@ $('#document-search').oninput = rememberFilters;
 $('#document-filter').onchange = rememberFilters;
 refreshDocuments().catch(error => toast(error.message));
 pollVisible(async () => {
-  if (appState.liveConnected || (!documentState.running && !documentRequestMessage && !finalSnapshotPending)) return;
+  if (appState.liveConnected || (!documentState.running && !documentState.blocked && !documentRequestMessage && !finalSnapshotPending)) return;
   finalSnapshotPending = false;
   try { await refreshDocuments(); }
   catch (error) { finalSnapshotPending = true; throw error; }

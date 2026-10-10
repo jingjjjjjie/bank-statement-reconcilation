@@ -27,7 +27,7 @@ def file_response(path, mime=None):
 
 def matching_source(kind: str, id: str, request: Request):
     """Capture one review and validate read-only evidence without the decision lock."""
-    review = request.app.state.context.review
+    review = request.state.context.review
     if review is None:
         raise HTTPException(409, "Select a workspace before viewing evidence")
     return final_review.evidence(review, kind, id)
@@ -64,7 +64,7 @@ def matching_file(kind: str, id: str, download: bool = False, state=Depends(acti
 
 def extraction_source(id: str, request: Request):
     """Validate one Step 2 original independently of slow workflow status checks."""
-    review = request.app.state.context.review
+    review = request.state.context.review
     if review is None:
         raise HTTPException(409, "Select a workspace before viewing evidence")
     return extraction_runs.source(review, id)

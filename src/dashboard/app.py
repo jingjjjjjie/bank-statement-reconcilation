@@ -25,13 +25,9 @@ def main():
     parser.add_argument("--data", type=Path, default=Path(__file__).parent / ".data")
     args = parser.parse_args()
     sources = SourceSelection(WORKSPACE, args.data)
-    manifest = (
-        sources.active_manifest(args.manifest)
-        if args.manifest == WORKSPACE / "duplicate-manifest.json"
-        else args.manifest
-    )
-    data = manifest.parent / "dashboard-data" if manifest != args.manifest else args.data
-    review = Review(manifest, data) if manifest.is_file() else None
+    # A shared remembered project must not be opened for whichever browser arrives first.
+    explicit = args.manifest != WORKSPACE / "duplicate-manifest.json"
+    review = Review(args.manifest, args.data) if explicit and args.manifest.is_file() else None
     app = create_app(review, secrets.token_urlsafe(32), sources)
     display_host = "127.0.0.1" if args.host == "0.0.0.0" else args.host
     print(f"Dashboard: http://{display_host}:{args.port}", flush=True)

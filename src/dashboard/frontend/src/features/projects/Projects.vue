@@ -39,6 +39,13 @@ async function open(project) {
   finally { opening.value = ''; }
 }
 
+// Release this browser's editor lease without changing saved decisions.
+async function closeProject() {
+  error.value = '';
+  try { await api('/api/source/close', {}); await load(); }
+  catch (failure) { error.value = failure.message; }
+}
+
 // Explain the selected operation before discarding any saved progress or drafts.
 async function changeProject(project, action) {
   const reset = action === 'reset';
@@ -90,13 +97,14 @@ onDeactivated(() => { dialog.value?.close(); creating.value = false; });
     <section v-if="visible.length" class="project-list" aria-label="Saved projects" :aria-busy="loading">
       <article v-for="project in visible" :key="project.id" class="project-row">
         <div class="project-identity">
-          <div class="project-title"><h2>{{ project.name }}</h2><span v-if="project.active" class="project-active">Active workspace</span></div>
+          <div class="project-title"><h2>{{ project.name }}</h2><span v-if="project.active" class="project-active">Active workspace</span><span v-else-if="project.in_use" class="project-active">Project in use</span></div>
           <p class="project-path">{{ project.workspace || 'Project record unavailable' }}</p>
           <p v-if="project.statement" class="project-path">{{ project.statement }}</p>
           <p v-if="project.error" class="project-warning">{{ project.error }}</p>
         </div>
         <div class="project-meta"><span class="project-status" :class="project.status">{{ project.status === 'ongoing' ? 'Ongoing' : 'Needs attention' }}</span><span>{{ project.documents == null ? 'File count unavailable' : `${project.documents} supporting files` }}</span><span>Updated {{ updated(project.updated) }}</span></div>
         <div class="project-actions">
+          <button v-if="project.active" type="button" class="button secondary" :disabled="!!opening" @click="closeProject">Close project</button>
           <button type="button" class="button secondary" :aria-label="`Resume ${project.name}`" :disabled="!!opening || !project.workspace || project.in_use" @click="open(project)">{{ project.in_use ? 'Project in use' : opening === project.id ? 'Working…' : 'Resume' }}</button>
           <button type="button" class="button secondary" :aria-label="`Reset workspace ${project.name}`" :disabled="!!opening || !project.workspace || project.in_use" @click="changeProject(project, 'reset')">Reset workspace</button>
           <button type="button" class="button secondary project-delete" :aria-label="`Delete workspace ${project.name}`" :disabled="!!opening || project.in_use" @click="changeProject(project, 'delete')">Delete workspace</button>

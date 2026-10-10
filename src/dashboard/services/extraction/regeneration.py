@@ -49,7 +49,15 @@ def update(review, digest, status, error=""):
 
 
 def enqueue(review, digest):
-    """Validate and enqueue a fresh whole-document extraction without blocking HTTP."""
+    """Reject another project's active batch before changing regeneration state."""
+    from dashboard.services.extraction import extraction_runs
+
+    with extraction_runs.run_slot(review):
+        return _enqueue(review, digest)
+
+
+def _enqueue(review, digest):
+    """Validate and enqueue a fresh whole-document extraction in the admitted batch."""
     from dashboard.services.extraction import extraction_runs
     from reconciliation.extraction.workflow import active_config, current_inventory, load, removal_plan
 

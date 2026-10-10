@@ -25,7 +25,10 @@ class ExtractionStopTests(unittest.TestCase):
     def test_stop_bypasses_busy_dashboard_and_checks_review_identity(self):
         """A document scan cannot queue Stop behind the global request lock."""
         entered, release, cancelled = threading.Event(), threading.Event(), threading.Event()
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
         review = SimpleNamespace(
+            root=Path(temporary.name),
             content_cancel=cancelled,
             content_engine=None,
             content_thread=SimpleNamespace(is_alive=lambda: not cancelled.is_set()),

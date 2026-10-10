@@ -4,7 +4,7 @@ import secrets
 import tempfile
 from pathlib import Path
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from fastapi.responses import Response
 from pydantic import BaseModel, Field, StrictInt
 
@@ -30,9 +30,13 @@ class ProjectChoice(BaseModel):
 
 
 @router.get("/projects")
-def projects(state=Depends(context)):
+def projects(request: Request, state=Depends(context)):
     """List saved workspaces without changing selection or workflow state."""
-    return {"projects": list_projects(state.sources, state.review)}
+    items = list_projects(state.sources, state.review)
+    for item in items:
+        if item['workspace']:
+            item['in_use'] = request.app.state.sessions.in_use(state, Path(item['workspace']) / 'documents')
+    return {"projects": items}
 
 
 @router.post("/projects/select")
@@ -93,7 +97,7 @@ def select_workspace(body: PathChoice, state=Depends(context)):
 
 
 @router.post("/source/start")
-def start(body: StartChoice, state=Depends(context)):
+def start(body: StartChoice, request: Request, state=Depends(context)):
     """Resume the same review; invalidate cached views only for a different project."""
     same_source = state.review and state.sources.selected() == state.review.root
     if state.review and not same_source:
@@ -101,14 +105,40 @@ def start(body: StartChoice, state=Depends(context)):
 
         if extraction_runs.execution_status(state.review)["running"] or matching_status(state.review)["running"]:
             raise ValueError("Stop document processing and matching before changing workspaces")
-    manifest, data = state.sources.start(body.preview)
-    if state.review and state.review.manifest_path.resolve() == manifest.resolve():
-        return {"active": str(state.review.root), "groups": len(state.review.groups), "resumed": True}
-    review = Review(manifest, data)
-    state.sources.activate(manifest)
-    state.review = review
-    state.review_id = secrets.token_hex(16)
+    source = state.sources.selected()
+    if source is None:
+        raise ValueError('Choose a workspace first')
+    sessions = request.app.state.sessions
+    old = state.review.root if state.review else None
+    sessions.claim(state, source)
+    try:
+        manifest, data = state.sources.start(body.preview)
+        if state.review and state.review.manifest_path.resolve() == manifest.resolve():
+            return {"active": str(state.review.root), "groups": len(state.review.groups), "resumed": True}
+        review = Review(manifest, data)
+        state.sources.activate(manifest)
+        state.review = review
+        state.review_id = secrets.token_hex(16)
+    except Exception:
+        if old is None or old.resolve() != source.resolve():
+            sessions.release(state, source)
+        raise
+    if old is not None and old.resolve() != source.resolve():
+        sessions.release(state, old)
     return {"active": str(review.root), "groups": len(review.groups), "resumed": False}
+
+
+@router.post('/source/close')
+def close_project(request: Request, state=Depends(active_context)):
+    """Release a project explicitly after its background jobs have finished."""
+    from dashboard.services.sessions import jobs_running
+
+    if jobs_running(state.review):
+        raise ValueError('Stop document processing and matching before closing the project')
+    request.app.state.sessions.release(state, state.review.root)
+    state.review = None
+    state.review_id = secrets.token_hex(16)
+    return {'closed': True}
 
 
 @router.post("/source/bank-prepare")

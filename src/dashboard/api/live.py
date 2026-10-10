@@ -12,7 +12,7 @@ router = APIRouter(prefix='/api')
 @router.get('/live')
 async def live(request: Request):
     """Replay current revisions on reconnect, then send only changed state."""
-    hub = request.app.state.live
+    hub = request.state.context.live
     hub.workspace()
     hub.start()
     queue = asyncio.Queue(maxsize=64)
@@ -36,6 +36,7 @@ async def live(request: Request):
         try:
             yield ': connected\n\n'
             while not hub.closed and not await request.is_disconnected():
+                request.app.state.sessions.touch(request.state.context)
                 try:
                     event = await asyncio.wait_for(queue.get(), timeout=5)
                     yield 'data: ' + json.dumps(event) + '\n\n'

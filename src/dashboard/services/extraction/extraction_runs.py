@@ -1,6 +1,7 @@
 """Run document extraction in a background thread for the dashboard: prepare, start, stop, status."""
 
 import threading
+from contextlib import contextmanager
 from pathlib import Path
 from time import monotonic
 
@@ -8,6 +9,33 @@ from reconciliation.core.settings import load_config, stage_settings
 from reconciliation.extraction.workflow import active_config, load, load_index, prepare as prepare_review, run
 from reconciliation.intake.duplicates import check, fingerprint
 from reconciliation.model.codex import BudgetReached, CodexReviewer, ReviewCancelled
+
+_BATCH_LOCK = threading.RLock()
+_batch_owner = None
+BLOCKED_MESSAGE = 'Extraction is running for another project. Wait for it to finish before starting.'
+
+
+def batch_running(review):
+    """Retain the extraction slot until worker and child-process exit are verified."""
+    worker = getattr(review, 'content_thread', None)
+    return bool(worker and worker.is_alive()) or bool(
+        getattr(getattr(review, 'content_engine', None), 'active_count', 0)
+    )
+
+
+def blocked(review):
+    """Report whether another project's extraction owns the shared server slot."""
+    with _BATCH_LOCK:
+        return _batch_owner is not None and _batch_owner is not review and batch_running(_batch_owner)
+
+
+@contextmanager
+def run_slot(review):
+    """Serialize batch launches and regeneration admission across all projects."""
+    with _BATCH_LOCK:
+        if blocked(review):
+            raise ValueError(BLOCKED_MESSAGE)
+        yield
 
 
 def work_path(review):
@@ -38,8 +66,11 @@ def execution_status(review):
     if status == "stopped":
         error = "Review stopped. Completed results are saved; run again to resume."
     started = getattr(review, "content_started", None)
+    is_blocked = blocked(review)
     return {
         "running": running,
+        "blocked": is_blocked,
+        "block_reason": BLOCKED_MESSAGE if is_blocked else "",
         "active_processes": active,
         "stop_requested": requested,
         "phase": getattr(review, "content_phase", ""),
@@ -61,7 +92,16 @@ def prepare(review):
 
 
 def start(review, *, regeneration_only=False):
-    """Run a bounded model batch in the background so the page stays responsive."""
+    """Launch one extraction batch server-wide, retaining its configured internal pool."""
+    global _batch_owner
+    with run_slot(review):
+        result = _start(review, regeneration_only=regeneration_only)
+        _batch_owner = review
+        return result
+
+
+def _start(review, *, regeneration_only=False):
+    """Validate and start the worker while its caller owns the global launch lock."""
     if exact_problems(review):
         raise ValueError("Finish exact duplicate review first")
     if execution_status(review)["running"]:

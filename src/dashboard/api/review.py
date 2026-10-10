@@ -41,7 +41,7 @@ def workspace(state=Depends(context)):
 @router.get("/workflow-checks")
 async def workflow(request: Request):
     """Read header indicators without blocking evidence saves on the decision lock."""
-    return await request.app.state.live.response(
+    return await request.state.context.live.response(
         '/api/workflow-checks', workflow_guide, allow_stale=request.headers.get('prefer') == 'stale-while-revalidate'
     )
 
@@ -95,7 +95,7 @@ def completion(state=Depends(active_context)):
 @router.get("/document-status")
 async def documents(request: Request):
     """Read saved processing progress without starting workers."""
-    return await request.app.state.live.response(
+    return await request.state.context.live.response(
         '/api/document-status',
         document_status.snapshot,
         allow_stale=request.headers.get('prefer') == 'stale-while-revalidate',
@@ -199,7 +199,7 @@ def regeneration_status(state=Depends(active_context)):
 @router.get("/matching")
 async def matching(request: Request, review=Depends(interrupt_context)):
     """Read a captured review without queuing behind unrelated workflow checks."""
-    return await request.app.state.live.response(
+    return await request.state.context.live.response(
         '/api/matching', final_review.snapshot, allow_stale=request.headers.get('prefer') == 'stale-while-revalidate'
     )
 
