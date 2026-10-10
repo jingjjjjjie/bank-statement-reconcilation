@@ -67,7 +67,7 @@ class AcceptNextTests(unittest.TestCase):
             expect(page.locator('.editor-footer button')).to_have_count(3)
             expect(page.locator('.extraction-original #accept-receipts')).to_have_count(1)
             expect(page.locator('.preview-toolbar a')).to_have_count(0)
-            expect(page.locator('.piece-download').first).to_be_visible()
+            expect(page.locator('.piece-download')).to_have_count(0)
             for width in [1536, 390, 320]:
                 page.set_viewport_size({'width': width, 'height': 900})
                 buttons = page.locator('.editor-footer button')

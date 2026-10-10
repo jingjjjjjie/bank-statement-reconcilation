@@ -27,12 +27,14 @@ usePage(root, initialize);
         <section class="extraction-editor" id="receipt-review-panel" aria-label="Extracted pieces">
           <div class="entry-toolbar">
             <span id="piece-count" class="piece-count" role="status">0 entries</span>
+            <div class="entry-actions">
             <span id="document-total" role="status" title="Sum of the displayed entry amounts, grouped by currency"></span>
             <button id="add-receipt" class="button secondary" type="button">+ Add entry</button>
             <button id="reset-original-pieces" class="button secondary" type="button">Reset to original</button>
             <button id="merge-all-pieces" class="button secondary" type="button" disabled>Merge all</button>
             <button id="remove-piece" class="button secondary" type="button" aria-label="Remove this piece from extraction">Remove</button>
-            <a id="receipt-original" class="original-link" download aria-label="Download original" title="Download original"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M5 16v4h14v-4" /></svg></a><div id="piece-tabs" hidden></div>
+            <a id="receipt-original" class="original-link" download aria-label="Download original" title="Download original"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M5 16v4h14v-4" /></svg></a></div>
+            <div id="piece-tabs" hidden></div>
           </div>
           <p id="receipt-error" class="validation" role="alert" hidden></p><p id="receipt-unit-status" role="status"></p>
           <form id="receipt-form"><div id="receipt-pieces"></div></form>

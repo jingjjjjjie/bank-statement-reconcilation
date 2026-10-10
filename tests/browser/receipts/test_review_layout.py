@@ -85,6 +85,8 @@ class ReviewLayoutTests(unittest.TestCase):
                 page.set_viewport_size({'width': width, 'height': 900})
                 expect(page.get_by_role('heading', name='Review Extraction', exact=True)).to_be_visible()
                 self.assertTrue(page.evaluate('document.documentElement.scrollWidth <= innerWidth'))
+                aligned = page.locator('.entry-actions').evaluate('e=>{const t=e.parentElement,b=t.getBoundingClientRect(),a=e.getBoundingClientRect();return Math.abs(a.right-(b.right-parseFloat(getComputedStyle(t).paddingRight)));}')
+                self.assertLessEqual(aligned, 1)
                 centers = header.locator(':scope > *').evaluate_all(
                     '(els) => els.map(el => { const r = el.getBoundingClientRect(); return r.y + r.height / 2; })'
                 )

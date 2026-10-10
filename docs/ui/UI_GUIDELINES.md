@@ -116,7 +116,11 @@ Shared help control: `dashboard/frontend/src/components/PageHelp.vue`.
 
 - Original preview controls and review actions share one bottom toolbar on panels
   at least 700px wide; narrower panels wrap the actions into a second compact row.
-  Put Download beside Show document / Show on candidate or extraction cards. No
+  Put Download beside Show document on matching candidate cards only. Extraction
+  entry cards use Show and Remove without Download. No
   download control belongs in the bottom toolbar. Bank download sits beside the
   source selector; extraction keeps a document-level fallback in its entry toolbar.
   Downloads preserve validated original bytes and source filenames.
+
+- Extraction entry cards show Show and Remove only. Right-align the document total
+  and Add entry / Reset / Merge all / Remove toolbar group, including wrapped rows.

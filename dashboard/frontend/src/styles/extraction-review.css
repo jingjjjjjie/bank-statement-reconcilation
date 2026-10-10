@@ -227,3 +227,7 @@
   .piece-card-actions{grid-column:2/-1;grid-row:5;justify-content:flex-end;min-height:28px}
   .viewer-footer{padding:8px;gap:8px}
 }
+
+/* Keep document actions aligned to the right when they wrap on narrow panes. */
+.extraction-workspace .entry-actions { display:flex; align-items:center; justify-content:flex-end; flex-wrap:wrap; flex:1 1 300px; min-width:0; max-width:100%; margin-left:auto; gap:8px; }
+.extraction-workspace .entry-actions #document-total { order:0; flex:0 1 auto; min-width:0; margin:0; text-align:right; }
