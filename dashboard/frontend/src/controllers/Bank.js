@@ -172,4 +172,6 @@ loadBank();
 
 
 page.onRefresh(async () => { await loadBank(); await loadMatchingReadiness(); }, ['/api/source/bank-prepare', '/api/matching-pieces', '/api/receipts/']);
+// Activation can return before its verified display snapshot; refresh when that snapshot arrives.
+page.onLive(['/api/matching']);
 }

@@ -93,9 +93,7 @@ class PiecePipelineBrowserTests(unittest.TestCase):
             page.route('**/api/source', lambda route: route.fulfill(json={'bank': None}))
             page.locator('.app-header a[href="/bank"]').click()
             page.locator('#load-final-matching').click()
-            expect(page.locator('#final-matching-ready')).to_have_text(
-                'Progress is saved automatically. Review the matches on Review Matching.'
-            )
+            expect(page.locator('#load-final-matching')).to_be_disabled()
             expect(page.locator('#generate-matches')).to_be_visible()
             expect(page.locator('#generate-matches')).to_be_enabled()
             page.locator('.app-header a[href="/matching"]').click()
