@@ -11,7 +11,7 @@ from playwright.sync_api import expect, sync_playwright
 
 from dashboard.routes import create_app
 from dashboard.services.review import Review
-from reconciliation.extraction.workflow import load, prepare, run
+from reconciliation.extraction.workflow import load, prepare, run, save
 from reconciliation.intake.duplicates import organize
 from tests.fixtures.extraction_runs import FixtureReviewer
 from tests.http_server import TestServer
@@ -50,6 +50,8 @@ class ContentBrowserTests(unittest.TestCase):
             prepare(manifest, work, config)
             index, state = load(work)
             run(work, index, state, FixtureReviewer())
+            state["pairs"] = {"legacy-pair": {"same": False, "reason": "Saved historical comparison"}}
+            save(work / "state.json", state)
             review = Review(manifest, base / "data")
             server = TestServer(("127.0.0.1", 0), create_app(review, "browser-token"))
             threading.Thread(target=server.serve_forever, daemon=True).start()

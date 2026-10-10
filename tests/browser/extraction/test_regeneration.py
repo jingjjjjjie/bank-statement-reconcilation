@@ -12,6 +12,7 @@ from reconciliation.core.paths import WORKSPACE
 from reconciliation.extraction.workflow import load, run
 from tests.browser import browser_options
 from tests.fixtures import extraction_runs as extraction_runs_fixture
+from tests.fixtures.assembly import piece
 from tests.http_server import TestServer
 
 
@@ -33,7 +34,7 @@ class RegenerationBrowserTests(unittest.TestCase):
                 if not release.wait(timeout=20):
                     raise AssertionError("Browser did not release the model fixture")
                 result = super().ask(prompt, schema, images)
-                result["supporting_evidence_reason"] = "KWSP contribution report can explain a payment."
+                result["receipts"] = [{**piece([1]), "brief_description": "KWSP contribution report"}]
                 return result
 
         server = TestServer(("127.0.0.1", 0), create_app(fixture.review, "test-token"))
@@ -61,7 +62,9 @@ class RegenerationBrowserTests(unittest.TestCase):
                 expect(page.locator("#regeneration-status")).to_have_attribute("aria-busy", "true")
                 expect(page.locator("#accept-receipts")).to_be_disabled()
                 release.set()
-                expect(page.locator("#supporting-evidence")).to_contain_text("KWSP contribution report", timeout=10000)
+                expect(page.locator('[data-field="brief_description"]')).to_have_value(
+                    "KWSP contribution report", timeout=10000
+                )
                 expect(page.locator("#regeneration-status")).to_contain_text("complete")
                 expect(page.locator("#accept-receipts")).to_be_enabled()
                 page.screenshot(path=str(WORKSPACE / ".tools/regeneration-review.png"))
