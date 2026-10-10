@@ -169,3 +169,18 @@ report and theme suites; the final theme rerun also verifies the 47px footer,
 inline search at 320/390px, state toggles and stable action rectangles after
 rejection/undo. Inspected expanded-search and saved-state Playwright screenshots.
 No model prompts, allocation validation, saved ledger format or originals changed.
+
+
+## Candidate search placement follow-up
+
+Search now sits at the right of the Available candidates disclosure heading.
+Clicking it expands candidates and focuses the wide field directly beneath the
+heading; Reset stays at the field's trailing edge. Close and Escape hide search
+without changing selections. The heading keeps its own keyboard disclosure action.
+
+Build and the theme browser test passed, including keyboard expansion, Search
+opening collapsed candidates, field alignment and width at 320/390px. Inspected
+expanded desktop and mobile Playwright screenshots. Two other matching tests passed.
+The existing compare/save workflow test fails its no-extra-refresh assertion:
+/api/matching is requested after a successful save. It reproduced in isolation;
+this positioning change does not alter save requests or the live refresh logic.

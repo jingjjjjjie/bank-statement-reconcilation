@@ -468,13 +468,15 @@ function toggleCandidateSearch() {
   /* Expand all-piece search without changing the draft supporting selection. */
   const panel = $('#candidate-search'), control = $('#toggle-candidate-search');
   panel.hidden = !panel.hidden;
+  if (!panel.hidden) $('#support-group').open = true;
   control.setAttribute('aria-expanded', String(!panel.hidden));
-  control.textContent = panel.hidden ? 'Search' : 'Close search';
+  control.textContent = panel.hidden ? 'Search' : 'Close';
   if (panel.hidden) $('#candidate-query').value = '';
   renderCandidates();
   (panel.hidden ? control : $('#candidate-query')).focus();
 }
-$('#toggle-candidate-search').onclick = toggleCandidateSearch;
+// The search action opens candidates without toggling the parent disclosure closed.
+$('#toggle-candidate-search').onclick = event => { event.preventDefault(); toggleCandidateSearch(); };
 $('#candidate-query').onkeydown = event => { if (event.key === 'Escape') { event.preventDefault(); toggleCandidateSearch(); } };
 $('#candidate-query').oninput = () => { renderCandidates(); $('#candidate-list').scrollTop = 0; };
 $('#restore-suggestion').onclick = () => { selected.clear(); allocationRoles.clear(); allocationAmounts.clear(); bank().suggestion.allocations.forEach(a => selected.set(a.item_id, a.amount)); renderCandidates(); updateSummary(); };

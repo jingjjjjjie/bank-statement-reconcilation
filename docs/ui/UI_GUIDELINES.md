@@ -98,6 +98,7 @@ Shared help control: `dashboard/frontend/src/components/PageHelp.vue`.
   expands its search button and candidate list. Keep the toolbar flush with the top
   of the workspace, and offer 50% and 75% original-preview zoom.
 
-- Candidate search expands inline beside its Search and Reset buttons, without a
-  separate empty toolbar row. Matching save announcements are accessible but do not
-  add a visible timestamp row beneath the buttons.
+- Candidate Search sits at the right of the Available candidates heading. It opens
+  the disclosure and shows a wide search field with Reset directly below the heading.
+  Matching save announcements are accessible but do not add a visible timestamp row
+  beneath the buttons.

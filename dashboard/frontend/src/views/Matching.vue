@@ -68,9 +68,9 @@ function keySplit(event) {
           <div id="selected-candidates"></div>
         </section>
         <details id="support-group" class="candidate-tray" aria-labelledby="support-heading">
-          <summary class="candidate-disclosure"><span id="support-heading">Available candidates</span><span id="candidate-count" class="subtle" role="status"></span></summary>
-          <div class="candidate-tools"><button id="toggle-candidate-search" class="button secondary" type="button" aria-expanded="false" aria-controls="candidate-search">Search</button><span id="support-status" class="sr-only" aria-live="polite"></span>
-          <div id="candidate-search" class="candidate-controls" hidden><label class="sr-only" for="candidate-query">Search all supporting pieces</label><input id="candidate-query" type="search" placeholder="Search all pieces"><button id="restore-suggestion" class="button secondary" type="button" title="Reset to suggestion">Reset</button></div></div>
+          <summary class="candidate-disclosure"><span id="support-heading">Available candidates</span><span id="candidate-count" class="subtle" role="status"></span><button id="toggle-candidate-search" class="button secondary" type="button" aria-expanded="false" aria-controls="candidate-search">Search</button></summary>
+          <span id="support-status" class="sr-only" aria-live="polite"></span>
+          <div id="candidate-search" class="candidate-controls" hidden><label class="sr-only" for="candidate-query">Search all supporting pieces</label><input id="candidate-query" type="search" placeholder="Search all pieces"><button id="restore-suggestion" class="button secondary" type="button" title="Reset to suggestion">Reset</button></div>
           <div id="candidate-list" tabindex="0" role="region" aria-label="Supporting candidate results"></div>
         </details>
         <div class="selection-summary" id="selection-summary" aria-live="polite"></div>

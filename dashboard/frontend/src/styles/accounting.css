@@ -244,13 +244,12 @@ body.matching-app #toast { bottom:160px; pointer-events:none; }
 /* Keep optional candidates collapsed and reclaim space above the review toolbar. */
 .matching-app .matching-main { padding-top:0; }
 .matching-app #support-group { display:block; flex:none; min-height:0; }
-.matching-app .candidate-disclosure { cursor:pointer; font-size:14px; font-weight:600; padding:2px 0; }
+.matching-app .candidate-disclosure { position:relative; cursor:pointer; font-size:14px; font-weight:600; min-height:28px; padding:4px 80px 4px 0; }
 .matching-app .candidate-disclosure #candidate-count { margin-left:8px; font-weight:400; }
-.matching-app .candidate-tools { display:flex; align-items:center; justify-content:flex-end; gap:8px; padding:6px 0; }
-.matching-app #candidate-search:not([hidden]) { display:contents; }
+.matching-app #candidate-search:not([hidden]) { display:flex; flex-wrap:nowrap; align-items:center; gap:8px; margin:6px 0 8px; }
 .matching-app #candidate-query { flex:1; width:0; min-width:0; margin:0; }
 .matching-app #restore-suggestion { min-height:28px; padding:3px 8px; font-size:11px; }
-.matching-app #toggle-candidate-search { min-height:28px; padding:3px 10px; font-size:11px; }
+.matching-app #toggle-candidate-search { position:absolute; top:0; right:0; min-height:28px; padding:3px 10px; font-size:11px; }
 
 .matching-app #review-editor { flex:1 0 auto; min-height:auto; overflow:visible; }
 .matching-app #selected-tray { flex:none; max-height:none; }
