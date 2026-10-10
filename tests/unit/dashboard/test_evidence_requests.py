@@ -75,6 +75,17 @@ class EvidenceRequestTests(ReceiptReviewFixture):
         self.assertEqual(status, 422)
         self.assertFalse(self.view()["units"][0]["accepted"])
 
+    def test_bulk_accept_preserves_large_current_draft(self):
+        """Accept all carries the same full document edit as individual acceptance."""
+        body = self.body()
+        status, result = self.post(
+            "/api/receipts/accept-all",
+            {"revision": body["revision"], "draft": {"key": body["key"], "receipts": body["receipts"]}},
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(result["bulk"]["accepted"], 1)
+        self.assertEqual(len(self.view()["units"][0]["receipts"]), 26)
+
     def test_evidence_limit_and_authentication_still_reject(self):
         """Oversized evidence and unauthorized edits never reach saved decisions."""
         body = self.body()

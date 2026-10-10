@@ -16,7 +16,12 @@ from reconciliation.intake.workspace import SourceSelection
 
 FRONTEND = Path(os.environ.get("DASHBOARD_FRONTEND", Path(__file__).parent / "frontend/dist"))
 # Evidence edits submit complete piece lists; small control requests keep their tighter bound.
-EVIDENCE_REQUEST_PATHS = {"/api/receipts/accept", "/api/receipts/merge-all", "/api/matching-decide"}
+EVIDENCE_REQUEST_PATHS = {
+    "/api/receipts/accept",
+    "/api/receipts/accept-all",
+    "/api/receipts/merge-all",
+    "/api/matching-decide",
+}
 MAX_EVIDENCE_REQUEST_BYTES = 1024 * 1024
 MAX_CONTROL_REQUEST_BYTES = 8192
 PAGES = {
