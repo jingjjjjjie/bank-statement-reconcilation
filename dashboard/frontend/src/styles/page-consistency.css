@@ -133,6 +133,58 @@ body main :is(.document-file,.bank-table tbody tr):hover { background:#f8fafd; }
   body main :is(.document-toolbar,.bank-toolbar) { align-items:stretch; gap:14px; }
 }
 /* Home remains a directory; dialog headings retain their own compact layout. */
+/* Review Matching shares the same connected header and workspace frame. */
+body.matching-app .matching-main { padding-top:22px; }
+.matching-app .matching-main > section[aria-label="Review controls"] {
+  flex:none;
+  background:white;
+  border:1px solid var(--line);
+  border-radius:10px 10px 0 0;
+}
+.matching-app .matching-main > section[aria-label="Review controls"] .queue-controls {
+  min-height:68px;
+  padding:14px 20px;
+  background:transparent;
+}
+body.matching-app #bank-view { border-color:var(--line); border-top:0; border-radius:0 0 10px 10px; }
+/* Final report uses the same single surface and quiet summary band as processing pages. */
+body .final-report .report-heading { margin-bottom:0; border-radius:10px 10px 0 0; padding:18px 24px; }
+body .final-report .export-layout {
+  background:white;
+  border:1px solid var(--line);
+  border-top:0;
+  border-radius:0 0 10px 10px;
+  padding:0 24px 24px;
+  overflow:hidden;
+}
+body .final-report .report-summary {
+  margin:0 -24px;
+  padding:18px 24px;
+  border:0;
+  border-bottom:1px solid var(--line);
+  border-radius:0;
+  box-shadow:none;
+  background:#f8fafc;
+}
+body .final-report .report-summary > div { padding:0 20px; gap:5px; border-color:var(--line); }
+body .final-report .report-summary > div:first-child { padding-left:0; }
+body .final-report .report-summary .summary-supported { background:transparent; color:var(--ink); }
+body .final-report .report-summary strong { font-size:21px; line-height:1.3; letter-spacing:0; }
+body .final-report .report-summary span { color:var(--muted); }
+body .final-report .report-notice { margin-top:16px; font-size:12px; }
+body .final-report .report-filters { margin:20px 0; }
+body .final-report .report-filters :is(input,select) { background:#fafbfd; border-color:#dfe6ef; border-radius:6px; min-height:36px; }
+body .final-report .report-table-wrap { border-color:var(--line); border-radius:6px; }
+body .final-report .report-table th { background:#f8fafc; color:var(--muted); font-size:11px; text-transform:none; letter-spacing:0; }
+@media (max-width:700px) {
+  body.matching-app .matching-main { padding-top:12px; }
+  .matching-app .matching-main > section[aria-label="Review controls"] .queue-controls { min-height:58px; padding:12px; }
+  body .final-report .report-heading { padding:16px; }
+  body .final-report .export-layout { padding:0 16px 16px; }
+  body .final-report .report-summary { margin:0 -16px; padding:16px; }
+  body .final-report .report-summary > div { padding:0 10px; }
+  body .final-report .report-summary strong { font-size:18px; }
+}
 body.directory-page main .portal-heading { background:transparent; border:0; padding:0; min-height:0; }
 @media (max-width:700px) {
   body:not(.extraction-workspace):not(.matching-app):not(.directory-page) main { padding:12px 8px 24px; }
