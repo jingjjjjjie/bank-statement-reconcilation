@@ -41,10 +41,10 @@ You need **Docker Compose** and **a ChatGPT account with Codex access**.
 
 **01 · Add your files**
 
-Copy `.env.example` to `.env`. Set `UPLOADS_PATH` to your jobs folder; use forward slashes on Windows.
+Copy `.env.example` to `.env`. Add your project folders inside `uploads/`:
 
 ```text
-bank-statement-uploads/
+uploads/
   MyProject/
     statement/
       bank-statement.pdf    # One statement PDF
@@ -53,14 +53,14 @@ bank-statement-uploads/
       receipts/
 ```
 
-The default folder is `../bank-statement-uploads`, beside this repository. Keep inputs outside Git.
+Docker mounts this folder at `/uploads`. Its contents are ignored by Git and excluded from Docker images. To use another folder, set `UPLOADS_PATH` and `DOCUMENTS_PATH` in `.env`; use forward slashes on Windows.
 
 **02 · Start your workspace**
 
 ```console
-docker compose build
-docker compose run --rm dashboard codex login
-docker compose up -d
+docker compose --project-directory . -f docker/compose.yaml build
+docker compose --project-directory . -f docker/compose.yaml run --rm dashboard codex login
+docker compose --project-directory . -f docker/compose.yaml up -d
 ```
 
 Choose ChatGPT login. Open **[localhost:8765](http://localhost:8765)**, then **Bank Statement Reconciliation → New project**. Select `/uploads/MyProject`. Use **Resume** to pick up where you left off.
@@ -101,16 +101,16 @@ For local Python development, run `python -m pip install -e .` first. Docker set
 
 ```console
 # Rebuild
-docker compose up -d --build dashboard
+docker compose --project-directory . -f docker/compose.yaml up -d --build dashboard
 
 # Test
-docker compose exec dashboard python -m unittest discover -s tests/unit -t .
+docker compose --project-directory . -f docker/compose.yaml exec dashboard python -m unittest discover -s tests/unit -t .
 
 # Logs
-docker compose logs --tail 50 dashboard
+docker compose --project-directory . -f docker/compose.yaml logs --tail 50 dashboard
 
 # Stop
-docker compose down
+docker compose --project-directory . -f docker/compose.yaml down
 ```
 
 The app binds to localhost by default. Keep the `codex-home` volume and project review data when updating.

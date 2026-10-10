@@ -15,7 +15,7 @@ PINS = {
     '.env': r'(?m)^CODEX_VERSION=[^\r\n]+',
     '.env.example': r'(?m)^CODEX_VERSION=[^\r\n]+',
     'docker/Dockerfile': r'(?m)^ARG CODEX_VERSION=[^\r\n]+',
-    'compose.yaml': r'\$\{CODEX_VERSION:-[^}]+\}',
+    'docker/compose.yaml': r'\$\{CODEX_VERSION:-[^}]+\}',
 }
 IDLE_CHECK = '''import json, pathlib, urllib.request, urllib.error
 for endpoint in ('content/execution', 'matching-run'):
@@ -44,7 +44,12 @@ def compose(*arguments, capture=False, version=None):
     if version:
         environment['CODEX_VERSION'] = version
     result = subprocess.run(
-        ['docker', 'compose', *arguments], cwd=ROOT, env=environment, text=True, capture_output=capture, check=True
+        ['docker', 'compose', '--project-directory', str(ROOT), '-f', str(ROOT / 'docker/compose.yaml'), *arguments],
+        cwd=ROOT,
+        env=environment,
+        text=True,
+        capture_output=capture,
+        check=True,
     )
     return result.stdout.strip() if capture else None
 
@@ -78,7 +83,7 @@ def planned_pins(version):
         text = before.decode('utf-8')
         replacement = (
             '${CODEX_VERSION:-' + version + '}'
-            if name == 'compose.yaml'
+            if name == 'docker/compose.yaml'
             else ('ARG ' if name == 'docker/Dockerfile' else '') + 'CODEX_VERSION=' + version
         )
         if name == '.env' and not re.search(pattern, text):

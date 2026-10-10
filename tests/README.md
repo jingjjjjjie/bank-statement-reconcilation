@@ -9,7 +9,7 @@ python -m unittest discover -s tests/unit -t .
 None of these tests call a live model. Run the same suite in Docker with:
 
 ```console
-docker compose exec -T -e PYTHONPATH=/workspace/src:/workspace dashboard python -m unittest discover -s tests/unit -t .
+docker compose --project-directory . -f docker/compose.yaml exec -T -e PYTHONPATH=/workspace/src:/workspace dashboard python -m unittest discover -s tests/unit -t .
 ```
 
 ## Layout

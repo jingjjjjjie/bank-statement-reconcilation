@@ -21,7 +21,7 @@ class CodexUpdateTests(unittest.TestCase):
             '.env': 'UPLOADS_PATH="C:/My Files"\r\nCODEX_VERSION=0.1.0\r\n',
             '.env.example': 'CODEX_VERSION=0.1.0\n',
             'docker/Dockerfile': 'ARG CODEX_VERSION=0.1.0\n',
-            'compose.yaml': 'CODEX_VERSION: ${CODEX_VERSION:-0.1.0}\n',
+            'docker/compose.yaml': 'CODEX_VERSION: ${CODEX_VERSION:-0.1.0}\n',
         }
         for name, text in values.items():
             path = self.root / name

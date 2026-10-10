@@ -26,7 +26,8 @@ resources/pdf-layouts.local.json
 
 # Default host folder mounted into the Docker container.
 documents/
-uploads/
+/uploads/*
+!/uploads/.gitkeep
 
 # Frontend dependencies and reproducible build output.
 src/dashboard/frontend/node_modules/
