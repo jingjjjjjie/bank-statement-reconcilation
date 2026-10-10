@@ -78,7 +78,7 @@ class SourceBrowserTests(unittest.TestCase):
                     )
                     try:
                         page = browser.new_page()
-                        page.goto(f"http://127.0.0.1:{server.server_port}/")
+                        page.goto(f"http://127.0.0.1:{server.server_port}/source")
                         expect(page.get_by_role("navigation", name="Main navigation")).to_have_count(1)
                         expect(page.locator(".page-navigation")).to_have_count(0)
                         expect(page.locator(".workspace-card")).to_have_count(1)

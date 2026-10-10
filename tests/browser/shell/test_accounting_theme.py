@@ -1,7 +1,7 @@
 """Check the approved typography, compact navigation and preserved rainbow styling."""
 
-import threading
 import re
+import threading
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
@@ -54,8 +54,13 @@ class AccountingThemeTests(unittest.TestCase):
             self.assertIn('oklch(0.55 0.18 210)', typography[4])
             self.assertTrue(page.locator('.brand-logo').evaluate('(e)=>e.complete && e.naturalWidth>0'))
             self.assertEqual(page.locator('.brand-logo').evaluate('(e)=>getComputedStyle(e).width'), '164px')
-            self.assertEqual(page.locator('.header-step.complete').first.evaluate('(e)=>getComputedStyle(e).color'), 'rgb(37, 99, 182)')
-            self.assertEqual(page.locator('.brand-identity span').evaluate('(e)=>getComputedStyle(e).fontWeight'), '600')
+            self.assertEqual(
+                page.locator('.header-step.complete').first.evaluate('(e)=>getComputedStyle(e).color'),
+                'rgb(37, 99, 182)',
+            )
+            self.assertEqual(
+                page.locator('.brand-identity span').evaluate('(e)=>getComputedStyle(e).fontWeight'), '600'
+            )
             self.assertEqual(title.evaluate('(e)=>getComputedStyle(e).paddingBottom'), '6px')
             rainbow = page.locator('.candidate-card.suggested[data-confidence=high]').first
             expect(rainbow).to_be_visible(timeout=30000)
@@ -64,7 +69,17 @@ class AccountingThemeTests(unittest.TestCase):
             page.emulate_media(reduced_motion='reduce')
             self.assertEqual(rainbow.evaluate('(e)=>getComputedStyle(e,"::before").animationName'), 'none')
             page.emulate_media(reduced_motion='no-preference')
-            for width, height in [(2560, 1300), (1920, 950), (1536, 760), (1366, 650), (1280, 620), (1440, 1000), (1024, 900), (390, 844), (320, 740)]:
+            for width, height in [
+                (2560, 1300),
+                (1920, 950),
+                (1536, 760),
+                (1366, 650),
+                (1280, 620),
+                (1440, 1000),
+                (1024, 900),
+                (390, 844),
+                (320, 740),
+            ]:
                 with self.subTest(width=width):
                     page.set_viewport_size({'width': width, 'height': height})
                     self.assertTrue(page.evaluate('document.documentElement.scrollWidth <= innerWidth'))
@@ -79,8 +94,13 @@ class AccountingThemeTests(unittest.TestCase):
                         self.assertEqual(page.locator('.evidence-panel #approve-match').count(), 1)
                         self.assertEqual(page.locator('#approve-match').bounding_box()['height'], 34)
                         if height <= 820:
-                            self.assertEqual(page.locator('.decision-scroll').evaluate('(e)=>getComputedStyle(e).overflowY'), 'auto')
-                            self.assertGreaterEqual(page.locator('#selected-candidates').bounding_box()['height'], rainbow.bounding_box()['height'])
+                            self.assertEqual(
+                                page.locator('.decision-scroll').evaluate('(e)=>getComputedStyle(e).overflowY'), 'auto'
+                            )
+                            self.assertGreaterEqual(
+                                page.locator('#selected-candidates').bounding_box()['height'],
+                                rainbow.bounding_box()['height'],
+                            )
                     active = page.locator('.header-link.active')
                     self.assertEqual(active.evaluate('(e)=>getComputedStyle(e).height'), '44px')
                     button = page.get_by_role('button', name='How to use this page')
@@ -99,7 +119,10 @@ class AccountingThemeTests(unittest.TestCase):
             download = page.locator('#selected-candidates .candidate-download').first
             expect(download).to_be_visible()
             expect(download.locator('svg')).to_have_count(1)
-            self.assertLess(download.bounding_box()['x'], page.locator('#selected-candidates .show-evidence').first.bounding_box()['x'])
+            self.assertLess(
+                download.bounding_box()['x'],
+                page.locator('#selected-candidates .show-evidence').first.bounding_box()['x'],
+            )
             self.assertLessEqual(page.locator('#preview-page').bounding_box()['width'], 160)
             self.assertIsNone(download.get_attribute('target'))
             expect(page.locator('.preview-toolbar a')).to_have_count(0)
@@ -142,9 +165,21 @@ class AccountingThemeTests(unittest.TestCase):
             disclosure.click()
             for scale in ['0.5', '0.75', '1']:
                 page.locator('#preview-zoom').select_option(scale)
-                self.assertEqual(page.locator('#evidence-content').evaluate('(e)=>e.style.getPropertyValue("--preview-scale")'), scale)
+                self.assertEqual(
+                    page.locator('#evidence-content').evaluate('(e)=>e.style.getPropertyValue("--preview-scale")'),
+                    scale,
+                )
             main = page.locator('.matching-main').bounding_box()
-            self.assertEqual(page.locator('.queue-controls').bounding_box()['y'], main['y'])
+            controls = page.get_by_role('region', name='Review controls').bounding_box()
+            inset = page.locator('.matching-main').evaluate('(e)=>parseFloat(getComputedStyle(e).paddingTop)')
+            self.assertAlmostEqual(controls['y'], main['y'] + inset, delta=1)
+            queue = page.locator('.queue-controls').bounding_box()
+            border = page.get_by_role('region', name='Review controls').evaluate(
+                '(e)=>parseFloat(getComputedStyle(e).borderTopWidth) + parseFloat(getComputedStyle(e).paddingTop)'
+            )
+            self.assertAlmostEqual(queue['y'], controls['y'] + border, delta=1)
+            self.assertGreaterEqual(queue['x'], controls['x'])
+            self.assertLessEqual(queue['x'] + queue['width'], controls['x'] + controls['width'])
             divider = page.get_by_role('separator', name='Resize review and evidence panels')
             expect(divider).to_be_visible()
             initial = page.locator('.decision-panel').bounding_box()['width']
@@ -171,35 +206,83 @@ class AccountingThemeTests(unittest.TestCase):
             for width in [1536, 390, 320]:
                 page.set_viewport_size({'width': width, 'height': 760})
                 self.assertTrue(all(b['width'] <= 140 for b in [actions.nth(i).bounding_box() for i in range(3)]))
-                before = actions.evaluate_all('(els)=>els.map(e=>{const b=e.getBoundingClientRect();return [b.x,b.y+scrollY,b.width,b.height]})')
+                before = actions.evaluate_all(
+                    '(els)=>els.map(e=>{const b=e.getBoundingClientRect();return [b.x,b.y+scrollY,b.width,b.height]})'
+                )
                 page.locator('#deny-match').click()
                 expect(page.locator('#deny-match')).to_have_text('Rejected · Undo')
                 expect(page.locator('#deny-match')).to_have_attribute('aria-pressed', 'true')
                 page.mouse.move(0, 0)
-                self.assertEqual(page.locator('#deny-match').evaluate('(e)=>getComputedStyle(e).backgroundColor'), 'rgb(179, 62, 53)')
-                self.assertEqual(page.locator('#deny-match').evaluate('(e)=>getComputedStyle(e).color'), 'rgb(255, 255, 255)')
-                after = actions.evaluate_all('(els)=>els.map(e=>{const b=e.getBoundingClientRect();return [b.x,b.y+scrollY,b.width,b.height]})')
+                self.assertEqual(
+                    page.locator('#deny-match').evaluate('(e)=>getComputedStyle(e).backgroundColor'), 'rgb(179, 62, 53)'
+                )
+                self.assertEqual(
+                    page.locator('#deny-match').evaluate('(e)=>getComputedStyle(e).color'), 'rgb(255, 255, 255)'
+                )
+                after = actions.evaluate_all(
+                    '(els)=>els.map(e=>{const b=e.getBoundingClientRect();return [b.x,b.y+scrollY,b.width,b.height]})'
+                )
                 self.assertEqual(before, after)
                 page.screenshot(path=str(output / f'matching-stable-undo-{width}.png'), full_page=True)
                 page.locator('#deny-match').click()
                 expect(page.locator('#deny-match')).to_have_text('Reject')
                 expect(page.locator('#undo-match')).to_have_count(0)
-                self.assertEqual(before, actions.evaluate_all('(els)=>els.map(e=>{const b=e.getBoundingClientRect();return [b.x,b.y+scrollY,b.width,b.height]})'))
+                self.assertEqual(
+                    before,
+                    actions.evaluate_all(
+                        '(els)=>els.map(e=>{const b=e.getBoundingClientRect();return [b.x,b.y+scrollY,b.width,b.height]})'
+                    ),
+                )
             page.set_viewport_size({'width': 1440, 'height': 1000})
             page.goto(f'http://127.0.0.1:{server.server_port}/final-report')
-            self.assertEqual(page.locator('.final-report').evaluate('(e)=>getComputedStyle(e).color'), 'rgb(32, 50, 71)')
+            self.assertEqual(
+                page.locator('.final-report').evaluate('(e)=>getComputedStyle(e).color'), 'rgb(32, 50, 71)'
+            )
             page.get_by_role('button', name='Export', exact=True).click()
             dialog = page.locator('.report-export-dialog')
             expect(dialog).to_be_visible()
-            self.assertEqual(dialog.locator('.workbook-download').evaluate('(e)=>getComputedStyle(e).backgroundColor'), 'rgb(255, 255, 255)')
-            self.assertEqual(dialog.locator('.button.dark').evaluate('(e)=>getComputedStyle(e).backgroundColor'), 'rgb(37, 99, 182)')
-            self.assertEqual(dialog.locator('.workbook-options .button.secondary').evaluate('(e)=>getComputedStyle(e).color'), 'rgb(37, 99, 182)')
-            self.assertEqual(dialog.locator('.download-word').evaluate_all('(els)=>els.map(e=>getComputedStyle(e).color)'), ['rgb(255, 255, 255)'] * 4)
-            self.assertEqual(dialog.locator('.archive-download .button').evaluate_all('(els)=>els.map(e=>getComputedStyle(e).backgroundColor)'), ['rgb(37, 99, 182)'] * 4)
-            self.assertEqual(page.locator('.report-heading').evaluate('(e)=>getComputedStyle(e).borderBottomWidth'), '0px')
-            self.assertEqual(dialog.locator('.download-section-heading h2').evaluate_all('(els)=>els.map(e=>getComputedStyle(e).fontSize)'), ['15px', '15px'])
-            self.assertEqual(dialog.locator('.archive-download .button').evaluate_all('(els)=>els.map(e=>getComputedStyle(e).minHeight)'), ['36px'] * 4)
-            self.assertEqual(dialog.locator('.workbook-options .button').first.evaluate('(e)=>getComputedStyle(e).textDecorationLine'), 'none')
+            self.assertEqual(
+                dialog.locator('.workbook-download').evaluate('(e)=>getComputedStyle(e).backgroundColor'),
+                'rgb(255, 255, 255)',
+            )
+            self.assertEqual(
+                dialog.locator('.button.dark').evaluate('(e)=>getComputedStyle(e).backgroundColor'), 'rgb(37, 99, 182)'
+            )
+            self.assertEqual(
+                dialog.locator('.workbook-options .button.secondary').evaluate('(e)=>getComputedStyle(e).color'),
+                'rgb(37, 99, 182)',
+            )
+            self.assertEqual(
+                dialog.locator('.download-word').evaluate_all('(els)=>els.map(e=>getComputedStyle(e).color)'),
+                ['rgb(255, 255, 255)'] * 4,
+            )
+            self.assertEqual(
+                dialog.locator('.archive-download .button').evaluate_all(
+                    '(els)=>els.map(e=>getComputedStyle(e).backgroundColor)'
+                ),
+                ['rgb(37, 99, 182)'] * 4,
+            )
+            self.assertEqual(
+                page.locator('.report-heading').evaluate('(e)=>getComputedStyle(e).borderBottomWidth'), '0px'
+            )
+            self.assertEqual(
+                dialog.locator('.download-section-heading h2').evaluate_all(
+                    '(els)=>els.map(e=>getComputedStyle(e).fontSize)'
+                ),
+                ['15px', '15px'],
+            )
+            self.assertEqual(
+                dialog.locator('.archive-download .button').evaluate_all(
+                    '(els)=>els.map(e=>getComputedStyle(e).minHeight)'
+                ),
+                ['36px'] * 4,
+            )
+            self.assertEqual(
+                dialog.locator('.workbook-options .button').first.evaluate(
+                    '(e)=>getComputedStyle(e).textDecorationLine'
+                ),
+                'none',
+            )
             for width in [1440, 390, 320]:
                 page.set_viewport_size({'width': width, 'height': 1000})
                 bounds = dialog.bounding_box()
