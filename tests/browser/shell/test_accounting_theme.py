@@ -163,7 +163,7 @@ class AccountingThemeTests(unittest.TestCase):
                 self.assertEqual(before, after)
                 page.screenshot(path=str(output / f'matching-stable-undo-{width}.png'), full_page=True)
                 page.locator('#deny-match').click()
-                expect(page.locator('#deny-match')).to_have_text('Reject suggestion')
+                expect(page.locator('#deny-match')).to_have_text('Reject')
                 expect(page.locator('#undo-match')).to_have_count(0)
                 self.assertEqual(before, actions.evaluate_all('(els)=>els.map(e=>{const b=e.getBoundingClientRect();return [b.x,b.y+scrollY,b.width,b.height]})'))
             page.set_viewport_size({'width': 1440, 'height': 1000})

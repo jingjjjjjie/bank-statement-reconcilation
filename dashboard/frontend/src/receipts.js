@@ -1,3 +1,4 @@
+import { reviewActionLabels as reviewLabels } from './reviewActionLabels.js';
 import { node } from './dom.js';
 
 // Share receipt editing between views without global variables.
@@ -35,7 +36,7 @@ async function saveReceiptDecision(path, body, button) {
   const controls = [...page.root.querySelectorAll('button, input, select, textarea')];
   const disabled = controls.map(control => control.disabled);
   controls.forEach(control => { control.disabled = true; });
-  button.textContent = 'Saving…'; button.setAttribute('aria-busy', 'true');
+  button.textContent = reviewLabels.saving; button.setAttribute('aria-busy', 'true');
   try { return await api(path, body); }
   finally {
     controls.forEach((control, index) => { control.disabled = disabled[index]; });
@@ -167,15 +168,17 @@ function renderReviewState() {
   const undo = !!unit?.accepted && !dirty;
   const hasNext = index >= 0 && index + 1 < receiptData.units.length;
   const supportingOnly = unit && !(unit.trash ? unit.receipts.length : $('#receipt-pieces').children.length);
-  button.textContent = undo ? 'Accepted · Undo' : supportingOnly ? 'Accept as supporting' : hasNext ? 'Accept & next' : 'Accept';
+  button.textContent = undo ? reviewLabels.accepted : unit?.accepted && dirty ? reviewLabels.changes : reviewLabels.accept;
   button.title = pending ? 'Waiting for extraction' : failed ? 'Extraction unavailable'
-    : unit?.trash ? 'Replace Discard with Accepted' : dirty ? 'Accept current changes' : button.textContent;
+    : undo ? 'Undo acceptance' : supportingOnly ? 'Accept as supporting evidence without amounts'
+    : hasNext ? 'Accept and open the next document' : 'Accept this document';
   button.classList.remove('secondary');
   button.classList.add('dark');
   button.setAttribute('aria-pressed', String(undo));
   button.disabled = !unit || !!pending || failed;
   if ($('#reset-original-pieces')) $('#reset-original-pieces').disabled = !unit || !!pending || failed || !!unit.trash;
-  $('#discard-document').textContent = unit?.trash ? 'Discarded · Undo' : hasNext ? 'Discard & next' : 'Discard';
+  $('#discard-document').textContent = unit?.trash ? reviewLabels.rejected : reviewLabels.reject;
+  $('#discard-document').title = unit?.trash ? 'Undo rejection' : 'Reject this document as trash; the original is preserved';
   $('#discard-document').classList.toggle('restore-document', !!unit?.trash);
   $('#discard-document').setAttribute('aria-pressed', String(!!unit?.trash));
 

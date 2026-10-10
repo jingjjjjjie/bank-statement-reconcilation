@@ -1,4 +1,4 @@
-import { reviewActionLabels as labels } from '../reviewActionLabels.js';
+import { reviewActionLabels as reviewLabels } from '../reviewActionLabels.js';
 import { node } from '../dom.js';
 import { renderOfficePreview } from '../office.js';
 import { evidenceLocation } from '../evidenceLocation.js';
@@ -137,7 +137,7 @@ function chooseBank(id, addItem, preservePreview = false) {
   $('#review-editor').hidden = false;
   $('#restore-suggestion').disabled = false;
   $('#deny-match').disabled = false;
-  $('#approve-match').textContent = labels.accept;
+  $('#approve-match').textContent = reviewLabels.accept;
   const detail = $('#transaction-detail'); detail.replaceChildren();
   const header = node('div', 'transaction-header');
   const party = node('div', 'transaction-party');
@@ -315,13 +315,13 @@ function updateSummary() {
   // Reflect the saved decision in its existing action; edits require a fresh save.
   const confirmed = b.review_status === 'approved' && unchanged;
   const rejected = b.review_status === 'denied';
-  $('#approve-match').textContent = saving ? labels.saving : confirmed ? labels.accepted
-    : b.review_status === 'approved' ? labels.changes : labels.accept;
+  $('#approve-match').textContent = saving ? reviewLabels.saving : confirmed ? reviewLabels.accepted
+    : b.review_status === 'approved' ? reviewLabels.changes : reviewLabels.accept;
   $('#approve-match').title = confirmed ? 'Undo acceptance'
     : difference === 0 && values.some(v => v !== '') ? 'Accept supporting evidence and open the next transaction'
     : 'Accept partial or contextual evidence; incomplete coverage remains No supporting';
   $('#approve-match').setAttribute('aria-pressed', String(confirmed));
-  $('#deny-match').textContent = rejected ? labels.rejected : labels.reject;
+  $('#deny-match').textContent = rejected ? reviewLabels.rejected : reviewLabels.reject;
   $('#deny-match').title = rejected ? 'Undo rejection' : 'Reject supporting suggestion for this transaction';
   $('#deny-match').setAttribute('aria-pressed', String(rejected));
   $('#deny-match').disabled = saving;

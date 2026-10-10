@@ -107,3 +107,9 @@ Shared help control: `dashboard/frontend/src/components/PageHelp.vue`.
   right-aligned and at most 140px wide. Reject/Rejected and Discard/Discarded use
   solid red with white text, including saved Undo states. Extraction Accepted and
   Discarded states offer Undo inside their existing buttons; no extra footer row.
+
+- Unify both review footers as Accept, Reject, Next. Saved decisions read
+  Accepted / Rejected with Undo in the same button; edited accepted drafts show
+  Save changes. Use shared reviewActionLabels.js copy. Keep partial-support warnings
+  in the allocation summary and explain different rejection effects in page help.
+  These labels do not change validation, automatic advance or trash semantics.

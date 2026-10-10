@@ -201,3 +201,19 @@ completion state, original zoom/pan and long-entry/mobile layouts. Added footer
 placement and button sizing checks at 1536, 390 and 320px plus saved-state red/white
 checks. Inspected Playwright desktop and mobile extraction screenshots. The original
 files, extraction data model and matching ledger are unchanged.
+
+
+## Unified review action wording
+
+Both review footers now use shared Accept / Reject / Next wording, Accepted or
+Rejected with Undo for saved states, and Save changes after edits. Primary actions
+are blue, rejection red/white and unavailable actions grey. Extraction rejection
+still classifies trash; matching rejection still clears only that transaction's
+supporting allocations. Help and tooltips explain these distinct effects. Partial
+coverage remains visible and does not receive Supporting simply because it is accepted.
+
+Production build passed. Seven theme/extraction/matching browser tests passed.
+The broader compare/save matching test reached and passed approval, undo and partial
+No supporting assertions, then failed to find #document-tab after a separate concurrent
+unmatched-pieces navigation change. That tab change is excluded from this commit.
+Inspected extraction and matching fixture screenshots with the unified controls.

@@ -265,3 +265,5 @@ body.matching-app #toast { bottom:160px; pointer-events:none; }
 .extraction-workspace .editor-footer #discard-document:not(:disabled):hover { background:#942f28; border-color:#942f28; }
 .extraction-workspace .editor-footer { position:static; display:grid; grid-template-columns:repeat(3,minmax(0,140px)); justify-content:end; gap:8px; padding:6px 16px; box-shadow:none; }
 .extraction-workspace .editor-footer .button { justify-content:center; text-align:center; width:100%; max-width:none; min-width:0; height:34px; min-height:34px; padding:3px 6px; margin:0; font-size:11px; line-height:12px; white-space:normal; overflow-wrap:anywhere; }
+
+.matching-app .decision-actions .button:disabled { background:#eef1f6; border-color:var(--line); color:#7e8b9b; opacity:1; }
