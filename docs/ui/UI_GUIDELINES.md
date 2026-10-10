@@ -39,6 +39,9 @@ Shared help control: `dashboard/frontend/src/components/PageHelp.vue`.
 - Completed header navigation ticks use blue circles, matching the selected-page
   indicator. The UPVANTAGE logo is slightly larger (164x66 on desktop), with
   responsive sizing that keeps the wordmark and Settings separate.
+- Document-folder download buttons use solid blue backgrounds and white text.
+  Final report omits the divider beneath its heading and keeps a compact gap
+  above transaction totals.
 
 - Step 2 displays all pieces together as editable rows. Keep payee, payer, amount, currency, date and document number visible; put type, other names, references and Amount at (with Show, which jumps the preview to that page or sheet rows) under Details. Fields from older extractions appear only when they hold a value. Selecting a row targets Remove; Merge all combines every entry in the current document into one editable draft; Split is not offered. Narrow screens wrap the fields and place save actions after the rows without overlap.
 

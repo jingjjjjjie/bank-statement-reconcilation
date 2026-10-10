@@ -82,7 +82,7 @@ only in status markers in the observed states; no workflow data was changed.
 
 Workbook and document downloads now have matching 15px section headings, format
 badges, card padding and rounded button controls. Workbook links have no underline;
-ZIP downloads have visible 36px outlined buttons beside their descriptions. Removed
+ZIP downloads have visible 36px solid blue buttons with white text beside their descriptions. Removed
 the repeated workbook instruction. The close button matches other compact controls.
 Reviewed extraction document boxes and matching transaction boxes now use blue,
 including the extraction acceptance icon; trash and balanced-total styles remain.
@@ -92,3 +92,8 @@ screenshots at 1440 and 320 pixels, and live Export screenshots at 1440, 390 and
 A read-only live check verified aligned desktop headings, no horizontal dialog
 overflow, and blue completed indicators in both review pages. Download integration
 tests continue to pass with the same endpoints, filenames and focus behaviour.
+
+The Final report heading divider is removed and the gap above transaction totals
+is compact. The production build and four theme/report browser tests passed again;
+rendered assertions check all four ZIP buttons' blue fill/white text and the absent
+heading border.

@@ -157,7 +157,7 @@ body .final-report .workbook-download .button.dark:hover { background:var(--prim
 body .final-report .workbook-options .button.secondary { background:white; color:var(--primary); border-color:#cbdcf0; }
 body .final-report .workbook-options .button.secondary:hover { background:var(--blue-light); }
 body .final-report .archive-download button { color:var(--ink); }
-body .final-report .archive-download :is(.download-word,.download-message) { color:var(--primary); }
+body .final-report .archive-download .download-message { color:var(--primary); }
 body .final-report .report-table td[data-label]::before { color:var(--muted); }
 
 /* Workbook and archive downloads share one card and control style. */
@@ -176,9 +176,9 @@ body .final-report .report-export-dialog .archive-download { display:grid; grid-
 body .final-report .report-export-dialog .archive-download:last-of-type { padding-bottom:0; }
 body .final-report .report-export-dialog .archive-description strong { font-size:12px; font-weight:600; }
 body .final-report .report-export-dialog .archive-description p { font-size:11px; margin:5px 0 0; line-height:1.5; }
-body .final-report .report-export-dialog .archive-download .button { width:auto; min-width:82px; min-height:36px; padding:8px 10px; border:1px solid #cbdcf0; border-radius:6px; background:white; justify-content:center; color:var(--primary); font-size:12px; font-weight:600; }
-body .final-report .report-export-dialog .archive-download .button:hover:not(:disabled) { background:var(--blue-light); }
-body .final-report .report-export-dialog .download-word { font-size:12px; font-weight:600; }
+body .final-report .report-export-dialog .archive-download .button { width:auto; min-width:82px; min-height:36px; padding:8px 10px; border:1px solid var(--primary); border-radius:6px; background:var(--primary); justify-content:center; color:white; font-size:12px; font-weight:600; }
+body .final-report .report-export-dialog .archive-download .button:hover:not(:disabled) { background:var(--primary-hover); border-color:var(--primary-hover); }
+body .final-report .report-export-dialog .download-word { font-size:12px; font-weight:600; color:inherit; }
 body .final-report .report-export-dialog .download-message { grid-column:1/-1; margin:0; }
 @media(max-width:650px) {
   body .final-report .report-export-dialog .export-downloads { padding:14px; gap:14px; }
@@ -189,6 +189,7 @@ body .final-report .report-export-dialog .download-message { grid-column:1/-1; m
 .extraction-workspace #document-buttons button { color:var(--muted); }
 .extraction-workspace #document-buttons button.reviewed,.matching-app #transaction-pages .transaction-number.finished { background:var(--blue-light); border-color:#cbdcf0; color:var(--primary); }
 .extraction-workspace #document-review-status[data-state=accepted] { background:var(--blue-light); color:var(--primary); }
+body .final-report .report-heading { border-bottom:0; padding-bottom:0; margin-bottom:20px; }
 
 @media(max-width:1100px) { :root { --app-header-height:112px; } }
 @media(max-width:900px) {
