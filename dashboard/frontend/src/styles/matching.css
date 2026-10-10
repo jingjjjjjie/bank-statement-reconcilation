@@ -2,8 +2,8 @@
 /* The source path identifies the preview; candidate Show controls select evidence. */
 .matching-app .evidence-panel .evidence-heading { display:none; }
 .matching-app #bank-view #selected-tray { border-color:#e4eaf2; }
-/* Round the workspace edge beneath the flat toolbar without restoring a card frame. */
-.matching-app #bank-view { border-radius:10px; }
+/* A lighter extraction-style frame keeps the review surface distinct from its toolbar. */
+.matching-app #bank-view { border:1px solid #e4eaf2; border-radius:8px; box-shadow:0 2px 8px #17345304; }
 .matching-app #selected-candidates .candidate-card.selected { border-color:#dce5ef; }
 .matching-app #selected-candidates .candidate-card.previewing { outline:1px solid #c7d9ed; box-shadow:inset 2px 0 #c7d9ed; }
 .matching-app{background:#f6f7f5;color:#203831}
