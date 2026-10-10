@@ -2,7 +2,10 @@
 /* The source path identifies the preview; candidate Show controls select evidence. */
 .matching-app .evidence-panel .evidence-heading { display:none; }
 .matching-app #bank-view #selected-tray { border-color:#e4eaf2; }
-.matching-app #selected-candidates .candidate-card.selected:not(.suggested) { border-color:#dce5ef; }
+/* Round the workspace edge beneath the flat toolbar without restoring a card frame. */
+.matching-app #bank-view { border-radius:10px; }
+.matching-app #selected-candidates .candidate-card.selected { border-color:#dce5ef; }
+.matching-app #selected-candidates .candidate-card.previewing { outline:1px solid #c7d9ed; box-shadow:inset 2px 0 #c7d9ed; }
 .matching-app{background:#f6f7f5;color:#203831}
 .matching-main{width:100%;max-width:none;margin:0;padding:0;height:calc(100dvh - 68px);display:flex;flex-direction:column}
 .matching-app [hidden]{display:none!important}
