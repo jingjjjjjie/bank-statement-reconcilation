@@ -5,6 +5,7 @@ import tempfile
 import threading
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from playwright.sync_api import expect, sync_playwright
 
@@ -12,10 +13,18 @@ from dashboard.routes import create_app
 from dashboard.services.review import Review
 from reconciliation.intake.duplicates import organize
 from reconciliation.intake.workspace import SourceSelection
+from reconciliation.model.token_usage import summary
 from tests.http_server import TestServer
 
 
 class NavigationTests(unittest.TestCase):
+    def setUp(self):
+        """Keep settings reads isolated from customer-wide usage logs."""
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        usage = summary(Path(temporary.name) / 'usage.jsonl')
+        self.enterContext(patch('dashboard.services.review.workspace_summary', return_value=usage))
+
     def test_resume_preserves_edits_and_switch_requires_confirmation(self):
         """Resume skips activation and returns to the cached page; switching protects drafts."""
         with tempfile.TemporaryDirectory() as directory:
@@ -61,12 +70,11 @@ class NavigationTests(unittest.TestCase):
                     )
                     dialogs = []
                     page.on('dialog', lambda dialog: (dialogs.append(dialog.message), dialog.dismiss()))
-                    page.locator('.app-header a[href="/source"]').click()
-                    expect(page.locator('#start-source')).to_be_enabled()
-                    expect(page.locator('#start-source')).to_have_text('Resume workspace')
+                    page.locator('.app-header a[href="/projects"]').click()
+                    expect(page.get_by_role('button', name='Resume first')).to_be_enabled()
                     page.set_viewport_size({'width': 390, 'height': 844})
                     self.assertTrue(page.evaluate('document.documentElement.scrollWidth <= innerWidth'))
-                    page.locator('#start-source').click()
+                    page.get_by_role('button', name='Resume first').click()
                     expect(page).to_have_url(base + '/settings')
                     self.assertEqual(starts, [])
                     self.assertEqual(previews, [])
@@ -74,7 +82,8 @@ class NavigationTests(unittest.TestCase):
                     self.assertEqual(dialogs, [])
                     expect(page.locator('#max-calls')).to_have_value('42')
                     self.assertTrue(page.evaluate("window.savedSettings === document.querySelector('#max-calls')"))
-                    page.locator('.app-header a[href="/source"]').click()
+                    page.locator('.app-header a[href="/projects"]').click()
+                    page.get_by_role('button', name='New project', exact=True).click()
                     page.locator('.manual-path summary').click()
                     page.locator('#source-path').fill(str(root / 'second'))
                     page.locator('#select-source').click()

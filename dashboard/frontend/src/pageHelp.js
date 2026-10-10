@@ -1,5 +1,11 @@
 // Instructions live here so each page can keep its controls and results concise.
 export const pageHelp = {
+  Projects: ['Bank Statement Reconciliation', [
+    'Search saved projects by name or folder. Each project uses one workspace containing documents/ and statement/.',
+    'Resume opens the project directly. Switching projects protects unsaved edits and requires running jobs to stop first.',
+    'Ongoing means the project has been set up. It does not mean its evidence or matching has been approved.',
+    'New project opens the workspace picker in a popup. Choose a folder, then Proceed. Missing folders or unreadable project records appear under Needs attention.',
+  ]],
   Source: ['Choose your workspace', [
     'Choose a folder containing statement/ with one bank-statement PDF and documents/ with supporting files.',
     'Resume workspace returns to your last page without restarting the review.',

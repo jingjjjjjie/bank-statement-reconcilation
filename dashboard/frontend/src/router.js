@@ -6,7 +6,10 @@ import { appState, loadSession, refreshNavigation, toast } from './api.js';
 export const router = createRouter({
   history: createWebHistory(),
   routes: [
-    { path: '/', redirect: '/source' },
+    { path: '/', redirect: '/accounting-finance' },
+    { path: '/home', redirect: '/accounting-finance' },
+    { path: '/accounting-finance', component: () => import('./views/Portal.vue'), meta: { title: 'Accounting and Finance', body: 'portal-page', public: true, portal: true } },
+    { path: '/projects', component: () => import('./views/Projects.vue'), meta: { title: 'Bank Statement Reconciliation', body: 'portal-page', public: true, portal: true } },
     { path: '/source', component: () => import('./views/Source.vue'), meta: { title: 'Workspace selection', body: 'workspace-page', public: true } },
     { path: '/bank', component: () => import('./views/Bank.vue'), meta: { title: 'Bank statement', public: true } },
     { path: '/documents', component: () => import('./views/Documents.vue'), meta: { title: 'Document status', body: 'documents-page', public: true } },
@@ -40,7 +43,7 @@ router.beforeEach(async (to, from) => {
   }
 });
 router.afterEach((to, from, failure) => {
-  if (!failure && to.path !== '/source' && appState.session?.active) appState.resumePath = to.fullPath;
+  if (!failure && to.path !== '/source' && !to.meta.portal && appState.session?.active) appState.resumePath = to.fullPath;
   document.title = `${to.meta.title} · Accounting Copilot`;
   document.body.className = to.meta.body || '';
 });

@@ -1,5 +1,7 @@
 # Dashboard UI rules
 
+- Accounting and Finance is the landing page, with the Bank Statement Reconciliation card directly inside it. Do not add a separate Home or department-selection page. The landing page has no question-mark help icon or Bank Reconciliation subtitle. Inside a project, the header shows the current project name. Use one Back to Home button without an underline instead of Home/Projects text links. New project opens the workspace picker as a popup; Resume opens existing projects directly.
+
 User preference, recorded 2026-09-18:
 
 - Keep copy functional and concise. Remove decorative subtitles, repeated labels,

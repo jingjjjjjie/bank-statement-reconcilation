@@ -1,0 +1,52 @@
+.portal-page { background:var(--paper); color:var(--ink); }
+.portal-main { max-width:1200px; margin:0 auto; padding:48px 32px 80px; }
+.portal-heading { display:flex; align-items:center; justify-content:space-between; gap:24px; margin-bottom:40px; }
+.portal-heading h1 { margin:0; color:var(--nav); font-size:30px; line-height:1.25; letter-spacing:-.8px; }
+.portal-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:24px; }
+.portal-card { display:flex; flex-direction:column; align-items:flex-start; gap:20px; padding:28px; border:1px solid var(--line); border-radius:14px; background:white; color:var(--ink); text-decoration:none; box-shadow:0 3px 16px #20324704; }
+.portal-card:hover { border-color:#a9c5e9; box-shadow:0 8px 24px #2032470c; }
+.portal-card:focus-visible { outline:2px solid var(--primary); outline-offset:4px; }
+.portal-icon { display:grid; place-items:center; width:52px; height:52px; border:1px solid #dce9fa; border-radius:13px; color:var(--primary); background:var(--blue-light); }
+.portal-icon svg { width:28px; height:28px; stroke-linecap:round; stroke-linejoin:round; }
+.portal-card h2 { font-size:20px; line-height:1.4; margin:0; }
+.portal-card p { font-size:14px; color:var(--muted); margin:-8px 0 12px; line-height:1.6; }
+.portal-card-action { display:flex; justify-content:space-between; width:100%; margin-top:auto; font-size:13px; color:var(--primary); font-weight:600; }
+.project-toolbar { display:flex; align-items:flex-end; flex-wrap:wrap; gap:16px; margin-bottom:24px; }
+.project-toolbar label { display:flex; flex-direction:column; gap:8px; font-size:12px; color:var(--muted); }
+.project-toolbar label:first-child { flex:1; min-width:180px; }
+.project-toolbar input,.project-toolbar select { box-sizing:border-box; height:42px; padding:10px 12px; border:1px solid var(--line); border-radius:7px; background:white; color:var(--ink); font-size:14px; }
+.project-toolbar input:focus-visible,.project-toolbar select:focus-visible { outline:2px solid var(--primary); outline-offset:2px; }
+.project-toolbar>span { align-self:flex-end; padding-bottom:12px; font-size:12px; color:var(--muted); }
+.project-list { border:1px solid var(--line); border-radius:12px; background:white; overflow:hidden; }
+.project-row { display:flex; align-items:center; gap:24px; padding:24px; border-bottom:1px solid var(--line); }
+.project-row:last-child { border-bottom:0; }
+.project-identity { flex:1; min-width:0; }
+.project-title { display:flex; align-items:center; flex-wrap:wrap; gap:10px; }
+.project-title h2 { margin:0; font-size:17px; overflow-wrap:anywhere; }
+.project-path { font-size:12px; color:var(--muted); overflow-wrap:anywhere; margin:8px 0 0; }
+.project-active { font-size:11px; color:var(--primary); background:var(--blue-light); padding:4px 8px; border-radius:5px; }
+.project-meta { display:flex; flex-direction:column; align-items:flex-start; flex:0 0 170px; gap:7px; font-size:12px; color:var(--muted); }
+.project-status { font-weight:600; color:var(--primary); }
+.project-status.needs_attention,.project-warning { color:#9c5417; }
+.project-warning { font-size:12px; margin:8px 0 0; overflow-wrap:anywhere; }
+.portal-empty { padding:64px 24px; text-align:center; background:white; border:1px dashed #cbd7e5; border-radius:12px; }
+.portal-empty h2 { font-size:20px; margin:0 0 12px; }
+.portal-empty p { color:var(--muted); font-size:14px; }
+.project-dialog { box-sizing:border-box; width:min(840px,calc(100vw - 32px)); max-height:calc(100dvh - 32px); padding:24px; border:1px solid var(--line); border-radius:14px; background:var(--paper); color:var(--ink); overflow-y:auto; }
+.project-dialog::backdrop { background:#142a4266; }
+.project-dialog-close { display:flex; justify-content:flex-end; margin-bottom:8px; }
+.project-dialog .workspace-picker { width:100%; max-width:none; margin:0; padding:0; }
+.project-dialog .workspace-card { margin-bottom:0; }
+.project-dialog .picker-heading { margin:0 0 24px; }
+.project-dialog .page-title h1 { margin:0; }
+@media (max-width:900px) { .portal-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media (max-width:600px) {
+  .portal-main { padding:28px 16px 48px; }
+  .portal-heading { align-items:flex-start; flex-wrap:wrap; gap:20px; margin-bottom:28px; }
+  .portal-heading h1 { font-size:25px; }
+  .portal-grid { grid-template-columns:1fr; }
+  .project-row { flex-wrap:wrap; gap:18px; padding:20px; }
+  .project-identity { flex-basis:100%; }
+  .project-meta { flex:1; }
+  .project-toolbar label:first-child { flex-basis:100%; }
+}

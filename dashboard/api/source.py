@@ -10,6 +10,7 @@ from pydantic import BaseModel, Field, StrictInt
 
 from dashboard.routes import active_context, context
 from dashboard.services.extraction import extraction_runs
+from dashboard.services.projects import list_projects
 from dashboard.services.review import Review
 from reconciliation.core import development_cache
 from reconciliation.intake.workspace import STATEMENT_YEARS
@@ -21,6 +22,27 @@ class PathChoice(BaseModel):
     """A user-selected local input path."""
 
     path: str = Field(min_length=1)
+
+
+class ProjectChoice(BaseModel):
+    """Identify a saved project without accepting a manifest path from the browser."""
+
+    id: str = Field(min_length=1, max_length=24)
+
+
+@router.get("/projects")
+def projects(state=Depends(context)):
+    """List saved workspaces without changing selection or workflow state."""
+    return {"projects": list_projects(state.sources, state.review)}
+
+
+@router.post("/projects/select")
+def select_project(body: ProjectChoice, state=Depends(context)):
+    """Select saved inputs; the existing Proceed action still activates the review."""
+    project = next((item for item in list_projects(state.sources, state.review) if item["id"] == body.id), None)
+    if not project or not project["workspace"]:
+        raise ValueError("Project is unavailable. Select its workspace folder again.")
+    return state.sources.save_workspace(project["workspace"])
 
 
 class StartChoice(BaseModel):

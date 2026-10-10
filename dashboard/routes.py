@@ -26,6 +26,9 @@ MAX_EVIDENCE_REQUEST_BYTES = 1024 * 1024
 MAX_CONTROL_REQUEST_BYTES = 8192
 PAGES = {
     "",
+    "home",
+    "accounting-finance",
+    "projects",
     "source",
     "review",
     "exact-report",

@@ -4,17 +4,26 @@ import tempfile
 import threading
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from playwright.sync_api import expect, sync_playwright
 
 from dashboard.routes import create_app
 from dashboard.services.review import Review
 from reconciliation.intake.duplicates import organize
+from reconciliation.model.token_usage import summary
 from tests.browser import browser_options
 from tests.http_server import TestServer
 
 
 class PageHelpTests(unittest.TestCase):
+    def setUp(self):
+        """Avoid reading customer-wide usage logs during help-only checks."""
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        usage = summary(Path(temporary.name) / 'usage.jsonl')
+        self.enterContext(patch('dashboard.services.review.workspace_summary', return_value=usage))
+
     def test_help_on_every_page(self):
         """Check hover, focus, dismissal, touch and viewport bounds for each page."""
         with tempfile.TemporaryDirectory() as directory:
@@ -79,7 +88,7 @@ class PageHelpTests(unittest.TestCase):
                             self.assertLessEqual(box['y'] + box['height'], 844)
                             expect(page.get_by_role('navigation', name='Main navigation')).to_have_count(1)
                             expect(
-                                page.locator('.app-header a[href="/source"] .header-step.complete svg')
+                                page.locator('.app-header a[href="/projects"] .header-step.complete svg')
                             ).to_have_count(1)
                             expect(page.locator('.app-header a[href="/bank"] .header-step')).to_have_text('4')
                             expect(page.locator('.app-header a[href="/review"]')).to_have_count(0)

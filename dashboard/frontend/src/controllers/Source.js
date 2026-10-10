@@ -52,6 +52,11 @@ function showSource(data) {
     $('#statement-name').textContent = sourceState.bank.path.split(/[\\/]/).pop();
     $('#document-count').textContent = `${selected.files.toLocaleString()} supporting files`;
     $('#browse-source').textContent = 'Change workspace';
+  } else {
+    $('#source-path').value = '';
+    $('#workspace-name').textContent = 'Choose a folder to begin';
+    $('#workspace-location').textContent = '';
+    $('#browse-source').textContent = 'Browse folders';
   }
   if (Object.hasOwn(data, 'selected') && selected) loadPreview();
 
@@ -132,12 +137,13 @@ $('#start-source').onclick = () => sourceAction(async () => {
     await navigate('/documents');
   } finally {$('#start-source').disabled = false;}
 });
-Promise.all([api('/api/session'), api('/api/source')]).then(([session, source]) => {
-  token = session.token;
-  showSource(source);
-}).catch(error => {
-  $('#source-error').textContent = error.message;
-  $('#source-error').hidden = false;
-});
+// Reload pending selection when a saved project opens this cached page.
+page.onQuery(() => sourceAction(async () => {
+  if (page.newProject || new URLSearchParams(routeQuery()).has('new')) {
+    showSource({ active: null, workspace: null, selected: null, bank: null });
+    return;
+  }
+  showSource(await api('/api/source'));
+}));
 
 }

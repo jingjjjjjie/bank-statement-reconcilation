@@ -5,13 +5,14 @@ import { usePage } from '../page.js';
 import initialize from '../controllers/Source.js';
 
 const root = ref(null);
-usePage(root, initialize);
+const props = defineProps({ newProject: Boolean });
+usePage(root, page => initialize({ ...page, newProject: props.newProject }));
 </script>
 
 <template>
   <div ref="root" class="page-view">
 <main class="workspace-picker">
-    <section class="picker-heading"><div class="page-title"><h1>Choose your workspace</h1><PageHelp page="Source" /></div></section>
+    <section class="picker-heading"><div class="page-title"><h1>{{ newProject ? 'New project' : 'Choose your workspace' }}</h1><PageHelp page="Source" /></div></section>
     <section class="workspace-card" aria-label="Workspace selection">
       <div class="workspace-card-top">
         <span class="folder-symbol" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 7V5a1 1 0 0 1 1-1h5l2 3h9a1 1 0 0 1 1 1v11H3V7Z"/></svg></span>

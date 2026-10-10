@@ -1,18 +1,20 @@
 <script setup>
 import { computed } from 'vue';
-import { RouterLink } from 'vue-router';
+import { RouterLink, useRoute } from 'vue-router';
 import { appState } from '../api.js';
 import logo from '../assets/upvantage.jpg';
+const route = useRoute();
 const links = [
-  ['/source', 'Workspace'], ['/documents', 'Documents'],
+  ['/projects', 'Workspace'], ['/documents', 'Documents'],
   ['/extraction-review', 'Review Extraction'], ['/bank', 'Bank statement'],
   ['/matching', 'Review Matching'], ['/final-report', 'Export'],
 ];
 // Pair each header destination with its existing workflow status.
 const items = computed(() => {
   const steps = appState.steps.filter(step => step.href !== '/review');
-  return links.map(([path, label]) => {
-    const index = steps.findIndex(step => (step.href === '/' ? '/source' : step.href) === path);
+  const destinations = route.meta.portal ? [] : links;
+  return destinations.map(([path, label]) => {
+    const index = steps.findIndex(step => (['/', '/source'].includes(step.href) ? '/projects' : step.href) === path);
     const status = steps[index];
     return { path, label, step: path !== '/final-report' ? status : null, number: index + 1,
       disabled: status?.available === false || (!status && ['/matching', '/extraction-review'].includes(path)),
@@ -25,10 +27,11 @@ const items = computed(() => {
   <nav class="app-header" aria-label="Main navigation">
     <div class="app-brand">
       <img class="brand-logo" :src="logo" alt="UPVANTAGE Group">
-      <div class="brand-identity"><strong>Accounting Copilot</strong><span>Bank Reconciliation</span></div>
+      <div class="brand-identity"><strong>Accounting Copilot</strong><span v-if="!route.meta.portal && appState.session?.active" :title="appState.workspace.name">{{ appState.workspace.name }}</span></div>
     </div>
     <span v-if="appState.syncing" class="sync-status" role="status">Updating...</span>
     <div class="header-links">
+      <RouterLink v-if="route.path !== '/accounting-finance'" to="/accounting-finance" class="button secondary back-home">← Back to Home</RouterLink>
       <component :is="item.disabled ? 'span' : RouterLink" v-for="item in items" :key="item.path" :to="item.disabled ? undefined : item.path" class="header-link" :class="{ disabled: item.disabled }" active-class="active" :role="item.disabled ? 'link' : undefined" :aria-disabled="item.disabled ? 'true' : undefined" :title="item.disabled ? item.reason : undefined" :tabindex="item.disabled ? 0 : undefined">
         <span v-if="item.step" class="header-step" :class="{ complete: item.step.checked }"
           :aria-label="item.step.checked ? 'Complete' : `Step ${item.number}`">
@@ -49,10 +52,12 @@ const items = computed(() => {
 .sync-status { font-size:11px; color:var(--muted); white-space:nowrap; }
 .app-brand { display:flex; align-items:center; gap:16px; flex-shrink:0; }
 .brand-logo { width:164px; height:66px; object-fit:cover; filter:contrast(1.06); }
-.brand-identity { display:flex; align-items:center; gap:12px; border-left:1px solid var(--line); padding-left:16px; }
+.brand-identity { display:flex; align-items:center; gap:12px; min-width:0; border-left:1px solid var(--line); padding-left:16px; }
 .brand-identity strong { display:block; padding:4px 4px 6px; font-family:'Syne',sans-serif; font-size:17px; font-weight:800; letter-spacing:-.02em; line-height:1.6; white-space:nowrap; background:linear-gradient(90deg,oklch(.52 .18 250),oklch(.55 .18 210)); background-clip:text; -webkit-text-fill-color:transparent; }
-.brand-identity span { font-size:11px; font-weight:600; color:var(--muted); white-space:nowrap; }
+.brand-identity span { max-width:180px; overflow:hidden; text-overflow:ellipsis; font-size:11px; font-weight:600; color:var(--muted); white-space:nowrap; }
 .header-links { display:flex; align-items:center; align-self:stretch; margin-left:auto; min-width:0; overflow-x:auto; scrollbar-width:thin; scrollbar-color:#bdcddd transparent; }
+.back-home { flex-shrink:0; margin-right:14px; font-size:12px; white-space:nowrap; text-decoration:none; }
+.back-home:hover,.back-home:focus-visible { text-decoration:none; }
 .header-settings-icon { display:inline-flex; align-items:center; justify-content:center; flex:0 0 36px; width:36px; height:36px; border:1px solid var(--line); border-radius:8px; color:var(--muted); }
 .header-settings-icon:hover, .header-settings-icon:focus-visible, .header-settings-icon.active { color:var(--primary); background:var(--blue-light); }
 .header-settings-icon:focus-visible { outline:2px solid var(--primary); outline-offset:3px; }
