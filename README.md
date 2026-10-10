@@ -1,10 +1,24 @@
+<div align="center">
+
 # 🧾 Bank Statement Reconciliation
+
+**From bank transactions to reviewed supporting evidence.**
+
+![Python](https://img.shields.io/badge/Python-3.12-3776AB?style=flat-square&logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=flat-square&logo=fastapi&logoColor=white)
+![Vue](https://img.shields.io/badge/Vue-3-4FC08D?style=flat-square&logo=vuedotjs&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-2496ED?style=flat-square&logo=docker&logoColor=white)
+
+[Quick start](#quick-start) · [Workflow](#workflow) · [Roadmap](#roadmap) · [Docs](docs/README.md)
+
+</div>
 
 A local app for checking bank transactions against receipts, invoices and supporting documents. Extract data, review it beside the originals, approve matches and export the results.
 
 Built with Python, FastAPI and Vue 3. AI extraction and matching use Codex through your ChatGPT subscription login.
 
-## 🚧 TODO
+<a id="roadmap"></a>
+## 🚧 Roadmap
 
 Currently hard-coded; open source soon!
 
@@ -12,6 +26,16 @@ Currently hard-coded; open source soon!
 - Make setup reusable across workspaces.
 - Prepare a clean public release.
 
+### What it does
+
+| Feature | Purpose |
+| --- | --- |
+| 📄 Extract | Read supporting files and group exact duplicates. |
+| 🔎 Review | Compare extracted entries with original documents. |
+| ✅ Approve | Review suggested matches and save your decisions. |
+| 📦 Export | Download bank workbooks and supporting-document ZIPs. |
+
+<a id="quick-start"></a>
 ## 🚀 Quick start
 
 Requires Docker with Docker Compose and a ChatGPT account with Codex access.
@@ -40,6 +64,7 @@ docker compose up -d
 
 Choose ChatGPT login. Open [localhost:8765](http://localhost:8765), select **Bank Statement Reconciliation**, then **New project**. Choose `/uploads/MyProject` and proceed. Use **Resume** to reopen saved work.
 
+<a id="workflow"></a>
 ## 🔄 Workflow
 
 1. **Extract documents.** Run supporting files, compare results with the originals and correct or accept entries.
@@ -50,7 +75,10 @@ Choose ChatGPT login. Open [localhost:8765](http://localhost:8765), select **Ban
 
 Exact duplicates are detected automatically; originals stay intact. Extraction progress and review decisions are saved. Source changes require rechecking affected evidence.
 
-## Run and update
+<details>
+<summary><strong>Development & maintenance</strong></summary>
+
+### Run and update
 
 ```console
 # Rebuild after code changes
@@ -65,7 +93,7 @@ docker compose down
 
 The app is localhost-only by default. The `codex-home` volume retains your login; project review data persists through the repository mount. Do not delete these when updating.
 
-## Development
+### Development
 
 Python owns extraction, validation and workflow state. The Vue frontend lives in `dashboard/frontend/`.
 
@@ -74,6 +102,8 @@ docker compose exec dashboard python -m unittest discover -s tests/unit -t .
 ```
 
 See [test instructions](tests/README.md) for browser checks and [architecture](docs/ARCHITECTURE.md) for the code layout.
+
+</details>
 
 ## 📚 Documentation
 
