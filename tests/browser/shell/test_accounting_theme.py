@@ -52,7 +52,8 @@ class AccountingThemeTests(unittest.TestCase):
             self.assertIn('oklch(0.52 0.18 250)', typography[4])
             self.assertIn('oklch(0.55 0.18 210)', typography[4])
             self.assertTrue(page.locator('.brand-logo').evaluate('(e)=>e.complete && e.naturalWidth>0'))
-            self.assertEqual(page.locator('.brand-logo').evaluate('(e)=>getComputedStyle(e).width'), '148px')
+            self.assertEqual(page.locator('.brand-logo').evaluate('(e)=>getComputedStyle(e).width'), '164px')
+            self.assertEqual(page.locator('.header-step.complete').first.evaluate('(e)=>getComputedStyle(e).color'), 'rgb(37, 99, 182)')
             self.assertEqual(page.locator('.brand-identity span').evaluate('(e)=>getComputedStyle(e).fontWeight'), '600')
             self.assertEqual(title.evaluate('(e)=>getComputedStyle(e).paddingBottom'), '6px')
             rainbow = page.locator('.candidate-card.suggested[data-confidence=high]').first
