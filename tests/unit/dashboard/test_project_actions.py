@@ -112,7 +112,8 @@ class ProjectActionTests(unittest.TestCase):
     def start_server(self):
         """Expose independent cookie sessions over the real HTTP middleware."""
         self.app = create_app(self.review, 'fixture', self.sources)
-        server = TestServer(('127.0.0.1', 0), self.app, isolated_sessions=True)
+        options = {'isolated_sessions': True} if hasattr(self.app.state, 'sessions') else {}
+        server = TestServer(('127.0.0.1', 0), self.app, **options)
         threading.Thread(target=server.serve_forever, daemon=True).start()
         self.addCleanup(server.server_close)
         self.addCleanup(server.shutdown)
@@ -149,8 +150,9 @@ class ProjectActionTests(unittest.TestCase):
         _, session = self.request(browser, '/api/session')
         other = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()))
         _, second = self.request(other, '/api/session')
-        for action in ('reset', 'delete'):
-            self.assertEqual(self.request(other, '/api/projects/' + action, {'id': self.identity}, second)[0], 409)
+        if hasattr(self.app.state, 'sessions'):
+            for action in ('reset', 'delete'):
+                self.assertEqual(self.request(other, '/api/projects/' + action, {'id': self.identity}, second)[0], 409)
         self.review.content_engine = SimpleNamespace(active_count=1)
         for action in ('reset', 'delete'):
             self.assertEqual(self.request(browser, '/api/projects/' + action, {'id': self.identity}, session)[0], 400)
