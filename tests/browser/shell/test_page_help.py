@@ -100,7 +100,7 @@ class PageHelpTests(unittest.TestCase):
                     page.goto(f'{base}/review')
                     expect(page.locator('#page-help-ExactReport')).to_have_count(1)
                     page.get_by_role('button', name='How to use this page').hover()
-                    expect(page.get_by_role('tooltip')).to_contain_text('no selection is needed')
+                    expect(page.get_by_role('tooltip')).to_contain_text('Identical files are grouped automatically.')
                     page.locator('.app-header a[href="/documents"]').click()
                     expect(page).to_have_url(base + '/documents')
                     expect(page.get_by_role('button', name='How to use this page')).to_have_count(1)
