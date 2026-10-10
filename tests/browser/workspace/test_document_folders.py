@@ -68,8 +68,18 @@ class DocumentFolderTests(unittest.TestCase):
             expect(page.locator('.duplicate-file')).to_be_visible()
             page.locator('#document-search').fill('')
             expect(page.locator('.document-file')).to_have_count(3)
-            page.locator('#document-filter').select_option('duplicate')
+            page.locator('#document-filter').select_option('excluded')
             expect(page.locator('.document-file')).to_have_count(1)
+            # Group processing states without hiding duplicate or rejected source files.
+            for index, status in enumerate(('Processing', 'Needs review', 'Trash', 'Needs attention')):
+                path = f'/work/documents/state-{index}.pdf'
+                rows.append({'id': f'state-{index}', 'name': f'state-{index}.pdf',
+                             'path': path, 'paths': [path], 'status': status})
+            page.reload()
+            expect(page.locator('#document-filter option')).to_have_count(5)
+            for category, count in (('all', 7), ('review', 3), ('complete', 1), ('attention', 1), ('excluded', 2)):
+                page.locator('#document-filter').select_option(category)
+                expect(page.locator('.document-file')).to_have_count(count)
             page.set_viewport_size({'width': 390, 'height': 844})
             self.assertTrue(page.evaluate('document.documentElement.scrollWidth <= innerWidth'))
             browser.close()

@@ -54,7 +54,9 @@ function renderDocuments() {
   const search = $('#document-search').value.trim().toLowerCase();
   const filter = $('#document-filter').value;
   const files = sourceFiles(rows);
-  const visible = files.filter(item => (filter === 'all' || (filter === 'duplicate' ? item.duplicate : item.status === filter)) &&
+  const category = item => item.duplicate || item.status === 'Trash' ? 'excluded'
+    : item.status === 'Complete' ? 'complete' : item.status === 'Needs attention' ? 'attention' : 'review';
+  const visible = files.filter(item => (filter === 'all' || category(item) === filter) &&
     `${item.name} ${item.path}`.toLowerCase().includes(search));
   $('#document-total').textContent = rows.length;
   $('#document-admin').textContent = rows.filter(item => item.status === 'Needs review').length;

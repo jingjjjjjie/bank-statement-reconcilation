@@ -52,6 +52,40 @@ body.documents-page .page-heading { margin-bottom:0; border-radius:10px 10px 0 0
 body.documents-page .page-heading + .settings-card { border-top:0; border-radius:0 0 10px 10px; }
 body.documents-page .document-table-wrap { margin-top:16px; }
 body.documents-page .document-toolbar { gap:12px; }
+/* Processing pages read as one workspace, with separators instead of stacked cards. */
+body main :is(.document-workspace,.bank-workspace) {
+  background:white;
+  border:1px solid var(--line);
+  border-radius:10px;
+  overflow:hidden;
+  box-shadow:0 2px 8px #17345304;
+}
+body main :is(.document-workspace,.bank-workspace) :is(.page-heading,.settings-card,.stats) {
+  border:0;
+  border-radius:0;
+  box-shadow:none;
+  margin:0;
+}
+body main :is(.document-workspace,.bank-workspace) .page-heading { border-bottom:1px solid var(--line); }
+body main :is(.document-workspace,.bank-workspace) .settings-card + .settings-card { border-top:1px solid var(--line); }
+body main :is(.document-workspace,.bank-workspace) .stats {
+  display:flex;
+  flex-wrap:wrap;
+  gap:12px 28px;
+  padding:12px 20px;
+  background:#fafbfd;
+  border-block:1px solid var(--line);
+}
+body main :is(.document-workspace,.bank-workspace) .stats > div {
+  display:flex;
+  align-items:baseline;
+  flex-wrap:wrap;
+  gap:8px;
+  padding:0;
+  border:0;
+}
+body main :is(.document-workspace,.bank-workspace) .stats strong { font-size:16px; margin:0; }
+body main :is(.document-workspace,.bank-workspace) .stats small { font-size:11px; }
 /* Home remains a directory; dialog headings retain their own compact layout. */
 body.directory-page main .portal-heading { background:transparent; border:0; padding:0; min-height:0; }
 @media (max-width:700px) {
