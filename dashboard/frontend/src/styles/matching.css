@@ -99,6 +99,16 @@
 @media(max-width:700px){.decision-panel{height:80dvh;min-height:560px}.decision-scroll{overflow:hidden;padding:10px 12px}.bank-amount{font-size:15px}}
 .payment-tag{display:inline-block;border-radius:4px;padding:2px 6px;font-size:10px;line-height:1.4;overflow-wrap:anywhere}.payment-tag.review-state{background:#fff2d5;color:#775315}.payment-tag.review-state.approved{background:#e4f3e9;color:#245b40}.payment-tag.review-state.denied{background:#fbe8e3;color:#a04631}
 
+/* Give the payment summary readable spacing without adding another card. */
+.matching-app #transaction-detail { padding:6px 0 14px; margin-bottom:14px; }
+.matching-app .transaction-header { align-items:center; gap:16px; }
+.matching-app .transaction-title { font-size:14px; line-height:1.5; }
+.matching-app .transaction-direction { font-size:11px; margin-bottom:3px; }
+.matching-app .bank-amount { font-size:20px; line-height:1.4; }
+.matching-app .bank-meta { font-size:12px; line-height:1.5; margin:10px 0 8px; }
+.matching-app .payment-description { font-size:12px; line-height:1.6; margin:0; overflow-wrap:anywhere; }
+.matching-app .payment-tag { font-size:11px; }
+
 /* Show one identity and keep supporting explanations behind a single disclosure. */
 .candidate-meta{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin:0 0 6px}
 .candidate-confidence{font-size:10px;font-weight:600;color:#52695b}
