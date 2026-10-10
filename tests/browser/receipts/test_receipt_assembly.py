@@ -54,7 +54,7 @@ class ReceiptAssemblyBrowserTests(unittest.TestCase):
             errors = []
             page.on("pageerror", lambda error: errors.append(str(error)))
             page.goto(f"http://127.0.0.1:{server.server_port}/documents")
-            link = page.locator("#document-rows").get_by_role("link", name="Review results", exact=True)
+            link = page.locator("#document-rows").get_by_role("link", name="Review Extraction", exact=True)
             link.first.click()
             expect(page.locator("#receipt-pieces fieldset")).to_have_count(2)
             amounts = page.locator('[data-field="total"]')

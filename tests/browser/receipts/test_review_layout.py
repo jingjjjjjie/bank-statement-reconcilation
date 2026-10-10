@@ -53,7 +53,7 @@ class ReviewLayoutTests(unittest.TestCase):
             expect(page.locator('#piece-count')).to_have_text('21 entries')
             page.get_by_role('button', name='Show original for piece 1', exact=True).click()
             expect(page.locator('#document-review-status')).to_have_attribute('aria-label', 'Not reviewed')
-            options = page.get_by_role('button', name='Review results options', exact=True)
+            options = page.get_by_role('button', name='Review Extraction options', exact=True)
             options.click()
             expect(page.locator('#reload-receipts')).to_be_visible()
             expect(page.locator('#export-ground-truth')).to_be_visible()
@@ -83,7 +83,7 @@ class ReviewLayoutTests(unittest.TestCase):
             page.screenshot(path=str(folder / 'desktop.png'))
             for width in (900, 390, 360):
                 page.set_viewport_size({'width': width, 'height': 900})
-                expect(page.get_by_role('heading', name='Review results', exact=True)).to_be_visible()
+                expect(page.get_by_role('heading', name='Review Extraction', exact=True)).to_be_visible()
                 self.assertTrue(page.evaluate('document.documentElement.scrollWidth <= innerWidth'))
                 centers = header.locator(':scope > *').evaluate_all(
                     '(els) => els.map(el => { const r = el.getBoundingClientRect(); return r.y + r.height / 2; })'

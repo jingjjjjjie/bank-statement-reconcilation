@@ -34,7 +34,7 @@ class PieceRemovalTests(unittest.TestCase):
         fixture.index['documents'] = {digest: document}
         (fixture.work / 'index.json').write_text(json.dumps(fixture.index))
         fixture.state['index_sha256'] = fingerprint(fixture.work / 'index.json')
-        fixture.state['units'] = {}
+        fixture.state['units'] = {f'{digest}:{number}': {'readable': True, 'receipts': []} for number in range(4)}
         fixture.state['assemblies'] = {
             digest: {
                 'input_revision': input_revision(document, fixture.state),
