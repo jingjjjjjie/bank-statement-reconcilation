@@ -82,7 +82,7 @@ function renderMatchingProgress(state) {
   /* Display real processed counts; failures and stopped work never imply successful completion. */
   const total = state.total || 0, completed = state.completed || 0;
   const running = !!state.running, stopping = !!state.stop_requested;
-  const complete = !running && total > 0 && completed >= total && !state.failed && !state.error;
+  const complete = !running && total > 0 && completed >= total && !state.failed && !state.error && !state.outdated;
   const percent = total ? Math.min(100, Math.floor(completed / total * 100)) : 0;
   const panel = $('#matching-progress'), bar = $('#matching-progress-bar');
   panel.hidden = false;
@@ -90,15 +90,15 @@ function renderMatchingProgress(state) {
   panel.dataset.error = String(!!state.error);
   panel.setAttribute('aria-busy', String(running));
   $('#generate-matches').disabled = running || !matchingReady;
-  $('#generate-matches').hidden = complete;
+  $('#generate-matches').hidden = false;
   $('#stop-matches').hidden = !running;
   $('#stop-matches').disabled = !running || stopping || matchingStarting;
   $('#stop-matches').textContent = stopping && running ? 'Stopping...' : 'Stop';
   $('#generate-matches').textContent = matchingStarting ? 'Starting...' : running ? (stopping ? 'Stopping...' : 'Matching...')
-    : total && (completed < total || state.failed || state.error || state.stop_requested) ? 'Resume matching' : 'Generate matches';
+    : !state.outdated && !complete && total && (completed < total || state.failed || state.error || state.stop_requested) ? 'Resume matching' : 'Generate matches';
   $('#matching-run-status').textContent = running
     ? stopping ? 'Stopping…' : matchingStarting ? 'Starting matching…' : 'Generating matches'
-    : complete ? 'Matching complete' : state.error || state.failed ? 'Finished with errors' : !total ? 'Ready to match' : 'Stopped';
+    : state.outdated ? 'Matches need updating' : complete ? 'Matching complete' : state.error || state.failed ? 'Finished with errors' : !total ? 'Ready to match' : 'Stopped';
   $('#matching-progress-count').textContent = total ? `${completed} / ${total} processed (${percent}%)` : '';
   if (matchingStarting || !total) bar.removeAttribute('value');
   else bar.value = percent;

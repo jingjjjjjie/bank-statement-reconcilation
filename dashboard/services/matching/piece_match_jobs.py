@@ -127,13 +127,45 @@ def status(review):
     started = saved.get('started_at')
     end = time.time() if running else saved.get('finished_at', saved.get('updated_at', started))
     elapsed = max(0, int(end - started)) if started else None
+    outdated = False
+    proposals = review.manifest_path.parent / 'final-review/piece-suggestions.json'
+    if not running and proposals.exists() and piece_matching.enabled(review):
+        previous = json.loads(proposals.read_text(encoding='utf-8'))
+        outdated = matching_outdated(review, previous)
     return {
         **saved,
         'running': running,
+        'outdated': outdated,
         'active_processes': active,
         'elapsed_seconds': elapsed,
         'stop_requested': bool(getattr(review, 'piece_match_stopping', saved.get('stop_requested', False))),
     }
+
+
+def matching_outdated(review, previous):
+    """Cache display freshness only; saves and model reuse still verify original bytes."""
+    from dashboard.services.live_state import signature
+
+    try:
+        index_path = review.manifest_path.parent / 'review/index.json'
+        index = json.loads(index_path.read_text(encoding='utf-8'))
+        config = active_config(index)
+        instructions = load_prompt('matching/matching')
+        key = revision([signature(review), stage_settings(config)['comparison'], instructions])
+        cached = getattr(review, 'piece_match_freshness', {})
+        if cached.get('key') != key or time.monotonic() - cached.get('checked', 0) >= 60:
+            _, state, banks, items, index, facts = piece_matching.context(review)
+            cached = {
+                'key': key,
+                'checked': time.monotonic(),
+                'revision': request_revision(
+                    state['binding'], banks, items, index, facts, config, instructions=instructions
+                ),
+            }
+            review.piece_match_freshness = cached
+        return previous.get('request_revision') != cached['revision']
+    except (OSError, ValueError, KeyError):
+        return True  # Unavailable evidence cannot certify an old run as current.
 
 
 def start(review):
@@ -308,6 +340,13 @@ def over_allocated(rows, items):
     return rows
 
 
+def request_revision(binding, banks, items, index, facts, config, *, instructions=None):
+    """Bind matching progress and resumable proposals to evidence, settings and prompt."""
+    choice = stage_settings(config)['comparison']
+    instructions = load_prompt('matching/matching') if instructions is None else instructions
+    return revision([binding, banks, items, index, facts, choice, instructions])
+
+
 def run_matching(review, binding, banks, items, index, facts, config):
     """Rank candidates in Python, then ask the model about batches of lines; approvals stay human."""
     directory = review.manifest_path.parent / 'final-review'
@@ -326,13 +365,13 @@ def run_matching(review, binding, banks, items, index, facts, config):
     engine.stage = 'piece_matching'
     review.piece_match_engine = engine
     instructions = load_prompt('matching/matching')
-    request_revision = revision([binding, banks, items, index, facts, choice, instructions])
+    current_revision = request_revision(binding, banks, items, index, facts, config, instructions=instructions)
     previous_path = directory / 'piece-suggestions.json'
     previous = json.loads(previous_path.read_text(encoding='utf-8')) if previous_path.exists() else {}
     results = [
         row
         for row in previous.get('decisions', [])
-        if previous.get('request_revision') == request_revision
+        if previous.get('request_revision') == current_revision
         and row['bank_id'] in banks
         and not row.get('reason', '').startswith('Matching unresolved:')
     ]
@@ -409,7 +448,7 @@ def run_matching(review, binding, banks, items, index, facts, config):
             directory / 'piece-suggestions.json',
             {
                 'binding': binding,
-                'request_revision': request_revision,
+                'request_revision': current_revision,
                 'total': len(banks),
                 'decisions': results,
                 'errors': errors,

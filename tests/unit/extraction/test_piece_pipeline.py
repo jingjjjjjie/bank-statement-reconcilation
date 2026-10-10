@@ -360,6 +360,47 @@ class PiecePipelineTests(PiecePipelineFixture):
         with self.assertRaisesRegex(ValueError, 'unknown'):
             validate_result(response, ['B1'], allowed, banks, items)
 
+    def test_completed_matching_status_detects_edited_evidence_settings_and_prompt(self):
+        """Old completion stays historical while changed inputs require new proposals."""
+        from dashboard.services.matching import piece_match_jobs
+        from reconciliation.core.settings import DEFAULTS
+
+        accepted = self.accept()
+        piece_matching.activate(self.review)
+        _, ledger, banks, items, index, facts = piece_matching.context(self.review)
+        config = {**DEFAULTS, 'codex_enabled': True}
+        path = self.review.manifest_path.parent / 'final-review/piece-suggestions.json'
+        path.write_text(
+            json.dumps(
+                {
+                    'request_revision': piece_match_jobs.request_revision(
+                        ledger['binding'], banks, items, index, facts, config
+                    ),
+                    'total': len(banks),
+                    'decisions': [
+                        {'bank_id': key, 'assessment': 'none', 'allocations': [], 'reason': 'Fixture'} for key in banks
+                    ],
+                }
+            )
+        )
+        with patch.object(piece_match_jobs, 'active_config', return_value=config):
+            with patch.object(piece_matching, 'context', wraps=piece_matching.context) as context:
+                self.assertFalse(piece_match_jobs.status(self.review)['outdated'])
+                self.assertFalse(piece_match_jobs.status(self.review)['outdated'])
+                self.assertEqual(context.call_count, 1, 'Idle progress polls must not repeatedly hash evidence')
+            with patch.object(piece_match_jobs, 'load_prompt', return_value='Changed matching prompt'):
+                self.assertTrue(piece_match_jobs.status(self.review)['outdated'])
+            with patch.object(piece_match_jobs, 'stage_settings', return_value={'comparison': {'model': 'changed'}}):
+                self.assertTrue(piece_match_jobs.status(self.review)['outdated'])
+            edited = copy.deepcopy(accepted['units'][0]['receipts'])
+            edited[0]['payee'] = 'Corrected payee'
+            self.accept(edited)
+            status = piece_match_jobs.status(self.review)
+        self.assertTrue(status['outdated'])
+        self.assertEqual(status['completed'], status['total'])
+        self.assertFalse(status['running'])
+        self.assertFalse(final_review.snapshot(self.review)['banks'][0]['decision'])
+
     def test_matching_worker_refills_slots_and_checkpoints_full_context(self):
         """A slow bank request cannot hold up a free worker or approve test proposals."""
         from dashboard.services.matching import piece_match_jobs

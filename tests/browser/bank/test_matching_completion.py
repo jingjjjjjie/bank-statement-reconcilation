@@ -1,4 +1,4 @@
-"""Completed matching hides run controls without hiding resumable or failed work."""
+"""Completed and outdated matching keep generation available without hiding progress."""
 
 import tempfile
 import threading
@@ -35,23 +35,32 @@ class MatchingCompletionTests(unittest.TestCase):
                 state = {}
                 page.route('**/api/matching', lambda route: route.fulfill(json={'live_pieces': True}))
                 page.route('**/api/matching-run', lambda route: route.fulfill(json=state))
-                for completed, running, stopped, failed, label, hidden in [
-                    (240, False, True, 0, 'Matching complete', True),
-                    (120, False, True, 0, 'Stopped', False),
-                    (240, False, False, 1, 'Finished with errors', False),
-                    (120, True, True, 0, 'Stopping…', False),
-                    (240, False, False, 0, 'Matching complete', True),
+                for completed, running, stopped, failed, outdated, label, action in [
+                    (240, False, True, 0, False, 'Matching complete', 'Generate matches'),
+                    (120, False, True, 0, False, 'Stopped', 'Resume matching'),
+                    (240, False, False, 1, False, 'Finished with errors', 'Resume matching'),
+                    (120, True, True, 0, False, 'Stopping…', 'Stopping...'),
+                    (240, False, False, 0, False, 'Matching complete', 'Generate matches'),
+                    (240, False, False, 0, True, 'Matches need updating', 'Generate matches'),
                 ]:
                     with self.subTest(completed=completed, running=running, failed=failed):
                         state.update(
-                            total=240, completed=completed, running=running, stop_requested=stopped, failed=failed
+                            total=240,
+                            completed=completed,
+                            running=running,
+                            stop_requested=stopped,
+                            failed=failed,
+                            outdated=outdated,
                         )
                         page.goto(f'http://127.0.0.1:{server.server_port}/bank')
                         expect(page.locator('#matching-run-status')).to_have_text(label)
-                        if hidden:
-                            expect(page.locator('#generate-matches')).to_be_hidden()
+                        generate = page.locator('#generate-matches')
+                        expect(generate).to_be_visible()
+                        expect(generate).to_have_text(action)
+                        if running:
+                            expect(generate).to_be_disabled()
                         else:
-                            expect(page.locator('#generate-matches')).to_be_visible()
+                            expect(generate).to_be_enabled()
                         if running:
                             expect(page.locator('#stop-matches')).to_be_visible()
                         else:
