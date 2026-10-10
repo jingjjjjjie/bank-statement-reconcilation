@@ -184,3 +184,20 @@ expanded desktop and mobile Playwright screenshots. Two other matching tests pas
 The existing compare/save workflow test fails its no-extra-refresh assertion:
 /api/matching is requested after a successful save. It reproduced in isolation;
 this positioning change does not alter save requests or the live refresh logic.
+
+
+## Aligned extraction and matching actions
+
+Reject and Rejected/Undo now use a solid red background with white labels.
+Extraction actions moved below the right original preview, after page/zoom controls,
+using the same 34px height, 140px maximum width and compact padding as matching.
+Accept remains associated with its original form through the HTML form attribute;
+saved Accepted/Undo and Discarded/Undo states remain reversible within their buttons.
+Discard stays red in both states; accepted stays blue. Unavailable actions stay grey.
+
+The production build and five theme/extraction browser tests passed. Checks cover
+failed-save preservation, successful accept/discard/undo, next-document navigation,
+completion state, original zoom/pan and long-entry/mobile layouts. Added footer
+placement and button sizing checks at 1536, 390 and 320px plus saved-state red/white
+checks. Inspected Playwright desktop and mobile extraction screenshots. The original
+files, extraction data model and matching ledger are unchanged.

@@ -134,8 +134,8 @@ function showReceiptUnit() {
     : '';
   $('#receipt-unit-status').textContent = unit.assembly_pending ? 'Waiting for document receipt assembly. Run documents to continue.' : status;
   if (unit.review_warnings?.length) $('#receipt-unit-status').textContent += ' ' + unit.review_warnings.join(' ');
-  $('#receipt-form').querySelector('[type=submit]').disabled = !!unit.assembly_pending;
-  $('#receipt-form').querySelector('[type=submit]').hidden = false;
+  ($('#accept-receipts') || $('#receipt-form').querySelector('[type=submit]')).disabled = !!unit.assembly_pending;
+  ($('#accept-receipts') || $('#receipt-form').querySelector('[type=submit]')).hidden = false;
   $('#add-receipt').hidden = false;
   if (unit.trash) {
     $('#receipt-unit-status').textContent = 'Trash — excluded from supporting evidence. Original file preserved.';
@@ -167,15 +167,17 @@ function renderReviewState() {
   const undo = !!unit?.accepted && !dirty;
   const hasNext = index >= 0 && index + 1 < receiptData.units.length;
   const supportingOnly = unit && !(unit.trash ? unit.receipts.length : $('#receipt-pieces').children.length);
-  button.textContent = undo ? 'Undo accept' : supportingOnly ? 'Accept as supporting' : hasNext ? 'Accept & next' : 'Accept';
+  button.textContent = undo ? 'Accepted · Undo' : supportingOnly ? 'Accept as supporting' : hasNext ? 'Accept & next' : 'Accept';
   button.title = pending ? 'Waiting for extraction' : failed ? 'Extraction unavailable'
     : unit?.trash ? 'Replace Discard with Accepted' : dirty ? 'Accept current changes' : button.textContent;
-  button.classList.toggle('secondary', undo);
-  button.classList.toggle('dark', !undo);
+  button.classList.remove('secondary');
+  button.classList.add('dark');
+  button.setAttribute('aria-pressed', String(undo));
   button.disabled = !unit || !!pending || failed;
   if ($('#reset-original-pieces')) $('#reset-original-pieces').disabled = !unit || !!pending || failed || !!unit.trash;
-  $('#discard-document').textContent = unit?.trash ? 'Undo discard' : hasNext ? 'Discard & next' : 'Discard';
+  $('#discard-document').textContent = unit?.trash ? 'Discarded · Undo' : hasNext ? 'Discard & next' : 'Discard';
   $('#discard-document').classList.toggle('restore-document', !!unit?.trash);
+  $('#discard-document').setAttribute('aria-pressed', String(!!unit?.trash));
 
 }
 
@@ -194,7 +196,7 @@ function renderRegeneration() {
   const count = Object.values(regenerationJobs).filter(item => ['queued', 'running'].includes(item.status)).length;
   $('#regeneration-status').textContent = (messages[job?.status] || '') + (count ? ` ${count} document(s) queued or regenerating.` : '');
   $('#regeneration-status').setAttribute('aria-busy', String(pending));
-  if (unit && !$('#document-review-status')) $('#receipt-form').querySelector('[type=submit]').disabled = pending || !!unit.assembly_pending || job?.status === 'failed';
+  if (unit && !$('#document-review-status')) ($('#accept-receipts') || $('#receipt-form').querySelector('[type=submit]')).disabled = pending || !!unit.assembly_pending || job?.status === 'failed';
 }
 
 async function pollRegeneration() {

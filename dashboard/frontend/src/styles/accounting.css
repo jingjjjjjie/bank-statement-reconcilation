@@ -257,3 +257,11 @@ body.matching-app #toast { bottom:160px; pointer-events:none; }
 .matching-app #candidate-list { max-height:clamp(180px,30dvh,320px); }
 
 .matching-app .decision-scroll { overflow-y:auto; overscroll-behavior:contain; }
+
+/* Match both review footers, including the reversible rejection/discard state. */
+.matching-app .decision-actions #deny-match:not(:disabled),
+.extraction-workspace .editor-footer #discard-document:not(:disabled) { background:#b33e35; border-color:#b33e35; color:white; }
+.matching-app .decision-actions #deny-match:not(:disabled):hover,
+.extraction-workspace .editor-footer #discard-document:not(:disabled):hover { background:#942f28; border-color:#942f28; }
+.extraction-workspace .editor-footer { position:static; display:grid; grid-template-columns:repeat(3,minmax(0,140px)); justify-content:end; gap:8px; padding:6px 16px; box-shadow:none; }
+.extraction-workspace .editor-footer .button { justify-content:center; text-align:center; width:100%; max-width:none; min-width:0; height:34px; min-height:34px; padding:3px 6px; margin:0; font-size:11px; line-height:12px; white-space:normal; overflow-wrap:anywhere; }

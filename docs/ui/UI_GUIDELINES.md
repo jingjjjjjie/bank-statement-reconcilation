@@ -60,11 +60,11 @@ Shared help control: `dashboard/frontend/src/components/PageHelp.vue`.
 
 - Pieces represent separate receipts or payees, not purchase lines. Show editable payee, payer, amount, currency, date and document number together; keep type, other names, references and amount location in the piece disclosure. Add entry and Remove are explicit edits; existing identities are preserved.
 
-- Review results uses one compact toolbar for entry count, Add entry and Remove. The highlighted row indicates selection; do not add separate heading or selection bars. Keep Accept / Undo accept, Discard / Undo discard and Next in the footer. Keep the title visible on narrow screens.
+- Review results uses one compact toolbar for entry count, Add entry and Remove. The highlighted row indicates selection; do not add separate heading or selection bars. Keep Accept / Accepted · Undo, Discard / Discarded · Undo and Next in the footer. Keep the title visible on narrow screens.
 
 - Review results combines title, filename, document numbers, progress and actions in one horizontal bar; scroll the bar on narrow screens. Do not show entry search.
 
-- Show review status as an accessible icon beside the filename. Acceptance belongs there, while warnings stay visible. Accept and Discard advance to the next document after a successful save; Undo stays on the current document; the last document stays open; Use exactly three footer buttons in order: Accept / Undo accept, Discard / Undo discard, Next. Labels toggle with the current status. Discard is red. After editing an accepted document, its button returns to Accept to save those changes. Next navigates independently, with unsaved-edit protection.
+- Show review status as an accessible icon beside the filename. Acceptance belongs there, while warnings stay visible. Accept and Discard advance to the next document after a successful save; Undo stays on the current document; the last document stays open; Use exactly three footer buttons in order: Accept / Accepted · Undo, Discard / Discarded · Undo, Next. Labels toggle with the current status. Discard is red. After editing an accepted document, its button returns to Accept to save those changes. Next navigates independently, with unsaved-edit protection.
 
 - The original preview has no heading bar. Keep Download original as a labelled icon alongside the page and zoom controls.
 
@@ -102,3 +102,8 @@ Shared help control: `dashboard/frontend/src/components/PageHelp.vue`.
   the disclosure and shows a wide search field with Reset directly below the heading.
   Matching save announcements are accessible but do not add a visible timestamp row
   beneath the buttons.
+
+- Both review pages put three compact 34px actions below the right original preview,
+  right-aligned and at most 140px wide. Reject/Rejected and Discard/Discarded use
+  solid red with white text, including saved Undo states. Extraction Accepted and
+  Discarded states offer Undo inside their existing buttons; no extra footer row.

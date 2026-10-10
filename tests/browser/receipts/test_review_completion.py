@@ -60,6 +60,6 @@ class ReviewCompletionBrowserTests(unittest.TestCase):
             expect(page.get_by_role("navigation", name="Main navigation")).to_have_count(1)
             page.reload()
             expect(tick).to_have_count(1)
-            page.get_by_role("button", name="Undo discard", exact=True).click()
+            page.get_by_role("button", name="Discarded · Undo", exact=True).click()
             expect(tick).to_have_count(0)
             browser.close()
