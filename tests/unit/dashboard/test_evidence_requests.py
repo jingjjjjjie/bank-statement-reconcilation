@@ -91,5 +91,7 @@ class EvidenceRequestTests(ReceiptReviewFixture):
         body = self.body()
         body["receipts"][0]["brief_description"] = "x" * MAX_EVIDENCE_REQUEST_BYTES
         self.assertEqual(self.post("/api/receipts/accept", body)[0], 413)
+        # Check authentication with a valid-sized draft, independently of the limit.
+        body = self.body()
         self.assertEqual(self.post("/api/receipts/accept", body, token="wrong")[0], 403)
         self.assertFalse(self.view()["units"][0]["accepted"])

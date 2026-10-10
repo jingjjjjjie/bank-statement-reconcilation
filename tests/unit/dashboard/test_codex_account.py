@@ -24,7 +24,9 @@ elif args == ['login', '--device-auth']:
 class CodexAccountTests(unittest.TestCase):
     def setUp(self):
         """Point the service at a stand-in CLI and a fixed latest release."""
-        folder = Path(tempfile.mkdtemp())
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        folder = Path(temporary.name)
         (folder / "codex.py").write_text(FAKE, encoding="utf-8")
         patches = [
             mock.patch.object(codex_account, "command", lambda: [sys.executable, str(folder / "codex.py")]),
@@ -64,7 +66,9 @@ class ConnectionAndUpdateTests(unittest.TestCase):
         """The dashboard-installed Codex wins only when its package is newer than the image's."""
         from reconciliation.model import codex
 
-        folder = Path(tempfile.mkdtemp())
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        folder = Path(temporary.name)
 
         def package(name, version):
             """Create an npm-style Codex package and return its executable."""

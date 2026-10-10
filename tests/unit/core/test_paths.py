@@ -4,6 +4,7 @@ import unittest
 from pathlib import Path
 
 from reconciliation.core.paths import WORKSPACE
+from reconciliation.core.prompts import PROMPTS
 from reconciliation.core.settings import CONFIG_PATH
 from reconciliation.extraction.workflow import DEFAULT_WORK
 from reconciliation.intake.duplicates import DEFAULT_MANIFEST
@@ -17,3 +18,4 @@ class WorkspacePathTests(unittest.TestCase):
         self.assertEqual(DEFAULT_MANIFEST, root / "duplicate-manifest.json")
         self.assertEqual(CONFIG_PATH, root / "config" / "review_config.json")
         self.assertEqual(DEFAULT_WORK, root / "review")
+        self.assertEqual(PROMPTS, root / "resources" / "prompts")

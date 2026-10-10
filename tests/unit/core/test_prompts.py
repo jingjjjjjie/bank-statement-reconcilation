@@ -21,7 +21,7 @@ class PromptTests(unittest.TestCase):
             (folder / "shared").mkdir()
             (folder / "extraction").mkdir()
             (folder / "shared/styles.md").write_text("Original rules\n", encoding="utf-8")
-            (folder / "extraction/extraction.md").write_text("Original task\n", encoding="utf-8")
+            (folder / "extraction/core.md").write_text("Original task\n", encoding="utf-8")
             received = []
 
             def fake_run(command, **kwargs):
@@ -35,12 +35,12 @@ class PromptTests(unittest.TestCase):
             reviewer = CodexReviewer(folder / "review", executable="codex")
             schema = object_schema({"ok": {"type": "boolean"}})
             with patch("reconciliation.core.prompts.PROMPTS", folder), mock_codex(fake_run):
-                reviewer.ask(load_prompt("extraction/extraction"), schema)
-                reviewer.ask(load_prompt("extraction/extraction"), schema)
-                (folder / "extraction/extraction.md").write_text("Edited task", encoding="utf-8")
-                reviewer.ask(load_prompt("extraction/extraction"), schema)
+                reviewer.ask(load_prompt("extraction/core"), schema)
+                reviewer.ask(load_prompt("extraction/core"), schema)
+                (folder / "extraction/core.md").write_text("Edited task", encoding="utf-8")
+                reviewer.ask(load_prompt("extraction/core"), schema)
                 (folder / "shared/styles.md").write_text("Edited rules", encoding="utf-8-sig")
-                reviewer.ask(load_prompt("extraction/extraction"), schema)
+                reviewer.ask(load_prompt("extraction/core"), schema)
             self.assertEqual(
                 received,
                 ["Original rules\n\nOriginal task", "Original rules\n\nEdited task", "Edited rules\n\nEdited task"],
@@ -54,11 +54,11 @@ class PromptTests(unittest.TestCase):
             folder = Path(temporary)
             with patch("reconciliation.core.prompts.PROMPTS", folder):
                 with self.assertRaises(FileNotFoundError):
-                    load_prompt("extraction/extraction")
+                    load_prompt("extraction/core")
                 (folder / "extraction").mkdir()
-                (folder / "extraction/extraction.md").write_text(" \n", encoding="utf-8")
+                (folder / "extraction/core.md").write_text(" \n", encoding="utf-8")
                 with self.assertRaisesRegex(ValueError, "Prompt file is empty"):
-                    load_prompt("extraction/extraction")
+                    load_prompt("extraction/core")
 
     def test_non_receipt_support_allows_empty_factual_fields(self):
         """A claim can be potential evidence without fabricated invoice details."""

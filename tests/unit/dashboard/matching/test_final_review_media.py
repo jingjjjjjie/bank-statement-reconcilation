@@ -8,6 +8,7 @@ import urllib.error
 import urllib.request
 from types import SimpleNamespace
 from unittest.mock import patch
+from urllib.parse import quote
 
 from dashboard.routes import create_app
 from dashboard.services.matching import final_review
@@ -50,6 +51,35 @@ class MatchingMediaSpeedTests(unittest.TestCase):
         self.assertIn('changed', message.lower())
         self.assertEqual(final_review.context(self.fixture.review)[1]['version'], 0)
 
+    def test_original_download_preserves_bytes_filename_and_decisions(self):
+        """Bank and document downloads keep originals and saved review decisions intact."""
+        source = self.fixture.review.root / 'receipt-1.txt'
+        renamed = source.with_name('receipt ' + chr(233) + ' #1.txt')
+        source.rename(renamed)
+        index_path = self.fixture.cache / 'index.json'
+        index = json.loads(index_path.read_text(encoding='utf-8'))
+        document = next(value for value in index['documents'].values() if value['paths'] == [str(source)])
+        document['paths'] = [str(renamed)]
+        self.fixture.write(index_path, index)
+        final_review.decide(self.fixture.review, self.fixture.request())
+        ledger = self.fixture.project / 'final-review/decisions.json'
+        saved = ledger.read_bytes()
+        for kind, identity, original in [
+            ('bank', 'B1', self.fixture.root / 'statement.txt'),
+            ('item', 'D1', renamed),
+        ]:
+            for download, disposition in [(False, 'inline'), (True, 'attachment')]:
+                with self.subTest(kind=kind, download=download):
+                    url = f'{self.base}/api/matching-file?kind={kind}&id={identity}&download={str(download).lower()}'
+                    with urllib.request.urlopen(url, timeout=3) as response:
+                        self.assertEqual(response.read(), original.read_bytes())
+                        self.assertEqual(response.headers.get_content_type(), 'text/plain')
+                        self.assertEqual(
+                            response.headers['Content-Disposition'],
+                            disposition + "; filename*=UTF-8''" + quote(original.name, safe=''),
+                        )
+        self.assertEqual(ledger.read_bytes(), saved)
+
     def test_media_bypasses_busy_workflow_lock(self):
         """A blocked status check must not delay validated evidence metadata or pages."""
         started, release = threading.Event(), threading.Event()
@@ -90,6 +120,9 @@ class MatchingMediaSpeedTests(unittest.TestCase):
             ('/api/matching-image?kind=item&id=D1&page=0', 400),
             ('/api/matching-office?kind=item&id=D1&page=0', 400),
             ('/api/matching-preview?kind=item&id=unknown', 404),
+            ('/api/matching-file?kind=item&id=D1&download=true', 400),
+            ('/api/matching-file?kind=item&id=unknown&download=true', 404),
+            ('/api/matching-file?kind=unknown&id=D1&download=true', 400),
         ]:
             with self.assertRaises(urllib.error.HTTPError) as error:
                 self.get(path)
