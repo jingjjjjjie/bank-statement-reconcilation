@@ -11,6 +11,7 @@ services:
     ports:
       - "${DASHBOARD_BIND_IP:-127.0.0.1}:${DASHBOARD_PORT:-8765}:8765"
     environment:
+      PYTHONPATH: /workspace/src:/workspace
       DASHBOARD_ALLOWED_HOSTS: ${DASHBOARD_ALLOWED_HOSTS:-}
     volumes:
       - .:/workspace

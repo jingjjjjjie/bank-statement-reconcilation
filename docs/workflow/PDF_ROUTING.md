@@ -17,7 +17,7 @@ overlapping text, very long pages and complex vector graphics bypass the text
 attempt. This deliberately prefers false alarms over silently omitted receipts.
 
 Hybrid additionally requires a layout fingerprint in the local JSON array
-`config/pdf-layouts.local.json`. The allowlist starts empty; no layout is
+`resources/pdf-layouts.local.json`. The allowlist starts empty; no layout is
 automatically approved by model output or benchmark agreement. Add an audit's
 `layout` value only after checking representative originals against accepted
 receipt fields. Geometry fingerprints are deliberately strict and may fail to

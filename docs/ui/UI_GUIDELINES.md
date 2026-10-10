@@ -24,8 +24,8 @@ User preference, recorded 2026-09-18:
   an audited, reversible classification that excludes supporting evidence; it never
   deletes or moves original files. Trash squares have a distinct muted brown shade.
 
-Shared help content: `dashboard/frontend/src/pageHelp.js`.
-Shared help control: `dashboard/frontend/src/components/PageHelp.vue`.
+Shared help content: `src/dashboard/frontend/src/pageHelp.js`.
+Shared help control: `src/dashboard/frontend/src/components/PageHelp.vue`.
 
 - Accounting Copilot uses the Career Copilot wordmark style: locally hosted Syne
   800, 17px desktop text, tight letter spacing and the same blue-to-teal gradient.

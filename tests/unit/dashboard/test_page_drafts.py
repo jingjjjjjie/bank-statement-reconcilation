@@ -70,6 +70,6 @@ const settle = async () => { await new Promise(resolve => setImmediate(resolve))
   callbacks.unmount();
 })().catch(error => { console.error(error); process.exitCode = 1; });
 """
-        source = Path(__file__).resolve().parents[3] / 'dashboard/frontend/src/page.js'
+        source = Path(__file__).resolve().parents[3] / 'src/dashboard/frontend/src/page.js'
         result = subprocess.run(['node', '-e', script, str(source)], capture_output=True, text=True, timeout=15)
         self.assertEqual(result.returncode, 0, result.stderr)

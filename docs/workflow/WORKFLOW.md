@@ -211,12 +211,12 @@ The report is read-only and makes no model calls. Pending/rejected suggestions d
 | Project `review/receipt-matches.json` | Receipt extraction approvals and legacy receipt-allocation history. |
 | Project `bank-output/master_statement.csv` | Deterministic bank master; differing existing masters are protected. |
 | Project `final-review/decisions.json` | Human decisions bound to the frozen matching evidence. |
-| `dashboard/frontend/src/router.js` | User-visible routes; retired `/content-review` redirects to `/documents`. |
+| `src/dashboard/frontend/src/router.js` | User-visible routes; retired `/content-review` redirects to `/documents`. |
 | `dashboard/api/`, `dashboard/routes.py` | HTTP endpoints, local access protections, session token and workspace guards. |
 | `reconciliation/intake/workspace.py`, `reconciliation/intake/exact_report.py` | Input selection, SHA preview, exact-copy output. |
 | `dashboard/services/extraction/extraction_runs.py`, `reconciliation/extraction/workflow.py` | Background extraction/assembly, cancellation, cache, and resume. Historical comparison helpers remain for compatibility. |
 | `dashboard/services/extraction/regeneration.py` | Durable regeneration queue on the shared extraction worker. |
-| `dashboard/frontend/src/views/FinalReport.vue`, `components/ReportEvidence.vue` | Read-only report, modal evidence navigation and original downloads. |
+| `src/dashboard/frontend/src/features/export/FinalReport.vue`, `components/ReportEvidence.vue` | Read-only report, modal evidence navigation and original downloads. |
 | `dashboard/services/extraction/document_status.py`, `receipt_review.py` | Five list statuses, current receipt results, and acceptance validation. |
 | `dashboard/services/matching/final_review.py` | Frozen-snapshot evidence checks, allocation ledger, remaining balances, and CSV export. |
 

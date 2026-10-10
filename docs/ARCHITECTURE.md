@@ -15,14 +15,14 @@ where code lives and how to make common changes without breaking the rest.
                          model/ (ModelClient interface, codex exec backend, processes, token usage)
 ```
 
-The dashboard (`dashboard/`) is a thin web layer: `api/` validates HTTP input and calls one function in
-`dashboard/services/`, which uses `reconciliation/`. The Vue frontend lives in `dashboard/frontend/src/`.
+The dashboard (`src/dashboard/`) is a thin web layer: `api/` validates HTTP input and calls one function in
+`dashboard/services/`, which uses `src/reconciliation/`. The Vue frontend lives in `src/dashboard/frontend/src/`.
 
 ## Where things live
 
 ```text
-reconciliation/
-  core/          paths, settings (config/review_config.json), prompt loading, money parsing, revision hashes
+src/reconciliation/
+  core/          paths, settings (resources/review_config.json), prompt loading, money parsing, revision hashes
   model/         client.py (the ModelClient interface), codex.py (codex exec backend), processes, token usage
   intake/        workspace.py (work-folder selection), duplicates.py + exact_report.py (exact copies)
   extraction/
@@ -31,17 +31,44 @@ reconciliation/
     pipeline/    stages.py (model stages), job_runner.py (parallel jobs), pdf_groups.py, assembly.py
     results/     pieces.py (piece facts), schemas.py (model output), records.py (saved JSON shapes), report, inventory
   bank/          statement.py (AmBank PDF -> master CSV), excel.py + workbook_style.py (styled export)
-  matching/      candidates.py, retrieval.py, ranking.py (deterministic candidate search and scoring)
-dashboard/
+  matching/      candidate retrieval, ranking, and pure allocation/confidence rules in review_rules.py
+src/dashboard/
   app.py, routes.py, api/        web layer
   services/review.py             active project session and workflow readiness
   services/extraction/           Documents + Review results pages
   services/matching/             Final review page
   previews/                      render originals for the browser
-prompts/        editable model instructions and schemas (read fresh on every request)
+  frontend/src/
+    features/                    page, controller and CSS grouped by workflow feature
+      projects/                  Home, projects and workspace selection
+      extraction/                document list, extraction editor and receipt actions
+      bank/                      statement extraction
+      matching/                  evidence matching
+      export/                    report and export dialogs
+      duplicates/, settings/     supporting screens
+    components/                  shared navigation, help and progress
+    styles/                      base, layout, fonts and theme; index.css sets cascade order
+resources/prompts/  editable model instructions and schemas (read fresh on every request)
 tests/          unit/ mirrors the code, browser/ is grouped by page, fixtures/ holds shared setup
 scripts/        extraction/ and matching/ benchmarks, codex/ maintenance
+docs/           current guides; archive/ contains historical audits and experiments
 ```
+
+## Local development
+
+Run `python -m pip install -e .` before invoking Python modules or tests on the host.
+Docker sets `PYTHONPATH=/workspace/src:/workspace`; import names remain `dashboard` and `reconciliation`.
+Shared settings live in `resources/review_config.json`. Existing saved reviews that name the former
+`config/review_config.json` resolve to the new location without rewriting evidence.
+
+## Frontend ownership
+
+Keep page-specific code beside its view in `features/<feature>/`. Shared browser utilities
+stay in `src/`; only reusable UI belongs in `components/`. Route URLs do not change when files move.
+
+`styles/index.css` defines the global cascade: base rules, feature layouts, then the shared theme.
+Put new shared colours and controls in `theme.css`; do not add another override stylesheet.
+Portal and export styles remain loaded with their features.
 
 ## Dependency rules
 
@@ -60,7 +87,7 @@ into the dashboard. Tests import code and `tests/fixtures/`, never another test 
 
 ## Recipes
 
-**Change what the model is told.** Edit files in `prompts/` (see [prompts/README.md](../prompts/README.md)).
+**Change what the model is told.** Edit files in `prompts/` (see [prompts/README.md](../resources/prompts/README.md)).
 Document kinds are the `## Kind` headings in `prompts/extraction/document_kinds.md`; they also become the allowed
 `piece_type` values. No code change or restart is needed; changed prompts get a new cache key.
 
@@ -72,7 +99,7 @@ module that uses them (for example `MAX_IMAGE_SIDE` in `sources/reader.py`, `NAM
 `matching/retrieval.py`). Change the value there; do not repeat the number elsewhere.
 
 **Add a user setting.** Add the default to `DEFAULTS` and a check to `validate()` in `core/settings.py`, show it
-in `dashboard/frontend/src/controllers/Settings.js` and `views/Settings.vue`, and cover it in
+in `src/dashboard/frontend/src/features/settings/Settings.js` and `views/Settings.vue`, and cover it in
 `tests/unit/core/test_settings.py`. Settings that change extracted evidence belong in `content_settings()`.
 
 **Add a dashboard action.** Put the logic in a `dashboard/services/...` function, add a thin endpoint in
@@ -90,7 +117,7 @@ workflow calls use `codex exec` with the ChatGPT login unless the owner decides 
   it does; add Google-style `Args:` / `Returns:` / `Raises:` only when the inputs or failures are not obvious.
 - **Saved data shapes** are documented once as `TypedDict`s in `extraction/results/records.py`, not repeated in
   docstrings. Model output shapes are JSON Schemas in `prompts/` and `extraction/results/schemas.py`.
-- **Constants** at module top; **user-tunable values** in `config/review_config.json` via Settings; secrets and
+- **Constants** at module top; **user-tunable values** in `resources/review_config.json` via Settings; secrets and
   host paths in `.env`.
 - **Style:** Ruff formats and lints (`ruff check . && ruff format .`, settings in `pyproject.toml`).
 - **Tests:** put a test in the file mirroring the module you changed; name it for the behaviour; reuse

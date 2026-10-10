@@ -9,7 +9,7 @@ __pycache__
 review
 duplicated
 bank-output
-dashboard/.data
+src/dashboard/.data
 benchmarks
 documents
 uploads
@@ -18,5 +18,14 @@ uploads
 docs/local
 
 # Frontend dependencies and reproducible build output.
-dashboard/frontend/node_modules/
-dashboard/frontend/dist/
+src/dashboard/frontend/node_modules/
+src/dashboard/frontend/dist/
+
+# Local check caches are not runtime inputs.
+.pytest_cache
+.ruff_cache
+
+# Legacy checkout state is never an image input.
+dashboard/.data/
+*.egg-info/
+build/

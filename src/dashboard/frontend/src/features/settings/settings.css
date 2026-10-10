@@ -1,0 +1,132 @@
+/* Dedicated settings page; request-limit explanations stay beside their control. */
+a.nav-item { text-decoration: none; margin-top: 5px; }
+a.nav-item:hover { background: #30483f; }
+.header-settings { font-size: 12px; text-decoration: none; color: var(--green); }
+.settings-page { padding-bottom: 20px; }
+.settings-page > * { max-width: 1100px; margin-left: auto; margin-right: auto; }
+.settings-page form { max-width: 1100px; }
+.settings-page fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
+.settings-card { background: white; border: 1px solid var(--line); border-radius: 9px; padding: 25px 28px; margin-bottom: 20px; }
+.section-title { display: flex; align-items: flex-start; gap: 15px; margin-bottom: 23px; }
+.section-title > span { color: var(--green); background: var(--mint); border-radius: 5px; padding: 6px 8px; font-size: 11px; }
+.section-title h2 { margin: 0 0 6px; font-size: 18px; font-weight: 550; }
+.section-title p { font-size: 12px; }
+.settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
+.settings-page .setting-field, .settings-page .setting-switch { font-size: 13px; }
+.settings-page .setting-field strong, .settings-page .setting-switch strong { display: block; margin-bottom: 8px; font-weight: 600; }
+.settings-page small { display: block; color: var(--muted); font-size: 12px; line-height: 1.65; }
+.settings-page select, .settings-page input[type=number] { padding: 10px; }
+.settings-page .setting-switch { justify-content: space-between; }
+.codex-master { margin-bottom: 0; }
+.codex-account .section-title { justify-content: space-between; flex-wrap: wrap; margin-bottom: 14px; }
+.codex-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+.codex-state { display: flex; align-items: center; gap: 9px; margin: 0; }
+.status-dot { width: 10px; height: 10px; border-radius: 50%; flex: none; background: #2f6fd6; }
+.status-dot.ok { background: #2e9d5b; }
+.status-dot.problem { background: #c9372c; }
+.status-dot.busy { animation: status-pulse 1.2s ease-in-out infinite; }
+@keyframes status-pulse { 50% { opacity: .35; } }
+@media (prefers-reduced-motion: reduce) { .status-dot.busy { animation: none; } }
+.codex-version { margin-left: 6px; color: var(--muted); font-size: 13px; font-weight: 400; }
+.codex-detail { margin: 4px 0 0; color: var(--muted); font-size: 13px; white-space: nowrap; }
+.codex-login { margin: 16px 0 0; padding: 14px 16px 14px 34px; background: var(--mint); border-radius: 7px; line-height: 2; }
+.codex-login a { overflow-wrap: anywhere; }
+.codex-code { font-size: 18px; font-weight: 650; letter-spacing: 2px; padding: 2px 8px; background: white; border: 1px solid var(--line); border-radius: 5px; user-select: all; }
+.codex-output { margin: 14px 0 0; max-height: 160px; overflow: auto; white-space: pre-wrap; font-size: 12px; }
+.budget-grid { display: grid; grid-template-columns: 250px 1fr; gap: 30px; align-items: center; margin-bottom: 20px; }
+.call-example { padding: 20px; background: #f0f5ea; border: 1px solid #dbe6d1; border-radius: 6px; }
+.call-example .eyebrow { color: var(--green); }
+.call-example p { color: var(--ink); font-size: 14px; margin-top: 9px; line-height: 1.75; }
+.call-rules { margin: 0; }
+.call-rules > div { display: grid; grid-template-columns: 220px 1fr; gap: 22px; padding: 13px 0; border-top: 1px solid var(--line); }
+.call-rules dt { font-size: 12px; font-weight: 600; }
+.call-rules dd { font-size: 12px; line-height: 1.7; color: var(--muted); margin: 0; }
+.resume-command { margin-top: 16px; border-radius: 6px; padding: 16px; background: var(--paper); }
+.resume-command strong { font-size: 12px; font-weight: 600; }
+.resume-command code, .block-code { display: block; overflow-wrap: anywhere; font-size: 12px; margin: 10px 0; }
+.settings-savebar { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 20px 0; }
+.settings-savebar strong { font-size: 12px; font-weight: 600; }
+.settings-savebar p { font-size: 11px; margin-top: 5px; }
+.settings-savebar > div:last-child { display: flex; flex-wrap: wrap; gap: 10px; }
+@media(max-width: 1000px) {
+  .settings-grid, .budget-grid { grid-template-columns: 1fr; gap: 22px; }
+  .call-rules > div { grid-template-columns: 160px 1fr; }
+}
+@media(max-width: 760px) {
+  .settings-card { padding: 20px 16px; }
+  .call-rules > div { grid-template-columns: 1fr; gap: 7px; }
+  .settings-savebar { flex-direction: column; align-items: flex-start; }
+}
+/* Form fields share the same appearance across all settings sections. */
+.settings-panel {
+  margin-bottom: 22px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: white;
+}
+.settings-panel > summary {
+  padding: 15px 19px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+}
+.settings-panel summary small {
+  margin-left: 18px;
+  font-size: 10px;
+  font-weight: 400;
+  color: var(--muted);
+}
+.settings-panel form { padding: 4px 19px 18px; }
+.settings-fields {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr 1fr .65fr;
+  gap: 22px;
+  padding: 10px 0 18px;
+}
+.setting-field, .setting-switch { font-size: 11px; }
+.settings-fields strong { display: block; margin-bottom: 8px; font-weight: 600; }
+.settings-fields small { display: block; font-size: 10px; color: var(--muted); line-height: 1.6; }
+.setting-field select, .setting-field input {
+  display: block;
+  width: 100%;
+  border: 1px solid var(--line);
+  padding: 8px;
+  margin-bottom: 7px;
+  border-radius: 5px;
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+}
+.setting-switch { display: flex; gap: 10px; align-items: flex-start; }
+.setting-switch input {
+  appearance: none;
+  cursor: pointer;
+  flex-shrink: 0;
+  width: 34px;
+  height: 20px;
+  background: #bdc6bb;
+  border-radius: 12px;
+  position: relative;
+}
+.setting-switch input:checked { background: var(--green); }
+.setting-switch input::after {
+  content: '';
+  position: absolute;
+  background: white;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  left: 3px;
+  top: 3px;
+  transition: transform .15s;
+}
+.setting-switch input:checked::after { transform: translateX(14px); }
+.settings-footer { display: flex; align-items: center; justify-content: space-between; gap: 15px; }
+.settings-footer span, .settings-refresh { font-size: 11px; color: var(--muted); }
+.settings-refresh { margin-top: 12px; color: var(--amber); }
+.settings-refresh code { display: block; margin-top: 4px; overflow-wrap: anywhere; }
+@media (max-width: 1150px) { .settings-fields { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 760px) {
+  .settings-fields { grid-template-columns: 1fr; }
+  .settings-panel summary small { display: block; margin: 6px 0 0; }
+}

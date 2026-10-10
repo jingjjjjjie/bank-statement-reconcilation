@@ -1,9 +1,9 @@
 FROM node:22-bookworm-slim AS frontend
 
 WORKDIR /frontend
-COPY dashboard/frontend/package.json dashboard/frontend/package-lock.json ./
+COPY src/dashboard/frontend/package.json src/dashboard/frontend/package-lock.json ./
 RUN npm ci --no-fund --no-audit
-COPY dashboard/frontend/ ./
+COPY src/dashboard/frontend/ ./
 RUN npm run build
 
 FROM node:22-bookworm-slim AS codex
@@ -15,6 +15,7 @@ FROM python:3.12-slim-bookworm AS runtime
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
+    PYTHONPATH=/workspace/src:/workspace \
     DASHBOARD_FRONTEND=/opt/dashboard-frontend
 
 COPY --from=codex /usr/local/bin/node /usr/local/bin/node
@@ -29,7 +30,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY --chown=app:app . .
 COPY --from=frontend /frontend/dist /opt/dashboard-frontend
-RUN mkdir -p /home/app/.codex /workspace/duplicated /workspace/dashboard/.data \
+RUN mkdir -p /home/app/.codex /workspace/duplicated /workspace/src/dashboard/.data \
     && chown -R app:app /home/app/.codex /workspace
 
 USER app
@@ -45,6 +46,7 @@ FROM python:3.12-bookworm AS development
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
+    PYTHONPATH=/workspace/src:/workspace \
     DASHBOARD_FRONTEND=/opt/dashboard-frontend \
     PATH="/home/app/.local/bin:${PATH}"
 
@@ -63,12 +65,12 @@ RUN ln -s /usr/local/lib/node_modules/@openai/codex/bin/codex.js /usr/local/bin/
 
 WORKDIR /workspace
 COPY requirements.txt ./
-COPY dashboard/requirements-dev.txt ./dashboard/requirements-dev.txt
-RUN pip install --no-cache-dir -r requirements.txt -r dashboard/requirements-dev.txt pytest debugpy
+COPY src/dashboard/requirements-dev.txt ./src/dashboard/requirements-dev.txt
+RUN pip install --no-cache-dir -r requirements.txt -r src/dashboard/requirements-dev.txt pytest debugpy
 
 COPY --chown=app:app . .
 COPY --from=frontend /frontend/dist /opt/dashboard-frontend
-RUN mkdir -p /home/app/.codex /workspace/duplicated /workspace/dashboard/.data \
+RUN mkdir -p /home/app/.codex /workspace/duplicated /workspace/src/dashboard/.data \
     && chown -R app:app /home/app/.codex /workspace
 
 USER app

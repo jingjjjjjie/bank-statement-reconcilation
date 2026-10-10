@@ -1,6 +1,6 @@
 # Tests
 
-Run from the repository root with the project requirements installed:
+Run from the repository root after `python -m pip install -e .` (Docker already sets the source path):
 
 ```console
 python -m unittest discover -s tests/unit -t .
@@ -35,7 +35,7 @@ processes and children to verify Stop, timeouts, launch races, and cancellation
 audit records. Run them on Windows and Linux; neither makes live Codex calls.
 See [process cancellation](../docs/operations/PROCESS_CANCELLATION.md) for the guarantees.
 
-`browser/` contains optional Playwright checks. Install `dashboard/requirements-dev.txt` first, then run individual modules, for example:
+`browser/` contains optional Playwright checks. Install `src/dashboard/requirements-dev.txt` first, then run individual modules, for example:
 
 ```console
 python -m unittest tests.browser.workspace.test_office_preview
@@ -51,4 +51,4 @@ Build the frontend first. Windows browser tests use installed Chrome; Linux uses
 python -m unittest tests.unit.dashboard.matching.test_final_review tests.browser.final_review.test_matching_review tests.browser.final_review.test_final_report
 ```
 
-The report checks cover approved/pending/rejected evidence, page selection, zoom, original/CSV downloads, modal keyboard focus, filter retention, mobile layout, changed originals and missing snapshots. Set `FINAL_REPORT_SCREENSHOTS` to an output directory to capture the synthetic desktop/mobile flow. See [the captured UI review](../docs/ui/FINAL_REPORT_UI_REVIEW.md). Private live-workspace audit screenshots remain excluded from Git.
+The report checks cover approved/pending/rejected evidence, page selection, zoom, original/CSV downloads, modal keyboard focus, filter retention, mobile layout, changed originals and missing snapshots. Set `FINAL_REPORT_SCREENSHOTS` to an output directory to capture the synthetic desktop/mobile flow. See [the captured UI review](../docs/archive/ui/FINAL_REPORT_UI_REVIEW.md). Private live-workspace audit screenshots remain excluded from Git.

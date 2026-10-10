@@ -4,7 +4,7 @@ review/
 duplicated/
 benchmarks/terra-benchmark/
 bank-output/
-dashboard/.data/
+src/dashboard/.data/
 
 # Local customer records and audit helpers contain source-specific details.
 Context.md
@@ -20,8 +20,8 @@ test_bank_sample_local.py
 .env.*
 !.env.example
 .venv/
-config/development.local.json
-config/pdf-layouts.local.json
+resources/development.local.json
+resources/pdf-layouts.local.json
 *.pyc
 
 # Default host folder mounted into the Docker container.
@@ -29,5 +29,15 @@ documents/
 uploads/
 
 # Frontend dependencies and reproducible build output.
-dashboard/frontend/node_modules/
-dashboard/frontend/dist/
+src/dashboard/frontend/node_modules/
+src/dashboard/frontend/dist/
+
+# Recreated by local checks.
+.pytest_cache/
+.ruff_cache/
+
+# Editable Python package metadata.
+*.egg-info/
+
+# Preserve ignored state from older checkout layouts.
+dashboard/.data/

@@ -1,0 +1,154 @@
+/* Final review follows the compact Review results workspace. */
+/* The source path identifies the preview; candidate Show controls select evidence. */
+.matching-app .evidence-panel .evidence-heading { display:none; }
+.matching-app #bank-view #selected-tray { border-color:#e4eaf2; }
+/* A lighter extraction-style frame keeps the review surface distinct from its toolbar. */
+.matching-app #bank-view { border:1px solid #e4eaf2; border-radius:8px; box-shadow:0 2px 8px #17345304; }
+.matching-app #selected-candidates .candidate-card.selected { border-color:#dce5ef; }
+.matching-app #selected-candidates .candidate-card.previewing { outline:1px solid #c7d9ed; box-shadow:inset 2px 0 #c7d9ed; }
+.matching-app{background:#f6f7f5;color:#203831}
+.matching-main{width:100%;max-width:none;margin:0;padding:0;height:calc(100dvh - 68px);display:flex;flex-direction:column}
+.matching-app [hidden]{display:none!important}
+.matching-app .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}
+.matching-app input:not([type=checkbox]),.matching-app select,.matching-app textarea{border:1px solid #dce3dd;border-radius:6px;padding:8px 10px;background:white;color:inherit;font:inherit;font-size:12px;max-width:100%;box-sizing:border-box}
+.matching-app :is(input,select,textarea,button,a):focus-visible{outline:2px solid #527c5f;outline-offset:2px}
+.matching-app button{cursor:pointer}.matching-app button:disabled{opacity:.4;cursor:not-allowed}
+.matching-app input[type=checkbox]{accent-color:var(--green);width:16px;height:16px;flex-shrink:0}
+.matching-app .button{font-size:12px;min-height:36px;padding:8px 13px;border-radius:6px}
+.matching-header{display:flex;align-items:center;gap:18px;min-height:58px;padding:8px 24px;border-bottom:1px solid var(--line);background:#fff;overflow-x:auto;flex:none}
+.matching-header>*{flex:none;white-space:nowrap}.matching-header h1{font-size:17px;margin:0;letter-spacing:-.4px}.matching-header .page-title{flex-wrap:nowrap}.matching-header #matching-counts{margin-left:auto}
+.review-progress{font-size:12px;background:#edf3ed;color:#62756a;padding:5px 9px;border-radius:5px}
+.review-tabs{display:flex;align-items:center;gap:14px}.review-tabs button{border:0;background:none;color:var(--muted);padding:8px 0;font-size:12px;border-bottom:2px solid transparent}.review-tabs button.selected{border-color:var(--green);color:var(--green);font-weight:650}
+.subtle{font-size:12px;color:var(--muted);line-height:1.5}
+.queue-controls{position:relative;display:flex;align-items:center;gap:10px;padding:10px 24px;background:white;border-bottom:1px solid var(--line);overflow-x:auto}
+.queue-controls>*{flex:none}.queue-controls input{width:210px}.queue-controls #queue-count{margin-left:auto;white-space:nowrap}
+.transaction-navigation{display:flex;align-items:center;gap:6px}.transaction-navigation>button{border:1px solid #dce3dd;border-radius:5px;width:28px;height:28px;background:white;color:#52665a;font-size:11px;padding:0}#transaction-pages{display:flex;gap:5px}.transaction-number{position:relative;min-width:30px;height:30px;padding:0 5px;border:1px solid #dce3dd;border-radius:5px;background:white;color:#52665a;font-size:12px}#transaction-pages .transaction-number.finished{background:#dcebdc;border-color:#bdd5bd;color:#285b35}.transaction-number[aria-current]{outline:2px solid #527c5f;outline-offset:1px}.completion-tick{font-size:9px;margin-left:2px}
+.matching-error{padding:12px 24px;background:#fff0ed;color:#a43724;font-size:13px}.warning{font-size:12px;color:#946026;line-height:1.6;overflow-wrap:anywhere}#matching-outdated{margin:0;padding:8px 24px;background:#fff6e8}
+.matching-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);flex:1;min-height:0;background:white}
+.decision-panel{display:flex;flex-direction:column;min-width:0;min-height:0;border-right:1px solid var(--line)}.decision-scroll{flex:1;min-height:0;overflow:auto;padding:16px 20px}
+#transaction-detail{border-bottom:1px solid var(--line);padding-bottom:10px;margin-bottom:14px}.transaction-header{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}.transaction-title{font-size:17px;line-height:1.4;margin:0;overflow-wrap:anywhere}.bank-amount{font-size:18px;font-weight:650;white-space:nowrap}.bank-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:11px;color:#78877c;margin:6px 0}.transaction-notes summary{font-size:11px}
+.badge{display:inline-block;border-radius:5px;padding:4px 7px;font-size:10px;font-weight:650;background:#edf0eb;color:#617165}.badge.approved,.badge.confidence-high{background:#e5f1e9;color:#245b40}.badge.denied{background:#f7e8e3;color:#a04631}.badge.confidence-low{background:#fff1da;color:#735016}
+.transaction-notes{font-size:12px;line-height:1.7;margin-bottom:10px}.transaction-notes summary,.review-note summary,.history summary,.source-details summary{cursor:pointer;color:#6c7e71;font-size:12px}.narration{white-space:pre-wrap;overflow-wrap:anywhere;background:#f7f8f4;padding:12px;border-radius:6px}
+.section-heading{display:flex;align-items:center;justify-content:space-between;gap:12px}.section-heading h2{font-size:14px;margin:0}.section-heading input{min-width:0}#support-status{font-size:11px;margin:6px 0 14px}#support-group{margin-bottom:18px}
+.candidate-card{position:relative;display:flex;align-items:flex-start;gap:10px;border:1px solid #dce5df;border-radius:6px;padding:0 10px;margin-bottom:7px;background:white}.candidate-card.selected{border-color:#86a691;background:#f6faf4}.candidate-card.previewing{box-shadow:inset 3px 0 #527c5f}.candidate-card>input{margin:16px 0 0;flex:none}.candidate-details{flex:1;min-width:0}.candidate-summary{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:46px;cursor:pointer;list-style:none}.candidate-summary::-webkit-details-marker{display:none}.candidate-summary::after{content:'+';color:#6e8274;font-size:15px}.candidate-details[open]>.candidate-summary::after{content:'−'}.candidate-name{flex:1;min-width:0;overflow-wrap:anywhere;font-size:12px;font-weight:600;line-height:1.4}.candidate-amount{font-size:12px;white-space:nowrap}.candidate-body{padding:0 0 12px}.candidate-description{font-size:12px;line-height:1.5;color:#52695b;margin:6px 0}.candidate-info{font-size:11px;line-height:1.5;color:#78877c;overflow-wrap:anywhere}.candidate-reason{font-size:12px;line-height:1.6;color:#40594b}.candidate-bottom{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;margin-top:10px}.candidate-preview{border:1px solid #cbdacf;border-radius:5px;padding:7px 10px;background:#f7faf5;color:#315c40;font-size:11px}.allocation-label{display:flex;flex-direction:column;gap:6px;font-size:11px;margin-top:10px}.allocation-label input{width:150px}.candidate-controls{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:8px 0}.candidate-controls input[type=search]{flex:1;min-width:160px}.candidate-controls .check-label{white-space:nowrap}.candidate-controls .text-button{font-size:11px}.candidate-paging{display:flex;align-items:center;gap:6px;margin:8px 0}.candidate-paging>span{margin-right:auto}.candidate-paging button{border:1px solid var(--line);background:white;width:26px;height:26px;border-radius:4px}.check-label{display:flex;align-items:flex-start;gap:6px;font-size:11px;line-height:1.5;color:#6d7b71}.section-heading #support-status{margin:0;font-size:11px}
+.text-button{border:0;background:none;color:var(--green);font-size:12px;text-decoration:underline;padding:6px}.selection-summary{border:1px solid #e4d5b9;background:#fff9ed;border-radius:6px;padding:12px;margin:16px 0;font-size:12px;line-height:1.8}.difference{color:#946026}.review-note{margin-top:16px}.review-note>label{display:block;margin-top:12px;font-size:12px}.review-note textarea{width:100%;margin:8px 0;resize:vertical}.history{border-top:1px solid var(--line);margin-top:18px;padding-top:14px;font-size:12px}.history p{line-height:1.6}
+.decision-footer{flex:none;padding:12px 24px;background:#fff;border-top:1px solid var(--line)}#footer-summary{font-size:11px}.decision-actions{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;margin-top:8px}.decision-actions>.button{flex:1;max-width:190px}.decision-actions #deny-match{color:#a04631;border-color:#dec8c0}.decision-footer #save-status{font-size:10px;margin:6px 0 0}.decision-footer #save-status:empty{display:none}
+.evidence-panel{display:flex;flex-direction:column;min-width:0;min-height:0;background:#e8ece7}.evidence-heading{position:relative;display:flex;align-items:center;gap:10px;padding:10px 20px;border-bottom:1px solid var(--line);background:#f7f9f5}.evidence-heading select{flex:1;min-width:0}.evidence-heading button{flex:none}.evidence-content{flex:1;min-height:0;overflow:auto;padding:24px;--preview-scale:1}.evidence-content>:not(.empty-state){width:calc(100% * var(--preview-scale));max-width:none;box-sizing:border-box}.evidence-content img{display:block;height:auto;background:white;box-shadow:0 3px 18px #233b2312}.evidence-content pre{white-space:pre-wrap;overflow-wrap:anywhere;background:white;padding:24px;min-height:200px}.evidence-content .word-page{background:white;padding:24px;font-size:13px;line-height:1.6}.evidence-content .office-table{background:white;border-collapse:collapse;font-size:11px}.office-table td,.office-table th{border:1px solid #dde3d6;padding:8px;white-space:pre-wrap;min-width:55px}
+.evidence-navigation{position:relative;display:flex;align-items:center;gap:8px;padding:10px 20px;background:#f5f7f3;border-top:1px solid var(--line);flex-wrap:wrap;font-size:11px}.evidence-navigation button{border:1px solid var(--line);border-radius:5px;background:white;width:28px;height:28px}.evidence-navigation select{font-size:11px;padding:5px 8px;min-width:0}#preview-page{flex:1;max-width:240px}#preview-zoom{width:94px}.evidence-navigation a{margin-left:auto;color:var(--green);white-space:nowrap}.empty-state{padding:30px 18px;color:#78877c;font-size:13px;text-align:center;line-height:1.7}
+
+@media(max-width:1100px){.matching-header,.queue-controls{padding-left:16px;padding-right:16px}.matching-header #matching-workspace{display:none}.decision-scroll{padding:16px}.decision-footer{padding:12px 16px}.evidence-content{padding:16px}.queue-controls #queue-count{margin-left:0}}
+@media(max-width:700px){.matching-main{height:auto;min-height:calc(100dvh - 68px)}.matching-header{gap:14px}.matching-layout{display:flex;flex-direction:column}.decision-panel{border-right:0}.decision-scroll{overflow:visible;padding:18px}.decision-footer{padding:12px}.decision-actions{gap:6px}.decision-actions>.button{font-size:11px;padding:8px;max-width:none}.evidence-panel{height:65dvh;min-height:430px;border-top:1px solid var(--line)}.evidence-heading,.evidence-navigation{padding:10px 12px}.evidence-heading button{font-size:11px!important}.bank-amount{font-size:26px}.candidate-card{padding:0 10px}}
+
+/* Match-generation progress stays compact and independent of review counts. */
+.matching-progress{margin:0 0 16px;padding:14px 16px;background:#f4f7f4;border:1px solid #dce6dd;border-radius:12px;display:grid;gap:8px}
+.matching-progress[hidden]{display:none}
+.matching-progress-label{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;font-size:13px}
+.matching-progress progress{display:block;width:100%;height:9px;border:0;border-radius:9px;overflow:hidden;appearance:none;background:#dfe7e0;accent-color:var(--green,#52755b)}
+.matching-progress progress::-webkit-progress-bar{background:#dfe7e0;border-radius:9px}
+.matching-progress progress::-webkit-progress-value{background:var(--green,#52755b);border-radius:9px;transition:width .6s ease}
+.matching-progress progress::-moz-progress-bar{background:var(--green,#52755b);border-radius:9px}
+.matching-progress[data-running="true"] progress{animation:matching-pulse 2s ease-in-out infinite}
+.matching-progress[data-error="true"]{border-color:#d8bb87}
+#matching-progress-detail{font-size:12px;color:#655d4f;overflow-wrap:anywhere}
+#matching-progress-detail:empty{display:none}
+@keyframes matching-pulse{50%{opacity:.65}}
+@media(prefers-reduced-motion:reduce){.matching-progress progress{animation:none!important}.matching-progress progress::-webkit-progress-value{transition:none}}
+
+/* Completed runs retain their status without crowding the candidate comparison. */
+.matching-progress[data-running="false"]{display:flex;align-items:center;flex-wrap:wrap;gap:8px 16px;padding:8px 16px;margin:0;border-radius:0}
+.matching-progress[data-running="false"] progress{display:none}
+.matching-progress[data-running="false"] .matching-progress-label{gap:16px}
+
+.transaction-direction{display:block;font-size:11px;color:#62756a;margin-bottom:3px}
+.transaction-party{min-width:0}.transaction-header .bank-amount{padding-top:16px}
+.bank-meta{justify-content:space-between;margin:6px 0 8px}.review-state{color:#52665a}.review-state.approved{color:#245b40}.review-state.denied{color:#a04631}
+.payment-description{font-size:12px;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere;margin:0 0 8px;color:#40594b}
+.transaction-notes{margin:0;font-size:12px}.transaction-notes summary{font-size:11px}
+.candidate-name{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.candidate-parties{font-size:12px;line-height:1.5;overflow-wrap:anywhere;margin:8px 0;font-weight:600}
+
+.candidate-card.suggested[data-confidence=high]{border:1px solid transparent;background:linear-gradient(110deg,#ffe1e8 0%,#fff0d5 22%,#e7f4d9 43%,#dff3f8 65%,#e8e0fa 84%,#f5dff2 100%) padding-box,linear-gradient(110deg,#e36a74,#eab454,#74b77a,#5ca6d8,#a77ad6) border-box}
+.candidate-card.suggested[data-confidence=low]{border:1px solid #7eae8d;background:#e1f0e5}
+.suggested-label{display:inline-block;font-size:9px;color:#7354a0;font-weight:700;margin-right:5px;text-transform:uppercase;letter-spacing:.3px}
+.suggestion-explanation{padding:10px;margin:5px 0 10px;border-radius:5px;background:#f4f0fa;font-size:12px;line-height:1.5;color:#443755}.suggestion-explanation p{margin:6px 0 0}.suggestion-confidence{display:block;font-size:11px;color:#68577c}
+
+.queue-controls .page-title{flex-wrap:nowrap;white-space:nowrap}.queue-controls h1{font-size:17px;margin:0}
+.confidence-controls{display:flex;align-items:center;gap:12px;flex:1}.confidence-controls #queue-count{margin-left:auto}
+#matching-options{border:1px solid var(--line);border-radius:8px;padding:16px;box-shadow:0 8px 30px #20383126;max-width:calc(100vw - 32px)}
+#matching-options .review-tabs{margin-bottom:12px}
+
+/* Move a painted layer; confidence controls its palette without moving text. */
+.candidate-card.suggested{overflow:hidden;isolation:isolate}
+.candidate-card.suggested:is([data-confidence=high],[data-confidence=low])::before{content:"";position:absolute;inset:0 -50%;z-index:-1;pointer-events:none;animation:suggested-flow 3s ease-in-out infinite alternate}
+.candidate-card.suggested[data-confidence=high]::before{background:linear-gradient(110deg,#ffe1e8,#fff0d5,#e7f4d9,#dff3f8,#e8e0fa,#f5dff2,#ffe1e8)}
+.candidate-card.suggested[data-confidence=low]::before{background:linear-gradient(110deg,#eff8ef,#d4ebdc,#b9ddc5,#e7f4ea,#c9e5d1,#eff8ef)}
+@keyframes suggested-flow{from{transform:translate3d(-20%,0,0)}to{transform:translate3d(20%,0,0)}}
+@media(prefers-reduced-motion:reduce){.candidate-card.suggested:is([data-confidence=high],[data-confidence=low])::before{animation:none}}
+
+.transaction-header{flex-direction:row-reverse}.transaction-party{text-align:right}.transaction-title{font-size:14px}.transaction-direction{font-size:10px}.transaction-header .bank-amount{padding-top:0}
+.candidate-tray{border:1px solid #dce5df;border-radius:8px;padding:10px;margin-bottom:12px}.candidate-tray .section-heading{margin-bottom:8px}.candidate-tray .section-heading h2{font-size:12px}
+#selected-tray{background:#f5f8f4}#selected-candidates .candidate-card:last-child,#candidate-list .candidate-card:last-child{margin-bottom:0}.tray-empty{font-size:12px;color:#64776b;margin:8px 0}
+.remove-candidate{flex:none;width:22px;height:26px;border:0;border-radius:4px;background:transparent;color:#6e554f;font-size:20px;padding:0;margin-top:10px}.remove-candidate:hover{background:#f5e5df;color:#943a28}
+
+.selection-summary{background:#fff0ee;border-color:#e4a49a;color:#a12d24}.selection-summary .warning,.selection-summary .difference,#footer-summary.allocation-warning{color:#a12d24}
+
+/* Keep payment facts and actions fixed; scroll only the candidate lists. */
+.decision-scroll{display:flex;flex-direction:column;overflow:hidden;padding:10px 16px}
+#transaction-detail{flex:none;padding-bottom:8px;margin-bottom:8px}
+.transaction-header{gap:10px}.transaction-title{font-size:12px}.transaction-direction{font-size:9px;margin-bottom:1px}.bank-amount{font-size:15px}
+.bank-meta{font-size:10px;margin:3px 0}.payment-description{font-size:11px;line-height:1.35;white-space:normal;margin:4px 0 0}
+#review-editor{display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden}
+.candidate-tray{display:flex;flex-direction:column;min-height:0;margin-bottom:8px;padding:8px}
+.candidate-tray .section-heading,.candidate-controls,.candidate-paging{flex:none}
+#selected-tray{flex:0 1 auto;max-height:40%}#support-group{flex:1;min-height:100px;margin-bottom:0}
+#selected-candidates,#candidate-list{overflow-y:auto;min-height:0;overscroll-behavior:contain;scrollbar-gutter:stable}
+#candidate-list{flex:1}.selection-summary{flex:none;margin:8px 0 0;padding:8px;font-size:11px;line-height:1.5}
+@media(max-width:700px){.decision-panel{height:80dvh;min-height:560px}.decision-scroll{overflow:hidden;padding:10px 12px}.bank-amount{font-size:15px}}
+.payment-tag{display:inline-block;border-radius:4px;padding:2px 6px;font-size:10px;line-height:1.4;overflow-wrap:anywhere}.payment-tag.review-state{background:#fff2d5;color:#775315}.payment-tag.review-state.approved{background:#e4f3e9;color:#245b40}.payment-tag.review-state.denied{background:#fbe8e3;color:#a04631}
+
+/* Show one identity and keep supporting explanations behind a single disclosure. */
+.candidate-meta{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin:0 0 6px}
+.candidate-confidence{font-size:10px;font-weight:600;color:#52695b}
+.candidate-source{font-size:11px;min-width:0}.candidate-source[open]{flex-basis:100%}
+.candidate-source summary{font-size:11px}.candidate-source p{margin:6px 0}
+.candidate-actions{align-items:flex-end;justify-content:space-between;margin-top:6px}
+.candidate-actions .allocation-label{margin:0;gap:3px;font-size:10px}
+.candidate-actions .allocation-label input{width:112px;padding:6px 8px}
+
+.candidate-heading{display:flex;align-items:baseline;gap:8px;min-width:0}.candidate-heading #candidate-count{font-size:10px;white-space:nowrap}
+
+/* Jump to the cited original without selecting or approving the candidate. */
+.show-evidence{background:#2563eb;color:white;border-color:#2563eb;cursor:pointer}
+.matching-app .show-evidence:hover{background:#eff6ff;border-color:#cbdcf0;color:var(--primary)}
+.show-evidence:focus-visible{outline:2px solid #2563eb;outline-offset:3px}
+#evidence-content .source-cell-highlight{background:#dbeafe!important;outline:2px solid #2563eb;outline-offset:-2px;color:#172554}
+
+/* Keep each selected document's allocation role visible while details are collapsed. */
+.candidate-content{flex:1;min-width:0}
+.allocation-controls{display:flex;flex-wrap:wrap;align-items:end;gap:10px;padding-bottom:10px}
+.allocation-controls .allocation-label{margin:0;gap:4px;font-size:10px;min-width:0}
+.allocation-controls select,.allocation-controls input{border:1px solid #cbdacf;border-radius:5px;background:white;padding:6px 8px;font:inherit;color:#243d30;max-width:100%}
+.allocation-controls select{width:165px;font-size:11px}.allocation-controls input{width:105px;font-size:12px}
+.allocation-note{font-size:11px;color:#52695b;line-height:1.5}
+.allocation-controls [hidden]{display:none}
+
+@media(max-width:700px){.allocation-controls{gap:8px}.allocation-controls select{width:150px}.allocation-controls input{width:80px}}
+
+/* Distinguish source values from proposed allocations; context-only evidence stays blue. */
+.document-amount-label{display:block;font-size:9px;font-weight:400;color:#62756a}
+.suggested-allocation{margin:0 0 8px;font-size:11px;line-height:1.4;color:#40594b}
+.candidate-card[data-role=support],.candidate-card.suggested[data-role=support]{background:#eff6ff;border-color:#93b5e5}
+.candidate-card.suggested[data-role=support]::before{display:none}
+.candidate-card[data-role=support] .allocation-controls select{background:#dbeafe;border-color:#93b5e5;color:#1e40af}
+.candidate-card[data-role=support] .allocation-note,.candidate-card[data-role=support] .suggested-allocation{color:#1e40af}
+
+/* A balanced draft is green; differences and invalid allocations retain the red warning. */
+.selection-summary.balanced{background:linear-gradient(110deg,#e8f5e9,#d7eee2,#eff8df);border-color:#91bd9c;color:#24583b}
+.selection-summary.balanced .warning,.selection-summary.balanced .difference,.selection-summary.balanced .allocation-note{color:#24583b}
+
+/* Keep allocation editing collapsed and the preview action at the card's bottom right. */
+.candidate-actions{padding-bottom:10px;margin-top:0;align-items:flex-end}
+.candidate-actions .show-evidence{margin-left:auto;flex:none}
+.allocation-editor{flex:1;min-width:0}
+.allocation-editor>summary{cursor:pointer;font-size:11px;color:#40594b;padding:6px 0}
+.allocation-editor .allocation-controls{padding:8px 0 0}

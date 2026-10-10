@@ -1,2 +1,0 @@
-/* Views keep their existing responsive layout inside the shared application shell. */
-.application, .page-view { display: contents; }

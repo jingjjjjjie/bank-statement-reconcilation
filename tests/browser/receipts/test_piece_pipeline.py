@@ -98,10 +98,10 @@ class PiecePipelineBrowserTests(unittest.TestCase):
             expect(page.locator('#generate-matches')).to_be_enabled()
             page.locator('.app-header a[href="/matching"]').click()
             expect(page.locator('#generate-matches, #matching-progress')).to_have_count(0)
-            page.get_by_role('button', name='Review options').click()
-            page.locator('#document-tab').click()
-            page.locator('#document-query').fill('Delivery piece')
-            expect(page.locator('#unmatched-list')).to_contain_text('Delivery piece')
+            expect(page.locator('#document-tab, #document-view')).to_have_count(0)
+            page.locator('#toggle-candidate-search').click()
+            page.locator('#candidate-query').fill('Delivery piece')
+            expect(page.locator('#candidate-list')).to_contain_text('Delivery piece')
             page.screenshot(
                 path=str(WORKSPACE / '.tools/field-removal/matching-mobile.png'),
                 full_page=True,

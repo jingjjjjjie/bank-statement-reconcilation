@@ -33,7 +33,7 @@ Two separate receipts are two pieces, even for one payee; two payees in a schedu
 
 Migration backs up the old ledger. Historical allocations remain reserved and visibly stale until explicitly reviewed or undone; they do not inherit current piece approvals. If the bank master belongs to an earlier verified run, a provenance-bound bank import retains that branch without modifying its originals. The source hash is still checked. Legacy receipt allocations must be undone before activating the final ledger; the old matching editor is removed from the current UI and cannot create a second ledger after migration.
 
-Old extraction records remain readable through compatibility adapters. Missing payees, typed references or dates are not guessed; use manual edits or document regeneration to fill them. New extraction and assembly calls use the lean schemas in `prompts/`. See [detailed pipeline review](../reviews/PIECE_PIPELINE_REVIEW.md).
+Old extraction records remain readable through compatibility adapters. Missing payees, typed references or dates are not guessed; use manual edits or document regeneration to fill them. New extraction and assembly calls use the lean schemas in `prompts/`. See [detailed pipeline review](../archive/reviews/PIECE_PIPELINE_REVIEW.md).
 
 The sections below record the original frozen-snapshot implementation and still-applicable review/export rules. The former general-import deferral is superseded for this explicitly authorized piece workflow.
 
@@ -125,7 +125,7 @@ Read this file when resuming final-comparison work after the two input branches 
 
 ## Matching research
 
-See [MATCHING_EXPERIMENTS.md](../benchmarks/MATCHING_EXPERIMENTS.md) for measured shortlist and batching experiments. These are design recommendations, not deployed matching behavior or changes to the open decisions above.
+See [MATCHING_EXPERIMENTS.md](../archive/benchmarks/MATCHING_EXPERIMENTS.md) for measured shortlist and batching experiments. These are design recommendations, not deployed matching behavior or changes to the open decisions above.
 
 ## Supporting verification presentation
 

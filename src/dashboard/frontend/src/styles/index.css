@@ -1,0 +1,8 @@
+/* Preserve cascade order: foundations, feature layouts, then shared theme. */
+@import './base.css';
+@import '../features/settings/settings.css';
+@import './layout.css';
+@import '../features/extraction/documents.css';
+@import '../features/extraction/extraction-review.css';
+@import '../features/matching/matching.css';
+@import './theme.css';

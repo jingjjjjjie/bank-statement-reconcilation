@@ -12,7 +12,7 @@ Your receipts, statements and supporting documents. One place to make sense of t
 
 </div>
 
-> 🌱 **Growing into something shareable.**  
+> 🌱 **Growing into something shareable.**
 > Currently hard-coded; open source soon! Bank extraction currently targets AmBank statements.
 
 ## Small steps. Clear records.
@@ -72,7 +72,32 @@ Choose ChatGPT login. Open **[localhost:8765](http://localhost:8765)**, then **B
 - [ ] Prepare the open-source release.
 
 <details>
+<summary><strong>🗂️ Project map</strong></summary>
+
+```text
+bank-statement-reconcilation/
+├── src/
+│   ├── dashboard/             # FastAPI + Vue
+│   │   ├── api/
+│   │   ├── services/
+│   │   └── frontend/src/
+│   │       ├── features/      # projects, extraction, bank, matching, export
+│   │       ├── components/    # Shared UI
+│   │       └── styles/        # Shared theme
+│   └── reconciliation/        # Python workflow and matching rules
+├── resources/                 # Prompts and configuration
+├── tests/                     # Unit tests, browser checks and fixtures
+├── docs/                      # Guides, roadmap and historical archive
+├── scripts/                   # Benchmarks and maintenance
+└── docker/                    # Container build
+```
+
+</details>
+
+<details>
 <summary><strong>For developers</strong></summary>
+
+For local Python development, run `python -m pip install -e .` first. Docker sets the source path automatically.
 
 ```console
 # Rebuild

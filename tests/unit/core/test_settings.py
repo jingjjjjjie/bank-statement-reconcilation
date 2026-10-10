@@ -211,7 +211,7 @@ if __name__ == "__main__":
 
     def test_managed_review_uses_shared_config_and_resolves_old_missing_path(self):
         """Dashboard settings and execution share the real file for nested work folders."""
-        shared = self.base / "config/review_config.json"
+        shared = self.base / "resources/review_config.json"
         shared.parent.mkdir()
         config = {**DEFAULTS, "model": ""}
         shared.write_text(json.dumps(config))

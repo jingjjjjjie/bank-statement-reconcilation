@@ -1,9 +1,25 @@
-# Tool settings only; the app is run from the repository (see README), not installed as a package.
+# Editable installation keeps Python imports stable with the src/ layout.
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "bank-statement-reconciliation"
+version = "0.1.0"
+requires-python = ">=3.12"
+dynamic = ["dependencies"]
+
+[tool.setuptools.dynamic]
+dependencies = {file = ["requirements.txt"]}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+namespaces = false
 
 [tool.ruff]
 line-length = 120
 target-version = "py312"
-extend-exclude = ["dashboard/frontend", "dashboard/.data"]
+extend-exclude = ["src/dashboard/frontend", "src/dashboard/.data"]
 
 [tool.ruff.format]
 quote-style = "preserve"      # Mixed quote styles are kept; new code prefers double quotes.
