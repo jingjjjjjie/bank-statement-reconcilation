@@ -1,5 +1,6 @@
 """Verify original and matched archives preserve bytes and folder locations."""
 
+import csv
 from zipfile import ZipFile
 
 from dashboard.services import source_export
@@ -15,8 +16,12 @@ class SourceExportTests(FinalReviewFixture):
         root = self.review.root
         (root / 'nested/empty').mkdir(parents=True)
         (root / 'nested/copy.txt').write_bytes((root / 'receipt-1.txt').read_bytes())
-        self.manifest = {'SupportingRoot': str(root), 'Files': [], 'Mode': 'exact_report',
-                         'SourceHashes': {str(path): fingerprint(path) for path in root.rglob('*') if path.is_file()}}
+        self.manifest = {
+            'SupportingRoot': str(root),
+            'Files': [],
+            'Mode': 'exact_report',
+            'SourceHashes': {str(path): fingerprint(path) for path in root.rglob('*') if path.is_file()},
+        }
         self.write(self.review.manifest_path, self.manifest)
         (root.parent / 'statement').mkdir()
         (root.parent / 'statement/bank.pdf').write_bytes(b'Original statement')
@@ -71,3 +76,65 @@ class SourceExportTests(FinalReviewFixture):
         source.unlink()
         with self.assertRaisesRegex(ValueError, 'missing'):
             self.archive('project')
+
+    def bind_statement(self, kind):
+        """Record fixture statement provenance using the implemented master or import format."""
+        statement = self.review.root.parent / 'statement/bank.pdf'
+        row = {'source': str(statement), 'source_sha256': fingerprint(statement).lower()}
+        if kind == 'master':
+            with (self.project / 'bank-output/master_statement.csv').open('w', newline='') as stream:
+                writer = csv.DictWriter(stream, fieldnames=list(row))
+                writer.writeheader()
+                writer.writerow(row)
+        else:
+            directory = self.project / 'final-review'
+            directory.mkdir(exist_ok=True)
+            self.write(
+                directory / 'bank-import.json',
+                {
+                    'manifest': str(self.review.manifest_path.resolve()),
+                    'banks': [row],
+                },
+            )
+        return statement
+
+    def test_master_statement_hash_rejects_changed_and_missing_original(self):
+        """An original project archive must retain the statement used by its bank master."""
+        statement = self.bind_statement('master')
+        self.assertEqual(self.archive('project')['uploads/statement/bank.pdf'], b'Original statement')
+        statement.write_bytes(b'Changed statement')
+        with self.assertRaisesRegex(ValueError, 'statement changed since extraction'):
+            self.archive('project')
+        statement.unlink()
+        with self.assertRaisesRegex(ValueError, 'statement is missing'):
+            self.archive('project')
+
+    def test_imported_statement_hash_rejects_changed_and_missing_original(self):
+        """A manifest-bound imported bank snapshot protects its statement's original bytes."""
+        statement = self.bind_statement('import')
+        self.assertEqual(self.archive('project')['uploads/statement/bank.pdf'], b'Original statement')
+        statement.write_bytes(b'Changed statement')
+        with self.assertRaisesRegex(ValueError, 'statement changed since extraction'):
+            self.archive('project')
+        statement.unlink()
+        with self.assertRaisesRegex(ValueError, 'statement is missing'):
+            self.archive('project')
+
+    def test_unbound_import_cannot_supply_another_workspaces_provenance(self):
+        """Reject a bank import whose saved manifest points at a different project."""
+        self.bind_statement('import')
+        path = self.project / 'final-review/bank-import.json'
+        saved = final_review.read(path)
+        saved['manifest'] = str(self.project / 'other-manifest.json')
+        self.write(path, saved)
+        with self.assertRaisesRegex(ValueError, 'another workspace'):
+            self.archive('project')
+
+    def test_legacy_statement_without_saved_hash_retains_export_compatibility(self):
+        """Do not invent historical hashes for older statement rows or extra input files."""
+        statement = self.review.root.parent / 'statement/bank.pdf'
+        statement.write_bytes(b'Current legacy statement')
+        (statement.parent.parent / 'notes.txt').write_bytes(b'Current notes')
+        result = self.archive('project')
+        self.assertEqual(result['uploads/statement/bank.pdf'], b'Current legacy statement')
+        self.assertEqual(result['uploads/notes.txt'], b'Current notes')

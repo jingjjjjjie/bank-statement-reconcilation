@@ -1,5 +1,6 @@
 """Export original inputs and confirmed supporting documents without changing them."""
 
+import csv
 import os
 from pathlib import Path
 
@@ -49,6 +50,7 @@ def original_documents(review, matched=False):
 
 def source_directories(root, prefix, excluded=()):
     """Scan original folders without following links or generated root directories."""
+
     def fail(error):
         """Never present an unreadable folder as a complete export."""
         raise error
@@ -69,6 +71,33 @@ def source_directories(root, prefix, excluded=()):
     return files, directories
 
 
+def statement_hashes(review, workspace):
+    """Read historical bank-source hashes belonging to the exported workspace."""
+    project = review.manifest_path.parent
+    rows = []
+    master = project / 'bank-output/master_statement.csv'
+    if master.exists():
+        with master.open(newline='', encoding='utf-8-sig') as stream:
+            rows.extend(csv.DictReader(stream))
+    imported = project / 'final-review/bank-import.json'
+    if imported.exists():
+        saved = final_review.read(imported)
+        if saved['manifest'] != str(review.manifest_path.resolve()):
+            raise ValueError('Imported bank evidence belongs to another workspace')
+        rows.extend(saved['banks'])
+    hashes = {}
+    for row in rows:
+        if not row.get('source') or not row.get('source_sha256'):
+            continue
+        path, digest = Path(row['source']).resolve(), row['source_sha256'].upper()
+        if not path.is_relative_to(workspace):
+            continue
+        if path in hashes and hashes[path] != digest:
+            raise ValueError('Conflicting original statement fingerprints; cannot export its initial state')
+        hashes[path] = digest
+    return hashes
+
+
 def export_zip(review, kind):
     """Build original documents, original project or approved-match archives."""
     if kind not in {'original', 'project', 'matched'}:
@@ -82,7 +111,15 @@ def export_zip(review, kind):
         workspace = root.parent
         if root.name != 'documents' or not (workspace / 'statement').is_dir():
             raise ValueError('Original project export requires a workspace with documents and statement folders')
+        expected = statement_hashes(review, workspace)
         extras, directories = source_directories(workspace, Path(workspace.name), GENERATED)
+        scanned = {path.resolve(): digest for path, _, digest in extras}
+        for path, digest in expected.items():
+            if path not in scanned:
+                raise ValueError('An original statement is missing; cannot export its initial state')
+            if scanned[path].upper() != digest:
+                raise ValueError('Original statement changed since extraction; cannot export its initial state')
+        extras = [(path, name, expected.get(path.resolve(), digest)) for path, name, digest in extras]
         prefix = workspace.name + '/'
         files = [(path, prefix + name, digest) for path, name, digest in files]
         files.extend(entry for entry in extras if not entry[1].startswith(prefix + root.name + '/'))
