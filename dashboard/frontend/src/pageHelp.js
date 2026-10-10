@@ -1,67 +1,33 @@
-// Instructions live here so each page can keep its controls and results concise.
+// Keep each tooltip to one or two short, actionable sentences.
 export const pageHelp = {
-  Projects: ['Bank Statement Reconciliation', [
-    'Search saved projects by name or folder. Each project uses one workspace containing documents/ and statement/.',
-    'Resume opens the project directly. Switching projects protects unsaved edits and requires running jobs to stop first.',
-    'Ongoing means the project has been set up. It does not mean its evidence or matching has been approved.',
-    'New project opens the workspace picker in a popup. Choose a folder, then Proceed. Missing folders or unreadable project records appear under Needs attention.',
+  Projects: ['Projects', [
+    'Resume a saved project or choose New project.',
   ]],
-  Source: ['Choose your workspace', [
-    'Choose a folder containing statement/ with one bank-statement PDF and documents/ with supporting files.',
-    'Resume workspace returns to your last page without restarting the review.',
-    'Use Browse folders or enter the folder path, then select Proceed. Exact duplicates are copied to output/duplicates/; originals stay in place.',
+  Source: ['Workspace', [
+    'Choose a folder with statement/ and documents/, then Proceed. Resume reopens your last review.',
   ]],
-  Bank: ['Bank Statement Extraction', [
-    'Load for final matching prepares the current bank statement and extracted supporting pieces. Generate matches starts matching here; Stop pauses it. The progress bar shows processed transactions and failures. Review the results on Review Matching. Loading alone does not start model calls.',
-    'Enter the year printed on the statement, then extract it. Check the transactions and balances against the original PDF.',
-    'Search filters the statement rows.',
+  Bank: ['Bank statement', [
+    'Enter the statement year, extract, then check the rows. Load for final matching before Generate matches.',
   ]],
   Documents: ['Documents', [
-    'Run all documents to extract the remaining files. Progress is saved; Stop pauses new requests while active calls finish.',
-    'Search or filter the list, then open Review Extraction to check each extraction against its original.',
+    'Run all documents, then review the extractions. Progress is saved when you stop.',
   ]],
   ExactReport: ['Exact duplicates', [
-    'Inspect each group of identical files. Hashes and full byte comparisons verify duplicates automatically; no selection is needed.',
-    'Originals remain in documents/. One copy per hash is processed. Continue to document extraction when ready.',
+    'Identical files are grouped automatically. Originals stay unchanged; only one copy is processed.',
   ]],
   ExactReview: ['Review duplicates', [
-    'Select a group, compare its files, and choose one to retain. Unselected copies are kept in recovery.',
-    'Use Undo selection to change a decision. Validate exact review after all groups have a selection.',
-    'Development tools can remember decisions and replay them for unchanged files when explicitly applied.',
+    'Choose one file per group, then validate. Undo selection lets you choose again.',
   ]],
   ExtractionReview: ['Review extraction', [
-    'Use the numbered squares to choose a document; green means reviewed. Arrows move between groups of ten. Compare the fields with the original, using page and zoom controls to inspect details.',
-    'Two receipts or two payees are separate pieces; purchase lines on one receipt are one piece. Use Add entry for a missed receipt. Merge all combines the current entries, sums complete amounts in one currency and keeps source references; check the merged total before accepting. Reset to original restores the latest model extraction before your edits or merges; Accept saves the reset. The highlighted entry is selected; Remove deletes it from the extraction. The icon beside the filename shows review status. Accept saves your review and opens the next document. Reject also advances after saving. Failed saves stay on the current document. Accept and Reject switch directly between statuses; Undo is optional. Accepted · Undo reopens it and keeps corrections. After editing an accepted document, use Save changes. Accepted documents show Accepted · Undo; discarded documents show Rejected · Undo. Review actions sit below the original preview. Undo stays on the current document. On the last document, Accept and Reject save without advancing. Unavailable actions stay visible in grey. Next opens the following document separately. Accept all approves completed results and current edits, including results with review warnings. Empty results are saved as supporting evidence without amounts; trash and unresolved extractions are skipped. Bank matches still require separate review.',
-    'In extraction review, Reject classifies the whole document as trash and excludes it from supporting evidence. The original stays intact. Reopen its numbered square and use Rejected · Undo to undo.',
-    'Details holds type, other names, references and Amount at; Show jumps the original to that page or sheet rows. "Currency (default)" means no currency was found and MYR was assumed.',
-    'Options contains Reload results, Export reviews and Accept all. Reload results fetches the latest saved results.',
-    'Export reviews downloads saved reviews as benchmark ground truth: accepted pieces, discarded documents, and pending documents without pieces. Unsaved edits are not included.',
+    'Check entries against the original, then Accept or Reject. Accept all approves completed extractions; empty results become supporting evidence.',
   ]],
-  Matching: ['Review Matching', [
-    'Open Edit allocation on a selected document to choose Counts toward amount or Supporting only. Supporting only contributes no money. Role and allocation edits are drafts until Confirm / Save; changing a role updates the total and difference immediately.',
-    'Load for final matching on the Bank statement page prepares the current bank and extracted pieces. Generate matches, Stop and matching progress are also on the Bank statement page. Matching proposals still require your review.',
-    'Review one bank transaction at a time. Use the transaction selector, filters or Next to move to another payment.',
-    'Scroll through supporting candidates on the left. Expand a card for its details and original preview on the right. Inspecting a candidate does not select or approve it.',
-    'Show opens the original evidence. Use checkboxes to add candidates and Remove to deselect them. Accept saves your selected evidence; incomplete coverage remains No supporting.',
-    'Search all pieces broadens the shortlist. Check original parties, amounts and receipt boundaries; equal amounts alone do not establish a match. Warnings and differences must be reviewed.',
-    'In matching review, Reject rejects the supporting proposal; other evidence may exist. Accepted or Rejected · Undo removes the saved decision and releases its allocations. Unmatched pieces uses the same review ledger.',
+  Matching: ['Review matching', [
+    'Check the original, select supporting documents, then Accept or Reject. Reset to suggestion restores the proposed selection.',
   ]],
   FinalReport: ['Export', [
-    'Search or filter the transaction report. View evidence opens confirmed supporting documents.',
-    'Download the bank statement workbook or document ZIPs here. Unmatched documents exclude duplicates and documents with a confirmed match. Original project contains input files, not application or review state.',
-    'Export Excel uses the bank statement workbook format, with or without supporting evidence paths. Confirmed, fully supported matches show OK; other remarks stay blank.',
-    'Return to Review Matching to change decisions. The report reflects the current saved ledger.',
-    'Workflow and recorded token usage are available inside Export. Unknown usage makes totals incomplete.',
+    'Check saved results and export files. Change decisions in Review Matching.',
   ]],
-  Settings: ['Review settings', [
-    'Set document processing, models, reasoning effort and request limits, then Save settings. Saving does not start processing.',
-    'Codex account: green means working, blue busy, red a problem. Login is rechecked every minute. Check now sends one tiny real request, recorded in token usage. Check for updates asks for the latest Codex and refreshes the model lists below, keeping your choices; Update installs it for new requests on this computer only. To rebuild the image with it, run python scripts/codex/update_codex.py on the host. Log in with ChatGPT shows a link and a one-time code.',
-    'PDF pages per call defaults to 5. Short PDFs use one call; longer PDFs use groups up to that limit, then whole-document assembly. Saved pages are preserved on resume. Testing modes and oversized groups keep the page route.',
-    'PDF vision reads every page. Changing processing modes requires refreshed inputs; previous results are archived.',
-    'Turning pictures off leaves image-dependent documents unresolved. Turning Codex off stops new model requests; active calls may finish.',
-    'The request limit is shared by extraction and receipt assembly, including failed attempts. Cache reads use no new requests. Run again to resume saved work with a fresh allowance.',
-    'Parallel requests controls simultaneous calls for the next run. More workers may hit subscription limits. Request limits are not token or spending caps.',
-    'Token counts come from reported usage. Cached input is part of input tokens; unknown attempts mean totals are incomplete.',
-    'Development mode enables shared caching and explicit decision replay for unchanged files. Turning it off preserves saved data.',
+  Settings: ['Settings', [
+    'Choose processing options, then Save settings. Saving does not start a run.',
   ]],
 };
