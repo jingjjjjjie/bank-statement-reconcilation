@@ -1,10 +1,18 @@
-# Bank Statement Reconciliation
+# ?? Bank Statement Reconciliation
 
 A local app for checking bank transactions against receipts, invoices and supporting documents. Extract data, review it beside the originals, approve matches and export the results.
 
 Built with Python, FastAPI and Vue 3. AI extraction and matching use Codex through your ChatGPT subscription login.
 
-## Quick start
+## ?? TODO
+
+Currently hard-coded; open source soon!
+
+- Remove project-specific assumptions.
+- Make setup reusable across workspaces.
+- Prepare a clean public release.
+
+## ?? Quick start
 
 Requires Docker with Docker Compose and a ChatGPT account with Codex access.
 
@@ -32,7 +40,7 @@ docker compose up -d
 
 Choose ChatGPT login. Open [localhost:8765](http://localhost:8765), select **Bank Statement Reconciliation**, then **New project**. Choose `/uploads/MyProject` and proceed. Use **Resume** to reopen saved work.
 
-## Workflow
+## ?? Workflow
 
 1. **Extract documents.** Run supporting files, compare results with the originals and correct or accept entries.
 2. **Extract the bank statement.** Enter its year and check transactions and balances. Bank extraction currently targets AmBank statements.
@@ -67,7 +75,7 @@ docker compose exec dashboard python -m unittest discover -s tests/unit -t .
 
 See [test instructions](tests/README.md) for browser checks and [architecture](docs/ARCHITECTURE.md) for the code layout.
 
-## Documentation
+## ?? Documentation
 
 - [Documentation index](docs/README.md)
 - [Workflow](docs/workflow/WORKFLOW.md)
