@@ -33,14 +33,16 @@ No actionable P0, P1 or P2 differences remain within the requested styling scope
   Bank Statement Reconciliation opens the project list. The requested Others
   section contains a full-size non-interactive Coming soon card with the copy
   "More functionalities coming soon." The header reads Accounting Copilot and
-  Home; no landing-page help icon or project name appears.
+  Home; no landing-page help icon or project name appears. On the project list
+  and reconciliation screens, the header identifies Bank Statement Reconciliation
+  rather than the workspace folder.
 
 ## Verification and comparison history
 
 - First rendered comparison passed; no further visual correction was required.
 - Existing Python Playwright project-flow test passed, covering navigation,
   search, filters, direct Resume, new-project popup, mobile sizing, popup focus,
-  current-project header and the underline-free Back to Home button.
+  application header and the underline-free Back to Home button.
 - Browser page-error collection was empty. Frontend production build passed.
 
 ## Follow-up polish

@@ -1,6 +1,6 @@
 # Dashboard UI rules
 
-- Accounting and Finance is the landing page, with the Bank Statement Reconciliation card directly inside it. Do not add a separate Home or department-selection page. The landing page has no question-mark help icon or Bank Reconciliation subtitle. Inside a project, the header shows the current project name. Use one Back to Home button without an underline instead of Home/Projects text links. New project opens the workspace picker as a popup; Resume opens existing projects directly.
+- Home at /home contains Accounting and Finance with the Bank Statement Reconciliation card, followed by Others with a full Coming soon card. Do not add a separate department-selection page. The header shows Accounting Copilot with Home on the landing page, and Bank Statement Reconciliation on /projects and inside the app; never use the workspace folder name there. Home has no question-mark help icon. Keep its previous light-grey background and blue icon styling. Use one Back to Home button without an underline instead of Home/Projects text links. New project opens the workspace picker as a popup; Resume opens existing projects directly.
 
 User preference, recorded 2026-09-18:
 

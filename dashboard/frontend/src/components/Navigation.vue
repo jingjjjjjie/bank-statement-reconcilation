@@ -4,9 +4,9 @@ import { RouterLink, useRoute } from 'vue-router';
 import { appState } from '../api.js';
 import logo from '../assets/upvantage.jpg';
 const route = useRoute();
-// Identify the landing page or the active project beside the application name.
+// Identify the current application rather than its selected workspace folder.
 const contextName = computed(() => route.path === '/home' ? 'Home'
-  : !route.meta.portal && appState.session?.active ? appState.workspace.name : '');
+  : 'Bank Statement Reconciliation');
 const links = [
   ['/projects', 'Workspace'], ['/documents', 'Documents'],
   ['/extraction-review', 'Review Extraction'], ['/bank', 'Bank statement'],
