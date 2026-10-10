@@ -411,11 +411,10 @@ function applyZoom() {
 function changeTab(documents) {
   /* Both views read the same ledger and remaining balances. */
   $('#bank-tab').hidden = !documents;
-  $('#document-tab').hidden = documents;
   $('#transaction-toolbar').hidden = documents;
   $('#bank-view').hidden = documents || !visibleBanks().length; $('#document-view').hidden = !documents;
   $('#filtered-empty').hidden = documents || !!visibleBanks().length;
-  $('#bank-tab').classList.toggle('selected', !documents); $('#document-tab').classList.toggle('selected', documents);
+  $('#bank-tab').classList.toggle('selected', !documents);
   if (documents) renderUnmatched();
 }
 function renderUnmatched() {
@@ -489,7 +488,7 @@ $('#preview-bank').onclick = () => { if (activeId) showEvidence('bank', activeId
 $('#preview-page').onchange = () => renderEvidencePage();
 $('#preview-prev').onclick = () => { $('#preview-page').selectedIndex--; renderEvidencePage(); };
 $('#preview-next').onclick = () => { $('#preview-page').selectedIndex++; renderEvidencePage(); };
-$('#bank-tab').onclick = () => changeTab(false); $('#document-tab').onclick = () => changeTab(true); $('#document-query').oninput = renderUnmatched;
+$('#bank-tab').onclick = () => changeTab(false); $('#document-query').oninput = renderUnmatched;
 $('#unmatched-bank-query').oninput = renderBankPicker;
 initialize();
 

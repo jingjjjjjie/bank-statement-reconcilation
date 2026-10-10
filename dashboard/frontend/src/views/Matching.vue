@@ -51,7 +51,6 @@ function keySplit(event) {
         <div class="transaction-navigation"><button id="previous-transactions" type="button" aria-label="Previous ten transactions">&larr;</button><div id="transaction-pages" role="group" aria-label="Transaction pages"></div><button id="next-transactions" type="button" aria-label="Next ten transactions">&rarr;</button></div>
         </div>
         <button id="bank-tab" class="button secondary" type="button" hidden>Back to transactions</button>
-        <button id="document-tab" class="button secondary" type="button">Unmatched pieces</button>
       </div>
     </section>
     <p id="matching-load-note" class="warning" hidden>Load the current data for final matching on the Bank statement page first.</p>
