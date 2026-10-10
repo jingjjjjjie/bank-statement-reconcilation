@@ -4,7 +4,6 @@ import { renderOfficePreview } from '../office.js';
 // Scope screen state and handlers to this cached Vue view.
 export default function initialize(page) {
 const { root, $, api, toast, pollVisible, navigate, routeQuery } = page;
-let token;
 /* Shared state stays small; the server owns all file checks and mutations. */
 let state, selected, filter = 'all', busy = false, renderVersion = 0;
 const docs = new Map();
@@ -103,10 +102,10 @@ $('#search').oninput = render;
 root.querySelectorAll('[data-filter]').forEach(button => button.onclick = () => {filter = button.dataset.filter; root.querySelectorAll('[data-filter]').forEach(b => b.classList.toggle('selected', b === button)); render();});
 $('#validate').onclick = async () => {
   if (busy) return; busy = true; render();
-  try {const result = await api('/api/validate', {}); const panel = $('#validation'); panel.hidden = false; panel.className = `validation ${result.passed ? 'success' : ''}`; $('#validation-text').textContent = result.passed ? 'Exact duplicate review complete.' : `Outstanding issues:\n${result.problems.join('\n')}`; state = await api('/api/state'); token = state.token; render();} catch (error) {toast(error.message);} finally {busy = false; render();}
+  try {const result = await api('/api/validate', {}); const panel = $('#validation'); panel.hidden = false; panel.className = `validation ${result.passed ? 'success' : ''}`; $('#validation-text').textContent = result.passed ? 'Exact duplicate review complete.' : `Outstanding issues:\n${result.problems.join('\n')}`; state = await api('/api/state'); render();} catch (error) {toast(error.message);} finally {busy = false; render();}
 };
 api('/api/state').then(async data => {
-  state = data; token = data.token; selected = data.groups.find(g => g.status === 'pending')?.id; render();
+  state = data; selected = data.groups.find(g => g.status === 'pending')?.id; render();
 }).catch(error => {
   $('#empty').textContent = `Unable to load review: ${error.message}`;
 });

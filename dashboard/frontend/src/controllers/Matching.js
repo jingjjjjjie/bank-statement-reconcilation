@@ -6,7 +6,6 @@ import { evidenceLocation } from '../evidenceLocation.js';
 // Scope screen state and handlers to this cached Vue view.
 export default function initialize(page) {
 const { root, $, api, toast, pollVisible, navigate, routeQuery } = page;
-let token;
 /* Present cached evidence; Python validates and persists every human decision. */
 let reviewData, activeId, saving = false, previewSerial = 0, previewState;
 let savedDraft = '', transactionPage = 0;
@@ -464,7 +463,7 @@ async function initialize() {
   $('#confidence-filter').value = preference('confidence', 'all');
   if (!$('#confidence-filter').value) $('#confidence-filter').value = 'all';
   try {
-    token = (await api('/api/session')).token; await refresh();
+    await api('/api/session'); await refresh();
     const rows = visibleBanks(), remembered = preference('active', '');
     const initial = rows.find(b => b.id === remembered) || rows[0];
     if (initial) chooseBank(initial.id); else applyFilters();

@@ -4,7 +4,6 @@ import { node } from './dom.js';
 // Share receipt editing between views without global variables.
 export function installReceipts(page, hooks = {}) {
 const { $, api, toast } = page;
-let token;
 /* Keep receipt pieces separate until a reviewer explicitly allocates them. */
 let receiptData = null, receiptBusy = false;
 let regenerationJobs = {};
@@ -46,8 +45,7 @@ async function saveReceiptDecision(path, body, button) {
 
 async function loadReceiptResults() {
   /* Reload saved extraction and allocation state only on explicit refresh. */
-  const [session, data] = await Promise.all([api('/api/session'), api('/api/receipts')]);
-  token = session.token;
+  const [, data] = await Promise.all([api('/api/session'), api('/api/receipts')]);
   setReceiptData(data);
 }
 

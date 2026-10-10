@@ -1,7 +1,6 @@
 /* A full-height review workspace keeps evidence and actions visible together. */
 .extraction-workspace { margin:0; background:#f6f7f5; color:#203831; }
 .extraction-workspace main { max-width:none; width:100%; margin:0; padding:0; height:calc(100dvh - 68px); display:flex; flex-direction:column; }
-.extraction-workspace #workflow-progress { display:none; }
 .regeneration-controls { display:flex; align-items:center; flex-wrap:wrap; gap:12px; padding:10px 24px; border-bottom:1px solid #dce3dd; background:#fff; font-size:13px; }
 .regeneration-controls:has(#regeneration-status:empty) { display:none; }
 #regeneration-status[aria-busy="true"]::before { content:''; display:inline-block; width:10px; height:10px; margin-right:8px; border:2px solid #ccd8cf; border-top-color:#365d43; border-radius:50%; animation:regeneration-spin 1s linear infinite; }

@@ -1,5 +1,3 @@
-import { node } from '../dom.js';
-import { renderOfficePreview } from '../office.js';
 
 // Scope screen state and handlers to this cached Vue view.
 export default function initialize(page) {

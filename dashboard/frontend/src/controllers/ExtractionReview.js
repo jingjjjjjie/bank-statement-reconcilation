@@ -5,7 +5,6 @@ import { installReceipts } from '../receipts.js';
 // Scope screen state and handlers to this cached Vue view.
 export default function initialize(page) {
 const { root, $, api, toast, pollVisible, navigate, routeQuery } = page;
-let token;
 /* Keep original evidence visible independently of editable extraction fields. */
 let originalUnit, originalInfo, originalRequest = 0, extractionDirty = false, selectedUnit = '';
 let activePiece = 0, pieceDocument = '', previousPieceCount = 0;

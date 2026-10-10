@@ -1053,12 +1053,6 @@ main { width: min(100%, 1600px); margin: 0 auto; padding: 0 clamp(20px, 3vw, 48p
 .content-pair textarea { display: block; width: 100%; min-height: 70px; padding: 10px; margin: 16px 0; border: 1px solid var(--line); border-radius: 5px; font: inherit; }
 @media (max-width: 760px) { .content-documents { grid-template-columns: 1fr; } }
 
-/* Compact progress stays secondary to the action on the current page. */
-.workflow-progress { display: flex; gap: 18px; align-items: center; overflow-x: auto; padding: 14px 0; border-bottom: 1px solid var(--line); scrollbar-width: thin; }
-.workflow-step { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 7px; color: var(--muted); font-size: 11px; text-decoration: none; white-space: nowrap; }
-.workflow-step.current { color: var(--ink); font-weight: 700; }
-.workflow-step.done .workflow-step-number { background: #227852; border-color: #227852; color: #fff; }
-.workflow-step-number { display: grid; place-items: center; width: 19px; height: 19px; border: 1px solid #c8d1ca; border-radius: 50%; color: var(--muted); font-size: 10px; }
 .button.ready, .context-next { background: #227852; border-color: #227852; color: #fff; }
 .context-next { text-decoration: none; }
 .active-review-card { display: flex; align-items: center; justify-content: space-between; gap: 18px; }
@@ -1090,7 +1084,6 @@ main { width: min(100%, 1600px); margin: 0 auto; padding: 0 clamp(20px, 3vw, 48p
 .workspace-picker > header { height: 70px; border: 0; }
 .picker-kicker, .picker-step, .picker-label, .input-kind { font-size: 10px; font-weight: 700; letter-spacing: 1.5px; }
 .picker-kicker { color: #7a8780; }
-.workspace-page #workflow-progress { display: none; }
 .picker-heading { margin: 38px 0 30px; }
 .picker-step { color: var(--green); }
 .picker-heading h1 { font-size: clamp(30px, 4vw, 42px); letter-spacing: -1.4px; margin: 13px 0 12px; }
@@ -1144,6 +1137,5 @@ main { width: min(100%, 1600px); margin: 0 auto; padding: 0 clamp(20px, 3vw, 48p
   .workspace-card .validation { margin: 0 22px 18px; }
 }
 @media (max-width: 650px) {
-  .workflow-progress { gap: 14px; }
   .active-review-card { align-items: flex-start; flex-direction: column; }
 }

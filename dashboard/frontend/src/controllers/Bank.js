@@ -1,10 +1,8 @@
 import { node } from '../dom.js';
-import { renderOfficePreview } from '../office.js';
 
 // Scope screen state and handlers to this cached Vue view.
 export default function initialize(page) {
 const { root, $, api, toast, pollVisible, navigate, routeQuery } = page;
-let token;
 /* Display the saved bank extraction; supporting-document matches remain pending. */
 const money = value => new Intl.NumberFormat('en-MY', {minimumFractionDigits: 2, maximumFractionDigits: 2}).format(Number(value || 0));
 let transactions = [];
@@ -160,7 +158,7 @@ $('#prepare-bank').onclick = async () => {
   button.textContent = 'Extracting...';
   $('#bank-error').hidden = true;
   try {
-    token = (await api('/api/session')).token;
+    await api('/api/session');
     await api('/api/source/bank-prepare', {year});
     await loadBank();
   } catch (error) {

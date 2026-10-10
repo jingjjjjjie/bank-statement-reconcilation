@@ -1,10 +1,8 @@
 import { node } from '../dom.js';
-import { renderOfficePreview } from '../office.js';
 
 // Scope screen state and handlers to this cached Vue view.
 export default function initialize(page) {
 const { root, $, api, toast, pollVisible, navigate, routeQuery } = page;
-let token;
 /* Display the deterministic report without offering file-selection actions. */
 api('/api/state').then(data => {
   $('#source-files').textContent = data.summary.files;
