@@ -26,6 +26,18 @@ from tests.fixtures.workflow import mock_codex
 
 
 class SettingsTests(unittest.TestCase):
+    def test_retired_model_can_be_read_and_replaced_but_not_run(self):
+        """Catalog removals allow settings repair without weakening execution validation."""
+        with tempfile.TemporaryDirectory() as folder, patch('reconciliation.core.settings.model_catalog', return_value=[]):
+            path = Path(folder) / 'config.json'
+            retired = {**DEFAULTS, 'stages': {'pdf': {'model': 'retired', 'reasoning': 'high'}}}
+            path.write_text(json.dumps(retired), encoding='utf-8')
+            self.assertEqual(load_config(path, check_models=False), retired)
+            with self.assertRaisesRegex(ValueError, 'not listed'):
+                load_config(path)
+            save_config(path, DEFAULTS, revision(retired))
+            self.assertEqual(load_config(path), DEFAULTS)
+
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)

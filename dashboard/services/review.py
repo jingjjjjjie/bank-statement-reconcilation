@@ -67,7 +67,8 @@ class Review:
 
     def settings(self):
         """Return saved settings plus whether prepared inputs are stale for them."""
-        config = load_config(self.config_path)
+        # Retired models must remain editable; saves and workflow runs still validate capabilities.
+        config = load_config(self.config_path, check_models=False)
         index_path = self.manifest_path.parent / "review" / "index.json"
         refresh = False
         if index_path.exists():

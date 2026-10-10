@@ -58,7 +58,7 @@ def model_catalog():
         return []
 
 
-def validate(config):
+def validate(config, *, check_models=True):
     """Return a complete, checked settings dict; raise ValueError on unknown keys, wrong types or out-of-range values."""
     required = {"pdf_mode", "pictures_enabled", "codex_enabled", "max_calls"}
     if not isinstance(config, dict) or not required <= set(config) or set(config) - set(DEFAULTS):
@@ -80,7 +80,7 @@ def validate(config):
         raise ValueError("Parallel requests must be an integer between %d and %d" % MAX_PARALLEL_RANGE)
     if not isinstance(config["model"], str) or not isinstance(config["reasoning"], str):
         raise ValueError("Model and reasoning must be strings")
-    if config["model"]:
+    if config["model"] and check_models:
         catalog = model_catalog()
         model = next((m for m in catalog if m["id"] == config["model"]), None)
         # Fresh installations can use the project default before Codex caches capabilities.
@@ -92,7 +92,7 @@ def validate(config):
                 raise ValueError("Selected reasoning level is not supported by this model")
             if config["pictures_enabled"] and not model["vision"]:
                 raise ValueError("Selected model does not support pictures; disable pictures or choose a vision model")
-    elif config["reasoning"] != "default":
+    elif not config["model"] and config["reasoning"] != "default":
         raise ValueError("Choose an explicit model before overriding reasoning")
     stages = config["stages"]
     if not isinstance(stages, dict) or set(stages) - set(STAGES):
@@ -102,16 +102,16 @@ def validate(config):
             raise ValueError(f"{stage}: model and reasoning are required")
         needs_vision = config["pictures_enabled"] and (stage != "pdf" or config["pdf_mode"] != "text_only")
         try:
-            validate({**config, **choice, "pictures_enabled": needs_vision, "stages": {}})
+            validate({**config, **choice, "pictures_enabled": needs_vision, "stages": {}}, check_models=check_models)
         except ValueError as error:
             raise ValueError(f"{stage}: {error}") from error
     return {**config, "stages": {stage: dict(choice) for stage, choice in stages.items()}}
 
 
-def load_config(path=None):
+def load_config(path=None, *, check_models=True):
     """Load settings from `path`; a missing file gives the defaults, a malformed one raises."""
     return (
-        validate(json.loads(Path(path).read_text(encoding="utf-8-sig")))
+        validate(json.loads(Path(path).read_text(encoding="utf-8-sig")), check_models=check_models)
         if path and Path(path).exists()
         else dict(DEFAULTS)
     )
@@ -160,7 +160,7 @@ def save_config(path, config, expected_revision):
 
         if not mode()["enabled"]:
             raise ValueError("Enable development mode before selecting experimental PDF processing")
-    if expected_revision != revision(load_config(path)):
+    if expected_revision != revision(load_config(path, check_models=False)):
         raise ValueError("Settings changed elsewhere. Reload the dashboard before saving")
     temporary = path.with_suffix(".tmp")
     temporary.write_text(json.dumps(config, indent=2) + "\n", encoding="utf-8")
