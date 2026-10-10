@@ -1,41 +1,28 @@
-# Bank statement reconciliation
+# Bank Statement Reconciliation
 
-Python performs extraction, hashing, validation, arithmetic and workflow state. FastAPI serves a Vue 3 frontend from one Docker service. Model reasoning and vision use `codex exec` with the existing ChatGPT subscription login; no API-key backend is used.
+A local app for checking bank transactions against receipts, invoices and supporting documents. Extract data, review it beside the originals, approve matches and export the results.
 
-## Current workflow
+Built with Python, FastAPI and Vue 3. AI extraction and matching use Codex through your ChatGPT subscription login.
 
-1. **Get Started:** choose a work folder containing `documents/` and `statement/`. Proceed verifies the preview and copies exact SHA duplicate groups to `output/duplicates/`, preserving originals. It opens Documents directly; no duplicate selection is required.
-2. **Documents:** run or resume extraction and receipt assembly. Open each document's **Review results**, correct pieces and explicitly accept them. Regenerate document queues a fresh extraction when needed. New dashboard and CLI runs do not run vision duplicate screening or comparison.
-3. **Bank statement:** provide the statement year, extract the AmBank statement, validate balances, and optionally export the bank-only Excel workbook.
-4. **Final review:** review saved pairing proposals, approve/reject/correct allocations, and inspect unmatched evidence. High/Low confidence is separate from human approval.
-5. **Final report:** inspect the saved decisions and export CSV. View evidence opens the statement and approved supporting documents in a popup with page/zoom controls, original downloads, allocations, differences and notes.
+## Quick start
 
-**Matching limitation:** Final review and Final report currently use the authorized frozen `duplicated/benchmarks/full-statement-240` snapshot. It must match the active manifest and original bank master. Newly extracted workspaces are not automatically imported into matching. Completion also still reads bank-master matching flags rather than the separate final-review ledger. Do not interpret either page as proof that the entire new-workspace workflow is connected.
+Requires Docker with Docker Compose and a ChatGPT account with Codex access.
 
-Documentation:
-
-- [Workflow and Mermaid diagrams](docs/workflow/WORKFLOW.md)
-- [Dashboard screens and maintenance](dashboard/README.md)
-- [Live dashboard updates and caching](docs/workflow/LIVE_DISPLAY.md)
-- [Final comparison rules and open decisions](docs/workflow/FINAL_COMPARISON.md)
-- [Final report UI checks with synthetic evidence](docs/ui/FINAL_REPORT_UI_REVIEW.md)
-- [Earlier live UI audit](docs/ui/UI_REVIEW.md) - historical observations, not current sign-off
-- [PDF routing](docs/workflow/PDF_ROUTING.md), [bank extraction](docs/workflow/BANK.md), [development cache](docs/operations/DEVELOPMENT_CACHE.md), [process cancellation](docs/operations/PROCESS_CANCELLATION.md)
-
-## Docker setup
-
-Copy `.env.example` to `.env`. Set `UPLOADS_PATH` to the host folder containing jobs, and `DOCUMENTS_PATH` if a separate source mount is needed. Both default to the sibling `bank-statement-uploads/` directory.
+1. Copy `.env.example` to `.env`.
+2. Set `UPLOADS_PATH` to your jobs folder. Use forward slashes for Windows paths.
+3. Create a project folder with exactly one bank-statement PDF in `statement/` and supporting files in `documents/`:
 
 ```text
 bank-statement-uploads/
-  WorkName/
+  MyProject/
     statement/
       bank-statement.pdf
     documents/
-      supporting files and subfolders
+      invoice.pdf
+      receipts/
 ```
 
-Keep exactly one bank-statement PDF directly in `statement/`. Supporting PDFs belong in `documents/`. Create the host folders first and ensure Docker can read and write them.
+The default jobs folder is `../bank-statement-uploads`, beside this repository. Keep input files outside the repository.
 
 ```console
 docker compose build
@@ -43,110 +30,48 @@ docker compose run --rm dashboard codex login
 docker compose up -d
 ```
 
-Choose ChatGPT login, or later use **Settings → Codex account**, which shows the login and CLI version and offers ChatGPT device-code login (a link and one-time code to enter in any browser). Open **http://127.0.0.1:8765**, browse to `/uploads/WorkName`, and click Proceed after checking the input preview. Selecting the folder does not change files; Proceed writes the duplicate report and activates the project.
+Choose ChatGPT login. Open [localhost:8765](http://localhost:8765), select **Bank Statement Reconciliation**, then **New project**. Choose `/uploads/MyProject` and proceed. Use **Resume** to reopen saved work.
 
-Compose mounts the repository at `/workspace`, `UPLOADS_PATH` at `/uploads`, and `DOCUMENTS_PATH` at `/documents`. The `codex-home` volume retains login. Review state remains in the repository through the bind mount, while exact-copy outputs are inside the work folder. The mounts are read-write; ordinary work-folder processing preserves inputs. Legacy standalone-folder organization can move copies, so use working copies for that workflow.
+## Workflow
 
-Paths in `.env` may be relative to the repository or absolute host paths. Use forward slashes on Windows and quote values containing spaces, for example `UPLOADS_PATH="C:/Shared Files/uploads"`. Keep input folders outside Git and the Docker build context. Files added to an existing mount appear immediately; changing mount settings requires `docker compose up -d dashboard`.
+1. **Extract documents.** Run supporting files, compare results with the originals and correct or accept entries.
+2. **Extract the bank statement.** Enter its year and check transactions and balances. Bank extraction currently targets AmBank statements.
+3. **Generate matches.** On the bank page, select **Load for final matching**, then **Generate matches**.
+4. **Review matching.** Inspect proposed evidence and amounts, then accept or reject. AI suggestions require your review.
+5. **Export.** Review saved results and download workbooks or document ZIPs.
 
-### Access from the same Wi-Fi
+Exact duplicates are detected automatically; originals stay intact. Extraction progress and review decisions are saved. Source changes require rechecking affected evidence.
 
-In `.env`, set `DASHBOARD_BIND_IP=0.0.0.0` and `DASHBOARD_ALLOWED_HOSTS=<PC-IP>:8765`, replacing `<PC-IP>` with the host computer's Wi-Fi IPv4 address. Apply with `docker compose up -d dashboard`, then open `http://<PC-IP>:8765` on another device on the same network. Additional allowed addresses can be comma-separated.
-
-Windows Firewall must allow inbound TCP port 8765 on the Wi-Fi interface, restricted to the local subnet. Creating this rule requires Windows administrator approval. Use a trusted network: everyone accessing the app shares its active workspace and review state. Keep the host computer awake and Docker running. If its IP changes, update the allowed address and browser link; a router DHCP reservation can keep it stable. The default configuration remains localhost-only.
-
-### Builds, restarts and debugging
-
-Docker builds Vue in a separate Node stage and installs it at `/opt/dashboard-frontend`, outside the repository bind mount. One Uvicorn worker serves the API and compiled frontend on port 8765. No separate Node server is needed.
+## Run and update
 
 ```console
+# Rebuild after code changes
 docker compose up -d --build dashboard
-docker compose ps
+
+# View logs
 docker compose logs --tail 50 dashboard
+
+# Stop the app
+docker compose down
 ```
 
-Rebuild after frontend or image changes. For a routine restart use `docker compose restart dashboard`; stop with `docker compose down`.
+The app is localhost-only by default. The `codex-home` volume retains your login; project review data persists through the repository mount. Do not delete these when updating.
 
-The default `development` image includes Python 3.12, Node/npm, Codex, Git, ripgrep, build tools, pytest, debugpy and Python Playwright. Enter it with `docker compose exec dashboard bash`. The `app` user works in `/workspace`; edits reach the host repository. Use `DOCKER_TARGET=runtime` in `.env` for the smaller image.
+## Development
 
-To update the workflow's Codex CLI to the latest stable [OpenAI release](https://github.com/openai/codex/releases/latest), run on the host with Docker and the dashboard running:
+Python owns extraction, validation and workflow state. The Vue frontend lives in `dashboard/frontend/`.
 
 ```console
-python scripts/codex/update_codex.py --check
-python scripts/codex/update_codex.py
+docker compose exec dashboard python -m unittest discover -s tests/unit -t .
 ```
 
-The first command only checks. The second builds and replaces the dashboard container when an update is needed, verifies its Codex version, and synchronizes `.env`, `.env.example`, `compose.yaml` and `docker/Dockerfile`. It refuses to interrupt active workflow or Codex calls. The dashboard briefly restarts; its ChatGPT login volume and document/review data are retained. Builds also include the current frontend files. This updates the project's Docker CLI; the separate Windows Codex installation is not modified.
+See [test instructions](tests/README.md) for browser checks and [architecture](docs/ARCHITECTURE.md) for the code layout.
 
-Browser binaries are optional. After creating a development container, install them if running browser checks there:
+## Documentation
 
-```console
-docker compose exec --user root dashboard python -m playwright install-deps chromium
-docker compose exec dashboard python -m playwright install chromium
-```
-
-Repeat browser installation after recreating the container. Existing host Chrome can instead run Windows browser tests.
-
-## Settings and model usage
-
-Settings saves `config/review_config.json`. Saving settings does not start model calls.
-
-- **PDF processing:** Vision is the default. Text + checked vision fallback and Compare text and vision require development mode and pictures. Legacy saved text-only/sparse-page modes remain supported. See [PDF routing](docs/workflow/PDF_ROUTING.md) for the actual safeguards.
-- **Pictures:** controls model image inputs, including Office images; dashboard previews remain available.
-- **Codex:** switching off prevents subsequent calls; use Stop to cancel active calls.
-- **Calls per run:** 1-1,000, default 1,000. The CLI uses the saved allowance unless `--max-calls` overrides it. A call is a new model invocation, including started failed/timed-out attempts. Local processing and cache hits do not consume the allowance. Rerun to resume with a fresh allowance.
-- **Parallel requests:** 1-8, default 4. Calls share one allowance, and completed responses are checkpointed.
-- **Model/reasoning:** defaults to `gpt-6.1-sol` and model-default reasoning. Supported choices come from the installed Codex catalog. All model calls use ChatGPT login and structured output; vision calls attach images.
-- **Workflow context:** calls keep the model's built-in instructions and run in a temporary directory with project instructions, host skill discovery, plugins, computer use, other unused agent tools, and web search disabled. Vision attachments and the image-viewing tool remain enabled; Python renders PDF pages for the model. Run `python -m scripts.codex.check_codex_connection --pdf` to verify this path with a synthetic receipt. This profile is part of the response-cache identity; existing accepted results are not recomputed automatically. The CLI must support `skip_host_skill_discovery` (verified locally with 0.157.1).
-- **Token usage:** per-attempt records live in project `review/token-usage.jsonl`, with stage/model totals and zero new usage for cache hits. Missing usage is unknown, never estimated. Settings and review reports expose recorded totals; Completion's final totals depend on its older completion gates.
-- **Development mode:** optional local shared caches and explicit human-decision replay. See [development cache](docs/operations/DEVELOPMENT_CACHE.md). It never makes human approval automatic.
-
-Changed extraction settings require preparing/refreshing the affected review. Refresh archives metadata and decisions in `review/history/`, retaining assets and successful model caches. Prompt/schema/model/reasoning/image changes affect cache identity. Completed results are not silently recomputed on resume. Regenerating one document refreshes its extraction and assembly and requires fresh acceptance.
-
-## Local Python and CLI
-
-Install Python 3.12+ and `requirements.txt`. Build the frontend using Node 22.12+ before starting the local server:
-
-```console
-cd dashboard/frontend
-npm ci
-npm run build
-cd ../..
-python -m dashboard.app
-```
-
-For a prepared project's extraction workflow, substitute its real manifest and review paths:
-
-```console
-python -m reconciliation.extraction.workflow prepare --manifest duplicated/projects/PROJECT/duplicate-manifest.json --work duplicated/projects/PROJECT/review
-python -m reconciliation.extraction.workflow run --work duplicated/projects/PROJECT/review --max-calls 1000
-python -m reconciliation.extraction.workflow check --work duplicated/projects/PROJECT/review
-```
-
-`prepare` performs local preparation. Add `--refresh` to intentionally archive/reprepare existing results. `run` extracts units and assembles multi-unit documents, then stops before vision duplicate comparisons. `--timeout` defaults to 240 seconds per call. `--model` and `--reasoning` override the configured selection. `prepare --config PATH` pins another configuration file.
-
-`check` verifies source/config consistency, readable units and required assembly, plus cleanup of any duplicate removals approved in older reviews. Exit 0 means that gate passed, 2 means unresolved work, and 1 means error. Extraction readiness is not human receipt acceptance or final bank approval.
-
-### Legacy duplicate tools
-
-Standalone-folder `reconciliation.intake.duplicates organize` verifies size, SHA-256 and bytes, records original locations, and **moves** groups into `duplicated/` beside the manifest. Legacy dashboard retain/undo controls use recoverable storage. These controls are separate from the automatic copy-only work-folder flow. Do not blindly rerun an interrupted organization or overwrite its manifest.
-
-The earlier AI duplicate screening and comparison has been removed. Keep/remove decisions saved by older reviews are still honoured by completion checks. Model output never authorizes file deletion. Original locations remain in manifests and extraction inventory exports.
-
-## Source map and checks
-
-- `reconciliation/`: workflow logic, one package per step (`intake/`, `extraction/`, `bank/`, `matching/`) over shared `core/` and `model/`.
-- `dashboard/`: FastAPI app (`routes.py`, `api/`), page services (`services/`), previews and the Vue frontend.
-- `prompts/`: editable model instructions and deterministic workbook style.
-- `tests/unit/` mirrors the code; `tests/browser/` is grouped by page; shared setup lives in `tests/fixtures/`.
-- `scripts/`: extraction and matching benchmarks, and Codex maintenance.
-- `docs/`: start at [docs/README.md](docs/README.md); [architecture and how to change things](docs/ARCHITECTURE.md).
-
-Lint and format with Ruff (settings in `pyproject.toml`): `ruff check . && ruff format .`
-
-```console
-python -m unittest discover -s tests/unit -t .
-python -m unittest tests.browser.final_review.test_matching_review tests.browser.final_review.test_final_report
-```
-
-Browser checks additionally require `dashboard/requirements-dev.txt`, built frontend assets, and Chrome/Chromium. See [test instructions](tests/README.md). Tests use isolated fixtures without model calls. `python -m scripts.codex.check_codex_connection` is a separate explicit live subscription check using one synthetic receipt.
+- [Documentation index](docs/README.md)
+- [Workflow](docs/workflow/WORKFLOW.md)
+- [Matching and review rules](docs/workflow/FINAL_COMPARISON.md)
+- [PDF processing](docs/workflow/PDF_ROUTING.md)
+- [Live dashboard updates](docs/workflow/LIVE_DISPLAY.md)
+- [Token usage](docs/operations/TOKEN_ACCOUNTING.md)
