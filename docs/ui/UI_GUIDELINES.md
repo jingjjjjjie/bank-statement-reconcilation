@@ -126,3 +126,5 @@ Shared help control: `src/dashboard/frontend/src/components/PageHelp.vue`.
   and Add entry / Reset / Merge all / Remove toolbar group, including wrapped rows.
 
 - Omit Workspace from the application header. Back to Home retains access to project selection. Number visible workflow destinations Documents 1, Review Extraction 2, Bank statement 3, Review Matching 4 and Export 5.
+
+- Export evidence uses a compact payment/document sidebar beside a full-height original preview. Keep Download evidence in the dialog header, document page/zoom controls below the preview, and saved differences/flags visible in the sidebar. Group entries sharing an original into one document choice; one original downloads directly, multiple unique originals download as a ZIP.

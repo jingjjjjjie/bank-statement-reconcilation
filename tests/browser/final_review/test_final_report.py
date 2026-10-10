@@ -8,6 +8,7 @@ import threading
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
+from zipfile import ZipFile
 
 import pymupdf
 from openpyxl import load_workbook
@@ -250,6 +251,43 @@ class FinalReportBrowserTests(unittest.TestCase):
             self.assertFalse(errors)
             browser.close()
         self.assertEqual((self.fixture.project / 'final-review/decisions.json').read_bytes(), ledger)
+
+    def test_evidence_download_selects_file_or_zip_and_shows_failures(self):
+        """Download all approved originals, preserving modal state and source bytes."""
+        matching.decide(self.fixture.review, self.fixture.request(
+            bank='B3', allocations=[{'item_id': 'D1', 'amount': '5'}],
+        ))
+        with sync_playwright() as playwright:
+            browser = playwright.chromium.launch(**browser_options())
+            page = browser.new_page(viewport={'width': 1440, 'height': 950})
+            page.goto(self.url + '/final-report')
+            for bank, zipped in [('B1', True), ('B3', False)]:
+                page.get_by_role('button', name=f'View evidence for {bank}').click()
+                dialog = page.locator('.evidence-dialog')
+                button = dialog.get_by_role('button', name='Download evidence', exact=True)
+                with page.expect_download() as download:
+                    button.click()
+                body = Path(download.value.path()).read_bytes()
+                if zipped:
+                    self.assertEqual(download.value.suggested_filename, 'evidence-B1.zip')
+                    with ZipFile(io.BytesIO(body)) as archive:
+                        self.assertEqual(archive.namelist(), ['demo-receipt-1.pdf', 'demo-receipt-2.pdf'])
+                        for name in archive.namelist():
+                            self.assertEqual(archive.read(name), (self.fixture.review.root / name).read_bytes())
+                else:
+                    self.assertEqual(download.value.suggested_filename, 'demo-receipt-1.pdf')
+                    self.assertEqual(body, (self.fixture.review.root / 'demo-receipt-1.pdf').read_bytes())
+                expect(dialog).to_be_visible()
+                page.route('**/api/matching-evidence-download?*', lambda route: route.fulfill(
+                    status=400, json={'error': 'Evidence changed. Review again.'},
+                ))
+                button.click()
+                expect(dialog.get_by_role('alert')).to_have_text('Evidence changed. Review again.')
+                expect(button).to_be_enabled()
+                page.unroute('**/api/matching-evidence-download?*')
+                page.keyboard.press('Escape')
+                expect(page.get_by_role('button', name=f'View evidence for {bank}')).to_be_focused()
+            browser.close()
 
     def test_missing_snapshot_and_changed_evidence(self):
         """Errors remain explicit and never masquerade as approved supporting evidence."""

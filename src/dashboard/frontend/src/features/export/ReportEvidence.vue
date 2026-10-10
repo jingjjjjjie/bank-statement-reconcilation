@@ -18,7 +18,7 @@ function restoreScroll() {
 watch([page, zoom], remember);
 // Encode only server-resolved evidence IDs; never accept arbitrary source paths.
 function url(endpoint, includePage = false) {
-  return `/api/matching-${endpoint}?${new URLSearchParams({kind: props.kind, id: props.id, ...(includePage ? {page: page.value} : {})})}`;
+  return `/api/matching-${endpoint}?${new URLSearchParams({kind: props.kind, id: props.id, ...(includePage ? {page: page.value} : {}), ...(endpoint === 'file' ? {download: 'true'} : {})})}`;
 }
 // Discard responses for a document that is no longer selected.
 async function load() {
@@ -53,10 +53,6 @@ watch([info, page], async () => {
 <template>
   <section class="report-evidence" :aria-label="title">
     <header><h3>{{ title }}</h3><a v-if="info" :href="url('file')" download>Download original</a></header>
-    <div v-if="info" class="preview-tools">
-      <label>Page <select v-model.number="page" :aria-label="`${title} page`"><option v-for="(label, index) in info.labels" :value="index" :key="index">{{ label }}</option></select></label>
-      <label>Zoom <select v-model.number="zoom" :aria-label="`${title} zoom`"><option v-for="value in [100, 125, 150, 200]" :key="value" :value="value">{{ value }}%</option></select></label>
-    </div>
     <div class="report-preview" ref="viewport" @scroll="remember">
       <p v-if="loading" role="status">Loading original evidence…</p>
       <p v-if="error" role="alert">{{ error }}</p>
@@ -66,6 +62,12 @@ watch([info, page], async () => {
         <div v-else-if="['word', 'spreadsheet'].includes(info.kind) && page < info.office_pages" ref="office"></div>
         <img v-else :key="url('image', true)" :src="url('image', true)" :alt="`${title} — ${info.labels[page]}`" @load="restoreScroll" @error="error = 'Preview unavailable. Download the original to inspect it.'">
       </div>
+    </div>
+    <div v-if="info" class="preview-tools">
+      <button type="button" class="evidence-page-arrow" aria-label="Previous evidence page" :disabled="page <= 0" @click="page--">&lsaquo;</button>
+      <label>Page <select v-model.number="page" :aria-label="`${title} page`"><option v-for="(label, index) in info.labels" :value="index" :key="index">{{ label }}</option></select></label>
+      <button type="button" class="evidence-page-arrow" aria-label="Next evidence page" :disabled="page >= info.pages - 1" @click="page++">&rsaquo;</button>
+      <label class="evidence-zoom">Zoom <select v-model.number="zoom" :aria-label="`${title} zoom`"><option v-for="value in [50, 75, 100, 125, 150, 200]" :key="value" :value="value">{{ value }}%</option></select></label>
     </div>
   </section>
 </template>

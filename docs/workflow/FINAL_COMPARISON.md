@@ -231,7 +231,7 @@ Unapproved, stale and incomplete support keeps the remark blank.
 
 ## Combined report and export workspace
 
-The unnumbered Export destination opens /final-report; /complete redirects there.
+The fifth Export destination opens /final-report; /complete redirects there.
 The transaction report retains support filters and confirmed-only evidence previews.
 One Export button opens both bank-workbook options and the matched, unmatched,
 original-document and original-project ZIPs. Workflow checks and recorded usage
@@ -239,3 +239,15 @@ remain available in the same dialog. Downloads retain their existing ledger rule
 Review Matching stays unavailable until bank and document extraction finish;
 reviewed high/low-confidence proposals give the stage a tick only while decisions
 are current. No-match rows do not require a proposed-match decision for that tick.
+
+
+## Transaction evidence downloads (2026-10-10)
+
+Export's evidence viewer groups approved pieces by original document and keeps their
+saved allocations visible beside the preview. Download evidence rechecks the selected
+transaction against the current ledger and original hashes. One unique original is
+returned directly with its filename; several produce a ZIP with relative filenames.
+Repeated pieces from one original include that file once. Pending, rejected, stale,
+or empty allocations cannot produce an evidence download; contextual and partial
+current approvals remain downloadable. Exact bytes are verified while preparing the
+response, failed ZIPs are removed, and downloads never change the review ledger.

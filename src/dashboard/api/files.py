@@ -178,3 +178,29 @@ def source_export(kind: str, state=Depends(active_context)):
         path, media_type='application/zip', filename=names[kind],
         background=BackgroundTask(path.unlink, missing_ok=True),
     )
+
+
+@router.get('/matching-evidence-download')
+def matching_evidence_download(bank_id: str, state=Depends(active_context)):
+    """Download one verified original or a ZIP of this transaction's approved documents."""
+    import hashlib
+
+    from dashboard.services.matching.evidence_download import approved_files
+    from dashboard.services.matching.unmatched_export import write_zip
+
+    files = approved_files(state.review, bank_id)
+    if len(files) == 1:
+        source, _, expected = files[0]
+        body = source.read_bytes()
+        if hashlib.sha256(body).hexdigest().upper() != expected:
+            raise ValueError('A document changed during export; retry the download')
+        return Response(
+            body,
+            media_type=mimetypes.guess_type(source.name)[0] or 'application/octet-stream',
+            headers={'Content-Disposition': "attachment; filename*=UTF-8''" + quote(source.name, safe='')},
+        )
+    path = write_zip(files, [])
+    return FileResponse(
+        path, media_type='application/zip', filename=f'evidence-{bank_id}.zip',
+        background=BackgroundTask(path.unlink, missing_ok=True),
+    )

@@ -8,6 +8,7 @@ import './final-report.css';
 const data = ref(null), error = ref(''), loading = ref(false), query = ref(''), filter = ref('all');
 const exportDialog = ref(null), exportButton = ref(null);
 const selected = ref(null), itemId = ref(''), dialog = ref(null);
+const downloading = ref(false), downloadError = ref('');
 let opener, request = 0;
 const evidencePositions = new Map();
 const selectedItems = new Map();
@@ -17,6 +18,36 @@ const rows = computed(() => (data.value?.banks || []).filter(b =>
 const pending = computed(() => data.value?.banks.filter(b => b.review_status === 'pending').length || 0);
 const allocations = computed(() => selected.value?.review_status === 'approved' ? selected.value.decision.allocations : []);
 const item = computed(() => data.value?.items.find(i => i.id === itemId.value));
+const documents = computed(() => {
+  // Group approved pieces by original document while retaining each saved allocation.
+  const groups = new Map();
+  for (const allocation of allocations.value) {
+    const source = data.value?.items.find(item => item.id === allocation.item_id);
+    if (!source) continue;
+    if (!groups.has(source.document)) groups.set(source.document, {item: source, allocations: []});
+    groups.get(source.document).allocations.push(allocation);
+  }
+  return [...groups.values()];
+});
+// The server rechecks approval and original bytes before choosing a file or ZIP.
+async function downloadEvidence() {
+  if (!selected.value || downloading.value) return;
+  const bankId = selected.value.id;
+  downloading.value = true; downloadError.value = '';
+  try {
+    const response = await fetch(`/api/matching-evidence-download?${new URLSearchParams({bank_id: bankId})}`);
+    if (!response.ok) { const result = await response.json(); throw Error(result.error || 'Unable to download evidence'); }
+    const disposition = response.headers.get('Content-Disposition') || '';
+    const encoded = disposition.match(/filename\*=UTF-8''([^;]+)/i);
+    const plain = disposition.match(/filename="([^"]+)"/i);
+    const filename = encoded ? decodeURIComponent(encoded[1]) : plain?.[1] || 'evidence.zip';
+    const url = URL.createObjectURL(await response.blob()), link = document.createElement('a');
+    link.href = url; link.download = filename; document.body.append(link); link.click(); link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  } catch (e) { if (selected.value?.id === bankId) downloadError.value = e.message; }
+  finally { downloading.value = false; }
+}
+
 // Keep rows visible while checking the ledger, including changes from other tabs.
 async function refresh() {
   const current = ++request; loading.value = true; error.value = '';
@@ -26,7 +57,7 @@ async function refresh() {
 }
 // Native modal dialogs contain keyboard focus and keep the report in place.
 async function openEvidence(bank, event) {
-  opener = event.currentTarget; selected.value = bank;
+  opener = event.currentTarget; selected.value = bank; downloadError.value = '';
   const approved = bank.review_status === 'approved' ? bank.decision.allocations : [];
   itemId.value = approved.find(item => item.item_id === selectedItems.get(bank.id))?.item_id || approved[0]?.item_id || '';
   await nextTick(); dialog.value.showModal();
@@ -86,15 +117,50 @@ onDeactivated(() => { request++; loading.value = false; closeEvidence(); closeEx
     </dialog>
     <dialog ref="dialog" class="evidence-dialog" aria-labelledby="report-evidence-title" @cancel.prevent="closeEvidence" @keydown="containFocus">
       <template v-if="selected">
-        <header class="dialog-heading"><div><h2 id="report-evidence-title">{{ selected.parties.join(' / ') }}</h2></div><button type="button" class="dialog-close" aria-label="Close evidence" autofocus @click="closeEvidence">×</button></header>
+        <header class="dialog-heading evidence-heading">
+          <div><h2 id="report-evidence-title">Supporting evidence</h2><p>{{ documents.length }} {{ documents.length === 1 ? 'document' : 'documents' }} &middot; Approved</p></div>
+          <div class="evidence-heading-actions">
+            <button class="button dark evidence-download" type="button" aria-label="Download evidence" :disabled="downloading || selected.stale || !documents.length" @click="downloadEvidence">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M5 16v4h14v-4" /></svg>
+              {{ downloading ? 'Preparing...' : 'Download evidence' }}<span v-if="documents.length > 1 && !downloading" class="evidence-filetype">ZIP</span>
+            </button>
+            <button type="button" class="dialog-close" aria-label="Close evidence" autofocus @click="closeEvidence">&times;</button>
+          </div>
+        </header>
+        <p v-if="downloadError" class="evidence-download-error" role="alert">{{ downloadError }}</p>
         <p v-if="selected.stale" class="report-notice" role="alert">Evidence changed or is unavailable. Return to review before relying on this pairing.</p>
-        <div class="evidence-columns">
-          <section class="supporting-pane" aria-label="Approved supporting evidence"><div v-if="allocations.length" class="evidence-switcher" role="group" aria-label="Choose approved document"><button v-for="(allocation, index) in allocations" :key="allocation.item_id" type="button" :aria-pressed="itemId === allocation.item_id" @click="itemId = allocation.item_id">{{ index + 1 }}. {{ data.items.find(i => i.id === allocation.item_id)?.filename || allocation.item_id }} </button></div>
+        <div class="evidence-workspace">
+          <aside class="evidence-sidebar" aria-label="Payment and approved documents">
+            <section class="evidence-payment">
+              <span class="evidence-source-label">From bank statement</span>
+              <h3>{{ selected.parties.join(' / ') }}</h3>
+              <strong class="evidence-payment-amount">{{ money(selected.amount, selected.currency) }}</strong>
+              <p class="evidence-payment-date">{{ selected.date || 'Date not recorded' }}</p>
+              <p class="evidence-payment-description">{{ selected.description }}</p>
+            </section>
+            <section class="evidence-document-list" aria-label="Approved documents">
+              <h3>Documents <span>{{ documents.length }}</span></h3>
+              <div class="evidence-switcher" role="group" aria-label="Choose approved document">
+                <button v-for="(document, index) in documents" :key="document.item.document" type="button" :aria-label="`${index + 1}. ${document.item.filename}`" :aria-pressed="item?.document === document.item.document" @click="itemId = document.item.id">
+                  <span class="evidence-document-number">{{ index + 1 }}</span>
+                  <span class="evidence-document-copy"><strong>{{ document.item.filename }}</strong>
+                    <small v-for="allocation in document.allocations" :key="allocation.item_id">{{ allocation.amount === '' ? 'Supporting only' : `Allocated ${money(allocation.amount, selected.currency)}` }}</small>
+                  </span>
+                </button>
+              </div>
+            </section>
+            <section class="evidence-summary" aria-label="Saved allocation summary">
+              <div><span>Allocated</span><strong>{{ money(selected.decision?.allocated_total || '0', selected.currency) }}</strong></div>
+              <div :class="{ 'evidence-difference': Number(selected.decision?.difference ?? selected.amount) !== 0 }"><span>Difference</span><strong>{{ money(selected.decision?.difference ?? selected.amount, selected.currency) }}</strong></div>
+              <p v-if="selected.decision?.note" class="evidence-review-note"><span>Review notes</span>{{ selected.decision.note }}</p>
+              <p v-for="flag in selected.decision?.flags || []" :key="flag" class="evidence-difference">{{ flag }}</p>
+            </section>
+          </aside>
+          <section class="supporting-pane" aria-label="Approved supporting evidence">
             <ReportEvidence :positions="evidencePositions" v-if="item" :key="item.id" kind="item" :id="item.id" :title="item.filename" :preferred="Math.max(0, item.unit)" />
             <p v-else class="report-caption">No approved supporting evidence for this transaction.</p>
           </section>
         </div>
-        <footer class="evidence-summary"><div><span>Bank amount</span><strong>{{ money(selected.amount, selected.currency) }}</strong></div><div><span>Allocated</span><strong>{{ money(selected.decision?.allocated_total || '0', selected.currency) }}</strong></div><div><span>Difference</span><strong>{{ money(selected.decision?.difference ?? selected.amount, selected.currency) }}</strong></div><p><strong>Review notes:</strong> {{ selected.decision?.note || 'No notes recorded.' }}</p><p v-for="flag in selected.decision?.flags || []" :key="flag">{{ flag }}</p></footer>
       </template>
     </dialog>
   </main>
