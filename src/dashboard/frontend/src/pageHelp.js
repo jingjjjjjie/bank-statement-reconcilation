@@ -10,6 +10,7 @@ export const pageHelp = {
   ]],
   Bank: ['Bank statement', [
     'Enter the statement year, extract, then check the rows. Load for final matching before Generate matches.',
+    'Regenerate matches clears saved supporting decisions after confirmation. Retry failed only keeps successful matches and approvals.',
   ]],
   Documents: ['Documents', [
     'Run all documents, then review the extractions. Progress is saved when you stop.',

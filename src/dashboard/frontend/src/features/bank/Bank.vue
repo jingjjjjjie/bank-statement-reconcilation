@@ -23,7 +23,7 @@ usePage(root, initialize);
     </section>
     <section id="final-matching" class="settings-card documents-page" aria-label="Final matching" hidden>
       <div class="processing-toolbar"><h2>Final matching</h2>
-      <div class="stage-actions"><button id="load-final-matching" class="button secondary" type="button">Load for final matching</button><button id="generate-matches" type="button" class="button dark" disabled>Generate matches</button><button id="stop-matches" type="button" class="button secondary" disabled>Stop</button></div></div>
+      <div class="stage-actions"><button id="load-final-matching" class="button secondary" type="button">Load for final matching</button><button id="generate-matches" type="button" class="button dark" disabled>Generate matches</button><button id="retry-failed-matches" type="button" class="button secondary" hidden>Retry failed only</button><button id="stop-matches" type="button" class="button secondary" disabled>Stop</button></div></div>
       <p id="final-matching-ready" role="status"></p>
     <section id="matching-progress" class="document-progress" aria-label="Matching progress">
       <div class="matching-progress-label"><strong id="matching-run-status" role="status" aria-live="polite"></strong><span id="matching-progress-count"></span></div>

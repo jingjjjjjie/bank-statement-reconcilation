@@ -36,8 +36,16 @@ class MatchingCompletionTests(unittest.TestCase):
                 bank = {'available': False}
                 page.route('**/api/bank-statement', lambda route: route.fulfill(json=bank))
                 page.route('**/api/source', lambda route: route.fulfill(json={}))
-                page.route('**/api/matching', lambda route: route.fulfill(json={'live_pieces': True}))
-                page.route('**/api/matching-run', lambda route: route.fulfill(json=state))
+                page.route('**/api/matching', lambda route: route.fulfill(json={'live_pieces': True, 'binding': 'fixture', 'version': 4}))
+                submitted = []
+
+                def matching_run(route):
+                    """Record clicked actions without running any matching jobs."""
+                    if route.request.method == 'POST':
+                        submitted.append(route.request.post_data_json)
+                    route.fulfill(json=state)
+
+                page.route('**/api/matching-run', matching_run)
                 for width in (1440, 390):
                     page.set_viewport_size({'width': width, 'height': 900})
                     page.goto(f'http://127.0.0.1:{server.server_port}/bank')
@@ -50,12 +58,12 @@ class MatchingCompletionTests(unittest.TestCase):
                 expect(page.locator('#final-matching')).to_be_hidden()
                 bank['balance_checks'] = 'passed'
                 for completed, running, stopped, failed, outdated, label, action in [
-                    (240, False, True, 0, False, 'Matching complete', 'Generate matches'),
+                    (240, False, True, 0, False, 'Matching complete', 'Regenerate matches'),
                     (120, False, True, 0, False, 'Stopped', 'Resume matching'),
-                    (240, False, False, 1, False, 'Finished with errors', 'Resume matching'),
+                    (240, False, False, 1, False, 'Finished with errors', 'Regenerate matches'),
                     (120, True, True, 0, False, 'Stopping…', 'Stopping...'),
-                    (240, False, False, 0, False, 'Matching complete', 'Generate matches'),
-                    (240, False, False, 0, True, 'Matches need updating', 'Generate matches'),
+                    (240, False, False, 0, False, 'Matching complete', 'Regenerate matches'),
+                    (240, False, False, 0, True, 'Matches need updating', 'Regenerate matches'),
                 ]:
                     with self.subTest(completed=completed, running=running, failed=failed):
                         state.update(
@@ -79,4 +87,26 @@ class MatchingCompletionTests(unittest.TestCase):
                             expect(page.locator('#stop-matches')).to_be_visible()
                         else:
                             expect(page.locator('#stop-matches')).to_be_hidden()
+                with page.expect_event('dialog') as prompt:
+                    generate.click()
+                self.assertIn('clear all saved supporting', prompt.value.message)
+                prompt.value.dismiss()
+                self.assertEqual(submitted, [])
+                with page.expect_event('dialog') as prompt:
+                    generate.click()
+                with page.expect_response(lambda response: response.url.endswith('/api/matching-run')
+                                          and response.request.method == 'POST'):
+                    prompt.value.accept()
+                self.assertEqual(submitted[-1]['mode'], 'regenerate')
+                self.assertTrue(submitted[-1]['confirm_clear'])
+                self.assertEqual(submitted[-1]['binding'], 'fixture')
+                self.assertEqual(submitted[-1]['version'], 4)
+                state.update(failed=2, outdated=False)
+                page.reload()
+                retry = page.locator('#retry-failed-matches')
+                expect(retry).to_be_visible()
+                with page.expect_response(lambda response: response.url.endswith('/api/matching-run')
+                                          and response.request.method == 'POST'):
+                    retry.click()
+                self.assertEqual(submitted[-1], {'mode': 'retry_failed'})
                 browser.close()

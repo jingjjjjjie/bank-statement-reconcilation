@@ -273,3 +273,19 @@ Shared originals appear in every payment folder that approves them. Pending, rej
 stale and empty allocations create no folders; their report indices are not reused.
 Folder labels sanitize filesystem-unsafe characters and use Transaction when the
 party is absent. Source hashes, ledger decisions and original exports are unchanged.
+
+
+## Matching regeneration and failed-only retry (2026-10-11)
+
+Completed runs offer Regenerate matches with explicit confirmation that saved
+supporting selections and review decisions will be cleared. The server checks
+the displayed ledger binding/version, archives the prior ledger and proposals,
+and records reset history before starting a fresh generation. Originals and
+extractions remain unchanged. A fresh request marker prevents model-cache reuse
+for regeneration; usage continues in the existing per-attempt ledger.
+
+Retry failed only requires unchanged evidence, settings and prompt. It retries
+failed bank IDs with fresh calls, preserving successful proposals and the human
+ledger; unstarted lines remain for Resume matching. Failed lines are counted
+individually, including responses that fail validation. Changed inputs require
+regeneration rather than silently expanding a failed-only retry.

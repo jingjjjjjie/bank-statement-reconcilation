@@ -4,7 +4,9 @@ import json
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from datetime import datetime, timezone
 from pathlib import Path
+from uuid import uuid4
 
 from dashboard.services.matching import piece_matching
 from dashboard.services.review import write_json
@@ -131,6 +133,7 @@ def status(review):
     proposals = review.manifest_path.parent / 'final-review/piece-suggestions.json'
     if not running and proposals.exists() and piece_matching.enabled(review):
         previous = json.loads(proposals.read_text(encoding='utf-8'))
+        saved = {**saved, 'failed': sum(failed_row(row) for row in previous.get('decisions', []))}
         outdated = matching_outdated(review, previous)
     return {
         **saved,
@@ -168,22 +171,71 @@ def matching_outdated(review, previous):
         return True  # Unavailable evidence cannot certify an old run as current.
 
 
-def start(review):
+def start(review, mode="resume", confirmation=None):
     """Start one bounded model run without holding the HTTP decision lock."""
     from dashboard.services.extraction.extraction_runs import execution_status
 
+    if mode not in {'resume', 'regenerate', 'retry_failed'}:
+        raise ValueError('Choose a valid matching action')
     if status(review)['running']:
         return status(review)
     if execution_status(review)['running']:
         raise ValueError('Wait for extraction to finish before generating matches')
     if not piece_matching.enabled(review):
+        if mode != 'resume':
+            raise ValueError('Load for final matching before retrying or regenerating')
         piece_matching.activate(review)
-    _, state, banks, items, index, facts = piece_matching.context(review)
+    ledger, state, banks, items, index, facts = piece_matching.context(review)
     if any(fingerprint(Path(bank['source'])) != bank['source_sha256'].upper() for bank in banks.values()):
         raise ValueError('Bank evidence changed; refresh the statement before matching')
     config = active_config(index)
     if not config['codex_enabled']:
         raise ValueError('Enable Codex before generating matches')
+    directory = review.manifest_path.parent / 'final-review'
+    proposals = directory / 'piece-suggestions.json'
+    previous = json.loads(proposals.read_text(encoding='utf-8')) if proposals.exists() else {}
+    if mode == 'retry_failed':
+        if previous.get('request_revision') != request_revision(state['binding'], banks, items, index, facts, config):
+            raise ValueError('Matching inputs changed. Regenerate matches instead of retrying failed results.')
+        if not any(failed_row(row) for row in previous.get('decisions', [])):
+            raise ValueError('There are no failed matches to retry')
+    if mode == 'regenerate':
+        confirmation = confirmation or {}
+        if (
+            confirmation.get('confirm_clear') is not True
+            or confirmation.get('binding') != state['binding']
+            or confirmation.get('version') != state['version']
+        ):
+            raise ValueError('Refresh and confirm regeneration before clearing supporting decisions')
+        for digest, document in index['documents'].items():
+            if fingerprint(Path(document['paths'][0])) != digest:
+                raise ValueError('Supporting evidence changed; refresh extraction before regenerating')
+        generation = uuid4().hex
+        (directory / 'backups').mkdir(exist_ok=True)
+        write_json(directory / 'backups' / f'regenerate-{generation}.json', {'ledger': state, 'proposals': previous})
+        at = datetime.now(timezone.utc).isoformat()
+        for bank_id, decision in state['decisions'].items():
+            state['history'].append(
+                {
+                    'bank_id': bank_id,
+                    'action': 'regenerate',
+                    'at': at,
+                    'reviewer': 'Local user',
+                    'before': decision,
+                    'after': None,
+                    'note': 'Cleared supporting decisions for confirmed regeneration.',
+                }
+            )
+        state['decisions'] = {}
+        state['version'] += 1
+        write_json(ledger, state)
+        # Clearing historical allocations can remove retired pieces from the current binding.
+        ledger, state, banks, items, index, facts = piece_matching.context(review)
+        write_json(ledger, state)
+        write_json(
+            proposals,
+            {'binding': state['binding'], 'generation': generation, 'decisions': [], 'total': len(banks), 'errors': []},
+        )
     review.piece_match_status = {
         'completed': 0,
         'total': len(banks),
@@ -195,16 +247,16 @@ def start(review):
     review.piece_match_cancel = threading.Event()
     review.piece_match_engine = None
     review.piece_match_thread = threading.Thread(
-        target=run, args=(review, state['binding'], banks, items, index, facts, config), daemon=True
+        target=run, args=(review, state['binding'], banks, items, index, facts, config, mode), daemon=True
     )
     review.piece_match_thread.start()
     return status(review)
 
 
-def run(review, binding, banks, items, index, facts, config):
+def run(review, binding, banks, items, index, facts, config, mode="resume"):
     """Keep setup failures visible as well as individual model-call failures."""
     try:
-        run_matching(review, binding, banks, items, index, facts, config)
+        run_matching(review, binding, banks, items, index, facts, config, mode)
     except Exception as error:
         review.piece_match_status['error'] = str(error)
     finally:
@@ -347,7 +399,12 @@ def request_revision(binding, banks, items, index, facts, config, *, instruction
     return revision([binding, banks, items, index, facts, choice, instructions])
 
 
-def run_matching(review, binding, banks, items, index, facts, config):
+def failed_row(row):
+    """Identify failed lines separately from valid tentative or no-match proposals."""
+    return row.get('reason', '').startswith('Matching unresolved:')
+
+
+def run_matching(review, binding, banks, items, index, facts, config, mode="resume"):
     """Rank candidates in Python, then ask the model about batches of lines; approvals stay human."""
     directory = review.manifest_path.parent / 'final-review'
     (directory / 'piece-matching').mkdir(parents=True, exist_ok=True)
@@ -371,11 +428,16 @@ def run_matching(review, binding, banks, items, index, facts, config):
     results = [
         row
         for row in previous.get('decisions', [])
-        if previous.get('request_revision') == current_revision
-        and row['bank_id'] in banks
-        and not row.get('reason', '').startswith('Matching unresolved:')
+        if previous.get('request_revision') == current_revision and row['bank_id'] in banks and not failed_row(row)
     ]
     completed = {row['bank_id'] for row in results}
+    targets = (
+        {row['bank_id'] for row in previous.get('decisions', []) if failed_row(row)}
+        if mode == 'retry_failed'
+        else set(banks) - completed
+    )
+    generation = previous.get('generation', '')
+    attempt = uuid4().hex if mode == 'retry_failed' else ''
 
     # Reuse only unchanged, still-verifiable evidence; no model request is needed.
     def packed(keys):
@@ -393,7 +455,7 @@ def run_matching(review, binding, banks, items, index, facts, config):
             'reason': 'No amount, name or filename candidate; manual piece search remains available.',
         }
         for key in banks
-        if not choices[key] and key not in completed
+        if not choices[key] and key in targets
     )
     errors = []
 
@@ -402,6 +464,8 @@ def run_matching(review, binding, banks, items, index, facts, config):
         supplied, images, allowed = piece_matching.model_payload(
             banks, items, index, facts, choices, keys, retrieval, include_images=False
         )
+        if generation or attempt:
+            supplied = {**supplied, 'matching_run': generation, 'retry_attempt': attempt}
         prompt = instructions + '\n' + json.dumps(supplied, ensure_ascii=False, separators=(',', ':'))
         if len(prompt) <= PROMPT_LIMIT:
             return [(keys, supplied, prompt, allowed)]
@@ -449,6 +513,7 @@ def run_matching(review, binding, banks, items, index, facts, config):
             {
                 'binding': binding,
                 'request_revision': current_revision,
+                'generation': generation,
                 'total': len(banks),
                 'decisions': results,
                 'errors': errors,
@@ -460,14 +525,14 @@ def run_matching(review, binding, banks, items, index, facts, config):
             'total': len(banks),
             'phase': 'Matching transactions',
             'updated_at': time.time(),
-            'failed': len(errors),
+            'failed': sum(failed_row(row) for row in results),
             'error': '\n'.join(errors),
         }
         write_json(directory / 'matching-status.json', review.piece_match_status)
 
     try:
         publish()
-        queue = iter(packed([key for key in banks if choices[key] and key not in completed]))
+        queue = iter(packed([key for key in banks if choices[key] and key in targets]))
         with ThreadPoolExecutor(max_workers=config['max_parallel']) as pool:
             pending = {}
             for keys in queue:
@@ -490,7 +555,12 @@ def run_matching(review, binding, banks, items, index, facts, config):
                         }
                         for key in keys
                     )
-                over_allocated(results, items)
+                # Retried proposals may be downgraded; successful saved results remain unchanged.
+                if mode == 'retry_failed':
+                    checked = over_allocated([dict(row) for row in results], items)
+                    results[:] = [old if old['bank_id'] in completed else new for old, new in zip(results, checked)]
+                else:
+                    over_allocated(results, items)
                 publish()
                 keys = None if getattr(review, 'piece_match_stopping', False) else next(queue, None)
                 if keys is not None:

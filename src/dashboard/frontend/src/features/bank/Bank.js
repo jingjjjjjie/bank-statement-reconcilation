@@ -53,7 +53,7 @@ async function loadBank() {
     if (bankExtracted) await loadMatchingReadiness();
   } catch (error) { $('#bank-error').textContent = error.message; $('#bank-error').hidden = false; }
 }
-let matchingReady = false, matchingStarting = false;
+let matchingReady = false, matchingStarting = false, matchingState = {};
 async function loadMatchingReadiness() {
   /* Show whether the current bank and extracted pieces are ready for matching. */
   if (!bankExtracted) return;
@@ -84,6 +84,7 @@ $('#load-final-matching').onclick = async () => {
 };
 function renderMatchingProgress(state) {
   /* Display real processed counts; failures and stopped work never imply successful completion. */
+  matchingState = state;
   const total = state.total || 0, completed = state.completed || 0;
   const running = !!state.running, stopping = !!state.stop_requested;
   const complete = !running && total > 0 && completed >= total && !state.failed && !state.error && !state.outdated;
@@ -95,11 +96,14 @@ function renderMatchingProgress(state) {
   panel.setAttribute('aria-busy', String(running));
   $('#generate-matches').disabled = running || !matchingReady;
   $('#generate-matches').hidden = false;
+  $('#retry-failed-matches').hidden = !state.failed || !!state.outdated;
+  $('#retry-failed-matches').disabled = running || matchingStarting || !matchingReady;
   $('#stop-matches').hidden = !running;
   $('#stop-matches').disabled = !running || stopping || matchingStarting;
   $('#stop-matches').textContent = stopping && running ? 'Stopping...' : 'Stop';
   $('#generate-matches').textContent = matchingStarting ? 'Starting...' : running ? (stopping ? 'Stopping...' : 'Matching...')
-    : !state.outdated && !complete && total && (completed < total || state.failed || state.error || state.stop_requested) ? 'Resume matching' : 'Generate matches';
+    : complete || state.outdated || (total && completed >= total) ? 'Regenerate matches'
+    : total ? 'Resume matching' : 'Generate matches';
   $('#matching-run-status').textContent = running
     ? stopping ? 'Stopping…' : matchingStarting ? 'Starting matching…' : 'Generating matches'
     : state.outdated ? 'Matches need updating' : complete ? 'Matching complete' : state.error || state.failed ? 'Finished with errors' : !total ? 'Ready to match' : 'Stopped';
@@ -124,21 +128,34 @@ async function matchingProgress() {
   const state = await api('/api/matching-run');
   if (!matchingStarting) renderMatchingProgress(state);
 }
-$('#generate-matches').onclick = async () => {
-  if (matchingStarting || !matchingReady) return;
+async function startMatching(mode) {
+  /* Require explicit confirmation before clearing saved supporting decisions. */
+  if (matchingStarting || !matchingReady || matchingState.running) return;
+  const previous = matchingState;
+  let body = {mode};
+  if (mode === 'regenerate') {
+    try {
+      const current = await api('/api/matching');
+      if (!window.confirm('Regenerate all matches? This will clear all saved supporting selections and review decisions, including approved matches. You will need to review the new matches again. Original documents are kept.')) return;
+      body = {...body, confirm_clear: true, binding: current.binding, version: current.version};
+    } catch (error) { $('#final-matching-ready').textContent = error.message; return; }
+  }
   matchingStarting = true;
   renderMatchingProgress({running:true});
   try {
-    const state = await api('/api/matching-run', {});
+    const state = await api('/api/matching-run', body);
     matchingStarting = false;
     renderMatchingProgress(state);
     await matchingProgress();
   } catch (e) {
     matchingStarting = false;
-    renderMatchingProgress({error:e.message});
+    renderMatchingProgress(previous);
     $('#final-matching-ready').textContent = e.message;
   }
-};
+}
+$('#generate-matches').onclick = () => startMatching(
+  matchingState.outdated || (matchingState.total && matchingState.completed >= matchingState.total) ? 'regenerate' : 'resume');
+$('#retry-failed-matches').onclick = () => startMatching('retry_failed');
 $('#stop-matches').onclick = async () => {
   $('#stop-matches').disabled = true;
   $('#matching-run-status').textContent = 'Stopping…';

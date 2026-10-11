@@ -223,7 +223,7 @@ def matching_run(body: dict, state=Depends(active_context)):
     """Generate proposals from complete documents without approving allocations."""
     from dashboard.services.matching.piece_match_jobs import start
 
-    return start(state.review)
+    return start(state.review, body.get('mode', 'resume'), body)
 
 
 @router.get('/matching-run')
