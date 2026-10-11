@@ -134,7 +134,7 @@ flowchart LR
         PY --> STORE["Workspace files and per-project checkpoints"]
         BG --> STORE
     end
-    INPUTS["Host uploads mounted at /uploads and /documents"] --> PY
+    INPUTS["Host uploads bind-mounted at /uploads"] --> PY
     REPO["Repository bind-mounted at /workspace"] --> STORE
     LOGIN["Persistent codex-home Docker volume"] --> CODEX
 ```

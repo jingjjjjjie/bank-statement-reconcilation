@@ -15,7 +15,6 @@ services:
       DASHBOARD_ALLOWED_HOSTS: ${DASHBOARD_ALLOWED_HOSTS:-}
     volumes:
       - .:/workspace
-      - "${DOCUMENTS_PATH:-./uploads}:/documents"
       - "${UPLOADS_PATH:-./uploads}:/uploads"
       - codex-home:/home/app/.codex
     restart: unless-stopped

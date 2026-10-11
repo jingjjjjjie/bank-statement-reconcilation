@@ -53,7 +53,7 @@ uploads/
       receipts/
 ```
 
-Docker bind-mounts this folder at `/uploads`. Drag or copy project folders into the host folder; they appear immediately in **New project**, which only browses inside `/uploads`. Its contents are ignored by Git and excluded from Docker images. To use another folder, set `UPLOADS_PATH` and `DOCUMENTS_PATH` in `.env`; use forward slashes on Windows.
+Docker bind-mounts this folder at `/uploads`. Drag or copy project folders into the host folder; they appear immediately in **New project**, which only browses inside `/uploads`. Its contents are ignored by Git and excluded from Docker images. To use another folder, set `UPLOADS_PATH` in `.env`; use forward slashes on Windows.
 
 **02 · Start your workspace**
 
