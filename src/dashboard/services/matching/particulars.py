@@ -23,6 +23,7 @@ def confirmed_particular(bank, items):
     if bank['review_status'] != 'approved' or bank['stale']:
         return ''
     return '\n'.join(
-        text for allocation in (bank['decision'] or {}).get('allocations', [])
+        text
+        for allocation in (bank['decision'] or {}).get('allocations', [])
         if (text := particular(items[allocation['item_id']]))
     )

@@ -282,17 +282,14 @@ if ($('#accept-all-receipts')) $('#accept-all-receipts').onclick = () => receipt
   const body = {revision:receiptData.revision};
   if (page.isDirty()) {
     const pieces = readReceiptPieces();
-    if (!pieces.length) {
-      receiptError(new Error('No entries extracted. Add an entry or accept as supporting evidence.'));
-      return;
-    }
     body.draft = {key, receipts:pieces};
   }
   const data = await saveReceiptDecision('/api/receipts/accept-all', body, $('#accept-all-receipts'));
   hooks.saved?.();
   setReceiptData(data, key);
   const skipped = data.bulk.skipped.length;
-  toast(`${data.bulk.accepted} accepted.${skipped ? ` ${skipped} still need attention.` : ''}`);
+  const reasons = [...new Set(data.bulk.skipped.map(item => item.reason))].join(' ');
+  toast(`${data.bulk.accepted} accepted.${skipped ? ` ${skipped} still need attention. ${reasons}` : ''}`);
 });
 if ($('#receipt-form')) $('#receipt-form').onsubmit = event => {
   event.preventDefault();

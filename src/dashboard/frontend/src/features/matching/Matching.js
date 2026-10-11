@@ -132,7 +132,7 @@ function chooseBank(id, addItem, preservePreview = false) {
   $('#toggle-candidate-search').setAttribute('aria-expanded', 'false');
   $('#toggle-candidate-search').textContent = 'Search';
   transactionPage = Math.floor(Math.max(0, visibleBanks().findIndex(row => row.id === id)) / 10);
-  $('#save-status').textContent = b.decision ? `Saved Â· ${new Date(b.decision.at).toLocaleString()}` : '';
+  $('#save-status').textContent = b.decision ? `Saved · ${new Date(b.decision.at).toLocaleString()}` : '';
   $('#review-editor').hidden = false;
   $('#restore-suggestion').disabled = false;
   $('#deny-match').disabled = false;
@@ -243,7 +243,7 @@ function renderCandidates() {
     if (retrievalReason) source.append(node('p', 'candidate-reason', retrievalReason));
     meta.append(source); body.append(meta);
     if (item.currency === b.currency && cents(item.amount) !== null && cents(item.amount) !== cents(b.amount)) body.append(node('p', 'warning', `Bank minus source: ${formatMoney(((cents(b.amount) - cents(item.amount)) / 100).toFixed(2), b.currency)}`));
-    if (item.used !== '0') body.append(node('p', 'warning', `Reserved: ${formatMoney(item.used, item.currency)} Â· Available here: ${available(item) === null ? 'unknown' : formatMoney((available(item) / 100).toFixed(2), item.currency)}`));
+    if (item.used !== '0') body.append(node('p', 'warning', `Reserved: ${formatMoney(item.used, item.currency)} · Available here: ${available(item) === null ? 'unknown' : formatMoney((available(item) / 100).toFixed(2), item.currency)}`));
     if (item.stale) body.append(node('p', 'warning', 'Source changed or unavailable. Approval blocked.'));
     if (item.boundary_unresolved) body.append(node('p', 'warning', 'Check receipt boundaries against the original.'));
     details.append(body);
@@ -310,7 +310,7 @@ function updateSummary() {
   const invalidAmount = [...selected].some(([id, value]) => allocationRole(id) === 'money' && (cents(value) === null || cents(value) <= 0));
   const summary = $('#selection-summary'); summary.replaceChildren();
   summary.classList.toggle('balanced', difference === 0 && !invalidAmount);
-  summary.append(node('strong', '', `${selected.size} selected Â· ${formatMoney((total / 100).toFixed(2), b.currency)} allocated`));
+  summary.append(node('strong', '', `${selected.size} selected · ${formatMoney((total / 100).toFixed(2), b.currency)} allocated`));
   summary.append(node('div', difference ? 'difference' : '', difference === 0 ? 'The allocation equals the bank payment.' : `Difference: ${formatMoney((difference / 100).toFixed(2), b.currency)}`));
   if ([...selected.keys()].some(id => allocationRole(id) === 'support')) summary.append(node('div', 'allocation-note', 'Supporting-only documents do not add to the allocated amount.'));
   if (values.some(v => v !== '' && cents(v) === null)) summary.append(node('div', 'warning', 'Enter valid amounts with up to two decimal places.'));
@@ -321,7 +321,7 @@ function updateSummary() {
   $('#support-heading').textContent = 'Available candidates';
   $('#support-status').textContent = b.decision && unchanged
     ? `${b.support_status}. ${b.review_status === 'denied' ? 'Suggestion rejected; other evidence may exist.' : 'Saved review decision.'}`
-    : `${selected.size} selected Â· Not confirmed`;
+    : `${selected.size} selected · Not confirmed`;
   // Reflect the saved decision in its existing action; edits require a fresh save.
   const confirmed = b.review_status === 'approved' && unchanged;
   const rejected = b.review_status === 'denied';
@@ -344,7 +344,7 @@ function updateSummary() {
 async function saveDecision(action) {
   /* Send explicit user intent, then reload the authoritative ledger and balances. */
   if (saving) return;
-  saving = true; error(); $('#save-status').textContent = 'Saving your decisionâ€¦';
+  saving = true; error(); $('#save-status').textContent = 'Saving your decision…';
   updateSummary();
   const queue = visibleBanks(), position = queue.findIndex(row => row.id === activeId);
   const nextId = action === 'approve' ? queue[position + 1]?.id : null;
@@ -376,13 +376,13 @@ async function showEvidence(kind, id) {
   for (const itemId of ids) {
     const item = itemById.get(itemId);
     if (!item) continue;
-    const option = node('option', '', `${item.parties.join(' / ') || item.filename} Â· ${item.filename}`);
+    const option = node('option', '', `${item.parties.join(' / ') || item.filename} · ${item.filename}`);
     option.value = itemId; sources.append(option);
   }
   const bankOption = node('option', '', 'Original bank statement'); bankOption.value = '__bank__'; sources.append(bankOption);
   sources.value = kind === 'bank' ? '__bank__' : id;
   root.querySelectorAll('.candidate-card').forEach(card => card.classList.toggle('previewing', kind === 'item' && card.dataset.itemId === id));
-  $('#evidence-content').replaceChildren(node('div', 'empty-state', 'Loading original evidenceâ€¦'));
+  $('#evidence-content').replaceChildren(node('div', 'empty-state', 'Loading original evidence…'));
   $('#evidence-title').textContent = kind === 'bank' ? 'Original bank statement' : itemById.get(id).filename;
   $('#evidence-original').href = `/api/matching-file?${query}&download=true`; $('#evidence-original').hidden = kind !== 'bank';
   try {
@@ -407,7 +407,7 @@ async function renderEvidencePage(serial = ++previewSerial) {
   const {kind,id,info} = previewState, n = Number($('#preview-page').value || 0), target = $('#evidence-content');
   const query = new URLSearchParams({kind,id,page:n});
   $('#preview-prev').disabled = n <= 0; $('#preview-next').disabled = n >= info.pages - 1;
-  target.replaceChildren(node('div', 'empty-state', 'Loading pageâ€¦'));
+  target.replaceChildren(node('div', 'empty-state', 'Loading page…'));
   try {
     if (info.kind === 'text') target.replaceChildren(node('pre', '', info.text));
     else if (info.kind === 'unsupported') target.replaceChildren(node('div', 'empty-state', info.message));
@@ -416,7 +416,7 @@ async function renderEvidencePage(serial = ++previewSerial) {
       renderOfficePreview(target, data, n === previewState.location.page ? previewState.location.highlight : null);
       target.querySelector('.source-cell-highlight')?.scrollIntoView({block:'center', inline:'center'});
     } else {
-      const image = node('img'); image.alt = `${$('#evidence-title').textContent} Â· ${info.labels[n]}`;
+      const image = node('img'); image.alt = `${$('#evidence-title').textContent} · ${info.labels[n]}`;
       image.onload = () => { if (serial === previewSerial) target.replaceChildren(image); };
       image.onerror = () => { if (serial === previewSerial) target.replaceChildren(node('div', 'empty-state', 'Preview unavailable. Use Open original.')); };
       image.src = `/api/matching-image?${query}`;
