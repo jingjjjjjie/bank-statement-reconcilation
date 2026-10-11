@@ -90,7 +90,7 @@ async function browse(path) {
       const button = node('button', 'browser-item', label);
       button.type = 'button'; button.onclick = () => action(target); items.append(button);
     };
-    if (data.path) addItem('↖ Up one level', data.parent, browse);
+    if (data.parent) addItem('↖ Up one level', data.parent, browse);
     for (const folder of data.folders) addItem('📁 ' + (folder.split(/[\\/]/).filter(Boolean).pop() || folder), folder, browse);
     if (!data.folders.length) items.append(node('p', '', 'No subfolders here.'));
   } catch (error) {
@@ -100,7 +100,7 @@ async function browse(path) {
 }
 function openBrowser() {
   $('#path-browser').showModal();
-  browse(sourceState.workspace || null);
+  browse(null);
 }
 $('#browse-source').onclick = () => openBrowser();
 $('#browser-close').onclick = () => $('#path-browser').close();

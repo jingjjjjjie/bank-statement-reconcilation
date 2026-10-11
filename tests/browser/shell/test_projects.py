@@ -5,6 +5,7 @@ import tempfile
 import threading
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from playwright.sync_api import expect, sync_playwright
 
@@ -16,20 +17,26 @@ from tests.http_server import TestServer
 class ProjectNavigationTests(unittest.TestCase):
     """Check the portal against synthetic workspaces without model calls."""
 
+    def setUp(self):
+        """Keep browser fixtures independent of the real upload mount."""
+        mount = patch.object(SourceSelection, "uploads_root", lambda source: source.workspace / "uploads")
+        mount.start()
+        self.addCleanup(mount.stop)
+
     def test_home_projects_selection_and_mobile_help(self):
         """Cards, search, cached selection, empty creation and mobile help work together."""
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             sources = SourceSelection(root, root / "data")
             for name in ("April", "May", "June"):
-                work = root / name
+                work = root / "uploads" / name
                 (work / "documents").mkdir(parents=True)
                 (work / "statement").mkdir()
                 (work / "statement/bank.pdf").write_bytes(b"fixture")
                 if name != "June":
                     sources.save_workspace(work)
                     sources.start()
-            (root / "May/documents").rmdir()
+            (root / "uploads/May/documents").rmdir()
             app = create_app(None, "token", sources)
             server = TestServer(("127.0.0.1", 0), app)
             threading.Thread(target=server.serve_forever, daemon=True).start()
@@ -73,7 +80,7 @@ class ProjectNavigationTests(unittest.TestCase):
                     self.assertIsNone(app.state.context.review)
                     page.get_by_role("button", name="Resume April").click()
                     expect(page).to_have_url(base + "/documents")
-                    self.assertEqual(app.state.context.review.root, root / "April/documents")
+                    self.assertEqual(app.state.context.review.root, root / "uploads/April/documents")
                     expect(page.locator(".brand-identity span")).to_have_text("Bank Statement Reconciliation")
                     page.get_by_role('link', name='Back to Home').click()
                     page.locator('.portal-card').click()
@@ -86,6 +93,12 @@ class ProjectNavigationTests(unittest.TestCase):
                     expect(page.get_by_role("dialog", name="New project", exact=True)).to_be_visible()
                     expect(page.locator("#workspace-name")).to_have_text("Choose a folder to begin")
                     expect(page.locator("#source-action")).to_be_hidden()
+                    page.locator("#browse-source").click()
+                    expect(page.locator("#browser-current")).to_have_text(str(root / "uploads"))
+                    expect(page.get_by_role("button", name="Up one level", exact=False)).to_have_count(0)
+                    page.locator("#browser-items").get_by_role("button", name="June", exact=False).click()
+                    expect(page.locator("#browser-current")).to_have_text(str(root / "uploads/June"))
+                    page.locator("#browser-close").click()
                     page.keyboard.press("Escape")
                     expect(page.get_by_role("dialog", name="New project", exact=True)).to_be_hidden()
                     expect(page.get_by_role("button", name="New project", exact=True)).to_be_focused()
@@ -107,14 +120,14 @@ class ProjectNavigationTests(unittest.TestCase):
                     page.get_by_role("button", name="New project", exact=True).click()
                     expect(page.get_by_role("dialog", name="New project", exact=True)).to_be_visible()
                     page.locator(".manual-path summary").click()
-                    page.locator("#source-path").fill(str(root / "June"))
+                    page.locator("#source-path").fill(str(root / "uploads/June"))
                     page.locator("#select-source").click()
                     expect(page.locator("#start-source")).to_be_enabled()
                     capture("new-project-mobile")
                     self.assertTrue(page.locator(".project-dialog").evaluate("el => el.scrollWidth <= el.clientWidth"))
                     page.locator("#start-source").click()
                     expect(page).to_have_url(base + "/documents")
-                    self.assertEqual(app.state.context.review.root, root / "June/documents")
+                    self.assertEqual(app.state.context.review.root, root / "uploads/June/documents")
                     page.get_by_role('link', name='Back to Home').click()
                     page.locator('.portal-card').click()
                     expect(page.locator(".project-row")).to_have_count(3)

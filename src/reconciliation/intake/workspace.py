@@ -3,7 +3,6 @@
 import hashlib
 import json
 import os
-import string
 from pathlib import Path
 
 from reconciliation.intake.duplicates import (
@@ -68,22 +67,29 @@ class SourceSelection:
         temporary.replace(self.selection)
         return result
 
-    def browse(self, path=None, pdfs=False):
-        """List one local directory for the dashboard's in-page picker."""
-        if not path:
-            if os.name == "nt":
-                candidates = [Path(f"{letter}:\\") for letter in string.ascii_uppercase]
-            else:
-                candidates = [Path("/uploads"), Path("/documents"), Path.home(), Path("/")]
-            roots = list(dict.fromkeys(str(folder) for folder in candidates if folder.is_dir()))
-            return {"path": None, "parent": None, "folders": roots, "files": []}
+    def uploads_root(self):
+        """Use the container mount or the local workspace uploads directory."""
+        return (Path("/uploads") if os.name != "nt" and Path("/uploads").is_dir()
+                else self.workspace / "uploads").resolve()
+
+    def upload_path(self, path):
+        """Reject manually entered paths and links that leave uploads."""
         folder = Path(path).expanduser().resolve(strict=True)
+        if not folder.is_relative_to(self.uploads_root()):
+            raise ValueError("Choose a workspace inside uploads/")
+        return folder
+
+    def browse(self, path=None, pdfs=False):
+        """List only folders and optional PDFs within uploads."""
+        root = self.uploads_root()
+        folder = self.upload_path(path or root)
         if not folder.is_dir():
             raise ValueError("Choose a folder")
         entries = sorted(folder.iterdir(), key=lambda item: item.name.casefold())
+        entries = [item for item in entries if item.resolve().is_relative_to(root)]
         folders = [str(item) for item in entries if item.is_dir()]
         files = [str(item) for item in entries if item.is_file() and item.suffix.lower() == ".pdf"] if pdfs else []
-        parent = str(folder.parent) if folder.parent != folder else None
+        parent = str(folder.parent) if folder != root else None
         return {"path": str(folder), "parent": parent, "folders": folders, "files": files}
 
     def inspect(self, path):

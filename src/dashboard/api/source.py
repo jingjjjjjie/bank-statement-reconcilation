@@ -93,7 +93,7 @@ def preview(state=Depends(context)):
 @router.post("/source/workspace-select")
 def select_workspace(body: PathChoice, state=Depends(context)):
     """Validate and save both inputs without starting processing."""
-    return state.sources.save_workspace(body.path)
+    return state.sources.save_workspace(state.sources.upload_path(body.path))
 
 
 @router.post("/source/start")

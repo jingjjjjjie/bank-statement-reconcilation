@@ -1,7 +1,6 @@
 """Verify source choices stay read-only until an explicit workflow action."""
 
 import json
-import os
 import tempfile
 import threading
 import unittest
@@ -25,6 +24,12 @@ def select_legacy_folder(sources, path, bank=None):
 
 
 class SourceSelectionTests(unittest.TestCase):
+    def setUp(self):
+        """Keep fixture uploads separate from any real Docker mount."""
+        mount = patch.object(SourceSelection, "uploads_root", lambda source: source.workspace / "uploads")
+        mount.start()
+        self.addCleanup(mount.stop)
+
     def test_workspace_selects_both_inputs_without_moving_files(self):
         """A work folder keeps the statement out of the supporting document scan."""
         with tempfile.TemporaryDirectory() as folder:
@@ -74,7 +79,7 @@ class SourceSelectionTests(unittest.TestCase):
         """Select a work folder through HTTP and keep the home page as its picker."""
         with tempfile.TemporaryDirectory() as folder:
             base = Path(folder)
-            work = base / "December"
+            work = base / "uploads/December"
             (work / "documents").mkdir(parents=True)
             (work / "statement").mkdir()
             (work / "documents/receipt.txt").write_text("receipt")
@@ -95,6 +100,9 @@ class SourceSelectionTests(unittest.TestCase):
                     return json.load(response)
 
             try:
+                with self.assertRaises(urllib.error.HTTPError) as rejected:
+                    post("/api/source/workspace-select", {"path": str(base)})
+                self.assertEqual(rejected.exception.code, 400)
                 result = post("/api/source/workspace-select", {"path": str(work)})
                 self.assertEqual(result["workspace"], str(work))
                 self.assertEqual(result["selected"]["files"], 1)
@@ -138,25 +146,25 @@ class SourceSelectionTests(unittest.TestCase):
             self.assertTrue(all(Path(r["OrganizedPath"]).is_file() for r in completed["Files"]))
             self.assertEqual(list(source.iterdir()), [])
 
-    def test_browser_roots_are_available_on_current_platform(self):
-        """A fresh picker must show drives or POSIX roots without a saved source."""
+    def test_browser_stays_inside_uploads(self):
+        """Start at uploads and reject traversal and manual outside selections."""
         with tempfile.TemporaryDirectory() as folder:
-            sources = SourceSelection(folder, Path(folder) / "data")
-            listing = sources.browse()
-            self.assertTrue(listing["folders"])
-            if os.name != "nt":
-                self.assertIn("/", listing["folders"])
-                self.assertIn(str(Path.home()), listing["folders"])
-
-    @unittest.skipIf(os.name == "nt", "Mounted POSIX roots are used inside Docker")
-    def test_docker_picker_prioritizes_existing_upload_mounts(self):
-        """List mounted uploads first and omit absent mount directories."""
-        with tempfile.TemporaryDirectory() as folder:
-            sources = SourceSelection(folder, Path(folder) / "data")
-            with patch.object(Path, "is_dir", lambda path: str(path) in {"/uploads", "/documents", "/"}):
-                self.assertEqual(sources.browse()["folders"], ["/uploads", "/documents", "/"])
-            with patch.object(Path, "is_dir", lambda path: str(path) == "/"):
-                self.assertEqual(sources.browse()["folders"], ["/"])
+            base = Path(folder)
+            uploads = base / "uploads"
+            child = uploads / "December"
+            child.mkdir(parents=True)
+            sources = SourceSelection(base, base / "data")
+            with patch.object(SourceSelection, "uploads_root", return_value=uploads):
+                listing = sources.browse()
+                self.assertEqual(listing["path"], str(uploads))
+                self.assertIsNone(listing["parent"])
+                self.assertEqual(listing["folders"], [str(child)])
+                self.assertEqual(sources.browse(child)["parent"], str(uploads))
+                for outside in (base, uploads / ".."):
+                    with self.assertRaisesRegex(ValueError, "inside uploads"):
+                        sources.browse(outside)
+                    with self.assertRaisesRegex(ValueError, "inside uploads"):
+                        sources.upload_path(outside)
 
     def test_preview_counts_moves_and_blocks_changed_source(self):
         """Require a fresh move preview before creating a review."""
@@ -178,11 +186,12 @@ class SourceSelectionTests(unittest.TestCase):
     def test_in_page_browser_lists_folders_and_pdfs(self):
         """Browse one directory without opening a desktop dialog or moving files."""
         with tempfile.TemporaryDirectory() as folder:
-            base = Path(folder)
+            base = Path(folder) / "uploads"
+            base.mkdir()
             (base / "receipts").mkdir()
             (base / "statement.pdf").write_bytes(b"fixture")
             (base / "other.txt").write_text("fixture", encoding="utf-8")
-            sources = SourceSelection(base, base / "dashboard-data")
+            sources = SourceSelection(Path(folder), base / "dashboard-data")
             listing = sources.browse(base, pdfs=True)
             self.assertIn(str(base / "receipts"), listing["folders"])
             self.assertEqual(listing["files"], [str(base / "statement.pdf")])
@@ -265,9 +274,10 @@ class SourceSelectionTests(unittest.TestCase):
                         self.assertEqual(response.status, 200)
                 with urllib.request.urlopen(root + "/api/document-status") as response:
                     self.assertEqual(json.load(response), {"prepared": False, "documents": []})
-                query = urlencode({"path": str(base), "kind": "bank"})
+                (base / "uploads").mkdir()
+                query = urlencode({"path": str(base / "uploads"), "kind": "bank"})
                 with urllib.request.urlopen(root + "/api/source/browse?" + query) as response:
-                    self.assertEqual(json.load(response)["path"], str(base))
+                    self.assertEqual(json.load(response)["path"], str(base / "uploads"))
             finally:
                 server.shutdown()
                 server.server_close()
