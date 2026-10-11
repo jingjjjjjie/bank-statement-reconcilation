@@ -21,7 +21,7 @@ usePage(root, initialize);
       <button id="prepare-bank" class="button dark" type="button">Extract bank statement</button>
       <p id="bank-result" role="status"></p>
     </section>
-    <section class="settings-card documents-page" aria-label="Final matching">
+    <section id="final-matching" class="settings-card documents-page" aria-label="Final matching" hidden>
       <div class="processing-toolbar"><h2>Final matching</h2>
       <div class="stage-actions"><button id="load-final-matching" class="button secondary" type="button">Load for final matching</button><button id="generate-matches" type="button" class="button dark" disabled>Generate matches</button><button id="stop-matches" type="button" class="button secondary" disabled>Stop</button></div></div>
       <p id="final-matching-ready" role="status"></p>

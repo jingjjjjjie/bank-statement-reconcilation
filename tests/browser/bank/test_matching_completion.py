@@ -33,8 +33,22 @@ class MatchingCompletionTests(unittest.TestCase):
                 page = browser.new_page()
                 page.route('**/api/live', lambda route: route.abort())
                 state = {}
+                bank = {'available': False}
+                page.route('**/api/bank-statement', lambda route: route.fulfill(json=bank))
+                page.route('**/api/source', lambda route: route.fulfill(json={}))
                 page.route('**/api/matching', lambda route: route.fulfill(json={'live_pieces': True}))
                 page.route('**/api/matching-run', lambda route: route.fulfill(json=state))
+                for width in (1440, 390):
+                    page.set_viewport_size({'width': width, 'height': 900})
+                    page.goto(f'http://127.0.0.1:{server.server_port}/bank')
+                    expect(page.locator('#bank-note')).to_have_text('No prepared bank statement was found.')
+                    expect(page.locator('#final-matching')).to_be_hidden()
+                    expect(page.locator('.page-help-button')).to_have_count(1)
+                bank.update(available=True, balance_checks='failed', transactions=[{'page': 1}], count=1)
+                page.reload()
+                expect(page.locator('#bank-content')).to_be_visible()
+                expect(page.locator('#final-matching')).to_be_hidden()
+                bank['balance_checks'] = 'passed'
                 for completed, running, stopped, failed, outdated, label, action in [
                     (240, False, True, 0, False, 'Matching complete', 'Generate matches'),
                     (120, False, True, 0, False, 'Stopped', 'Resume matching'),

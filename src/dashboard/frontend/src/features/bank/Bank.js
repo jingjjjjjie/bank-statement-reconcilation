@@ -5,7 +5,7 @@ export default function initialize(page) {
 const { root, $, api, toast, pollVisible, navigate, routeQuery } = page;
 /* Display the saved bank extraction; supporting-document matches remain pending. */
 const money = value => new Intl.NumberFormat('en-MY', {minimumFractionDigits: 2, maximumFractionDigits: 2}).format(Number(value || 0));
-let transactions = [];
+let transactions = [], bankExtracted = false;
 function renderRows() {
   const query = $('#bank-search').value.trim().toLowerCase();
   const matches = transactions.filter(row => [row.date, row.counterparty, row.narration, row.money_in, row.money_out, row.balance, row.matching_status].some(value => String(value).toLowerCase().includes(query)));
@@ -22,8 +22,12 @@ function renderRows() {
   $('#row-count').textContent = `${matches.length} of ${transactions.length} transactions shown`;
 }
 async function loadBank() {
+  /* Reveal matching only after a saved extraction passes bank validation. */
   try {
     const data = await api('/api/bank-statement');
+    bankExtracted = !!data.available && data.balance_checks === 'passed' && data.transactions.length > 0;
+    $('#final-matching').hidden = !bankExtracted;
+    if (!bankExtracted) matchingReady = false;
     $('#bank-extraction').hidden = true;
     if (!data.available) {
       $('#bank-note').textContent = 'No prepared bank statement was found.';
@@ -46,11 +50,13 @@ async function loadBank() {
     $('#workbook').hidden = !data.workbook_available;
     $('#bank-content').hidden = false;
     renderRows();
+    if (bankExtracted) await loadMatchingReadiness();
   } catch (error) { $('#bank-error').textContent = error.message; $('#bank-error').hidden = false; }
 }
 let matchingReady = false, matchingStarting = false;
 async function loadMatchingReadiness() {
   /* Show whether the current bank and extracted pieces are ready for matching. */
+  if (!bankExtracted) return;
   try {
     const data = await api('/api/matching');
     matchingReady = !!data.live_pieces;
@@ -140,7 +146,6 @@ $('#stop-matches').onclick = async () => {
   catch (e) { $('#stop-matches').disabled = false; $('#final-matching-ready').textContent = e.message; }
 };
 page.pollVisible(matchingProgress, 2000);
-loadMatchingReadiness();
 
 $('#bank-search').addEventListener('input', renderRows);
 $('#prepare-bank').onclick = async () => {
@@ -169,7 +174,7 @@ $('#prepare-bank').onclick = async () => {
 loadBank();
 
 
-page.onRefresh(async () => { await loadBank(); await loadMatchingReadiness(); }, ['/api/source/bank-prepare', '/api/matching-pieces', '/api/receipts/']);
+page.onRefresh(loadBank, ['/api/source/bank-prepare', '/api/matching-pieces', '/api/receipts/']);
 // Activation can return before its verified display snapshot; refresh when that snapshot arrives.
 page.onLive(['/api/matching']);
 }

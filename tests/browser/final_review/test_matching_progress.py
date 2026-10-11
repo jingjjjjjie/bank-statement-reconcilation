@@ -50,7 +50,9 @@ class MatchingProgressTests(unittest.TestCase):
             page.route('**/api/matching', snapshot)
             page.route('**/api/matching-run', progress)
             page.route('**/api/matching-stop', lambda route: route.fulfill(json={**state, 'stop_requested': True}))
-            page.route('**/api/bank-statement', lambda route: route.fulfill(json={'available': False}))
+            page.route('**/api/bank-statement', lambda route: route.fulfill(json={
+                'available': True, 'balance_checks': 'passed', 'transactions': [{'page': 1}], 'count': 1,
+            }))
             page.route('**/api/source', lambda route: route.fulfill(json={'bank': None}))
             page.goto(f'http://127.0.0.1:{server.server_port}/bank')
             page.locator('#generate-matches').click()
