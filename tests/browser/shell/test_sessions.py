@@ -63,13 +63,15 @@ class BrowserSessionTests(unittest.TestCase):
                         expect(a.locator('#stop-documents')).to_be_enabled()
                         # Closing a different idle project never releases the running owner's slot.
                         b.goto(base + '/projects')
-                        b.get_by_role('button', name='Close project').click()
+                        b.get_by_role('button', name='More actions for May').click()
+                        b.get_by_role('button', name='Release editing').click()
                         expect(b.locator('.project-row').filter(has=b.get_by_role('heading', name='May', exact=True))
                                .get_by_role('button', name='Resume May')).to_be_enabled()
                 finally:
                     state.review.content_thread = None
                 a.goto(base + '/projects')
-                a.get_by_role('button', name='Close project').click()
+                a.get_by_role('button', name='More actions for April').click()
+                a.get_by_role('button', name='Release editing').click()
                 expect(a.get_by_text('Active workspace', exact=True)).to_have_count(0)
                 b.get_by_role('button', name='Refresh', exact=True).click()
                 expect(row.get_by_role('button', name='Resume April')).to_be_enabled()

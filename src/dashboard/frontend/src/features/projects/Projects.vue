@@ -40,10 +40,22 @@ async function open(project) {
 }
 
 // Release this browser's editor lease without changing saved decisions.
-async function closeProject() {
+async function closeProject(project) {
+  opening.value = project.id;
   error.value = '';
-  try { await api('/api/source/close', {}); await load(); }
+  try { await api('/api/source/close', {}); toast('Editing released. Saved progress kept.'); await load(); }
   catch (failure) { error.value = failure.message; }
+  finally { opening.value = ''; }
+}
+
+// Position the native popup within the viewport; Escape and outside clicks dismiss it.
+function toggleActions(event) {
+  const trigger = event.currentTarget, menu = trigger.nextElementSibling;
+  if (menu.matches(':popover-open')) { menu.hidePopover(); return; }
+  menu.showPopover();
+  const rect = trigger.getBoundingClientRect();
+  menu.style.left = `${Math.max(8, Math.min(rect.right - menu.offsetWidth, innerWidth - menu.offsetWidth - 8))}px`;
+  menu.style.top = `${Math.max(8, Math.min(rect.bottom + 6, innerHeight - menu.offsetHeight - 8))}px`;
 }
 
 // Explain the selected operation before discarding any saved progress or drafts.
@@ -104,10 +116,16 @@ onDeactivated(() => { dialog.value?.close(); creating.value = false; });
         </div>
         <div class="project-meta"><span class="project-status" :class="project.status">{{ project.status === 'ongoing' ? 'Ongoing' : 'Needs attention' }}</span><span>{{ project.documents == null ? 'File count unavailable' : `${project.documents} supporting files` }}</span><span>Updated {{ updated(project.updated) }}</span></div>
         <div class="project-actions">
-          <button v-if="project.active" type="button" class="button secondary" :disabled="!!opening" @click="closeProject">Close project</button>
           <button type="button" class="button secondary" :aria-label="`Resume ${project.name}`" :disabled="!!opening || !project.workspace || project.in_use" @click="open(project)"><svg class="project-action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true" focusable="false"><path d="m9 5 11 7-11 7Z" fill="currentColor" stroke="none" /></svg>{{ project.in_use ? 'Project in use' : opening === project.id ? 'Working…' : 'Resume' }}</button>
-          <button type="button" class="button secondary" :aria-label="`Reset workspace ${project.name}`" :disabled="!!opening || !project.workspace || project.in_use" @click="changeProject(project, 'reset')"><svg class="project-action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true" focusable="false"><path d="M3 10a9 9 0 1 1 2 8M3 4v6h6" /></svg>Reset</button>
-          <button type="button" class="button secondary project-delete" :aria-label="`Delete workspace ${project.name}`" :disabled="!!opening || project.in_use" @click="changeProject(project, 'delete')"><svg class="project-action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true" focusable="false"><path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7M14 10v7" /></svg>Delete</button>
+          <button type="button" class="button secondary project-more" :aria-label="`More actions for ${project.name}`" :popovertarget="`project-actions-${project.id}`" :disabled="!!opening" @click.prevent="toggleActions"><span aria-hidden="true">&#8943;</span></button>
+          <div :id="`project-actions-${project.id}`" popover="auto" class="project-action-menu" @click="event => { if (event.target.closest('button')) event.currentTarget.hidePopover(); }">
+            <template v-if="project.active">
+              <button type="button" class="button secondary" :disabled="!!opening" :aria-describedby="`release-help-${project.id}`" @click="closeProject(project)">Release editing</button>
+              <p :id="`release-help-${project.id}`">Allow another session to edit. Saved progress is kept.</p>
+            </template>
+            <button type="button" class="button secondary" :aria-label="`Reset workspace ${project.name}`" :disabled="!!opening || !project.workspace || project.in_use" @click="changeProject(project, 'reset')"><svg class="project-action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true" focusable="false"><path d="M3 10a9 9 0 1 1 2 8M3 4v6h6" /></svg>Reset</button>
+            <button type="button" class="button secondary project-delete" :aria-label="`Delete workspace ${project.name}`" :disabled="!!opening || project.in_use" @click="changeProject(project, 'delete')"><svg class="project-action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true" focusable="false"><path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7M14 10v7" /></svg>Delete</button>
+          </div>
         </div>
       </article>
     </section>

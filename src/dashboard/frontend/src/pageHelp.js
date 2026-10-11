@@ -2,7 +2,7 @@
 export const pageHelp = {
   Projects: ['Projects', [
     'Resume a saved project or choose New project.',
-    'Close keeps progress and frees the workspace for another browser. Resume reopens it.',
+    'Open the More actions menu for Release editing, Reset and Delete. Release editing keeps saved progress and allows another session to edit. Resume reopens the project.',
     'Reset starts a fresh run. Delete removes the workspace from this list. Both keep originals and archive previous results. Stop running jobs first.',
   ]],
   Source: ['Workspace', [
