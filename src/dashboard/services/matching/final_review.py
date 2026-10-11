@@ -103,6 +103,15 @@ def frozen_context(review):
     return path, state, banks, items, index, facts
 
 
+def review_optional(confidence, suggestion, facts, stale):
+    """Only a current completed no-match result may skip a human decision."""
+    return (
+        confidence['level'] in {None, 'none'}
+        and not stale
+        and (not facts.get('live_pieces') or bool(suggestion.get('saved')))
+    )
+
+
 def snapshot(review, *, summary=False):
     """Expose suggestions, human outcomes, remaining evidence and changed-source flags."""
     path, state, banks, items, index, facts = context(review)
@@ -161,6 +170,7 @@ def snapshot(review, *, summary=False):
             support_status='Supporting' if support else 'No supporting',
             history=[] if summary else [h for h in state['history'] if h['bank_id'] == key],
         )
+        bank['review_optional'] = review_optional(bank['confidence'], suggestion, facts, stale)
         if summary:
             continue
         evidence_ids = set(bank['candidates'])
@@ -172,7 +182,7 @@ def snapshot(review, *, summary=False):
     if summary:
         return {
             'banks': [
-                {key: bank[key] for key in ('confidence', 'review_status', 'stale', 'decision')}
+                {key: bank[key] for key in ('confidence', 'review_status', 'stale', 'decision', 'review_optional')}
                 for bank in banks.values()
             ]
         }
@@ -423,6 +433,7 @@ def decision_update(review, state, bank_id, banks, items, facts, before):
         }
         for key in relevant
     ]
+    confidence = pairing_confidence(bank, suggestion, items, decision, stale_source)
     return {
         'saved': True,
         'version': state['version'],
@@ -434,7 +445,8 @@ def decision_update(review, state, bank_id, banks, items, facts, before):
             'review_status': decision['status'] if decision else 'pending',
             'support_status': 'Supporting' if support else 'No supporting',
             'stale': stale_source,
-            'confidence': pairing_confidence(bank, suggestion, items, decision, stale_source),
+            'confidence': confidence,
+            'review_optional': review_optional(confidence, suggestion, facts, stale_source),
             'history': [row for row in state['history'] if row['bank_id'] == bank_id],
         },
     }

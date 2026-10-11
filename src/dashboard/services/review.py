@@ -436,13 +436,11 @@ def workflow_guide(review, *, navigation=False):
         from dashboard.services.matching.final_review import snapshot as matching_snapshot
 
         try:
-            candidates = [
-                row
-                for row in matching_snapshot(review, summary=True)['banks']
-                if row['confidence']['level'] in {'high', 'low'} or row.get('decision')
-            ]
-            matched = bool(candidates) and all(
-                row['review_status'] in {'approved', 'denied'} and not row['stale'] for row in candidates
+            banks = matching_snapshot(review, summary=True)['banks']
+            matched = bool(banks) and all(
+                row.get('review_optional', False)
+                or (row['review_status'] in {'approved', 'denied'} and not row['stale'])
+                for row in banks
             )
         except (OSError, ValueError, KeyError):
             pass

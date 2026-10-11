@@ -145,7 +145,7 @@ function chooseBank(id, addItem, preservePreview = false) {
   header.append(party, node('strong', 'bank-amount', formatMoney(b.amount, b.currency)));
   const meta = node('div', 'bank-meta');
   meta.title = b.id;
-  const status = {pending: 'Awaiting review', approved: 'Approved', denied: 'Rejected'}[b.review_status] || b.review_status;
+  const status = {pending: b.review_optional ? 'Review optional' : 'Awaiting review', approved: 'Approved', denied: 'Rejected'}[b.review_status] || b.review_status;
   meta.append(node('span', 'payment-date', `Payment date: ${b.date || 'Not provided'}`),
     node('span', `payment-tag review-state ${b.review_status}`, status));
   const narration = node('p', 'payment-description', b.description || 'Payment description unavailable');

@@ -65,10 +65,25 @@ class ReviewCompletionTests(unittest.TestCase):
             rows = [
                 {'confidence': {'level': 'high'}, 'review_status': 'approved', 'stale': False},
                 {'confidence': {'level': 'low'}, 'review_status': status, 'stale': stale},
-                {'confidence': {'level': 'none'}, 'review_status': 'pending', 'stale': False},
+                {'confidence': {'level': 'none'}, 'review_status': 'pending', 'stale': False, 'review_optional': True},
             ]
             with (
                 self.subTest(status=status, stale=stale),
+                patch('dashboard.services.extraction.document_status.snapshot', return_value={'documents': []}),
+                patch('dashboard.services.matching.final_review.snapshot', return_value={'banks': rows}),
+            ):
+                step = next(step for step in workflow_guide(review)['steps'] if step['href'] == '/matching')
+                self.assertEqual(step['checked'], expected)
+
+    def test_only_no_matches_can_complete_without_decisions(self):
+        """Optional current no matches complete review; missing or failed results do not."""
+        review = SimpleNamespace(manifest={}, manifest_path='fixture', workflow_checks=lambda: (False, False, False))
+        for level, optional, expected in [(None, True, True), (None, False, False), ('failed', False, False),
+                                          ('unresolved', False, False), ('outdated', False, False)]:
+            rows = [{'confidence': {'level': level}, 'review_status': 'pending', 'stale': False,
+                     'review_optional': optional}]
+            with (
+                self.subTest(level=level, optional=optional),
                 patch('dashboard.services.extraction.document_status.snapshot', return_value={'documents': []}),
                 patch('dashboard.services.matching.final_review.snapshot', return_value={'banks': rows}),
             ):

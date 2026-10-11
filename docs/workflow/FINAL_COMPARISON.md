@@ -251,3 +251,13 @@ Repeated pieces from one original include that file once. Pending, rejected, sta
 or empty allocations cannot produce an evidence download; contextual and partial
 current approvals remain downloadable. Exact bytes are verified while preparing the
 response, failed ZIPs are removed, and downloads never change the review ledger.
+
+
+## Optional no-match review (2026-10-11)
+
+High- and low-confidence proposals require a current human decision. Completed,
+current no-match results require no approval and do not count toward the export
+review notice, including when every result is no match. Users may still review
+them or manually select and approve evidence. No automatic decision is written;
+No supporting remains the export status without approved evidence. Missing, failed,
+unresolved, outdated or stale results are not completed no-match results.

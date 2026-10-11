@@ -35,6 +35,7 @@ export const pageHelp = {
     'Options → Reload results loads saved results. Export reviews downloads saved review data. Accept all accepts ready extractions across the batch, includes your current draft, and reports skipped items that still need attention.',
   ]],
   Matching: ['Review matching', [
+    'High- and low-confidence matches need review. No match needs no approval; you can still review it or select supporting documents.',
     'Check the original, select supporting documents, then Accept or Reject. Reset to suggestion restores the proposed selection.',
   ]],
   FinalReport: ['Export', [

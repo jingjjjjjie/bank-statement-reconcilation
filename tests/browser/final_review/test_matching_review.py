@@ -24,6 +24,10 @@ class MatchingReviewBrowserTests(unittest.TestCase):
         fixture.review.manifest = {}
         fixture.review.workspace = lambda: {'name': 'Fixture', 'period': 'December'}
         fixture.enable_review_navigation()
+        fixture.review.completion = lambda: {'complete': False}
+        suggestions = final_review.read(fixture.cache / 'decisions.json')
+        suggestions[2].update(assessment='none', allocations=[])
+        fixture.write(fixture.cache / 'decisions.json', suggestions)
         server = TestServer(('127.0.0.1', 0), create_app(fixture.review, 'test-token', SimpleNamespace()))
         threading.Thread(target=server.serve_forever, daemon=True).start()
         self.addCleanup(server.server_close)
@@ -35,6 +39,15 @@ class MatchingReviewBrowserTests(unittest.TestCase):
             page.goto(base + '/matching')
             expect(page.locator('.transaction-number[aria-current]')).to_be_visible(timeout=30000)
             banks = page.request.get(base + '/api/matching').json()['banks']
+            page.locator('#confidence-filter').select_option('none')
+            expect(page.locator('.review-state')).to_have_text('Review optional')
+            expect(page.locator('#deny-match')).to_be_enabled()
+            page.goto(base + '/final-report')
+            expect(page.locator('.report-notice')).to_contain_text('2 transactions still need review')
+            expect(page.get_by_text('Review optional', exact=True)).to_be_visible()
+            page.set_viewport_size({'width': 390, 'height': 844})
+            expect(page.get_by_text('Review optional', exact=True)).to_be_visible()
+            page.goto(base + '/matching')
             for confidence in ['high', 'low', 'none', 'all']:
                 for decision in ['all', 'pending', 'approved', 'denied']:
                     page.locator('#confidence-filter').select_option(confidence)

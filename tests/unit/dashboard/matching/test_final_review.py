@@ -9,6 +9,15 @@ from tests.fixtures.final_review import FinalReviewFixture
 
 
 class MatchingReviewTests(FinalReviewFixture):
+    def test_live_no_match_requires_completed_current_result(self):
+        """Unfinished or stale matching cannot be treated as optional no-match review."""
+        for saved, stale, expected in [(False, False, False), (True, False, True), (True, True, False)]:
+            self.assertEqual(matching.review_optional({'level': None}, {'saved': saved},
+                                                     {'live_pieces': True}, stale), expected)
+        for level in ('high', 'low', 'failed', 'outdated', 'unresolved'):
+            self.assertFalse(matching.review_optional({'level': level}, {'saved': True},
+                                                      {'live_pieces': True}, False))
+
     def test_trash_document_cannot_be_approved_as_support(self):
         """Final review respects explicit document trash classifications."""
         item = matching.context(self.review)[3]['D1']
@@ -30,6 +39,7 @@ class MatchingReviewTests(FinalReviewFixture):
         self.write(self.cache / 'decisions.json', suggestions)
         data = matching.snapshot(self.review)
         self.assertEqual([b['confidence']['level'] for b in data['banks']], ['high', 'low', None])
+        self.assertEqual([b['review_optional'] for b in data['banks']], [False, False, True])
         self.assertTrue(all(b['review_status'] == 'pending' for b in data['banks']))
         self.assertTrue(all(b['support_status'] == 'No supporting' for b in data['banks']))
         matching.decide(self.review, self.request())
