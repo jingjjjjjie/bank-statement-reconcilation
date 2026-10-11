@@ -99,7 +99,7 @@ onDeactivated(() => { request++; loading.value = false; closeEvidence(); closeEx
 
       <div class="report-filters"><label>Find a transaction<input v-model="query" type="search" placeholder="Name, amount or reference…"></label><label>Support status<select v-model="filter" aria-label="Support status"><option value="all">All transactions</option><option>Supporting</option><option>No supporting</option></select></label><span>{{ rows.length }} shown</span></div>
       <div class="report-table-wrap"><table class="report-table"><caption class="sr-only">Final reconciliation with saved approval decisions</caption><thead><tr><th>Transaction</th><th>Bank amount</th><th>Support status</th><th>Review</th><th>Evidence</th></tr></thead><tbody>
-        <tr v-for="bank in rows" :key="bank.id"><td><strong>{{ bank.parties.join(' / ') }}</strong><span>{{ bank.description }}</span></td><td data-label="Bank amount">{{ money(bank.amount, bank.currency) }}</td><td data-label="Support"><span class="report-status" :class="{supported: bank.support_status === 'Supporting'}">{{ bank.support_status }}</span><small v-if="bank.stale">Evidence changed — recheck required</small></td><td data-label="Review">{{ bank.review_optional && bank.review_status === 'pending' ? 'Review optional' : decisionLabel(bank.review_status) }}</td><td><button v-if="bank.review_status === 'approved' && !bank.stale && bank.decision?.allocations?.length" type="button" class="text-button" :aria-label="`View evidence for ${bank.id}`" @click="openEvidence(bank, $event)">View evidence</button></td></tr>
+        <tr v-for="bank in rows" :key="bank.id"><td><strong><b class="report-index">{{ bank.report_index }}-</b> {{ bank.parties.join(' / ') }}</strong><span>{{ bank.description }}</span></td><td data-label="Bank amount">{{ money(bank.amount, bank.currency) }}</td><td data-label="Support"><span class="report-status" :class="{supported: bank.support_status === 'Supporting'}">{{ bank.support_status }}</span><small v-if="bank.stale">Evidence changed — recheck required</small></td><td data-label="Review">{{ bank.review_optional && bank.review_status === 'pending' ? 'Review optional' : decisionLabel(bank.review_status) }}</td><td><button v-if="bank.review_status === 'approved' && !bank.stale && bank.decision?.allocations?.length" type="button" class="text-button" :aria-label="`View evidence for ${bank.id}`" @click="openEvidence(bank, $event)">View evidence</button></td></tr>
       </tbody></table><p v-if="!rows.length" class="report-caption">No transactions match these filters.</p></div>
     </template>
       </section>
@@ -133,7 +133,7 @@ onDeactivated(() => { request++; loading.value = false; closeEvidence(); closeEx
           <aside class="evidence-sidebar" aria-label="Payment and approved documents">
             <section class="evidence-payment">
               <span class="evidence-source-label">From bank statement</span>
-              <h3>{{ selected.parties.join(' / ') }}</h3>
+              <h3>{{ selected.report_index }}- {{ selected.parties.join(' / ') }}</h3>
               <strong class="evidence-payment-amount">{{ money(selected.amount, selected.currency) }}</strong>
               <p class="evidence-payment-date">{{ selected.date || 'Date not recorded' }}</p>
               <p class="evidence-payment-description">{{ selected.description }}</p>

@@ -2,6 +2,7 @@
 
 import csv
 import os
+import re
 from pathlib import Path
 
 from dashboard.services.matching import final_review, unmatched_export
@@ -18,14 +19,13 @@ def portable_name(path):
     return path.as_posix()
 
 
-def original_documents(review, matched=False):
+def original_documents(review, selected=None):
     """Keep every original copy and restore legacy organized paths inside the ZIP."""
     root = review.root.resolve(strict=True)
     manifest = final_review.read(review.manifest_path)
     if Path(manifest['SupportingRoot']).resolve() != root:
         raise ValueError('Document manifest belongs to another workspace')
     originals = {str(Path(row['OrganizedPath']).resolve()): Path(row['OriginalPath']) for row in manifest['Files']}
-    selected = unmatched_export.matched_documents(review) if matched else None
     files = {}
     for digest, locations in inventory(root, review.manifest_path).items():
         if selected is not None and digest not in selected:
@@ -40,12 +40,44 @@ def original_documents(review, matched=False):
                 raise ValueError('Original document changed since intake; cannot export its initial state')
             name = portable_name(Path(root.name) / original.relative_to(root))
             files[name] = (source, name, digest)
-    if not matched:
+    if selected is None:
         for original in manifest.get('SourceHashes', {}):
             name = portable_name(Path(root.name) / Path(original).relative_to(root))
             if name not in files:
                 raise ValueError('An original document is missing; cannot export its initial state')
     return list(files.values())
+
+
+def matched_files(review):
+    """Group current approved originals by their unfiltered report number and party."""
+    if not (review.manifest_path.parent / 'final-review/decisions.json').exists():
+        return [], []
+    banks = final_review.snapshot(review)['banks']
+    groups = []
+    for bank in banks:
+        if bank['review_status'] != 'approved' or bank['stale']:
+            continue
+        digests = {entry['document'] for entry in bank['decision']['allocations']}
+        if not digests:
+            continue
+        party = ' / '.join(bank['parties'])
+        party = re.sub(r'[<>:"/\\|?*\x00-\x1f]', '-', party).strip(' .')[:100].rstrip(' .')
+        folder = f"{bank['report_index']}-{party or 'Transaction'}"
+        groups.append((folder, digests))
+    selected = set().union(*(digests for _, digests in groups))
+    originals = original_documents(review, selected=selected)
+    by_digest = {}
+    for source, name, digest in originals:
+        by_digest.setdefault(digest, []).append((source, name.split('/', 1)[1], digest))
+    if selected - by_digest.keys():
+        raise ValueError('An approved supporting document is missing; cannot export its original')
+    files = [
+        (source, folder + '/' + relative, digest)
+        for folder, digests in groups
+        for digest in sorted(digests)
+        for source, relative, digest in by_digest[digest]
+    ]
+    return files, [folder + '/' for folder, _ in groups]
 
 
 def source_directories(root, prefix, excluded=()):
@@ -103,8 +135,11 @@ def export_zip(review, kind):
     if kind not in {'original', 'project', 'matched'}:
         raise ValueError('Unknown document export option')
     root = review.root.resolve(strict=True)
-    files = original_documents(review, matched=kind == 'matched')
-    directories = [root.name + '/']
+    if kind == 'matched':
+        files, directories = matched_files(review)
+    else:
+        files = original_documents(review)
+        directories = [root.name + '/']
     if kind == 'original':
         _, directories = source_directories(root, Path(root.name))
     elif kind == 'project':

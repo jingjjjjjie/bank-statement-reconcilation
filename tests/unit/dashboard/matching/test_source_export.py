@@ -58,14 +58,40 @@ class SourceExportTests(FinalReviewFixture):
 
     def test_only_current_confirmed_matches_are_exported(self):
         """Partial approved links include full originals and copies; undo removes them."""
-        self.assertEqual(self.archive('matched'), {'documents/': b''})
+        self.assertEqual(self.archive('matched'), {})
         final_review.decide(self.review, self.request(allocations=[{'item_id': 'D1', 'amount': '4'}]))
         ledger = (self.project / 'final-review/decisions.json').read_bytes()
         result = self.archive('matched')
-        self.assertEqual(set(result), {'documents/', 'documents/receipt-1.txt', 'documents/nested/copy.txt'})
+        self.assertEqual(set(result), {'1-Person 1/', '1-Person 1/receipt-1.txt', '1-Person 1/nested/copy.txt'})
         self.assertEqual((self.project / 'final-review/decisions.json').read_bytes(), ledger)
         final_review.decide(self.review, self.request(action='undo'))
-        self.assertEqual(self.archive('matched'), {'documents/': b''})
+        self.assertEqual(self.archive('matched'), {})
+
+    def test_shared_support_is_in_each_payment_folder_with_report_indices(self):
+        """Keep report gaps and repeat shared evidence for each approved payment."""
+        final_review.decide(self.review, self.request(allocations=[{'item_id': 'D1', 'amount': '4'}]))
+        final_review.decide(self.review, self.request(bank='B3', allocations=[{'item_id': 'D1', 'amount': '5'}]))
+        banks = final_review.snapshot(self.review)['banks']
+        self.assertEqual([bank['report_index'] for bank in banks], [1, 2, 3])
+        result = self.archive('matched')
+        self.assertEqual({name.split('/')[0] for name in result}, {'1-Person 1', '3-Person 3'})
+        for folder in ('1-Person 1', '3-Person 3'):
+            self.assertEqual(result[folder + '/receipt-1.txt'], (self.review.root / 'receipt-1.txt').read_bytes())
+            self.assertIn(folder + '/nested/copy.txt', result)
+        (self.review.root / 'receipt-1.txt').write_bytes(b'Changed original')
+        self.assertEqual(self.archive('matched'), {})
+
+    def test_folder_names_sanitize_parties_and_distinguish_repeated_names(self):
+        """Number prefixes disambiguate companies; party text cannot create ZIP paths."""
+        facts = final_review.read(self.cache / 'facts.json')
+        for bank in facts['banks']:
+            bank['parties'] = ['PIPO(MY) SDN BHD/../ACME:*?']
+        self.write(self.cache / 'facts.json', facts)
+        for bank in ('B1', 'B2'):
+            final_review.decide(self.review, self.request(bank=bank, allocations=[{'item_id': 'D1', 'amount': '4'}]))
+        result = self.archive('matched')
+        folders = {name.split('/')[0] for name in result}
+        self.assertEqual(folders, {'1-PIPO(MY) SDN BHD-..-ACME---', '2-PIPO(MY) SDN BHD-..-ACME---'})
 
     def test_changed_or_missing_original_is_not_called_initial_state(self):
         """Fail clearly if original intake bytes can no longer be recovered."""

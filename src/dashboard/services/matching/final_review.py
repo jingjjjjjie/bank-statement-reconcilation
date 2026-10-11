@@ -136,7 +136,8 @@ def snapshot(review, *, summary=False):
             used=str(used.get(key, Decimal(0))),
             remaining=str(total - used.get(key, Decimal(0))) if total is not None else '',
         )
-    for key, bank in banks.items():
+    for report_index, (key, bank) in enumerate(banks.items(), 1):
+        bank['report_index'] = report_index
         suggestion = suggestions[key]
         decision = state['decisions'].get(key)
         stale = bank_hashes[bank['source']] != bank.get('source_sha256', facts.get('statement_hash', '')).upper()

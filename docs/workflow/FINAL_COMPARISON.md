@@ -261,3 +261,15 @@ review notice, including when every result is no match. Users may still review
 them or manually select and approve evidence. No automatic decision is written;
 No supporting remains the export status without approved evidence. Missing, failed,
 unresolved, outdated or stale results are not completed no-match results.
+
+
+## Numbered matched-document folders (2026-10-11)
+
+Final report assigns every bank transaction a one-based index in its full saved
+order. Search and support filters retain that index. Matched documents ZIP uses
+`<index>-<bank party>/` folders containing that payment's current approved originals,
+with relative supporting paths and exact-copy locations preserved inside each folder.
+Shared originals appear in every payment folder that approves them. Pending, rejected,
+stale and empty allocations create no folders; their report indices are not reused.
+Folder labels sanitize filesystem-unsafe characters and use Transaction when the
+party is absent. Source hashes, ledger decisions and original exports are unchanged.

@@ -4,7 +4,7 @@ import { api } from '../../api.js';
 
 const busy = ref(''), messages = ref({}), completion = ref(null), error = ref('');
 const archives = [
-  { id: 'matched', title: 'Matched documents', detail: 'Confirmed supporting originals.', endpoint: '/api/source-export?kind=matched', filename: 'matched-documents.zip' },
+  { id: 'matched', title: 'Matched documents', detail: 'Supporting documents grouped by report number and party.', endpoint: '/api/source-export?kind=matched', filename: 'matched-documents.zip' },
   { id: 'unmatched', title: 'Unmatched documents', detail: 'Duplicates and confirmed matches excluded.', endpoint: '/api/unmatched-documents-export', filename: 'unmatched-documents.zip' },
   { id: 'original', title: 'Original documents', detail: 'All supporting documents, as uploaded.', endpoint: '/api/source-export?kind=original', filename: 'original-documents.zip' },
   { id: 'project', title: 'Original project', detail: 'Statement and supporting input folders.', endpoint: '/api/source-export?kind=project', filename: 'original-project.zip' },
