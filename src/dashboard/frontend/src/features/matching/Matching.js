@@ -8,7 +8,7 @@ export default function initialize(page) {
 const { root, $, api, toast, pollVisible, navigate, routeQuery } = page;
 /* Present cached evidence; Python validates and persists every human decision. */
 let reviewData, activeId, saving = false, previewSerial = 0, previewState;
-let savedDraft = '', transactionPage = 0;
+let savedDraft = '', transactionPage = 0, saveGeneration = 0;
 const expandedCandidates = new Set(), expandedAllocations = new Set(), returnedCandidates = new Set();
 const selected = new Map(), allocationRoles = new Map(), allocationAmounts = new Map();
 function allocationRole(id) {
@@ -51,13 +51,19 @@ function button(label, action, className = 'text-button') {
   const element = node('button', className, label); element.type = 'button'; element.onclick = action; return element;
 }
 async function refresh() {
-  /* Reload durable state rather than optimistically claiming a save succeeded. */
-  reviewData = await api('/api/matching');
+  /* Never replace a saved decision or active draft with a late display snapshot. */
+  if (saving) return false;
+  const generation = saveGeneration;
+  const data = await api('/api/matching');
+  if (saving || generation !== saveGeneration || (activeId && draftSnapshot() !== savedDraft) ||
+      (reviewData?.binding === data.binding && data.version < reviewData.version)) return false;
+  reviewData = data;
   error('');
   itemById.clear(); reviewData.items.forEach(i => itemById.set(i.id, i));
   $('#matching-load-note').hidden = !!reviewData.live_pieces;
   $('#matching-outdated').hidden = !reviewData.banks.some(b => b.suggestion.outdated);
   renderQueue();
+  return true;
 }
 function visibleBanks() {
   /* Filter confidence separately from the saved human decision. */
@@ -344,6 +350,7 @@ function updateSummary() {
 async function saveDecision(action) {
   /* Send explicit user intent, then reload the authoritative ledger and balances. */
   if (saving) return;
+  saveGeneration++;
   saving = true; error(); $('#save-status').textContent = 'Saving your decision…';
   updateSummary();
   const queue = visibleBanks(), position = queue.findIndex(row => row.id === activeId);
@@ -483,7 +490,7 @@ async function matchingProgress() {
   if (!reviewData?.live_pieces) return;
   const state = await api('/api/matching-run');
   if (matchingWasRunning && !state.running && draftSnapshot() === savedDraft) {
-    await refresh(); if (activeId) chooseBank(activeId);
+    if (await refresh() && activeId) chooseBank(activeId);
   }
   matchingWasRunning = !!state.running;
 }
@@ -491,7 +498,7 @@ pollVisible(matchingProgress, 2000);
 page.onLive(['/api/matching']);
 page.onRefresh(async () => {
   /* Select newly loaded payments when returning from an initially empty workspace. */
-  await refresh();
+  if (!await refresh()) return;
   if (visibleBanks().some(row => row.id === activeId)) chooseBank(activeId, undefined, true);
   else applyFilters();
 }, ['/api/matching-decide', '/api/matching-pieces', '/api/matching-run', '/api/receipts/', '/api/content/']);
