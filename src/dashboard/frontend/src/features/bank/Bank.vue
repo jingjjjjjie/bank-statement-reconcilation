@@ -16,6 +16,7 @@ usePage(root, initialize);
     <div id="bank-error" class="validation" role="alert" hidden></div>
     <section id="bank-extraction" class="settings-card" hidden>
       <h2>Extract bank statement</h2><p id="statement-source"></p>
+      <label class="setting-field"><strong>Bank</strong><select id="bank-format" required><option value="">Choose bank</option><option value="ambank">AmBank</option><option value="public_bank">Public Bank</option><option value="maybank">Maybank</option><option value="hong_leong">Hong Leong Bank</option><option value="cimb">CIMB</option><option value="uob">UOB (account activities)</option></select></label>
       <label class="setting-field"><strong>Statement year</strong><input id="bank-year" type="number" min="1900" max="2100" step="1" required placeholder="Enter year"></label>
 
       <button id="prepare-bank" class="button dark" type="button">Extract bank statement</button>
@@ -33,6 +34,7 @@ usePage(root, initialize);
     </section>
     </section>
     <section id="bank-content" hidden>
+      <p id="bank-validation-note" class="validation" role="note" hidden></p>
       <section class="stats bank-stats"><div><span>Transactions</span><strong id="bank-count"></strong><small id="bank-account"></small></div><div><span>Opening balance</span><strong id="bank-opening"></strong></div><div><span>Money in / out</span><strong id="bank-flow"></strong></div><div><span>Closing balance</span><strong id="bank-closing"></strong><small id="bank-checks"></small></div></section>
       <section class="settings-card"><div class="bank-toolbar"><div><h2>Statement rows</h2><p id="match-note"></p></div><input id="bank-search" type="search" placeholder="Search date, payee, reference, or amount" aria-label="Search bank transactions"></div><div class="bank-table-wrap"><table class="bank-table"><thead><tr><th>Date</th><th>Pay to / from</th><th>Money in</th><th>Money out</th><th>Balance</th><th>Match</th></tr></thead><tbody id="bank-rows"></tbody></table></div><p id="row-count" class="bank-row-count"></p></section>
     </section>

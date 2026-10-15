@@ -3,6 +3,7 @@
 import secrets
 import tempfile
 from pathlib import Path
+from typing import Literal
 
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import Response
@@ -58,6 +59,7 @@ class BankYear(BaseModel):
     """Require an explicit four-digit statement year."""
 
     year: StrictInt = Field(ge=STATEMENT_YEARS[0], le=STATEMENT_YEARS[1])
+    bank: Literal['ambank', 'public_bank', 'maybank', 'hong_leong', 'cimb', 'uob']
 
 
 class ExportChoice(BaseModel):
@@ -146,7 +148,7 @@ def prepare_bank(body: BankYear, state=Depends(active_context)):
     """Extract deterministically in FastAPI's worker thread pool."""
     if state.sources.selected_workspace() and state.sources.selected() != state.review.root:
         raise ValueError("Create or open the selected workspace review before extracting its statement")
-    return state.sources.prepare_bank(state.review.manifest_path, body.year)
+    return state.sources.prepare_bank(state.review.manifest_path, body.year, body.bank)
 
 
 @router.get("/bank-statement")

@@ -13,7 +13,7 @@ Your receipts, statements and supporting documents. One place to make sense of t
 </div>
 
 > 🌱 **Growing into something shareable.**
-> Currently hard-coded; open source soon! Bank extraction currently targets AmBank statements.
+> Currently hard-coded; open source soon! Bank extraction supports the observed AmBank, Public Bank, Maybank, Hong Leong, CIMB digital statement layouts, and UOB account-activity exports.
 
 ## Small steps. Clear records.
 

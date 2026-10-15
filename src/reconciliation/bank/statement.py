@@ -1,35 +1,46 @@
-"""Extract and reconcile a single-account AmBank digital statement locally."""
+"""Extract supported single-account digital bank statements locally."""
 
 import argparse
 import csv
 import hashlib
 import re
-from datetime import datetime
 from decimal import Decimal
 from pathlib import Path
 
 import pdfplumber
+from pdfminer.pdftypes import resolve1
+from pdfplumber.utils.exceptions import PdfminerException
 
 # Keep money exact and retain the evidence needed for later matching.
 MONEY = re.compile(r"(?:\d{1,3}(?:,\d{3})+|\d+)\.\d{2}")
-#: AmBank digital statements are A4 portrait; column positions below assume this width (points).
-A4_WIDTH = 595.28
-#: Left edges (points) of each statement column; a column runs to the next edge.
-DATE_X, NARRATION_X, DEBIT_X, CREDIT_X, BALANCE_X = 0, 100, 310, 395, 480
+DEFAULT_METADATA = {
+    'bank': 'ambank',
+    'statement_kind': 'statement',
+    'validation_note': '',
+    'opening_balance_origin': 'printed',
+    'header_balance': '',
+}
 MASTER_FIELDS = [
     "transaction_id",
     "source",
     "source_sha256",
+    "bank",
+    'statement_kind',
+    'validation_note',
+    'opening_balance_origin',
+    'header_balance',
     "page",
     "sequence",
     "account",
     "currency",
     "year_supplied",
     "date",
+    'transaction_datetime',
     "direction",
     "money_in",
     "money_out",
     "balance",
+    "balance_origin",
     "transaction_type",
     "counterparty",
     "counterparty_role",
@@ -46,36 +57,28 @@ MASTER_FIELDS = [
 ]
 
 
-def describe(narration, money_in):
-    """Separate comma-delimited AmBank fields while keeping original evidence."""
-    parts = narration.split(",", 2)
-    method = " ".join(parts[0].split())
-    raw_party = parts[1].strip() if len(parts) > 1 else ""
-    raw_details = parts[2].strip() if len(parts) > 2 else ""
-    party = " ".join(raw_party.split())
+def describe(narration, money_in, bank='ambank', direction=None):
+    """Apply bank-specific party rules while keeping original evidence."""
+    from reconciliation.bank.formats import layout
 
-    # Incoming company fields may include a numeric prefix and a LEVEL address.
-    if method in ("INWARD IBG", "INWARD RENTAS /MISC CREDIT"):
-        party = re.sub(r"^\d+\s+", "", party)
-        party = re.split(r"\s+LEVEL\s+", party, maxsplit=1, flags=re.I)[0]
-    role = "payer" if money_in else "recipient"
-    if method.startswith("IBG OUTWARD RTN"):
-        role = "original payment recipient"
-    # Preserve reference line breaks; replacing them with spaces changes identifiers.
-    details = raw_details
-    return {
-        "transaction_type": method,
-        "counterparty": party,
-        "counterparty_role": role,
-        "counterparty_raw": raw_party,
-        "details_raw": raw_details,
-        "particular": details or method,
-    }
+    if bank != 'ambank':
+        # Only known party fields are separated; all source narration remains intact.
+        party = layout(bank).counterparty(narration, money_in)
+        lines = narration.splitlines()
+        return {
+            'transaction_type': lines[0] if lines else '',
+            'counterparty': party,
+            'counterparty_role': 'payer' if money_in or direction == 'in' else 'recipient',
+            'counterparty_raw': party,
+            'details_raw': narration,
+            'particular': '',
+        }
+    return layout(bank).describe(narration, money_in)
 
 
 def write_master(result, path):
     """Write a self-contained CSV master, including statement-level checks."""
-    metadata = {k: v for k, v in result.items() if k != "transactions"}
+    metadata = {**DEFAULT_METADATA, **{k: v for k, v in result.items() if k != "transactions"}}
     metadata["source_sha256"] = hashlib.sha256(Path(result["source"]).read_bytes()).hexdigest()
     with path.open("w", newline="", encoding="utf-8-sig") as file:
         writer = csv.DictWriter(file, fieldnames=MASTER_FIELDS)
@@ -85,10 +88,12 @@ def write_master(result, path):
                 {
                     **metadata,
                     **row,
-                    **describe(row["narration"], row["money_in"]),
+                    'transaction_datetime': row.get('transaction_datetime', ''),
+                    'balance_origin': row.get('balance_origin', 'printed'),
+                    **describe(row["narration"], row["money_in"], metadata['bank'], row.get('direction')),
                     "sequence": sequence,
                     "transaction_id": f"{metadata['source_sha256']}:{sequence:04d}",
-                    "direction": "in" if row["money_in"] else "out",
+                    "direction": row.get('direction', "in" if row["money_in"] else "out"),
                     "matching_status": "pending",
                 }
             )
@@ -100,9 +105,19 @@ def read_master(path):
         rows = list(csv.DictReader(file))
     if not rows:
         raise ValueError("Master CSV contains no transactions")
+    for row in rows:
+        for key, default in DEFAULT_METADATA.items():
+            row[key] = row.get(key) or default
+        row['transaction_datetime'] = row.get('transaction_datetime') or ''
+        row['balance_origin'] = row.get('balance_origin') or 'printed'
     summary_keys = (
         "source",
         "source_sha256",
+        "bank",
+        'statement_kind',
+        'validation_note',
+        'opening_balance_origin',
+        'header_balance',
         "account",
         "currency",
         "year_supplied",
@@ -118,7 +133,9 @@ def read_master(path):
             row[key] = amount(row[key])
     result = {key: rows[0][key] for key in summary_keys}
     validate(
-        rows, *(amount(result[k]) for k in ("opening_balance", "closing_balance", "total_money_out", "total_money_in"))
+        rows,
+        *(amount(result[k]) for k in ("opening_balance", "closing_balance", "total_money_out", "total_money_in")),
+        allow_zero=result['bank'] == 'public_bank',
     )
 
     # Bind each CSV row to the unchanged PDF, not merely to plausible arithmetic.
@@ -126,20 +143,25 @@ def read_master(path):
     digest = hashlib.sha256(source.read_bytes()).hexdigest()
     if digest != result["source_sha256"]:
         raise ValueError("Source PDF fingerprint changed")
-    original = extract(source, int(result["year_supplied"]))
+    original = extract(source, int(result["year_supplied"]), result['bank'])
+    for key, default in DEFAULT_METADATA.items():
+        if str(result[key]) != str(original.get(key, default)):
+            raise ValueError(f'Master {key} differs from source PDF')
     for key in ("account", "currency"):
         if result[key] != original[key]:
             raise ValueError(f"Master {key} differs from source PDF")
     if len(rows) != len(original["transactions"]):
         raise ValueError("Master row count differs from source PDF")
     for number, (row, expected) in enumerate(zip(rows, original["transactions"]), 1):
-        derived = describe(expected["narration"], expected["money_in"])
+        derived = describe(expected["narration"], expected["money_in"], result['bank'], expected.get('direction'))
         required = {
             **expected,
+            'transaction_datetime': expected.get('transaction_datetime', ''),
             **derived,
             "sequence": number,
             "transaction_id": f"{digest}:{number:04d}",
-            "direction": "in" if expected["money_in"] else "out",
+            "direction": expected.get('direction', "in" if expected["money_in"] else "out"),
+            'balance_origin': expected.get('balance_origin', 'printed'),
         }
         if any(str(row[key]) != str(value) for key, value in required.items()):
             raise ValueError(f"Master row {number} differs from source extraction")
@@ -157,18 +179,19 @@ def amount(text):
 
 
 def cell(line, left, right):
-    """Read a column using the observed AmBank page coordinates."""
+    """Read a text column using verified page coordinates."""
     chars = [c for c in line["chars"] if left <= c["x0"] < right]
     return pdfplumber.utils.extract_text(chars, x_tolerance=1).strip() if chars else ""
 
 
-def validate(rows, opening, closing, debit_total, credit_total):
+def validate(rows, opening, closing, debit_total, credit_total, allow_zero=False):
     """Check each balance and both independent printed monthly totals."""
     if not rows or any(v is None for v in (opening, closing, debit_total, credit_total)):
         raise ValueError("Missing transactions, opening/closing balance, or printed totals")
     balance = opening
     for number, row in enumerate(rows, 1):
-        if min(row["money_in"], row["money_out"]) < 0 or bool(row["money_in"]) == bool(row["money_out"]):
+        zero = allow_zero and row.get('direction') in ('in', 'out') and row['money_in'] == row['money_out'] == 0
+        if min(row["money_in"], row["money_out"]) < 0 or (bool(row["money_in"]) == bool(row["money_out"]) and not zero):
             raise ValueError(f"Expected one positive debit or credit at transaction {number}")
         balance += row["money_in"] - row["money_out"]
         if balance != row["balance"]:
@@ -181,91 +204,32 @@ def validate(rows, opening, closing, debit_total, credit_total):
         raise ValueError("Printed credit total mismatch")
 
 
-def extract(path, year):
-    """Read this AmBank layout; fail when required structure is missing."""
-    rows = []
-    opening = debit_total = credit_total = None
-    account = None
-    with pdfplumber.open(path) as pdf:
-        # The cover summary supplies an independent closing balance.
-        cover = pdf.pages[0].extract_text() or ""
-        summary = re.findall(r"(\d{10,})\s+MYR\s+([\d,]+\.\d{2})", cover)
-        if "AMBANK" not in cover or len(summary) != 1:
-            raise ValueError("Expected a single-account AmBank MYR statement")
-        account, closing_text = summary[0]
-        closing = amount(closing_text)
+def extract(path, year, bank='ambank'):
+    """Check the selected issuer before dispatching to its verified layout reader."""
+    from reconciliation.bank.formats import check_selection, layout
+    from reconciliation.bank.formats.common import read_layout
 
-        # Ignore non-transaction pages and repeated bilingual table headings.
-        for page_number, page in enumerate(pdf.pages, 1):
-            lines = page.extract_text_lines()
-            if not lines:
-                raise ValueError(f"Page {page_number} has no readable text; OCR required")
-            header = next(
-                (
-                    i
-                    for i, line in enumerate(lines)
-                    if line["text"] == "DATE TRANSACTION CHEQUE NO. DEBIT CREDIT BALANCE"
-                ),
-                None,
-            )
-            if header is None:
-                if any(re.match(r"^\d{2}-[A-Za-z]{3}\s", line["text"]) for line in lines):
-                    raise ValueError(f"Transaction-like page {page_number} has an unsupported header")
-                continue
-            if abs(page.width - A4_WIDTH) > 1:
-                raise ValueError("Unsupported page width for AmBank column positions")
-            for line in lines[header + 1 :]:
-                text = line["text"]
-                if text.startswith("TARIKH TRANSAKSI"):
-                    continue
-                if text.startswith("Balance Brought Fwd"):
-                    if opening is not None:
-                        raise ValueError("Multiple opening balances are unsupported")
-                    opening = amount(cell(line, BALANCE_X, page.width))
-                    continue
-                if text.startswith("TOTAL / JUMLAH"):
-                    debit_total = amount(cell(line, DEBIT_X, CREDIT_X))
-                    credit_total = amount(cell(line, CREDIT_X, BALANCE_X))
-                    break
+    path = Path(path)
+    if type(year) is not int or not 1900 <= year <= 2100:
+        raise ValueError('Enter a valid statement year (1900-2100).')
+    try:
+        document = pdfplumber.open(path)
+    except PdfminerException as error:
+        raise ValueError('Cannot read this PDF. Use an unencrypted, readable bank PDF.') from error
+    with document as pdf:
+        if not pdf.pages:
+            raise ValueError('Statement PDF has no pages.')
+        if resolve1(pdf.doc.catalog['Pages']).get('Count') != len(pdf.pages):
+            raise ValueError('Inconsistent PDF page count; repeated or malformed pages are unsupported.')
+        check_selection(pdf.pages[0].extract_text() or '', bank)
+        reader = layout(bank)
+        if hasattr(reader, 'read'):
+            return reader.read(pdf, path, year)
+        if bank != 'ambank':
+            return read_layout(pdf, path, year, bank)
+    from reconciliation.bank.formats.ambank import extract as extract_ambank
 
-                # A date begins a transaction; subsequent lines extend its narration.
-                date_text = cell(line, DATE_X, NARRATION_X)
-                narration = cell(line, NARRATION_X, DEBIT_X)
-                debit = cell(line, DEBIT_X, CREDIT_X)
-                credit = cell(line, CREDIT_X, BALANCE_X)
-                balance = cell(line, BALANCE_X, page.width)
-                if re.fullmatch(r"\d{2}-[A-Za-z]{3}", date_text):
-                    if bool(debit) == bool(credit):
-                        raise ValueError(f"Expected one debit or credit on page {page_number}")
-                    rows.append(
-                        {
-                            "date": datetime.strptime(f"{date_text}-{year}", "%d-%b-%Y").date().isoformat(),
-                            "narration": narration,
-                            "money_out": amount(debit) if debit else Decimal("0.00"),
-                            "money_in": amount(credit) if credit else Decimal("0.00"),
-                            "balance": amount(balance),
-                            "page": page_number,
-                        }
-                    )
-                elif not date_text and not (debit or credit or balance) and narration and rows:
-                    rows[-1]["narration"] += "\n" + narration
-                else:
-                    raise ValueError(f"Unrecognized transaction line on page {page_number}: {text}")
-
-    # Only reconciled records can reach the output stage.
-    validate(rows, opening, closing, debit_total, credit_total)
-    return {
-        "source": str(path.resolve()),
-        "account": account,
-        "currency": "MYR",
-        "year_supplied": year,
-        "opening_balance": opening,
-        "closing_balance": closing,
-        "total_money_in": credit_total,
-        "total_money_out": debit_total,
-        "balance_checks": "passed",
-        "transactions": rows,
-    }
+    return extract_ambank(path, year)
 
 
 def main():
@@ -273,10 +237,13 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("pdf", type=Path)
     parser.add_argument("--year", type=int, required=True)
+    from reconciliation.bank.formats import BANKS
+
+    parser.add_argument('--bank', choices=BANKS, default='ambank')
     parser.add_argument("--output", type=Path, default=Path("bank-output"))
     args = parser.parse_args()
     try:
-        result = extract(args.pdf, args.year)
+        result = extract(args.pdf, args.year, args.bank)
     except (ValueError, OSError) as error:
         parser.exit(1, f"Extraction stopped: {error}\n")
 
@@ -289,6 +256,8 @@ def main():
         f"Out: {result['total_money_out']} | Closing: {result['closing_balance']}"
     )
     print(f"Output: {args.output.resolve()}")
+    if result.get('validation_note'):
+        print(result['validation_note'])
 
 
 if __name__ == "__main__":

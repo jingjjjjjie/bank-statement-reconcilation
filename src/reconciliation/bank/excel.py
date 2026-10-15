@@ -7,6 +7,7 @@ from pathlib import Path
 from openpyxl import Workbook
 from openpyxl.comments import Comment
 
+from reconciliation.bank.formats import BANKS
 from reconciliation.bank.statement import read_master
 from reconciliation.bank.workbook_style import WorkbookStyle
 from reconciliation.core.paths import WORKSPACE
@@ -50,10 +51,25 @@ def statement_workbook(company, metadata, rows, style_path=None):
     style.prepare(book)
     sheet['A1'] = company.strip()
     sheet['A1'].data_type = 's'
-    sheet['A2'] = f"AMBANK - BANK & CASH : A/C {metadata.get('account', '')} ({sheet.title}) - {metadata['currency']}"
+    bank_name = BANKS.get(metadata.get('bank', 'ambank'), 'Bank')
+    source_label = (
+        'ACCOUNT ACTIVITIES (FILTERED EXPORT)' if metadata.get('statement_kind') == 'activity_export' else 'BANK & CASH'
+    )
+    sheet['A2'] = (
+        f"{bank_name.upper()} - {source_label} : A/C {metadata.get('account', '')} ({sheet.title}) - {metadata['currency']}"
+    )
+    if metadata.get('validation_note'):
+        sheet['A2'].comment = Comment(metadata['validation_note'], 'Source')
     opening = metadata.get('opening_balance')
     style.write_row(sheet, 5, {'balance': float(opening) if opening not in (None, '') else None})
-    style.cell(sheet, 5, 'balance').comment = Comment('Opening balance from the AmBank statement.', 'Source')
+    style.cell(sheet, 5, 'balance').comment = Comment(f'Opening balance from the {bank_name} statement.', 'Source')
+    if metadata.get('opening_balance_origin') == 'inferred':
+        style.write_row(sheet, 5, {'particular': 'OPENING BALANCE (INFERRED)'})
+        style.cell(sheet, 5, 'balance').comment = Comment(
+            'Inferred from the first listed transaction; not an independently printed opening balance. '
+            + metadata.get('validation_note', ''),
+            'Source',
+        )
     for number, values in enumerate(rows, 6):
         style.apply_row(sheet, number, 'transaction')
         style.write_row(sheet, number, values)
@@ -86,6 +102,11 @@ def export(data_path, company, output_path, style_path=None):
     )
     sheet = book.active
     for number, transaction in enumerate(data['transactions'], 6):
+        if transaction.get('balance_origin') == 'calculated':
+            style.cell(sheet, number, 'balance').comment = Comment(
+                'Calculated running balance; not printed on this transaction. Checked against subsequent printed balances and statement totals.',
+                'Source',
+            )
         style.cell(sheet, number, 'date').comment = Comment(
             f"{Path(data['source']).name}, page {transaction['page']}.\n"
             f"ID: {transaction['transaction_id']}\n{transaction['narration']}\n"

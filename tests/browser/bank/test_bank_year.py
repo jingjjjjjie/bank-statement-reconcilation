@@ -24,6 +24,12 @@ class BankYearTests(unittest.TestCase):
             path = route.request.url.split('/api/')[1]
             if path == 'source/bank-prepare':
                 requests.append(route.request.post_data_json)
+                if route.request.post_data_json['bank'] == 'cimb':
+                    route.fulfill(
+                        status=400,
+                        json={'error': 'Selected CIMB, but this PDF is a Maybank statement. Select Maybank.'},
+                    )
+                    return
                 route.fulfill(json={'existing': False})
                 return
             data = {
@@ -46,6 +52,10 @@ class BankYearTests(unittest.TestCase):
             page.route('**/api/**', respond)
             page.goto(f'http://127.0.0.1:{server.server_port}/bank')
             page.locator('#prepare-bank').click()
+            expect(page.locator('#bank-error')).to_contain_text('Choose the bank')
+            self.assertEqual(requests, [])
+            page.locator('#bank-format').select_option('maybank')
+            page.locator('#prepare-bank').click()
             expect(page.locator('#bank-error')).to_contain_text('Enter the statement year')
             self.assertEqual(requests, [])
             page.locator('#bank-year').fill('2025.5')
@@ -54,5 +64,58 @@ class BankYearTests(unittest.TestCase):
             page.locator('#bank-year').fill('2025')
             page.locator('#prepare-bank').click()
             expect(page.locator('#prepare-bank')).to_be_enabled()
-            self.assertEqual(requests, [{'year': 2025}])
+            self.assertEqual(requests, [{'year': 2025, 'bank': 'maybank'}])
+            for width in (1280, 390):
+                page.set_viewport_size({'width': width, 'height': 844})
+                expect(page.locator('.page-help-button')).to_have_count(1)
+                expect(page.get_by_role('navigation', name='Main navigation')).to_have_count(1)
+                expect(page.locator('#bank-format')).to_be_visible()
+                page.locator('.page-help-button').focus()
+                expect(page.locator('[role="tooltip"]')).to_contain_text('Wrong-bank selections')
+                page.keyboard.press('Escape')
+                expect(page.locator('[role="tooltip"]')).to_be_hidden()
+                self.assertTrue(
+                    page.locator('#bank-format').evaluate('(el) => el.getBoundingClientRect().right <= innerWidth')
+                )
+            page.locator('#bank-format').select_option('cimb')
+            page.locator('#prepare-bank').click()
+            expect(page.locator('#bank-error')).to_contain_text('Selected CIMB')
+            expect(page.locator('#prepare-bank')).to_be_enabled()
+            expect(page.locator('#bank-format')).to_have_value('cimb')
+            page.route(
+                '**/api/bank-statement',
+                lambda route: route.fulfill(
+                    json={
+                        'available': True,
+                        'bank': 'uob',
+                        'account': '123',
+                        'currency': 'MYR',
+                        'opening_balance': '100.00',
+                        'closing_balance': '105.00',
+                        'opening_balance_origin': 'inferred',
+                        'total_money_in': '5.00',
+                        'total_money_out': '0.00',
+                        'count': 1,
+                        'matched': 0,
+                        'balance_checks': 'passed',
+                        'validation_note': 'Filtered account-activity export; full-period completeness is not verified.',
+                        'transactions': [
+                            {
+                                'date': '2025-01-01',
+                                'page': 1,
+                                'counterparty': '',
+                                'narration': 'Example',
+                                'money_in': '5.00',
+                                'money_out': '0.00',
+                                'balance': '105.00',
+                            }
+                        ],
+                    }
+                ),
+            )
+            page.locator('#bank-format').select_option('uob')
+            page.locator('#prepare-bank').click()
+            expect(page.locator('#bank-validation-note')).to_contain_text('completeness is not verified')
+            expect(page.locator('#bank-opening')).to_have_text('100.00 (inferred)')
+            expect(page.locator('#bank-account')).to_contain_text('UOB')
             browser.close()

@@ -4,6 +4,7 @@ import { node } from '../../dom.js';
 export default function initialize(page) {
 const { root, $, api, toast, pollVisible, navigate, routeQuery } = page;
 /* Display the saved bank extraction; supporting-document matches remain pending. */
+const bankNames = {ambank: 'AmBank', public_bank: 'Public Bank', maybank: 'Maybank', hong_leong: 'Hong Leong Bank', cimb: 'CIMB', uob: 'UOB'};
 const money = value => new Intl.NumberFormat('en-MY', {minimumFractionDigits: 2, maximumFractionDigits: 2}).format(Number(value || 0));
 let transactions = [], bankExtracted = false;
 function renderRows() {
@@ -14,7 +15,7 @@ function renderRows() {
     const tr = node('tr');
     const party = node('td'); party.append(node('strong', '', row.counterparty || 'Unidentified'), node('small', '', `Page ${row.page} · ${row.counterparty_role || 'unknown role'}`));
     const details = node('details'); details.append(node('summary', '', 'Bank narration'), node('pre', '', row.narration)); party.append(details);
-    for (const value of [row.date, party, row.money_in === '0.00' ? '—' : money(row.money_in), row.money_out === '0.00' ? '—' : money(row.money_out), money(row.balance), row.matching_status || 'pending']) {
+    for (const value of [row.date, party, row.money_in === '0.00' ? '—' : money(row.money_in), row.money_out === '0.00' ? '—' : money(row.money_out), `${money(row.balance)}${row.balance_origin === 'calculated' ? ' (calculated)' : ''}`, row.matching_status || 'pending']) {
       tr.append(value instanceof Node ? value : node('td', '', value));
     }
     body.append(tr);
@@ -41,8 +42,10 @@ async function loadBank() {
     transactions = data.transactions;
     $('#bank-note').hidden = true;
     $('#bank-count').textContent = data.count;
-    $('#bank-account').textContent = `Account ${data.account} · ${data.currency}`;
-    $('#bank-opening').textContent = money(data.opening_balance);
+    $('#bank-account').textContent = `${bankNames[data.bank] || 'AmBank'} | Account ${data.account} · ${data.currency}`;
+    $('#bank-opening').textContent = `${money(data.opening_balance)}${data.opening_balance_origin === 'inferred' ? ' (inferred)' : ''}`;
+    $('#bank-validation-note').hidden = !data.validation_note;
+    $('#bank-validation-note').textContent = data.validation_note || '';
     $('#bank-flow').textContent = `${money(data.total_money_in)} / ${money(data.total_money_out)}`;
     $('#bank-closing').textContent = money(data.closing_balance);
     $('#bank-checks').textContent = data.balance_checks === 'passed' ? 'Bank balance checks passed' : 'Bank balance checks need review';
@@ -169,6 +172,13 @@ $('#prepare-bank').onclick = async () => {
   const button = $('#prepare-bank');
   const yearField = $('#bank-year');
   const year = Number(yearField.value);
+  const bank = $('#bank-format').value;
+  if (!bank) {
+    $('#bank-error').textContent = 'Choose the bank printed on the statement.';
+    $('#bank-error').hidden = false;
+    $('#bank-format').focus();
+    return;
+  }
   if (!yearField.value.trim() || !Number.isInteger(year) || year < 1900 || year > 2100) {
     $('#bank-error').textContent = 'Enter the statement year (1900–2100).';
     $('#bank-error').hidden = false;
@@ -181,7 +191,7 @@ $('#prepare-bank').onclick = async () => {
   $('#bank-error').hidden = true;
   try {
     await api('/api/session');
-    await api('/api/source/bank-prepare', {year});
+    await api('/api/source/bank-prepare', {year, bank});
     await loadBank();
   } catch (error) {
     $('#bank-error').textContent = error.message;

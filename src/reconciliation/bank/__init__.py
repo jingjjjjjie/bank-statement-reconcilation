@@ -1,1 +1,1 @@
-"""Step 3, Bank statement: parse the AmBank PDF, validate balances, export Excel."""
+"""Read supported bank statements, validate balances, and export Excel."""

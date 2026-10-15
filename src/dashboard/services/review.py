@@ -171,6 +171,10 @@ class Review:
         workbook = self.manifest_path.parent / "bank-output" / "answer_statement_bank_only.xlsx"
         return {
             "available": True,
+            "bank": first.get('bank') or 'ambank',
+            'validation_note': first.get('validation_note', ''),
+            'opening_balance_origin': first.get('opening_balance_origin') or 'printed',
+            'statement_kind': first.get('statement_kind') or 'statement',
             "account": first["account"],
             "currency": first["currency"],
             "opening_balance": first["opening_balance"],
@@ -181,7 +185,10 @@ class Review:
             "balance_checks": first["balance_checks"],
             "matched": sum(row["matching_status"] == "matched" for row in rows),
             "workbook_available": workbook.is_file(),
-            "transactions": [{key: row[key] for key in fields} for row in rows],
+            "transactions": [
+                {**{key: row[key] for key in fields}, 'balance_origin': row.get('balance_origin') or 'printed'}
+                for row in rows
+            ],
         }
 
     def workflow_checks(self):

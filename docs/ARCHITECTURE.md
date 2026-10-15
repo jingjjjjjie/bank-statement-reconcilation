@@ -8,7 +8,7 @@ where code lives and how to make common changes without breaking the rest.
 ```text
  Get Started            Documents                  Bank statement        Final review / report
  intake/                extraction/                bank/                 matching/
- pick work folder  -->  read files into units -->  parse AmBank PDF -->  retrieve + rank pieces per
+ pick work folder  -->  read files into units -->  parse selected bank PDF -->  retrieve + rank pieces per
  set aside exact        model extracts pieces       validate balances     bank line; human approves
  duplicates             human accepts/edits         export Excel          allocations; export CSV
         \_______________________ core/ (paths, settings, prompts, money, revisions) _____________/
@@ -30,7 +30,7 @@ src/reconciliation/
     sources/     reader.py (file -> units, READERS table), pdf_routing.py (text vs vision per PDF page)
     pipeline/    stages.py (model stages), job_runner.py (parallel jobs), pdf_groups.py, assembly.py
     results/     pieces.py (piece facts), schemas.py (model output), records.py (saved JSON shapes), report, inventory
-  bank/          statement.py (AmBank PDF -> master CSV), excel.py + workbook_style.py (styled export)
+  bank/          statement.py + formats/ (selected bank PDF -> master CSV), excel.py + workbook_style.py (styled export)
   matching/      candidate retrieval, ranking, and pure allocation/confidence rules in review_rules.py
 src/dashboard/
   app.py, routes.py, api/        web layer

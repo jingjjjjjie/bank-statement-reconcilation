@@ -137,16 +137,19 @@ class SourceSelection:
             raise ValueError("Select a PDF file")
         return {"path": str(source), "bytes": source.stat().st_size}
 
-    def prepare_bank(self, manifest, year):
+    def prepare_bank(self, manifest, year, bank='ambank'):
         """Extract the selected PDF after an explicit request and protect existing data."""
         import csv
 
+        from reconciliation.bank.formats import BANKS
         from reconciliation.bank.statement import extract, write_master
 
         source = self.selected_bank()
         if source is None:
             raise ValueError("Choose a bank statement PDF first")
         self.inspect_bank(source)
+        if bank not in BANKS:
+            raise ValueError('Choose a supported bank')
         if not isinstance(year, int) or not STATEMENT_YEARS[0] <= year <= STATEMENT_YEARS[1]:
             raise ValueError("Enter a valid statement year")
         output = Path(manifest).parent / "bank-output" / "master_statement.csv"
@@ -154,10 +157,14 @@ class SourceSelection:
         if output.exists():
             with output.open(newline="", encoding="utf-8-sig") as stream:
                 row = next(csv.DictReader(stream), None)
+            if row and (row.get('bank') or 'ambank') != bank:
+                raise ValueError(
+                    f"Saved statement is {BANKS.get(row.get('bank') or 'ambank', 'another bank')}; existing data was not replaced"
+                )
             if row and row.get("source_sha256") == digest and row.get("year_supplied") == str(year):
                 return {"path": str(output), "existing": True}
             raise ValueError("This review already has a different bank master; existing data was not replaced")
-        result = extract(source, year)
+        result = extract(source, year, bank)
         output.parent.mkdir(parents=True, exist_ok=True)
         write_master(result, output)
         return {"path": str(output), "existing": False}

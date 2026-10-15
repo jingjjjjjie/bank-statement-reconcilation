@@ -138,6 +138,10 @@ def export_workbook(review, include_evidence_paths=True):
             )
         if rows[row - 6]['balance'] is None:
             style.cell(sheet, row, 'balance').comment = Comment('Balance unavailable in saved bank evidence.', 'Source')
+        elif bank.get('balance_origin') == 'calculated':
+            style.cell(sheet, row, 'balance').comment = Comment(
+                'Calculated running balance; checked against available printed balances and statement totals.', 'Source'
+            )
     headings = [
         'Bank ID',
         'Transaction ID',
