@@ -96,9 +96,9 @@
 }
 .report-status {
   display:inline-block;
-  padding:6px 10px;
+  padding:3px 7px;
   border-radius:20px;
-  font-size:12px;
+  font-size:11px;
   background:#f5ead8;
   color:#725019;
   white-space:nowrap;
@@ -106,6 +106,30 @@
 .report-status.supported {
   background:#e1eee2;
   color:#285c36;
+}
+/* Give export wording space while keeping support and its exceptions readable. */
+.report-table .report-support { width:112px; }
+.report-table .report-description { width:38%; min-width:230px; }
+.description-copy { display:flex; align-items:flex-start; gap:8px; width:100%; }
+.particular-text { white-space:pre-wrap; overflow-wrap:anywhere; flex:1; min-width:0; line-height:1.5; }
+.description-pencil { flex:none; width:32px; height:32px; display:grid; place-items:center; border:1px solid #dbe3ee; border-radius:6px; background:white; cursor:pointer; }
+.description-pencil:hover { background:#eff6ff; border-color:#93b7e7; }
+.description-dialog { width:min(600px,calc(100vw - 32px)); max-width:calc(100vw - 32px); max-height:90dvh; box-sizing:border-box; padding:0; border:1px solid #dbe3ee; border-radius:12px; color:#243248; background:white; }
+.description-dialog::backdrop { background:#13243d99; }
+.description-dialog .dialog-heading { background:white; }
+.description-editor { padding:20px; }
+.description-editor>p:first-child { margin-top:0; font-weight:600; }
+.description-editor label { display:block; margin-bottom:8px; font-size:13px; }
+.description-editor textarea { box-sizing:border-box; width:100%; resize:vertical; min-height:150px; padding:12px; border:1px solid #cbd5e1; border-radius:7px; font:inherit; line-height:1.5; }
+#description-help { font-size:12px; color:#64748b; }
+.description-error { color:#b42318; font-size:13px; }
+.description-actions { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:20px; }
+.description-actions>span { flex:1; }
+@media(max-width:700px) {
+  .report-table .report-description,.report-table .report-support { width:100%; min-width:0; }
+  .report-table .report-description { align-items:flex-start; }
+  .description-editor { padding:16px; }
+  .description-actions .text-button { flex-basis:100%; }
 }
 .sr-only {
   position:absolute;

@@ -210,6 +210,14 @@ def matching_decide(body: dict, state=Depends(active_context)):
     return final_review.decide(state.review, body)
 
 
+@router.post('/matching-description')
+def matching_description(body: dict, state=Depends(active_context)):
+    """Save explicit export wording without changing matching approvals or allocations."""
+    from dashboard.services.matching.descriptions import save
+
+    return save(state.review, body)
+
+
 @router.post('/matching-pieces')
 def matching_pieces(body: dict, state=Depends(active_context)):
     """Switch to reviewed pieces while preserving previous decisions as history."""

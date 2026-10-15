@@ -44,9 +44,10 @@ class MatchingReviewBrowserTests(unittest.TestCase):
             expect(page.locator('#deny-match')).to_be_enabled()
             page.goto(base + '/final-report')
             expect(page.locator('.report-notice')).to_contain_text('2 transactions still need review')
-            expect(page.get_by_text('Review optional', exact=True)).to_be_visible()
+            expect(page.locator('.report-table tbody tr').last.locator('.report-status')).to_have_text('No supporting')
+            expect(page.locator('.report-table tbody tr').last).not_to_contain_text('Needs review')
             page.set_viewport_size({'width': 390, 'height': 844})
-            expect(page.get_by_text('Review optional', exact=True)).to_be_visible()
+            expect(page.locator('.report-table tbody tr').last.locator('.report-status')).to_be_visible()
             page.goto(base + '/matching')
             for confidence in ['high', 'low', 'none', 'all']:
                 for decision in ['all', 'pending', 'approved', 'denied']:

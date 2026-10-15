@@ -114,6 +114,8 @@ def review_optional(confidence, suggestion, facts, stale):
 
 def snapshot(review, *, summary=False):
     """Expose suggestions, human outcomes, remaining evidence and changed-source flags."""
+    from dashboard.services.matching.descriptions import fields as description_fields
+
     path, state, banks, items, index, facts = context(review)
     hashes = {digest: source_hash(doc['paths'][0]) for digest, doc in index['documents'].items()}
     bank_hashes = {source: source_hash(source) for source in {bank['source'] for bank in banks.values()}}
@@ -167,6 +169,7 @@ def snapshot(review, *, summary=False):
             decision=decision,
             review_status=status,
             stale=stale,
+            bank_source_stale=bank_hashes[bank['source']] != bank.get('source_sha256', facts.get('statement_hash', '')).upper(),
             confidence=pairing_confidence(bank, suggestion, items, decision, stale),
             support_status='Supporting' if support else 'No supporting',
             history=[] if summary else [h for h in state['history'] if h['bank_id'] == key],
@@ -174,6 +177,7 @@ def snapshot(review, *, summary=False):
         bank['review_optional'] = review_optional(bank['confidence'], suggestion, facts, stale)
         if summary:
             continue
+        bank.update(description_fields(bank, items, state, facts))
         evidence_ids = set(bank['candidates'])
         if decision:
             evidence_ids.update(a['item_id'] for a in decision['allocations'])

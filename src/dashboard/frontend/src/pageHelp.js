@@ -41,7 +41,7 @@ export const pageHelp = {
     'Check the original, select supporting documents, then Accept or Reject. Reset to suggestion restores the proposed selection.',
   ]],
   FinalReport: ['Export', [
-    'Check saved results and export files. Report numbers stay the same when filtering and identify payment folders in Matched documents. Change decisions in Review Matching.',
+    'Use the pencil to edit Description, which becomes PARTICULAR in Excel. Reset to generated restores the supporting-evidence wording. Editing does not change support status. Report numbers identify payment folders in Matched documents. Change decisions in Review Matching.',
   ]],
   Settings: ['Settings', [
     'Choose processing options, then Save settings. Saving does not start a run.',

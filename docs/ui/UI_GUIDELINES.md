@@ -128,3 +128,9 @@ Shared help control: `src/dashboard/frontend/src/components/PageHelp.vue`.
 - Omit Workspace from the application header. Back to Home retains access to project selection. Number visible workflow destinations Documents 1, Review Extraction 2, Bank statement 3, Review Matching 4 and Export 5.
 
 - Export evidence uses a compact payment/document sidebar beside a full-height original preview. Keep Download evidence in the dialog header, document page/zoom controls below the preview, and saved differences/flags visible in the sidebar. Group entries sharing an original into one document choice; one original downloads directly, multiple unique originals download as a ZIP.
+
+- Export replaces the Review column with Description, showing the exact PARTICULAR
+  wording used in Excel. Each row has an accessible pencil button opening a text
+  editor with Save, Cancel and Reset to generated. Keep Support compact, with
+  pending, rejected, partial and stale warnings visible. Manual wording never
+  changes evidence, matching decisions or support status.

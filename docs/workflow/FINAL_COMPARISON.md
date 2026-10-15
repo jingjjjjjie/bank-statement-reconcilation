@@ -64,7 +64,7 @@ Actual bank statement and receipt/document content is the evidence. Folder and f
 
 ## Final report after review
 
-`/final-report` is a read-only view of the same saved ledger, reached from Final review or navigation. It lists every transaction with Supporting / No supporting and the human decision, search and support filters, and CSV export. Pending rows remain visible with an explicit incomplete-review notice. It is a live report, not a locked archival snapshot.
+`/final-report` displays the same saved ledger, reached from Final review or navigation. It lists every transaction with Supporting / No supporting, search and support filters, and export. Matching decisions remain read-only here; the Description column now permits explicit PARTICULAR edits as documented below. Pending rows remain visible with an explicit incomplete-review notice. It is a live report, not a locked archival snapshot.
 
 View evidence is available only for current confirmed allocations, including partial/contextual approvals. Pending, rejected and stale rows have no evidence button. The modal shows only the approved supporting documents, without the bank statement pane. Document switches show each saved allocation; page and zoom controls, original downloads, totals, differences, flags and notes remain available. Pending or rejected proposals are never shown as approved evidence. Changed sources are flagged and previews retain hash validation. Escape or Close restores focus and preserves filters; mobile uses a full-screen stacked pane and transaction cards. No new model calls or review writes occur.
 
@@ -289,3 +289,19 @@ failed bank IDs with fresh calls, preserving successful proposals and the human
 ledger; unstarted lines remain for Resume matching. Failed lines are counted
 individually, including responses that fail validation. Changed inputs require
 regeneration rather than silently expanding a failed-only retry.
+
+## Editable export descriptions (2026-10-15)
+
+The user requested replacing Export's Review column with Description and a pencil
+editor, with the same saved wording used for PARTICULAR in both Excel variants
+and CSV. Support is a compact badge; pending, rejected, partial and stale warnings
+remain visible. The generated default still uses only current approved evidence.
+
+Manual text can be entered for any bank transaction, including an unmatched one;
+it does not approve a match, change allocations, alter originals, or set REMARK to
+OK. Save and Reset to generated are audited in the existing final-review ledger,
+using its binding and version checks. An explicitly saved blank stays blank;
+reset removes the override. Edits are bound to the bank transaction and original,
+remain independent of supporting decisions, and are withheld with a warning if
+the bank evidence changes. This supersedes the earlier read-only description and
+blank-PARTICULAR policy only for explicit manual wording.

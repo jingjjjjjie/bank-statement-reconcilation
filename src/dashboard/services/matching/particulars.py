@@ -19,7 +19,9 @@ def particular(item):
 
 
 def confirmed_particular(bank, items):
-    """Keep pending, rejected and stale evidence out of exported particulars."""
+    """Use explicit manual wording, otherwise only current approved evidence facts."""
+    if bank.get('particular_override') is not None:
+        return bank['particular_override']
     if bank['review_status'] != 'approved' or bank['stale']:
         return ''
     return '\n'.join(

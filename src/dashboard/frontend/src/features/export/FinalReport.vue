@@ -1,7 +1,9 @@
 <script setup>
 import PageHelp from '../../components/PageHelp.vue';
-import { computed, nextTick, onActivated, onDeactivated, ref } from 'vue';
-import { api } from '../../api.js';
+import { computed, nextTick, onActivated, onBeforeUnmount, onDeactivated, onMounted, ref } from 'vue';
+import { onBeforeRouteLeave } from 'vue-router';
+import { api, appState, pages } from '../../api.js';
+import pencilIcon from '../../assets/icons/pencil-square.svg?no-inline';
 import ReportEvidence from './ReportEvidence.vue';
 import ExportDownloads from './ExportDownloads.vue';
 import './final-report.css';
@@ -9,12 +11,19 @@ const data = ref(null), error = ref(''), loading = ref(false), query = ref(''), 
 const exportDialog = ref(null), exportButton = ref(null);
 const selected = ref(null), itemId = ref(''), dialog = ref(null);
 const downloading = ref(false), downloadError = ref('');
+const descriptionDialog = ref(null), descriptionInput = ref(null), editing = ref(null);
+const description = ref(''), descriptionError = ref(''), savingDescription = ref(false), resetDescription = ref(false);
+let descriptionOpener;
+const reviewId = appState.session.review_id;
+// Track unsaved wording for navigation, workspace switches and browser close protection.
+const descriptionDirty = () => !!editing.value && (resetDescription.value || description.value !== editing.value.particular);
+const reportPage = { isDirty: () => savingDescription.value || descriptionDirty() };
 let opener, request = 0;
 const evidencePositions = new Map();
 const selectedItems = new Map();
 const rows = computed(() => (data.value?.banks || []).filter(b =>
   (filter.value === 'all' || b.support_status === filter.value) &&
-  `${b.id} ${b.date} ${b.parties.join(' ')} ${b.description} ${b.amount}`.toLowerCase().includes(query.value.toLowerCase())));
+  `${b.id} ${b.date} ${b.parties.join(' ')} ${b.description} ${b.particular || ''} ${b.amount}`.toLowerCase().includes(query.value.toLowerCase())));
 const pending = computed(() => data.value?.banks.filter(b => b.review_status === 'pending' && !b.review_optional).length || 0);
 const allocations = computed(() => selected.value?.review_status === 'approved' ? selected.value.decision.allocations : []);
 const item = computed(() => data.value?.items.find(i => i.id === itemId.value));
@@ -51,11 +60,54 @@ async function downloadEvidence() {
 // Keep rows visible while checking the ledger, including changes from other tabs.
 async function refresh() {
   const current = ++request; loading.value = true; error.value = '';
-  try { const result = await api('/api/matching'); if (current === request) data.value = result; }
+  try { const result = await api('/api/matching'); if (current === request && !editing.value &&
+      !(data.value?.binding === result.binding && result.version < data.value.version)) data.value = result; }
   catch (e) { if (current === request) error.value = e.message; }
   finally { if (current === request) loading.value = false; }
 }
 // Native modal dialogs contain keyboard focus and keep the report in place.
+async function openDescription(bank, event) {
+  /* Bind the draft to its displayed ledger version so concurrent edits cannot be overwritten. */
+  descriptionOpener = event.currentTarget;
+  editing.value = {...bank, binding: data.value.binding, version: data.value.version};
+  description.value = bank.particular || ''; resetDescription.value = false; descriptionError.value = '';
+  await nextTick(); descriptionDialog.value.showModal(); descriptionInput.value.focus();
+}
+function closeDescription() {
+  /* Cancel explicitly discards the local draft and restores its pencil control. */
+  if (savingDescription.value) return;
+  descriptionDialog.value?.close(); editing.value = null; descriptionOpener?.focus();
+}
+function useGeneratedDescription() {
+  /* Reset is a draft change until Save is pressed. */
+  description.value = editing.value.generated_particular || ''; resetDescription.value = true;
+}
+async function saveDescription() {
+  /* Persist only export wording; retain the draft on validation or conflict errors. */
+  if (!editing.value || savingDescription.value) return;
+  savingDescription.value = true; descriptionError.value = ''; request++; loading.value = false;
+  try {
+    const result = await api('/api/matching-description', {
+      bank_id: editing.value.id, binding: editing.value.binding, version: editing.value.version,
+      description: resetDescription.value ? null : description.value,
+    }, {reviewId});
+    data.value.version = result.version; data.value.binding = result.binding;
+    Object.assign(data.value.banks.find(bank => bank.id === result.bank_id), {
+      particular: result.particular, particular_override: result.particular_override,
+      particular_edited: result.particular_edited, particular_stale: result.particular_stale,
+    });
+    savingDescription.value = false; closeDescription();
+  } catch (e) { descriptionError.value = e.message; }
+  finally { savingDescription.value = false; }
+}
+function supportWarning(bank) {
+  /* Keep exceptions visible after removing the redundant decision column. */
+  if (bank.stale) return 'Evidence changed — recheck required';
+  if (bank.review_status === 'pending' && !bank.review_optional) return 'Needs review';
+  if (bank.review_status === 'denied') return 'Match rejected';
+  if (bank.review_status === 'approved' && bank.support_status !== 'Supporting') return bank.decision?.context_only ? 'Supporting only' : 'Partial support';
+  return '';
+}
 async function openEvidence(bank, event) {
   opener = event.currentTarget; selected.value = bank; downloadError.value = '';
   const approved = bank.review_status === 'approved' ? bank.decision.allocations : [];
@@ -75,15 +127,17 @@ function closeExport() {
 function containFocus(event) {
   /* Wrap keyboard navigation within the popup, including Shift+Tab. */
   if (event.key !== 'Tab') return;
-  const controls = [...event.currentTarget.querySelectorAll('button:not(:disabled), a[href], select:not(:disabled), summary')].filter(el => el.getClientRects().length);
+  const controls = [...event.currentTarget.querySelectorAll('button:not(:disabled), a[href], select:not(:disabled), textarea:not(:disabled), summary')].filter(el => el.getClientRects().length);
   const first = controls[0], last = controls.at(-1);
   if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
   else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
 }
 function money(value, currency) { /* Format display values without recalculating allocations. */ return value === '' || value == null ? 'Not recorded' : `${currency || 'Currency unknown'} ${Number(value).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`; }
-function decisionLabel(value) { /* Use the same human decision wording as final review. */ return {approved: 'Approved', denied: 'Rejected', pending: 'Pending'}[value]; }
+onMounted(() => pages.add(reportPage));
+onBeforeUnmount(() => pages.delete(reportPage));
+onBeforeRouteLeave(() => !savingDescription.value && (!descriptionDirty() || window.confirm('Discard unsaved description changes?')));
 onActivated(refresh);
-onDeactivated(() => { request++; loading.value = false; closeEvidence(); closeExport(); });
+onDeactivated(() => { request++; loading.value = false; closeEvidence(); closeExport(); closeDescription(); });
 </script>
 
 <template>
@@ -98,13 +152,32 @@ onDeactivated(() => { request++; loading.value = false; closeEvidence(); closeEx
       <p v-if="pending" class="report-notice">{{ pending }} {{ pending === 1 ? 'transaction still needs' : 'transactions still need' }} review. This report includes them as No supporting.</p>
 
       <div class="report-filters"><label>Find a transaction<input v-model="query" type="search" placeholder="Name, amount or reference…"></label><label>Support status<select v-model="filter" aria-label="Support status"><option value="all">All transactions</option><option>Supporting</option><option>No supporting</option></select></label><span>{{ rows.length }} shown</span></div>
-      <div class="report-table-wrap"><table class="report-table"><caption class="sr-only">Final reconciliation with saved approval decisions</caption><thead><tr><th>Transaction</th><th>Bank amount</th><th>Support status</th><th>Review</th><th>Evidence</th></tr></thead><tbody>
-        <tr v-for="bank in rows" :key="bank.id"><td><strong><b class="report-index">{{ bank.report_index }}-</b> {{ bank.parties.join(' / ') }}</strong><span>{{ bank.description }}</span></td><td data-label="Bank amount">{{ money(bank.amount, bank.currency) }}</td><td data-label="Support"><span class="report-status" :class="{supported: bank.support_status === 'Supporting'}">{{ bank.support_status }}</span><small v-if="bank.stale">Evidence changed — recheck required</small></td><td data-label="Review">{{ bank.review_optional && bank.review_status === 'pending' ? 'Review optional' : decisionLabel(bank.review_status) }}</td><td><button v-if="bank.review_status === 'approved' && !bank.stale && bank.decision?.allocations?.length" type="button" class="text-button" :aria-label="`View evidence for ${bank.id}`" @click="openEvidence(bank, $event)">View evidence</button></td></tr>
+      <div class="report-table-wrap"><table class="report-table"><caption class="sr-only">Final reconciliation and exported descriptions</caption><thead><tr><th>Transaction</th><th>Bank amount</th><th>Support</th><th>Description</th><th>Evidence</th></tr></thead><tbody>
+        <tr v-for="bank in rows" :key="bank.id">
+          <td><strong><b class="report-index">{{ bank.report_index }}-</b> {{ bank.parties.join(' / ') }}</strong><span>{{ bank.description }}</span></td>
+          <td data-label="Bank amount">{{ money(bank.amount, bank.currency) }}</td>
+          <td data-label="Support" class="report-support"><span class="report-status" :class="{supported: bank.support_status === 'Supporting'}">{{ bank.support_status }}</span><small v-if="supportWarning(bank)">{{ supportWarning(bank) }}</small></td>
+          <td data-label="Description" class="report-description"><div class="description-copy"><span class="particular-text">{{ bank.particular || '—' }}</span><button type="button" class="description-pencil" :aria-label="`Edit description for ${bank.id}`" title="Edit description" @click="openDescription(bank, $event)"><img :src="pencilIcon" alt="" width="16" height="16"></button></div><small v-if="bank.particular_stale">Bank details changed — recheck description</small></td>
+          <td><button v-if="bank.review_status === 'approved' && !bank.stale && bank.decision?.allocations?.length" type="button" class="text-button" :aria-label="`View evidence for ${bank.id}`" @click="openEvidence(bank, $event)">View evidence</button></td>
+        </tr>
       </tbody></table><p v-if="!rows.length" class="report-caption">No transactions match these filters.</p></div>
     </template>
       </section>
 
     </div>
+    <dialog ref="descriptionDialog" class="description-dialog" aria-labelledby="description-title" @cancel.prevent="closeDescription" @keydown="containFocus">
+      <form v-if="editing" @submit.prevent="saveDescription">
+        <header class="dialog-heading"><h2 id="description-title">Edit description</h2><button type="button" class="dialog-close" aria-label="Close description" :disabled="savingDescription" @click="closeDescription">&times;</button></header>
+        <div class="description-editor">
+          <p>{{ editing.report_index }}- {{ editing.parties.join(' / ') }}</p>
+          <label for="export-description">Description</label>
+          <textarea ref="descriptionInput" id="export-description" v-model="description" rows="6" maxlength="4000" :disabled="savingDescription" aria-describedby="description-help" @input="resetDescription = false"></textarea>
+          <p id="description-help">Used as PARTICULAR in Excel. Editing does not change support status.</p>
+          <p v-if="descriptionError" class="description-error" role="alert">{{ descriptionError }}</p>
+          <div class="description-actions"><button type="button" class="text-button" :disabled="savingDescription" @click="useGeneratedDescription">Reset to generated</button><span></span><button type="button" class="button secondary" :disabled="savingDescription" @click="closeDescription">Cancel</button><button type="submit" class="button dark" :disabled="savingDescription || !descriptionDirty()">{{ savingDescription ? 'Saving…' : 'Save' }}</button></div>
+        </div>
+      </form>
+    </dialog>
     <dialog ref="exportDialog" class="report-export-dialog" aria-labelledby="report-export-title" @cancel.prevent="closeExport" @keydown="containFocus">
       <header class="dialog-heading"><h2 id="report-export-title">Export</h2><button type="button" class="dialog-close" aria-label="Close export" @click="closeExport">&times;</button></header>
       <ExportDownloads>

@@ -21,6 +21,7 @@ EVIDENCE_REQUEST_PATHS = {
     "/api/receipts/accept-all",
     "/api/receipts/merge-all",
     "/api/matching-decide",
+    "/api/matching-description",
 }
 MAX_EVIDENCE_REQUEST_BYTES = 1024 * 1024
 MAX_CONTROL_REQUEST_BYTES = 8192
