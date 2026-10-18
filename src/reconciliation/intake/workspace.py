@@ -142,13 +142,13 @@ class SourceSelection:
         import csv
 
         from reconciliation.bank.formats import BANKS
-        from reconciliation.bank.statement import extract, write_master
+        from reconciliation.bank.statement import extract, read_master, write_master
 
         source = self.selected_bank()
         if source is None:
             raise ValueError("Choose a bank statement PDF first")
         self.inspect_bank(source)
-        if bank not in BANKS:
+        if bank != 'auto' and bank not in BANKS:
             raise ValueError('Choose a supported bank')
         if not isinstance(year, int) or not STATEMENT_YEARS[0] <= year <= STATEMENT_YEARS[1]:
             raise ValueError("Enter a valid statement year")
@@ -157,11 +157,13 @@ class SourceSelection:
         if output.exists():
             with output.open(newline="", encoding="utf-8-sig") as stream:
                 row = next(csv.DictReader(stream), None)
-            if row and (row.get('bank') or 'ambank') != bank:
+            if row and bank != 'auto' and (row.get('bank') or 'ambank') != bank:
                 raise ValueError(
                     f"Saved statement is {BANKS.get(row.get('bank') or 'ambank', 'another bank')}; existing data was not replaced"
                 )
             if row and row.get("source_sha256") == digest and row.get("year_supplied") == str(year):
+                if bank == 'auto':
+                    read_master(output)  # Revalidate saved source and rows before accepting automatic reuse.
                 return {"path": str(output), "existing": True}
             raise ValueError("This review already has a different bank master; existing data was not replaced")
         result = extract(source, year, bank)

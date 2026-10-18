@@ -59,7 +59,7 @@ class BankYear(BaseModel):
     """Require an explicit four-digit statement year."""
 
     year: StrictInt = Field(ge=STATEMENT_YEARS[0], le=STATEMENT_YEARS[1])
-    bank: Literal['ambank', 'public_bank', 'maybank', 'hong_leong', 'cimb', 'uob']
+    bank: Literal['auto', 'ambank', 'public_bank', 'maybank', 'hong_leong', 'cimb', 'uob']
 
 
 class ExportChoice(BaseModel):

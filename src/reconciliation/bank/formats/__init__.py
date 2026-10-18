@@ -31,13 +31,15 @@ def detect_bank(cover):
 
 def check_selection(cover, selected):
     """Reject wrong-bank selection and unsupported issuers before extraction."""
-    if selected not in BANKS:
+    if selected != 'auto' and selected not in BANKS:
         raise ValueError('Choose a supported bank: ' + ', '.join(BANKS.values()))
     detected = detect_bank(cover)
-    if detected != selected:
+    if selected != 'auto' and detected != selected:
         raise ValueError(
             f'Selected {BANKS[selected]}, but this PDF is a {BANKS[detected]} statement. Select {BANKS[detected]}.'
         )
+
+    return detected
 
 
 def layout(bank):

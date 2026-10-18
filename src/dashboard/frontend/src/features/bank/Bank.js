@@ -48,7 +48,7 @@ async function loadBank() {
     $('#bank-validation-note').textContent = data.validation_note || '';
     $('#bank-flow').textContent = `${money(data.total_money_in)} / ${money(data.total_money_out)}`;
     $('#bank-closing').textContent = money(data.closing_balance);
-    $('#bank-checks').textContent = data.balance_checks === 'passed' ? 'Bank balance checks passed' : 'Bank balance checks need review';
+    $('#bank-checks').textContent = data.balance_checks === 'passed' ? 'Recognised format; balance checks passed' : 'Bank balance checks need review';
     $('#match-note').textContent = `${data.matched} of ${data.count} transactions matched to supporting documents`;
     $('#workbook').hidden = !data.workbook_available;
     $('#bank-content').hidden = false;

@@ -52,10 +52,7 @@ class BankYearTests(unittest.TestCase):
             page.route('**/api/**', respond)
             page.goto(f'http://127.0.0.1:{server.server_port}/bank')
             page.locator('#prepare-bank').click()
-            expect(page.locator('#bank-error')).to_contain_text('Choose the bank')
-            self.assertEqual(requests, [])
-            page.locator('#bank-format').select_option('maybank')
-            page.locator('#prepare-bank').click()
+            expect(page.locator('#bank-format')).to_have_value('auto')
             expect(page.locator('#bank-error')).to_contain_text('Enter the statement year')
             self.assertEqual(requests, [])
             page.locator('#bank-year').fill('2025.5')
@@ -64,7 +61,7 @@ class BankYearTests(unittest.TestCase):
             page.locator('#bank-year').fill('2025')
             page.locator('#prepare-bank').click()
             expect(page.locator('#prepare-bank')).to_be_enabled()
-            self.assertEqual(requests, [{'year': 2025, 'bank': 'maybank'}])
+            self.assertEqual(requests, [{'year': 2025, 'bank': 'auto'}])
             for width in (1280, 390):
                 page.set_viewport_size({'width': width, 'height': 844})
                 expect(page.locator('.page-help-button')).to_have_count(1)
@@ -113,9 +110,10 @@ class BankYearTests(unittest.TestCase):
                     }
                 ),
             )
-            page.locator('#bank-format').select_option('uob')
+            page.locator('#bank-format').select_option('auto')
             page.locator('#prepare-bank').click()
             expect(page.locator('#bank-validation-note')).to_contain_text('completeness is not verified')
             expect(page.locator('#bank-opening')).to_have_text('100.00 (inferred)')
             expect(page.locator('#bank-account')).to_contain_text('UOB')
+            expect(page.locator('#bank-checks')).to_contain_text('Recognised format')
             browser.close()

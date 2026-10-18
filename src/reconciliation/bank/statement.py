@@ -221,7 +221,7 @@ def extract(path, year, bank='ambank'):
             raise ValueError('Statement PDF has no pages.')
         if resolve1(pdf.doc.catalog['Pages']).get('Count') != len(pdf.pages):
             raise ValueError('Inconsistent PDF page count; repeated or malformed pages are unsupported.')
-        check_selection(pdf.pages[0].extract_text() or '', bank)
+        bank = check_selection(pdf.pages[0].extract_text() or '', bank)
         reader = layout(bank)
         if hasattr(reader, 'read'):
             return reader.read(pdf, path, year)
@@ -239,7 +239,7 @@ def main():
     parser.add_argument("--year", type=int, required=True)
     from reconciliation.bank.formats import BANKS
 
-    parser.add_argument('--bank', choices=BANKS, default='ambank')
+    parser.add_argument('--bank', choices=['auto', *BANKS], default='auto')
     parser.add_argument("--output", type=Path, default=Path("bank-output"))
     args = parser.parse_args()
     try:

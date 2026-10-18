@@ -16,7 +16,7 @@ usePage(root, initialize);
     <div id="bank-error" class="validation" role="alert" hidden></div>
     <section id="bank-extraction" class="settings-card" hidden>
       <h2>Extract bank statement</h2><p id="statement-source"></p>
-      <label class="setting-field"><strong>Bank</strong><select id="bank-format" required><option value="">Choose bank</option><option value="ambank">AmBank</option><option value="public_bank">Public Bank</option><option value="maybank">Maybank</option><option value="hong_leong">Hong Leong Bank</option><option value="cimb">CIMB</option><option value="uob">UOB (account activities)</option></select></label>
+      <label class="setting-field"><strong>Bank</strong><select id="bank-format" required><option value="auto">Auto-detect</option><option value="ambank">AmBank</option><option value="public_bank">Public Bank</option><option value="maybank">Maybank</option><option value="hong_leong">Hong Leong Bank</option><option value="cimb">CIMB</option><option value="uob">UOB (account activities)</option></select></label>
       <label class="setting-field"><strong>Statement year</strong><input id="bank-year" type="number" min="1900" max="2100" step="1" required placeholder="Enter year"></label>
 
       <button id="prepare-bank" class="button dark" type="button">Extract bank statement</button>

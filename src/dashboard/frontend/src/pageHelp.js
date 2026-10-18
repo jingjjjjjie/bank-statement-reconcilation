@@ -9,7 +9,7 @@ export const pageHelp = {
     'Choose a folder with statement/ and documents/, then Proceed. Resume reopens your last review.',
   ]],
   Bank: ['Bank statement', [
-    'Choose the bank printed on the PDF and enter its statement year. Wrong-bank selections, unsupported layouts, and failed balance checks are rejected. UOB account-activity exports have an inferred opening balance and a visible completeness warning. Extract, then check the rows. Load for final matching before Generate matches.',
+    'Use Auto-detect or choose the bank printed on the PDF, then enter its statement year. Detection uses bank wording and the supported layout; it is not a confidence score. Wrong-bank selections, unsupported layouts, and failed balance checks are rejected. UOB account-activity exports have an inferred opening balance and a visible completeness warning. Extract, then check the rows. Load for final matching before Generate matches.',
     'Calculated balances are derived from transactions where the statement leaves a balance blank. Unidentified parties remain available in the original narration.',
     'Regenerate matches clears saved supporting decisions after confirmation. Retry failed only keeps successful matches and approvals.',
   ]],

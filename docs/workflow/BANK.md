@@ -28,9 +28,15 @@ Public Bank (RM Plus Current Account), Maybank (CCA SME First Account), Hong Leo
 Bank, and CIMB, plus the observed UOB account-activity export. Scanned PDFs remain unsupported.
 Support is for these layouts, not every product or historical format issued by a bank.
 
-Choose the bank and year before extracting in the dashboard. The API requires
-`bank`; CLI `--bank` accepts `ambank`, `public_bank`, `maybank`, `hong_leong`,
-`cimb`, or `uob` and defaults to AmBank for existing scripts. Bank detection uses issuer
+The dashboard defaults to Auto-detect; enter the year before extracting. The API
+requires `bank`, accepting `auto` or an explicit bank. CLI `--bank` accepts `auto`,
+`ambank`, `public_bank`, `maybank`, `hong_leong`, `cimb`, or `uob` and defaults to
+`auto`. Python callers retain the legacy AmBank default. Automatic selection uses
+the same layout and financial checks as manual selection and stores the resolved
+bank, never `auto`. It does not retry other parsers after validation fails.
+First-page bank wording is a candidate identifier, not a confidence score: mentions
+in transaction text can cause ambiguity, and passing checks does not independently
+verify narration or completeness. Unknown or ambiguous candidates stop extraction. Bank detection uses issuer
 wording inside the PDF, never its filename. A wrong selection is rejected with the
 detected bank's name. Unknown/ambiguous issuers, unexpected columns, missing pages,
 conflicting accounts, invalid dates, and failed financial checks stop extraction

@@ -44,6 +44,48 @@ class FormatTests(unittest.TestCase):
                 self.assertEqual(loaded['bank'], bank)
                 self.assertEqual(loaded['transactions'][0]['balance'], Decimal('110.00'))
 
+    def test_auto_detect_all_formats_and_preserve_resolved_bank(self):
+        """Automatic dispatch must match explicit extraction and persist the real issuer."""
+        paths = {bank: self.sample(bank) for bank in ('public_bank', 'maybank', 'hong_leong', 'cimb')}
+        paths['ambank'] = ambank_statement(self.root / 'ambank.pdf')
+        paths['uob'] = uob_export(self.root / 'uob.pdf')
+        for bank, path in paths.items():
+            with self.subTest(bank=bank):
+                automatic = extract(path, 2025, 'auto')
+                self.assertEqual(automatic, extract(path, 2025, bank))
+                master = self.root / f'{bank}.csv'
+                write_master(automatic, master)
+                self.assertEqual(read_master(master)['bank'], bank)
+        self.assertEqual(BankYear(year=2025, bank='auto').bank, 'auto')
+
+    def test_auto_detect_does_not_bypass_rejection(self):
+        """Ambiguous issuers and invalid layouts or amounts must stop automatic extraction."""
+        for text in ('Invoice', 'CIMB BANK BERHAD Malayan Banking Berhad'):
+            with self.assertRaises(ValueError):
+                check_selection(text, 'auto')
+        for bank in ('public_bank', 'maybank', 'hong_leong', 'cimb'):
+            for damage in ('bad_balance', 'missing_row', 'missing_header'):
+                with self.subTest(bank=bank, damage=damage), self.assertRaises(ValueError):
+                    extract(self.sample(bank, **{damage: True}), 2025, 'auto')
+        with self.assertRaises(ValueError):
+            extract(uob_export(self.root / 'uob.pdf', bad_totals=True), 2025, 'auto')
+
+    def test_auto_reuse_validates_saved_master(self):
+        """Automatic reuse verifies existing output and never replaces damaged saved rows."""
+        source = self.sample('maybank')
+        selection = SourceSelection(self.root, self.root / 'dashboard-data')
+        manifest = self.root / 'project' / 'manifest.json'
+        with patch.object(selection, 'selected_bank', return_value=source):
+            result = selection.prepare_bank(manifest, 2025, 'auto')
+            self.assertFalse(result['existing'])
+            self.assertTrue(selection.prepare_bank(manifest, 2025, 'auto')['existing'])
+            master = Path(result['path'])
+            master.write_text(master.read_text(encoding='utf-8-sig').replace('SAMPLE PARTY', 'CHANGED PARTY'), encoding='utf-8-sig')
+            saved = master.read_bytes()
+            with self.assertRaises(ValueError):
+                selection.prepare_bank(manifest, 2025, 'auto')
+            self.assertEqual(master.read_bytes(), saved)
+
     def test_legacy_ambank_master_without_new_metadata(self):
         path = ambank_statement(self.root / 'ambank.pdf')
         data = extract(path, 2025)
