@@ -10,7 +10,9 @@ HEADERS = {
 }
 
 
-def statement(path, bank, *, bad_balance=False, missing_row=False, missing_header=False, foreign=False):
+def statement(
+    path, bank, *, bad_balance=False, missing_row=False, missing_header=False, foreign=False, mention=None
+):
     """Write fictional evidence that exercises actual PDF text and column extraction."""
     width = {'public_bank': 612, 'maybank': 510, 'hong_leong': 595.44, 'cimb': 595}[bank]
     doc = pymupdf.open()
@@ -79,7 +81,8 @@ def statement(path, bank, *, bad_balance=False, missing_row=False, missing_heade
         date = f'{day}-01-2025' if bank == 'hong_leong' else f'{day}/01/2025' if bank == 'cimb' else f'{day}/01'
         put(55 if bank == 'public_bank' else 30, y, '' if bank == 'public_bank' and i == 2 else date)
         put(start, y, narration)
-        put(start, y + 12, 'SAMPLE PARTY REFERENCE')
+        # A transaction may name another bank, e.g. a transfer to its customer.
+        put(start, y + 12, mention if mention and i == 1 else 'SAMPLE PARTY REFERENCE')
         if bank == 'maybank':
             put(400, y, incoming + '+' if incoming else outgoing + '-', right=True)
         else:

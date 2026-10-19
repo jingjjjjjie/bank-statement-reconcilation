@@ -204,10 +204,24 @@ def validate(rows, opening, closing, debit_total, credit_total, allow_zero=False
         raise ValueError("Printed credit total mismatch")
 
 
-def extract(path, year, bank='ambank'):
-    """Check the selected issuer before dispatching to its verified layout reader."""
-    from reconciliation.bank.formats import check_selection, layout
+def read_bank(pdf, path, year, bank):
+    """Dispatch one open PDF to a single bank's verified layout reader."""
+    from reconciliation.bank.formats import layout
     from reconciliation.bank.formats.common import read_layout
+
+    reader = layout(bank)
+    if hasattr(reader, 'read'):
+        return reader.read(pdf, path, year)
+    if bank != 'ambank':
+        return read_layout(pdf, path, year, bank)
+    from reconciliation.bank.formats.ambank import extract as extract_ambank
+
+    return extract_ambank(path, year)
+
+
+def extract(path, year, bank='ambank'):
+    """Try each issuer named on page 1; accept only when exactly one layout passes every check."""
+    from reconciliation.bank.formats import BANKS, check_selection, names
 
     path = Path(path)
     if type(year) is not int or not 1900 <= year <= 2100:
@@ -221,15 +235,21 @@ def extract(path, year, bank='ambank'):
             raise ValueError('Statement PDF has no pages.')
         if resolve1(pdf.doc.catalog['Pages']).get('Count') != len(pdf.pages):
             raise ValueError('Inconsistent PDF page count; repeated or malformed pages are unsupported.')
-        bank = check_selection(pdf.pages[0].extract_text() or '', bank)
-        reader = layout(bank)
-        if hasattr(reader, 'read'):
-            return reader.read(pdf, path, year)
-        if bank != 'ambank':
-            return read_layout(pdf, path, year, bank)
-    from reconciliation.bank.formats.ambank import extract as extract_ambank
-
-    return extract_ambank(path, year)
+        candidates = check_selection(pdf.pages[0].extract_text() or '', bank)
+        if len(candidates) == 1:
+            return read_bank(pdf, path, year, candidates[0])
+        # Bank names inside transactions add candidates; only the real layout reconciles.
+        passed, errors = [], []
+        for candidate in candidates:
+            try:
+                passed.append(read_bank(pdf, path, year, candidate))
+            except (ValueError, KeyError, IndexError) as error:
+                errors.append(f'{BANKS[candidate]}: {error}')
+    if len(passed) == 1:
+        return passed[0]
+    if passed:
+        raise ValueError(f'This PDF passes the {names(r["bank"] for r in passed)} checks. Select the bank manually.')
+    raise ValueError(f'This PDF names {names(candidates)}, but no layout passed its checks. ' + ' '.join(errors))
 
 
 def main():

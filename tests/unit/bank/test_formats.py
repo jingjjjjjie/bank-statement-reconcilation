@@ -60,9 +60,9 @@ class FormatTests(unittest.TestCase):
 
     def test_auto_detect_does_not_bypass_rejection(self):
         """Ambiguous issuers and invalid layouts or amounts must stop automatic extraction."""
-        for text in ('Invoice', 'CIMB BANK BERHAD Malayan Banking Berhad'):
-            with self.assertRaises(ValueError):
-                check_selection(text, 'auto')
+        with self.assertRaisesRegex(ValueError, 'No supported bank name'):
+            check_selection('Invoice', 'auto')
+        self.assertEqual(check_selection('CIMB BANK BERHAD Malayan Banking Berhad', 'auto'), ['maybank', 'cimb'])
         for bank in ('public_bank', 'maybank', 'hong_leong', 'cimb'):
             for damage in ('bad_balance', 'missing_row', 'missing_header'):
                 with self.subTest(bank=bank, damage=damage), self.assertRaises(ValueError):
@@ -157,13 +157,24 @@ class FormatTests(unittest.TestCase):
         self.assertEqual(data['transactions'][-1]['money_out'], 0)
 
     def test_unknown_ambiguous_and_mismatched_uob_fail_closed(self):
-        for text in (
-            'Invoice from a supplier',
-            'CIMB BANK BERHAD Malayan Banking Berhad',
-            'Account Activities UOBM Jln Tengah',
-        ):
+        for text in ('Invoice from a supplier', 'Account Activities UOBM Jln Tengah', 'CIMB BANK BERHAD UOBM'):
             with self.subTest(text=text), self.assertRaises(ValueError):
                 check_selection(text, 'maybank')
+        self.assertEqual(check_selection('CIMB BANK BERHAD Malayan Banking Berhad', 'maybank'), ['maybank'])
+
+    def test_other_bank_named_in_transaction_still_detected(self):
+        """Another issuer's name in a narration must not block or redirect detection."""
+        cases = {'maybank': 'CIMB BANK BERHAD', 'public_bank': 'IBG TO AMBANK', 'cimb': 'PUBLIC BANK BERHAD'}
+        for bank, mention in cases.items():
+            with self.subTest(bank=bank):
+                path = statement(self.root / f'{bank}-mention.pdf', bank, mention=mention)
+                automatic = extract(path, 2025, 'auto')
+                self.assertEqual(automatic['bank'], bank)
+                self.assertEqual(automatic, extract(path, 2025, bank))
+                self.assertIn(mention, automatic['transactions'][1 if bank != 'cimb' else 0]['narration'])
+        damaged = statement(self.root / 'damaged.pdf', 'maybank', mention='CIMB BANK BERHAD', bad_balance=True)
+        with self.assertRaisesRegex(ValueError, 'names Maybank and CIMB, but no layout passed'):
+            extract(damaged, 2025, 'auto')
 
     def test_unreadable_pdf_rejected_clearly(self):
         path = self.root / 'not-a-statement.pdf'

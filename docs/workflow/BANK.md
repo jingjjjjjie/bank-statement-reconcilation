@@ -33,12 +33,15 @@ requires `bank`, accepting `auto` or an explicit bank. CLI `--bank` accepts `aut
 `ambank`, `public_bank`, `maybank`, `hong_leong`, `cimb`, or `uob` and defaults to
 `auto`. Python callers retain the legacy AmBank default. Automatic selection uses
 the same layout and financial checks as manual selection and stores the resolved
-bank, never `auto`. It does not retry other parsers after validation fails.
-First-page bank wording is a candidate identifier, not a confidence score: mentions
-in transaction text can cause ambiguity, and passing checks does not independently
-verify narration or completeness. Unknown or ambiguous candidates stop extraction. Bank detection uses issuer
-wording inside the PDF, never its filename. A wrong selection is rejected with the
-detected bank's name. Unknown/ambiguous issuers, unexpected columns, missing pages,
+bank, never `auto`. First-page bank wording is a candidate identifier, not a
+confidence score. Issuer wording may sit in the header or footer (Public Bank, Hong
+Leong), so the whole first page is searched; a transfer naming another bank adds a
+candidate. Auto tries each candidate's reader and accepts only when exactly one
+passes every check; none or several passing stops extraction with each reader's
+reason. Passing checks does not independently verify narration or completeness.
+Bank detection uses issuer wording inside the PDF, never its filename. A manual
+selection must be among the candidates, otherwise it is rejected with the named
+bank(s). No issuer wording, unexpected columns, missing pages,
 conflicting accounts, invalid dates, and failed financial checks stop extraction
 before a master is saved. Existing masters cannot be replaced by another bank,
 source, or year. The new formats verify the supplied year against the printed
