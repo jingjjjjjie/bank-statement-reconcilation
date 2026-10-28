@@ -1,4 +1,5 @@
 <script setup>
+import { appState } from '../../api.js';
 import clockIcon from '../../assets/icons/clock.svg?raw';
 import './portal.css';
 </script>
@@ -34,5 +35,10 @@ import './portal.css';
         </article>
       </div>
     </section>
+    <footer v-if="appState.session?.version" class="application-version" aria-label="Application version">Accounting Copilot {{ appState.session.version }}</footer>
   </main>
 </template>
+
+<style scoped>
+.application-version { margin-top:36px; color:var(--muted); font-size:11px; text-align:center; }
+</style>
