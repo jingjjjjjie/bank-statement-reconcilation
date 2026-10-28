@@ -274,3 +274,30 @@ class FormatTests(unittest.TestCase):
         )
         self.assertEqual(describe('AUTOPAY DR 123\nREF\nBATCH.TXT', 0, 'cimb')['counterparty'], '')
         self.assertEqual(describe('TR IBG 123\nEXAMPLE PAYEE\nREFERENCE', 0, 'cimb')['counterparty'], 'EXAMPLE PAYEE')
+
+    def test_layout_marked_payees_read_and_ambiguous_ones_left_for_review(self):
+        """Names bounded by the bank's layout are read; fees and name-purpose blends stay blank."""
+        from reconciliation.bank.statement import describe
+
+        cases = {
+            'hong_leong': {
+                'JomPAY Bill Payment at DIO\n2100\nBC2TKTYS2241\nEXAMPLE UTILITY BHD\n24IM2412': 'EXAMPLE UTILITY BHD',
+                'Fund Transfer at DIO\nMonthly Rental fee\nMV D-11-07\nEXAMPLE PAYER': 'EXAMPLE PAYER',
+                'Fund Trf fr CA to CA-Internet\nFund transfer\nEXAMPLE PAYER': 'EXAMPLE PAYER',
+                'Cr Adv-Interbank GIRO at KLM\nA-19-07, R3\n-\nEXAMPLE PAYER': 'EXAMPLE PAYER',
+                'Fund Transfer at DIO\nRent\nMV D1307': '',
+                'Serv Charge-IBG/TT/Rentas/Misc at DIO\nSMS Charges\nNov Parking Fee': '',
+            },
+            'public_bank': {
+                'DUITNOW TRSF DR 939667 EXAMPLE PAYEE\nJAN SALARY\n20250201PBBEMYKL010OCB10149967': 'EXAMPLE PAYEE',
+                'DUITNOW TRSF CR 098752\nEXAMPLE FOODS SDN BHD EXAMPLE\nPYMT\n20250206MBBE': 'EXAMPLE FOODS SDN BHD',
+                'DUITNOW TRSF CR 038653\nEXAMPLE ENTERPRISE FUND TRANSFER\nINV2501': '',
+                'DEP-ECP 105289\nIMEPS2025022710000 ABM\nEXAMPLE HUB PLT ABM KB BILL PAYMENT': 'EXAMPLE HUB PLT',
+                'GIRO PYMT-ATM/EFT 382177\nJOMPAY - C2KI7AX6 - EXAMPLE UTILITY': 'EXAMPLE UTILITY',
+                'DEP-LOC CHEQ 953195 AT TCS': '',
+            },
+        }
+        for bank, narrations in cases.items():
+            for narration, party in narrations.items():
+                with self.subTest(bank=bank, narration=narration):
+                    self.assertEqual(describe(narration, 0, bank)['counterparty'], party)

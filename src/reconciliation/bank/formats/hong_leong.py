@@ -9,15 +9,21 @@ from .common import MONEY, one
 
 
 def counterparty(narration, money_in):
-    """Read the name immediately before a bank network reference in transfer rows."""
+    """Read the printed party name for recognised transfer and bill rows."""
     lines = narration.splitlines()
-    if (
-        len(lines) >= 3
-        and lines[0].startswith(('Instant Transfer', 'CIB Instant Transfer'))
-        and re.fullmatch(r'\d{8}[A-Z]{8}\w+', lines[-1])
-    ):
-        return lines[-2]
-    return ''
+    if len(lines) < 3:
+        return ''
+    first, last = lines[0], lines[-1]
+    if first.startswith(('Instant Transfer', 'CIB Instant Transfer')) and re.fullmatch(r'\d{8}[A-Z]{8}\w+', last):
+        party = lines[-2]
+    elif first.startswith('JomPAY Bill Payment') and len(lines) == 5:
+        party = lines[-2]
+    elif first.startswith(('Fund Transfer', 'Fund Trf fr', 'Cr Adv-Interbank GIRO')):
+        party = last
+    else:
+        return ''
+    # A party name has letters and no digits; references stay unidentified.
+    return party if re.search('[A-Za-z]', party) and not re.search(r'\d', party) else ''
 
 
 def specification(cover, whole, texts):

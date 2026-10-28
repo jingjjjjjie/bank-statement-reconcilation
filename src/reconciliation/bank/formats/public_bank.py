@@ -10,13 +10,36 @@ from reconciliation.bank.statement import amount
 from .common import MONEY, one
 
 
+COMPANY = re.compile(r'^(.*?\b(?:SDN\.? BHD\.?|BHD\.?|S/B|PLT|BERHAD))(?:\s|$)')
+
+
+def duitnow_party(lines):
+    """Take the DuitNow name only where the first line or a company suffix marks its end."""
+    inline = re.fullmatch(r'DUITNOW TRSF (?:CR|DR) \d+ (\D+)', lines[0])
+    if inline:
+        return inline[1]
+    # Otherwise the name and purpose share a line; only a company suffix splits them safely.
+    company = COMPANY.match(lines[1]) if len(lines) > 2 else None
+    return company[1] if company else ''
+
+
 def counterparty(narration, money_in):
-    """Read explicitly masked-account party fields without interpreting reference prose."""
+    """Read party fields whose end is marked by the bank's own layout, never guessed from prose."""
     lines = narration.splitlines()
     if len(lines) > 1 and lines[0].startswith('TSFR FUND '):
         match = re.fullmatch(r'\d+X+\s+(.+)', lines[1])
         if match:
             return match[1]
+    if lines[0].startswith('DUITNOW TRSF '):
+        return duitnow_party(lines)
+    if len(lines) > 2 and lines[0].startswith('DEP-ECP '):
+        # The sending bank code ends line 2 and follows the payer's name on line 3.
+        code = lines[1].rsplit(' ', 1)[-1]
+        name, found, _ = (lines[2] + ' ').partition(f' {code} ')
+        return name if found else ''
+    if len(lines) > 1 and lines[0].startswith('GIRO PYMT'):
+        match = re.fullmatch(r'JOMPAY - \w+ - (.+)', lines[1])
+        return match[1] if match else ''
     return ''
 
 
