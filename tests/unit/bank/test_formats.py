@@ -322,27 +322,22 @@ class FormatTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'Scanned statements are not supported'):
             check_selection('  ', 'auto')
 
-    def test_fee_rows_and_blended_lines_use_payees_from_the_same_statement(self):
-        """Fees take their transfer's payee by reference; a known name inside a purpose line is reused."""
+    def test_fee_rows_stay_review_and_blended_lines_reuse_printed_payees(self):
+        """Fees never borrow a payee; a known name inside a purpose line is reused."""
         from reconciliation.bank.statement import payees
 
         def row(narration):
             return {'narration': narration, 'money_in': 0, 'direction': 'out'}
 
         rows = [
-            row('OTHER TRANSFER FEE 993829014284\nEXAMPLE OWN SDN Inv 141'),
+            row('OTHER TRANSFER FEE 993829014284\nEXAMPLE PAYEE Inv 141'),
             row('TR IBG 993829014284\nEXAMPLE PAYEE\nEXAMPLE OWN SDN'),
             row('TR TO SAVINGS 993827474593\nInv V26.03-1164 EXAMPLE PAYEE\nEXAMPLE OWN SDN'),
             row('TR TO SAVINGS 993828115171\nMAR WAGES UNSEEN PERSON W\nEXAMPLE OWN SDN'),
             row('AUTOPAY CHARGES 347176454853'),
         ]
         names = [field['counterparty'] for field in payees(rows, 'cimb')]
-        self.assertEqual(names, ['EXAMPLE PAYEE', 'EXAMPLE PAYEE', 'EXAMPLE PAYEE', '', ''])
-        # Two payees sharing a reference leave the fee for review, whatever the row order.
-        alpha, beta = row('TR IBG 123456789012\nALPHA SDN BHD\nOWN'), row('TR IBG 123456789012\nBETA SDN BHD\nOWN')
-        fee = row('OTHER TRANSFER FEE 123456789012\nOWN')
-        for order in ([alpha, beta, fee], [beta, alpha, fee], [alpha, fee, beta]):
-            self.assertEqual(payees(order, 'cimb')[order.index(fee)]['counterparty'], '')
+        self.assertEqual(names, ['', 'EXAMPLE PAYEE', 'EXAMPLE PAYEE', '', ''])
 
     def test_master_saved_under_older_payee_rules_still_exports(self):
         """An older rule's payee copied from the row is refreshed; a payee absent from the row is rejected."""
