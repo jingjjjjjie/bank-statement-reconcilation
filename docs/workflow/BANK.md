@@ -53,7 +53,8 @@ Each bank has a module under `src/reconciliation/bank/formats/`. New formats def
 source metadata, columns, and conservative party rules there. UOB uses its own
 row-boundary reader for vertically centered table cells; shared reading and
 Decimal validation live in `formats/common.py` and `statement.py`. Full narration
-is preserved. Only recognizable party fields populate PAY TO; ambiguous names and
+is preserved. Only recognizable party fields populate PAY TO, and every bank rejects reference-like
+values (long digit runs, file names, mostly digits); ambiguous names and
 batch references stay unidentified and produce REVIEW PAY TO in bank-only Excel.
 
 Public Bank preserves zero-value debit/credit entries and continued dates/narration
@@ -82,7 +83,9 @@ catches CSV edits but is not independent verification of the same parser's logic
 
 Validation on the five supplied samples: Public Bank 480 rows, Maybank 33 rows,
 Hong Leong 309 rows, CIMB 128 rows, and UOB 53 rows; all available balance/count/total checks passed.
-Customer PDFs are not test fixtures or committed. Synthetic PDF regression tests
+Customer PDFs are not test fixtures or committed. `python -m scripts.bank.check_real_statements` re-extracts
+registered local statements and flags any change in bank, rows, totals or payees against a
+baseline kept in git-ignored `docs/local/`. Synthetic PDF regression tests
 cover wrong bank/year, filename independence, damaged/missing rows, unsupported
 headers/currency, repeated pages, zero amounts, calculated balance provenance,
 preservation of saved masters, and UOB header/period balance separation. Browser
