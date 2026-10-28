@@ -37,6 +37,8 @@ def check_selection(cover, selected):
     """Return the candidate readers to try; layout validation picks the real issuer."""
     if selected != 'auto' and selected not in BANKS:
         raise ValueError('Choose a supported bank: ' + ', '.join(BANKS.values()))
+    if not cover.strip():
+        raise ValueError('Page 1 has no readable text. Scanned statements are not supported; use the digital PDF from online banking.')
     found = issuers(cover)
     if not found:
         raise ValueError('No supported bank name found on page 1. Use a complete supported digital bank statement.')

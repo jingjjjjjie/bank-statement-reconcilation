@@ -41,7 +41,9 @@ function download(kind) {
   const bytes = Uint8Array.from(atob(result.value[kind]), c => c.charCodeAt(0));
   const url = URL.createObjectURL(new Blob([bytes], { type: kind === 'csv' ? 'text/csv' : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
   const link = document.createElement('a');
-  link.href = url; link.download = `bank-transactions.${kind}`; link.click();
+  const { bank: name, transactions } = result.value.statement;
+  // Name downloads by bank and month so several statements do not overwrite each other.
+  link.href = url; link.download = `${name}-${transactions.at(-1).date.slice(0, 7)}.${kind}`; link.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 </script>
@@ -82,6 +84,7 @@ function download(kind) {
 <style scoped>
 .standalone-extraction { max-width:1320px; margin:0 auto; padding:24px; }
 fieldset { border:0; margin:0; padding:0; min-width:0; }
+.bank-table th:nth-child(3), .bank-table td.narration { text-align:left; white-space:normal; background:none; border-radius:0; padding:12px; min-width:280px; }
 label { display:flex; flex-direction:column; gap:8px; font-size:12px; font-weight:600; color:var(--ink); min-width:0; }
 input, select { box-sizing:border-box; width:100%; min-width:0; height:42px; padding:10px 12px; border:1px solid var(--line); border-radius:7px; background:white; color:var(--ink); font:inherit; font-size:14px; }
 input:focus-visible, select:focus-visible { outline:2px solid var(--primary); outline-offset:2px; }

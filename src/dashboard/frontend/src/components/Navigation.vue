@@ -32,7 +32,7 @@ const items = computed(() => {
       <img class="brand-logo" :src="logo" alt="UPVANTAGE Group">
       <div class="brand-identity"><strong>Accounting Copilot</strong><span v-if="contextName" :title="contextName">{{ contextName }}</span></div>
     </div>
-    <span v-if="appState.syncing" class="sync-status" role="status">Updating...</span>
+    <span v-if="appState.syncing && !route.meta.portal" class="sync-status" role="status">Updating...</span>
     <div class="header-links">
       <RouterLink v-if="route.path !== '/home'" to="/home" class="button secondary back-home">← Back to Home</RouterLink>
       <component :is="item.disabled ? 'span' : RouterLink" v-for="item in items" :key="item.path" :to="item.disabled ? undefined : item.path" class="header-link" :class="{ disabled: item.disabled }" active-class="active" :role="item.disabled ? 'link' : undefined" :aria-disabled="item.disabled ? 'true' : undefined" :title="item.disabled ? item.reason : undefined" :tabindex="item.disabled ? 0 : undefined">

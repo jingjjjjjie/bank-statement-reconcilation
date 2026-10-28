@@ -306,6 +306,11 @@ class FormatTests(unittest.TestCase):
                 with self.subTest(bank=bank, narration=narration):
                     self.assertEqual(describe(narration, 0, bank)['counterparty'], party)
 
+    def test_scanned_cover_is_named_as_scanned(self):
+        """A page 1 without text says scanned PDFs are unsupported instead of blaming the bank."""
+        with self.assertRaisesRegex(ValueError, 'Scanned statements are not supported'):
+            check_selection('  ', 'auto')
+
     def test_fee_rows_and_blended_lines_use_payees_from_the_same_statement(self):
         """Fees take their transfer's payee by reference; a known name inside a purpose line is reused."""
         from reconciliation.bank.statement import payees
