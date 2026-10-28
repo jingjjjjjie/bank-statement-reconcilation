@@ -296,6 +296,10 @@ class FormatTests(unittest.TestCase):
                 'GIRO PYMT-ATM/EFT 382177\nJOMPAY - C2KI7AX6 - EXAMPLE UTILITY': 'EXAMPLE UTILITY',
                 'DEP-LOC CHEQ 953195 AT TCS': '',
             },
+            'cimb': {
+                'TR TO SAVINGS 993828615996\nEXAMPLE PAYEE BINTI\nEXAMPLE OWN SDN': 'EXAMPLE PAYEE BINTI',
+                'TR TO SAVINGS 993828115171\nMAR WAGES EXAMPLE PAYEE W\nEXAMPLE OWN SDN': '',
+            },
         }
         for bank, narrations in cases.items():
             for narration, party in narrations.items():

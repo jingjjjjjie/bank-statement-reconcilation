@@ -12,6 +12,9 @@ def counterparty(narration, money_in):
     lines = narration.splitlines()
     if len(lines) > 1 and lines[0].startswith(('TR IBG ', 'TR TO C/A ')):
         return lines[1]
+    # CIMB's name field holds 20 characters; a longer line also carries the payment purpose.
+    if len(lines) > 1 and lines[0].startswith('TR TO SAVINGS ') and len(lines[1]) <= 20:
+        return lines[1]
     if len(lines) >= 4 and money_in and lines[0].startswith(('DUITNOW TO ACCOUNT ', 'IBG CREDIT ')):
         return lines[-1]
     return ''
