@@ -20,6 +20,10 @@ def counterparty(narration, money_in):
         party = lines[-2]
     elif first.startswith(('Fund Transfer', 'Fund Trf fr', 'Cr Adv-Interbank GIRO')):
         party = last
+    elif first.startswith('ATM Interbank Funds Trf'):
+        # The name is the one line that is not the repeated INSTANT TRANSFER label.
+        others = [line for line in lines[1:] if line != 'INSTANT TRANSFER']
+        party = others[0] if len(others) == 1 else ''
     else:
         return ''
     # A party name has letters and no digits; references stay unidentified.

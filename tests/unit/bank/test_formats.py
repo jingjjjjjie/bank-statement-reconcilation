@@ -287,6 +287,17 @@ class FormatTests(unittest.TestCase):
                 'Cr Adv-Interbank GIRO at KLM\nA-19-07, R3\n-\nEXAMPLE PAYER': 'EXAMPLE PAYER',
                 'Fund Transfer at DIO\nRent\nMV D1307': '',
                 'Serv Charge-IBG/TT/Rentas/Misc at DIO\nSMS Charges\nNov Parking Fee': '',
+                'ATM Interbank Funds Trf to CA\nINSTANT TRANSFER\nINSTANT TRANSFER\nEXAMPLE PAYER\nINSTANT TRANSFER': (
+                    'EXAMPLE PAYER'
+                ),
+            },
+            'uob': {
+                'IBG CR\nEXAMPLE PAYER SDN\nInv 008\nCIMB EXAMPLE PAYER\nSDN BHD': 'EXAMPLE PAYER SDN BHD',
+                'DuitNow/Instant Trf\nINV 1\nPBB EXAMPLE HOTEL\nSUPPLIES SDN.\nPBB EXAMPLE HOTEL\nSUPPLIES SDN.\nBHD.|EPF|': (
+                    'EXAMPLE HOTEL SUPPLIES SDN. BHD.'
+                ),
+                'DuitNow/Instant Trf\nINV 1\nPBB EXAMPLE ONE\nPBB OTHER NAME||': '',
+                'IBG CR\nSOMEONE ELSE\nInv 008\nCIMB EXAMPLE PAYER SDN BHD': '',
             },
             'public_bank': {
                 'DUITNOW TRSF DR 939667 EXAMPLE PAYEE\nJAN SALARY\n20250201PBBEMYKL010OCB10149967': 'EXAMPLE PAYEE',
@@ -327,6 +338,11 @@ class FormatTests(unittest.TestCase):
         ]
         names = [field['counterparty'] for field in payees(rows, 'cimb')]
         self.assertEqual(names, ['EXAMPLE PAYEE', 'EXAMPLE PAYEE', 'EXAMPLE PAYEE', '', ''])
+        # Two payees sharing a reference leave the fee for review, whatever the row order.
+        alpha, beta = row('TR IBG 123456789012\nALPHA SDN BHD\nOWN'), row('TR IBG 123456789012\nBETA SDN BHD\nOWN')
+        fee = row('OTHER TRANSFER FEE 123456789012\nOWN')
+        for order in ([alpha, beta, fee], [beta, alpha, fee], [alpha, fee, beta]):
+            self.assertEqual(payees(order, 'cimb')[order.index(fee)]['counterparty'], '')
 
     def test_master_saved_under_older_payee_rules_still_exports(self):
         """An older rule's payee copied from the row is refreshed; a payee absent from the row is rejected."""

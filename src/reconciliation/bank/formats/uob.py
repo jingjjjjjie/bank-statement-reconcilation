@@ -28,10 +28,14 @@ def counterparty(narration, money_in):
     if len(lines) >= 4 and lines[0] == 'FPX Debit' and lines[-1] == 'GEB':
         return ' '.join(lines[2:-1])
     blocks = re.split(r'\b(?:GEB|PBB|MBB|ABMB|CIMB|HLB)\s+', narration)
-    if len(blocks) == 3:
-        first, second = (' '.join(block.split('|')[0].split()) for block in blocks[1:])
-        if first == second:
-            return first
+    names = [' '.join(block.split('|')[0].split()) for block in blocks[1:]]
+    if len(names) == 2:
+        # Copies may be cut at different lengths; accept them only when one extends the other.
+        short, full = sorted(names, key=len)
+        return full if full.startswith(short) else ''
+    if len(names) == 1 and len(lines) > 1 and names[0].startswith(lines[1]):
+        # Incoming IBG prints the sender's truncated name first and the full name after its bank code.
+        return names[0]
     return ''
 
 

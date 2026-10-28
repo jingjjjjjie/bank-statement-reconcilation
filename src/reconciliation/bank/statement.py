@@ -95,14 +95,15 @@ def payees(rows, bank):
     for row, field in zip(rows, fields):
         for reference in re.findall(r'\b\d{9,}\b', row['narration'].splitlines()[0]):
             if field['counterparty']:
-                transfers.setdefault(reference, field['counterparty'])
+                transfers.setdefault(reference, set()).add(field['counterparty'])
     for row, field in zip(rows, fields):
         lines = row['narration'].splitlines()
         if field['counterparty'] or len(lines) < 2 and not re.search(r'FEE|CHARGE', lines[0]):
             continue
         if re.search(r'\bFEE\b|CHARGE', lines[0]):
-            # A fee row shares its transfer's reference number and takes that payee.
-            party = next((transfers[r] for r in re.findall(r'\b\d{9,}\b', lines[0]) if r in transfers), '')
+            # A fee takes its transfer's payee by reference; a reference shared by different payees stays REVIEW.
+            names = {name for r in re.findall(r'\b\d{9,}\b', lines[0]) for name in transfers.get(r, ())}
+            party = names.pop() if len(names) == 1 else ''
         else:
             # A purpose may sit before or after a payee already printed cleanly elsewhere in the statement.
             party = next((n for n in known if re.search(rf'(^{re.escape(n)}\s|\s{re.escape(n)}$)', lines[1])), '')
