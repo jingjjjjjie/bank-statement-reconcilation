@@ -301,3 +301,14 @@ class FormatTests(unittest.TestCase):
             for narration, party in narrations.items():
                 with self.subTest(bank=bank, narration=narration):
                     self.assertEqual(describe(narration, 0, bank)['counterparty'], party)
+
+    def test_reference_like_payees_become_review_for_every_bank(self):
+        """A bank rule that lands on a reference, number or file name yields no payee."""
+        from reconciliation.bank.statement import describe, plausible_party
+
+        for text in ('99 BRILLIANT STARS ENTER', 'M11BBCC PLT', 'KOJADI - SME 81'):
+            self.assertTrue(plausible_party(text), text)
+        for text in ('', '-', '20250201PBBEMYKL', 'IV-25020', 'RTB2603.TXT', 'U2026030101342'):
+            self.assertFalse(plausible_party(text), text)
+        self.assertEqual(describe('TRANSFER TO A/C\n2603010325937340*\nREF', 0, 'maybank')['counterparty'], '')
+        self.assertEqual(describe('IBG CREDIT, 2026030101342, INV', 1, 'ambank')['counterparty'], '')

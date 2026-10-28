@@ -57,6 +57,13 @@ MASTER_FIELDS = [
 ]
 
 
+def plausible_party(party):
+    """Reject reference-like text so a misread field becomes REVIEW PAY TO, never a payee."""
+    letters = sum(c.isalpha() for c in party)
+    digits = sum(c.isdigit() for c in party)
+    return letters >= 2 and digits <= letters / 3 and not re.search(r'\d{5,}|\.TXT\b', party, re.I)
+
+
 def describe(narration, money_in, bank='ambank', direction=None):
     """Apply bank-specific party rules while keeping original evidence."""
     from reconciliation.bank.formats import layout
@@ -64,6 +71,7 @@ def describe(narration, money_in, bank='ambank', direction=None):
     if bank != 'ambank':
         # Only known party fields are separated; all source narration remains intact.
         party = layout(bank).counterparty(narration, money_in)
+        party = party if plausible_party(party) else ''
         lines = narration.splitlines()
         return {
             'transaction_type': lines[0] if lines else '',
@@ -73,7 +81,10 @@ def describe(narration, money_in, bank='ambank', direction=None):
             'details_raw': narration,
             'particular': '',
         }
-    return layout(bank).describe(narration, money_in)
+    fields = layout(bank).describe(narration, money_in)
+    if not plausible_party(fields['counterparty']):
+        fields['counterparty'] = ''
+    return fields
 
 
 def write_master(result, path):
