@@ -30,7 +30,7 @@ const items = computed(() => {
   <nav class="app-header" :class="{ 'directory-header': route.path === '/home' }" aria-label="Main navigation">
     <div class="app-brand">
       <img class="brand-logo" :src="logo" alt="UPVANTAGE Group">
-      <div class="brand-identity"><strong>Accounting Copilot</strong><span v-if="contextName" :title="contextName">{{ contextName }}</span></div>
+      <div class="brand-identity"><div class="brand-release"><strong>Accounting Copilot</strong><small v-if="appState.session?.version" class="release-version" aria-label="Application version">{{ appState.session.version }}</small></div><span v-if="contextName" :title="contextName">{{ contextName }}</span></div>
     </div>
     <span v-if="appState.syncing && !route.meta.portal" class="sync-status" role="status">Updating...</span>
     <div class="header-links">
@@ -56,6 +56,8 @@ const items = computed(() => {
 .app-brand { display:flex; align-items:center; gap:16px; flex-shrink:0; }
 .brand-logo { width:164px; height:66px; object-fit:cover; filter:contrast(1.06); }
 .brand-identity { display:flex; align-items:center; gap:12px; min-width:0; border-left:1px solid var(--line); padding-left:16px; }
+.brand-release { display:flex; flex-direction:column; }
+.release-version { padding-left:4px; color:var(--muted); font-size:10px; line-height:1.2; white-space:nowrap; }
 .brand-identity strong { display:block; padding:4px 4px 6px; font-family:'Syne',sans-serif; font-size:17px; font-weight:800; letter-spacing:-.02em; line-height:1.6; white-space:nowrap; background:linear-gradient(90deg,oklch(.52 .18 250),oklch(.55 .18 210)); background-clip:text; -webkit-text-fill-color:transparent; }
 .brand-identity span { max-width:220px; overflow:hidden; text-overflow:ellipsis; font-size:13px; font-weight:600; color:var(--muted); white-space:nowrap; }
 .header-links { display:flex; align-items:center; align-self:stretch; margin-left:auto; min-width:0; overflow-x:auto; scrollbar-width:thin; scrollbar-color:#bdcddd transparent; }

@@ -12,6 +12,7 @@ from fastapi.responses import FileResponse, JSONResponse, Response
 from jsonschema.exceptions import ValidationError as SchemaValidationError
 
 from dashboard.services.sessions import COOKIE, Context, Sessions
+from dashboard.version import DISPLAY_VERSION
 from reconciliation.intake.workspace import SourceSelection
 
 FRONTEND = Path(os.environ.get("DASHBOARD_FRONTEND", Path(__file__).parent / "frontend/dist"))
@@ -173,6 +174,7 @@ def create_app(review=None, token=None, sources=None):
         """Return routing metadata without scanning documents or acquiring a workflow lock."""
         state = request.state.context
         return {
+            "version": DISPLAY_VERSION,
             "token": state.token,
             "review_id": state.review_id,
             "active": state.review is not None,
