@@ -306,6 +306,43 @@ class FormatTests(unittest.TestCase):
                 with self.subTest(bank=bank, narration=narration):
                     self.assertEqual(describe(narration, 0, bank)['counterparty'], party)
 
+    def test_fee_rows_and_blended_lines_use_payees_from_the_same_statement(self):
+        """Fees take their transfer's payee by reference; a known name inside a purpose line is reused."""
+        from reconciliation.bank.statement import payees
+
+        def row(narration):
+            return {'narration': narration, 'money_in': 0, 'direction': 'out'}
+
+        rows = [
+            row('OTHER TRANSFER FEE 993829014284\nEXAMPLE OWN SDN Inv 141'),
+            row('TR IBG 993829014284\nEXAMPLE PAYEE\nEXAMPLE OWN SDN'),
+            row('TR TO SAVINGS 993827474593\nInv V26.03-1164 EXAMPLE PAYEE\nEXAMPLE OWN SDN'),
+            row('TR TO SAVINGS 993828115171\nMAR WAGES UNSEEN PERSON W\nEXAMPLE OWN SDN'),
+            row('AUTOPAY CHARGES 347176454853'),
+        ]
+        names = [field['counterparty'] for field in payees(rows, 'cimb')]
+        self.assertEqual(names, ['EXAMPLE PAYEE', 'EXAMPLE PAYEE', 'EXAMPLE PAYEE', '', ''])
+
+    def test_master_saved_under_older_payee_rules_still_exports(self):
+        """An older rule's payee copied from the row is refreshed; a payee absent from the row is rejected."""
+        master = self.root / 'master.csv'
+        write_master(extract(self.sample('hong_leong'), 2025, 'hong_leong'), master)
+        with master.open(newline='', encoding='utf-8-sig') as file:
+            rows = list(csv.DictReader(file))
+
+        def save(payee):
+            rows[0]['counterparty'] = payee
+            with master.open('w', newline='', encoding='utf-8-sig') as file:
+                writer = csv.DictWriter(file, fieldnames=rows[0].keys())
+                writer.writeheader()
+                writer.writerows(rows)
+
+        save('SAMPLE PARTY REFERENCE')
+        self.assertEqual(read_master(master)['transactions'][0]['counterparty'], '')
+        save('INVENTED PAYEE')
+        with self.assertRaisesRegex(ValueError, 'differs from source extraction'):
+            read_master(master)
+
     def test_reference_like_payees_become_review_for_every_bank(self):
         """A bank rule that lands on a reference, number or file name yields no payee."""
         from reconciliation.bank.statement import describe, plausible_party

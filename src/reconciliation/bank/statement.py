@@ -87,6 +87,30 @@ def describe(narration, money_in, bank='ambank', direction=None):
     return fields
 
 
+def payees(rows, bank):
+    """Describe every row, then fill blanks from the statement's own clean names and linked transfers."""
+    fields = [describe(r['narration'], r['money_in'], bank, r.get('direction')) for r in rows]
+    known = sorted({f['counterparty'] for f in fields if len(f['counterparty']) >= 6}, key=len, reverse=True)
+    transfers = {}
+    for row, field in zip(rows, fields):
+        for reference in re.findall(r'\b\d{9,}\b', row['narration'].splitlines()[0]):
+            if field['counterparty']:
+                transfers.setdefault(reference, field['counterparty'])
+    for row, field in zip(rows, fields):
+        lines = row['narration'].splitlines()
+        if field['counterparty'] or len(lines) < 2 and not re.search(r'FEE|CHARGE', lines[0]):
+            continue
+        if re.search(r'\bFEE\b|CHARGE', lines[0]):
+            # A fee row shares its transfer's reference number and takes that payee.
+            party = next((transfers[r] for r in re.findall(r'\b\d{9,}\b', lines[0]) if r in transfers), '')
+        else:
+            # A purpose may sit before or after a payee already printed cleanly elsewhere in the statement.
+            party = next((n for n in known if re.search(rf'(^{re.escape(n)}\s|\s{re.escape(n)}$)', lines[1])), '')
+        if party:
+            field['counterparty'] = field['counterparty_raw'] = party
+    return fields
+
+
 def write_master(result, path):
     """Write a self-contained CSV master, including statement-level checks."""
     metadata = {**DEFAULT_METADATA, **{k: v for k, v in result.items() if k != "transactions"}}
@@ -94,14 +118,15 @@ def write_master(result, path):
     with path.open("w", newline="", encoding="utf-8-sig") as file:
         writer = csv.DictWriter(file, fieldnames=MASTER_FIELDS)
         writer.writeheader()
-        for sequence, row in enumerate(result["transactions"], 1):
+        parties = payees(result["transactions"], metadata['bank'])
+        for sequence, (row, party) in enumerate(zip(result["transactions"], parties), 1):
             writer.writerow(
                 {
                     **metadata,
                     **row,
                     'transaction_datetime': row.get('transaction_datetime', ''),
                     'balance_origin': row.get('balance_origin', 'printed'),
-                    **describe(row["narration"], row["money_in"], metadata['bank'], row.get('direction')),
+                    **party,
                     "sequence": sequence,
                     "transaction_id": f"{metadata['source_sha256']}:{sequence:04d}",
                     "direction": row.get('direction', "in" if row["money_in"] else "out"),
@@ -163,12 +188,16 @@ def read_master(path):
             raise ValueError(f"Master {key} differs from source PDF")
     if len(rows) != len(original["transactions"]):
         raise ValueError("Master row count differs from source PDF")
-    for number, (row, expected) in enumerate(zip(rows, original["transactions"]), 1):
-        derived = describe(expected["narration"], expected["money_in"], result['bank'], expected.get('direction'))
+    parties = payees(original["transactions"], result['bank'])
+    for number, (row, expected, derived) in enumerate(zip(rows, original["transactions"], parties), 1):
+        # Older payee rules only ever copied text from the row itself; anything else is an edit.
+        saved = ' '.join(row.get('counterparty', '').split()).upper()
+        if saved and saved != derived['counterparty'].upper() and saved not in ' '.join(expected['narration'].split()).upper():
+            raise ValueError(f"Master row {number} differs from source extraction")
+        row.update(derived)
         required = {
             **expected,
             'transaction_datetime': expected.get('transaction_datetime', ''),
-            **derived,
             "sequence": number,
             "transaction_id": f"{digest}:{number:04d}",
             "direction": expected.get('direction', "in" if expected["money_in"] else "out"),
