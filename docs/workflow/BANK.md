@@ -41,7 +41,8 @@ passes every check; none or several passing stops extraction with each reader's
 reason. Passing checks does not independently verify narration or completeness.
 Bank detection uses issuer wording inside the PDF, never its filename. A manual
 selection must be among the candidates, otherwise it is rejected with the named
-bank(s). No issuer wording, unexpected columns, missing pages,
+bank(s). Printed notices after the statement totals are skipped, including overflow pages
+without a table; a dated line after the totals still stops extraction. No issuer wording, unexpected columns, missing pages,
 conflicting accounts, invalid dates, and failed financial checks stop extraction
 before a master is saved. Existing masters cannot be replaced by another bank,
 source, or year. The new formats verify the supplied year against the printed

@@ -7,6 +7,7 @@ from decimal import Decimal
 from reconciliation.bank.statement import amount, cell, validate
 
 MONEY = r"([\d,]+\.\d{2})"
+TRANSACTION_START = r'^\d{2}[/-]\d{2}(?:[/-]\d{4})?\s'
 
 
 def one(pattern, text, label):
@@ -52,7 +53,12 @@ def read_layout(pdf, path, year, bank):
             raise ValueError(f'Unsupported {BANKS[bank]} page size on page {page_number}.')
         lines = page.extract_text_lines()
         headers = [i for i, line in enumerate(lines) if line['text'] == header]
-        if len(headers) != 1:
+        if not headers:
+            # Pages without the table may hold notices, but never dated transactions.
+            if any(re.match(TRANSACTION_START, line['text']) for line in lines):
+                raise ValueError(f'Page {page_number} has dated lines but no {BANKS[bank]} transaction table.')
+            continue
+        if len(headers) > 1:
             raise ValueError(f'Unsupported {BANKS[bank]} table header on page {page_number}.')
         for line in lines[headers[0] + 1 :]:
             if spec.get('ignore_rotated') and not any(c.get('upright', True) for c in line['chars']):
@@ -60,7 +66,7 @@ def read_layout(pdf, path, year, bank):
             text = line['text']
             # Printed notices are outside the transaction region.
             if ended:
-                if re.match(r'^\d{2}[/-]\d{2}(?:[/-]\d{4})?\s', text):
+                if re.match(TRANSACTION_START, text):
                     raise ValueError('Unexpected transactions after statement totals.')
                 continue
             if text.startswith(spec['skip_prefixes']):
@@ -127,8 +133,9 @@ def read_layout(pdf, path, year, bank):
                 )
             elif narration and rows and not date_text and not balance_text:
                 rows[-1]['narration'] += '\n' + narration
-            elif text.strip():
+            elif date_text or balance_text:
                 raise ValueError(f'Unrecognized transaction line on page {page_number}: {text}')
+            # Remaining text has no date or amount, such as a notice, and is ignored.
     if not ended:
         raise ValueError('Missing statement end/totals.')
     if spec.get('reverse'):

@@ -187,6 +187,15 @@ class FormatTests(unittest.TestCase):
             with self.subTest(bank=bank), self.assertRaises(ValueError):
                 extract(self.sample(bank, foreign=True), 2025, bank)
 
+    def test_notices_after_totals_skipped_but_transactions_rejected(self):
+        """Notices below the totals or on an overflow page pass; dated rows after totals fail."""
+        for notice in ('same', 'page'):
+            with self.subTest(notice=notice):
+                data = extract(self.sample('hong_leong', notice=notice), 2025, 'auto')
+                self.assertEqual(len(data['transactions']), 2)
+        with self.assertRaisesRegex(ValueError, 'Page 2 has dated lines'):
+            extract(self.sample('hong_leong', notice='page_row'), 2025, 'hong_leong')
+
     def test_page_sequence_rejected(self):
         path = self.sample('cimb')
         with pymupdf.open(path) as doc:

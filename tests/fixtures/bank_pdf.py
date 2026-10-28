@@ -11,7 +11,15 @@ HEADERS = {
 
 
 def statement(
-    path, bank, *, bad_balance=False, missing_row=False, missing_header=False, foreign=False, mention=None
+    path,
+    bank,
+    *,
+    bad_balance=False,
+    missing_row=False,
+    missing_header=False,
+    foreign=False,
+    mention=None,
+    notice=None,
 ):
     """Write fictional evidence that exercises actual PDF text and column extraction."""
     width = {'public_bank': 612, 'maybank': 510, 'hong_leong': 595.44, 'cimb': 595}[bank]
@@ -39,7 +47,7 @@ def statement(
         'maybank': ['Malayan Banking Berhad', 'MUKA/ /PAGE : 1', 'CCA SME FIRST ACCOUNT'],
         'hong_leong': [
             'Hong Leong Bank Berhad',
-            'Page No / No Mukasurat : 1 of 1',
+            'Page No / No Mukasurat : 1 of 2' if notice in ('page', 'page_row') else 'Page No / No Mukasurat : 1 of 1',
             'Date / Tarikh : 31-01-2025',
             'A/C No /No Akaun : 1234567890 MYR',
             'Statement Period / : 01/01/25 - 31/01/25',
@@ -110,6 +118,19 @@ def statement(
     }[bank]
     for i, text in enumerate(footer):
         put(start, 400 + i * 12, text)
+    # Hong Leong prints notices under the totals, or on an extra page when they overflow.
+    notes = ['1) Effective 9 May 2023, the Base Rate is 3.88% p.a.', 'The items and balances shown above are correct.']
+    if notice == 'same':
+        for i, text in enumerate(notes):
+            put(start, 450 + i * 12, text)
+    elif notice in ('page', 'page_row'):
+        page = doc.new_page(width=width, height=864)
+        for i, text in enumerate(cover[1:]):
+            put(20, 20 + i * 10, text.replace('1 of 2', '2 of 2'))
+        if notice == 'page_row':
+            notes.insert(0, '03-01-2025 HIDDEN TRANSFER 7.00')
+        for i, text in enumerate(notes):
+            put(20, 180 + i * 12, text)
     doc.save(path)
     doc.close()
     return path
