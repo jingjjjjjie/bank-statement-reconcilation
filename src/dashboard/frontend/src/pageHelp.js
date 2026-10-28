@@ -1,5 +1,9 @@
 // Keep help actionable; editing screens also explain each control and when changes are saved.
 export const pageHelp = {
+  StatementExtraction: ['Bank Statement Extraction', [
+    'Upload a supported digital bank PDF, choose Auto-detect or its bank, and enter the statement year and company name. Extract to check transactions and download Excel or CSV.',
+    'Files are processed temporarily. This tool does not create or change reconciliation projects. Layout and financial checks must pass. UOB activity exports show inferred balances and completeness warnings.',
+  ]],
   Projects: ['Projects', [
     'Resume a saved project or choose New project.',
     'Open the More actions menu for Release editing, Reset and Delete. Release editing keeps saved progress and allows another session to edit. Resume reopens the project.',

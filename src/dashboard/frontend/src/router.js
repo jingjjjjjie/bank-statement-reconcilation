@@ -9,6 +9,7 @@ export const router = createRouter({
     { path: '/', redirect: '/home' },
     { path: '/accounting-finance', redirect: '/home' },
     { path: '/home', component: () => import('./features/projects/Portal.vue'), meta: { title: 'Home', body: 'portal-page directory-page', public: true, portal: true } },
+    { path: '/statement-extraction', component: () => import('./features/statement-extraction/StatementExtraction.vue'), meta: { title: 'Bank Statement Extraction', public: true, portal: true } },
     { path: '/projects', component: () => import('./features/projects/Projects.vue'), meta: { title: 'Bank Statement Reconciliation', body: 'portal-page', public: true, portal: true } },
     { path: '/source', component: () => import('./features/projects/Source.vue'), meta: { title: 'Workspace selection', body: 'workspace-page', public: true } },
     { path: '/bank', component: () => import('./features/bank/Bank.vue'), meta: { title: 'Bank statement', public: true } },
@@ -44,6 +45,6 @@ router.beforeEach(async (to, from) => {
 });
 router.afterEach((to, from, failure) => {
   if (!failure && to.path !== '/source' && !to.meta.portal && appState.session?.active) appState.resumePath = to.fullPath;
-  document.title = `${to.meta.title} · Accounting Copilot`;
+  document.title = `${to.meta.title} \u00b7 Accounting Copilot`;
   document.body.className = to.meta.body || '';
 });

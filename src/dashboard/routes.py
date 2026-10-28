@@ -28,6 +28,7 @@ MAX_CONTROL_REQUEST_BYTES = 8192
 PAGES = {
     "",
     "home",
+    "statement-extraction",
     "accounting-finance",
     "projects",
     "source",
@@ -74,7 +75,7 @@ def active_context(state=Depends(context)):
 
 def create_app(review=None, token=None, sources=None):
     """Build the ASGI app without starting a server or performing model calls."""
-    from dashboard.api import codex, files, live, project_actions, review as review_api, source
+    from dashboard.api import codex, files, live, project_actions, review as review_api, source, statement_extraction
 
     workspace = Path(__file__).resolve().parents[2]
     sources = sources or (
@@ -120,6 +121,8 @@ def create_app(review=None, token=None, sources=None):
             limit = (
                 MAX_EVIDENCE_REQUEST_BYTES if request.url.path in EVIDENCE_REQUEST_PATHS else MAX_CONTROL_REQUEST_BYTES
             )
+            if request.url.path == "/api/statement-extraction":
+                limit = 40 * 1024 * 1024
             async for chunk in request.stream():
                 body.extend(chunk)
                 if len(body) > limit:
@@ -176,6 +179,7 @@ def create_app(review=None, token=None, sources=None):
             "mode": state.review.manifest.get("Mode", "legacy") if state.review else None,
         }
 
+    app.include_router(statement_extraction.router)
     app.include_router(source.router)
     app.include_router(project_actions.router)
     app.include_router(review_api.router)

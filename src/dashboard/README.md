@@ -10,6 +10,16 @@ docker compose up -d --build dashboard
 
 Open http://127.0.0.1:8765. FastAPI serves the Vue application and Python API from the same container and port. See [frontend maintenance](frontend/README.md) for the source structure and local build commands.
 
+Home also offers **Bank Statement Extraction** at `/statement-extraction`. Upload a
+supported digital PDF (up to 25 MB), select Auto-detect or a bank, and supply the
+statement year and company name. The standalone tool validates and previews the
+transactions and downloads Excel and CSV without selecting or changing a project.
+Uploads and generated files use temporary storage; results remain in the page until
+its inputs change or it is reloaded. The Python extractor, bank formats, workbook
+exporter and style are copied into `src/statement_extraction/`; the reconciliation
+implementation remains unchanged. Future extraction fixes must be considered for
+each copy separately.
+
 For work folders containing `documents/` and `statement/`, Proceed verifies exact duplicates automatically. Proceed copies every member into `output/duplicates/group-NNN/` beside the input folders; `/review` can display the saved counts. `output/duplicates/report.json` records hashes and original locations. Inputs remain intact, no human selection is required, and extraction uses one input per hash. Existing organized copies are copied back to their original locations when upgrading a legacy work-folder review; old recovery files and the legacy manifest are preserved.
 
 The following retain/undo controls apply only to older standalone-folder reviews:

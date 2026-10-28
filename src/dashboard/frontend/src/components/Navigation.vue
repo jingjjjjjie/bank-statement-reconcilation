@@ -6,7 +6,7 @@ import logo from '../assets/upvantage.jpg';
 const route = useRoute();
 // Identify the current application rather than its selected workspace folder.
 const contextName = computed(() => route.path === '/home' ? 'Home'
-  : 'Bank Statement Reconciliation');
+  : route.path === '/statement-extraction' ? 'Bank Statement Extraction' : 'Bank Statement Reconciliation');
 const links = [
   ['/documents', 'Documents'],
   ['/extraction-review', 'Review Extraction'], ['/bank', 'Bank statement'],
@@ -44,7 +44,7 @@ const items = computed(() => {
         <span>{{ item.label }}</span>
       </component>
     </div>
-    <RouterLink to="/settings" class="header-settings-icon" active-class="active" aria-label="Settings" title="Settings">
+    <RouterLink v-if="route.path !== '/statement-extraction'" to="/settings" class="header-settings-icon" active-class="active" aria-label="Settings" title="Settings">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9.5 3-.6 2.2-1.7 1L5 5.6 2.5 10l1.6 1.6v1.8L2.5 15 5 19.4l2.2-.6 1.7 1 .6 2.2h5l.6-2.2 1.7-1 2.2.6 2.5-4.4-1.6-1.6v-1.8L21.5 10 19 5.6l-2.2.6-1.7-1L14.5 3Z"/><circle cx="12" cy="12.5" r="3"/></svg>
     </RouterLink>
   </nav>

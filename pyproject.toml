@@ -16,6 +16,9 @@ dependencies = {file = ["requirements.txt"]}
 where = ["src"]
 namespaces = false
 
+[tool.setuptools.package-data]
+statement_extraction = ["bank_statement.xml"]
+
 [tool.ruff]
 line-length = 120
 target-version = "py312"
