@@ -353,3 +353,5 @@ class FormatTests(unittest.TestCase):
             self.assertFalse(plausible_party(text), text)
         self.assertEqual(describe('TRANSFER TO A/C\n2603010325937340*\nREF', 0, 'maybank')['counterparty'], '')
         self.assertEqual(describe('IBG CREDIT, 2026030101342, INV', 1, 'ambank')['counterparty'], '')
+        self.assertEqual(describe('SERVICE CHARGE /MISC DEBIT, SMS ALERT FEE, NOV', 0, 'ambank')['counterparty'], '')
+        self.assertEqual(describe('JomPAY /DEBIT TRANSFER, TM UNIFI, 123', 0, 'ambank')['counterparty'], 'TM UNIFI')

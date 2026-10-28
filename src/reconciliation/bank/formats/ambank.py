@@ -12,6 +12,11 @@ from reconciliation.bank.statement import amount, cell, validate
 A4_WIDTH = 595.28
 #: Left edges (points) of each statement column; a column runs to the next edge.
 DATE_X, NARRATION_X, DEBIT_X, CREDIT_X, BALANCE_X = 0, 100, 310, 395, 480
+#: Transaction types confirmed to print the payer or payee between the first two commas.
+NAMED_TYPES = (
+    'DuitNow Transfer', 'DuitNow CR TRF', 'Fund Transfer', 'Interbank GIRO', 'CMS FPX PAYMENT',
+    'IBG OUTWARD RTN', 'JomPAY', 'CREDIT TRANSFER', 'INWARD RENTAS', 'INWARD IBG',
+)
 
 
 def describe(narration, money_in):
@@ -20,7 +25,8 @@ def describe(narration, money_in):
     method = " ".join(parts[0].split())
     raw_party = parts[1].strip() if len(parts) > 1 else ""
     raw_details = parts[2].strip() if len(parts) > 2 else ""
-    party = " ".join(raw_party.split())
+    # Unconfirmed types, such as fees, may hold a reference there and stay REVIEW PAY TO.
+    party = " ".join(raw_party.split()) if method.startswith(NAMED_TYPES) else ""
 
     # Incoming company fields may include a numeric prefix and a LEVEL address.
     if method in ("INWARD IBG", "INWARD RENTAS /MISC CREDIT"):
