@@ -10,7 +10,7 @@ import argparse
 import json
 from pathlib import Path
 
-from reconciliation.bank.statement import describe, extract
+from reconciliation.bank.statement import extract, payees
 
 STORE = Path(__file__).resolve().parents[2] / 'docs' / 'local' / 'real-statements.json'
 TOTALS = ('opening_balance', 'total_money_in', 'total_money_out', 'closing_balance')
@@ -27,7 +27,7 @@ def snapshot(path, year):
         'bank': result['bank'],
         'rows': len(rows),
         'totals': [str(result[key]) for key in TOTALS],
-        'payees': [describe(r['narration'], r['money_in'], result['bank'], r.get('direction'))['counterparty'] for r in rows],
+        'payees': [field['counterparty'] for field in payees(rows, result['bank'])],
     }
 
 
